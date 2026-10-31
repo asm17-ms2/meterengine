@@ -3,14 +3,11 @@ package com.meterengine.audit.service;
 import com.meterengine.audit.dto.AuditLogResponse;
 import com.meterengine.audit.dto.ListAuditLogsResponse;
 import com.meterengine.audit.entity.AuditLog;
-import com.meterengine.audit.repository.AuditLogRepository;
+import com.meterengine.global.database.DatabaseScope;
+import com.meterengine.global.database.DatabaseScopes;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.InvalidRequestException;
 import com.meterengine.global.security.BusinessEnvironmentContext;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.Expression;
-import jakarta.persistence.criteria.Predicate;
-import jakarta.persistence.criteria.Root;
 import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -19,10 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.jpa.domain.Specification;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
@@ -31,11 +25,11 @@ import tools.jackson.databind.json.JsonMapper;
 public class AuditLogQueryService {
   private static final int MIN_YEAR = 1;
   private static final int MAX_YEAR = 9999;
-  private final AuditLogRepository auditLogRepository;
+  private final JdbcTemplate jdbcTemplate;
   private final JsonMapper jsonMapper;
 
-  public AuditLogQueryService(AuditLogRepository auditLogRepository, JsonMapper jsonMapper) {
-    this.auditLogRepository = auditLogRepository;
+  public AuditLogQueryService(JdbcTemplate jdbcTemplate, JsonMapper jsonMapper) {
+    this.jdbcTemplate = jdbcTemplate;
     this.jsonMapper = jsonMapper;
   }
 
@@ -54,60 +48,100 @@ public class AuditLogQueryService {
     OffsetDateTime end = boundary(to, true);
     if (start != null && end != null && !start.isBefore(end))
       throw new InvalidRequestException(ErrorCode.VALIDATION_ERROR);
-    Specification<AuditLog> specification =
-        (root, query, cb) -> {
-          List<Predicate> filters = new ArrayList<>();
-          if (organizationId != null) {
-            filters.add(cb.equal(root.get("organizationId"), organizationId));
-            filters.add(
-                cb.or(
-                    BusinessEnvironmentContext.environmentId() == null
-                        ? cb.isNull(root.get("environmentId"))
-                        : cb.equal(
-                            root.get("environmentId"), BusinessEnvironmentContext.environmentId()),
-                    root.get("action").in(AuditLogService.ORGANIZATION_WIDE_ACTIONS)));
-          }
-          if (action != null) filters.add(cb.equal(root.get("action"), action));
-          if (actorType != null) filters.add(cb.equal(root.get("actorType"), actorType));
-          if (start != null) filters.add(cb.greaterThanOrEqualTo(root.get("occurredAt"), start));
-          if (end != null) filters.add(cb.lessThan(root.get("occurredAt"), end));
-          if (q != null && !q.isBlank()) {
-            String term =
-                "%"
-                    + q.toLowerCase(Locale.ROOT)
-                        .replace("\\", "\\\\")
-                        .replace("%", "\\%")
-                        .replace("_", "\\_")
-                    + "%";
-            List<Predicate> matches = new ArrayList<>();
-            matches.add(cb.like(cb.lower(root.get("action")), term, '\\'));
-            matches.add(cb.like(cb.lower(root.get("targetType")), term, '\\'));
-            matches.add(cb.like(cb.lower(root.get("targetId")), term, '\\'));
-            matches.add(cb.like(cb.lower(detail(root, cb, "request_id")), term, '\\'));
-            matches.add(cb.like(cb.lower(detail(root, cb, "route")), term, '\\'));
-            if (organizationId == null)
-              matches.add(
-                  cb.like(
-                      cb.function("text", String.class, root.get("organizationId")), term, '\\'));
-            filters.add(cb.or(matches.toArray(Predicate[]::new)));
-          }
-          return cb.and(filters.toArray(Predicate[]::new));
-        };
-    Sort.Direction direction =
-        "occurred_at_asc".equals(sort) ? Sort.Direction.ASC : Sort.Direction.DESC;
-    Page<AuditLog> result =
-        auditLogRepository.findAll(
-            specification, PageRequest.of(page, size, Sort.by(direction, "occurredAt", "id")));
-    return new ListAuditLogsResponse(
-        result.getContent().stream().map(log -> AuditLogResponse.from(log, jsonMapper)).toList(),
-        result.getTotalElements(),
-        page,
-        size);
-  }
-
-  private static Expression<String> detail(Root<AuditLog> root, CriteriaBuilder cb, String key) {
-    return cb.function(
-        "jsonb_extract_path_text", String.class, root.get("detail"), cb.literal(key));
+    var filters = new ArrayList<String>();
+    var arguments = new ArrayList<Object>();
+    if (organizationId != null) {
+      filters.add("organization_id = ?");
+      arguments.add(organizationId);
+      String wideActions =
+          String.join(
+              ",",
+              java.util.Collections.nCopies(AuditLogService.ORGANIZATION_WIDE_ACTIONS.size(), "?"));
+      filters.add("(environment_id = ? OR action IN (" + wideActions + "))");
+      arguments.add(BusinessEnvironmentContext.environmentId());
+      arguments.addAll(AuditLogService.ORGANIZATION_WIDE_ACTIONS);
+    }
+    if (action != null) {
+      filters.add("action = ?");
+      arguments.add(action);
+    }
+    if (actorType != null) {
+      filters.add("actor_type = ?");
+      arguments.add(actorType);
+    }
+    if (start != null) {
+      filters.add("occurred_at >= ?");
+      arguments.add(start);
+    }
+    if (end != null) {
+      filters.add("occurred_at < ?");
+      arguments.add(end);
+    }
+    if (q != null && !q.isBlank()) {
+      String term =
+          "%"
+              + q.toLowerCase(Locale.ROOT)
+                  .replace("\\", "\\\\")
+                  .replace("%", "\\%")
+                  .replace("_", "\\_")
+              + "%";
+      var fields =
+          new ArrayList<>(
+              List.of(
+                  "action",
+                  "target_type",
+                  "target_id",
+                  "detail->>'request_id'",
+                  "detail->>'route'"));
+      if (organizationId == null) fields.add("CAST(organization_id AS text)");
+      filters.add(
+          "("
+              + String.join(
+                  " OR ",
+                  fields.stream()
+                      .map(field -> "lower(" + field + ") LIKE ? ESCAPE E'\\\\'")
+                      .toList())
+              + ")");
+      for (var field : fields) arguments.add(term);
+    }
+    String table =
+        DatabaseScopes.current() == DatabaseScope.SHARED
+            ? "shared.audit_log"
+            : "shared.audit_for_scope";
+    String where = filters.isEmpty() ? "" : " WHERE " + String.join(" AND ", filters);
+    long total =
+        jdbcTemplate.queryForObject(
+            "SELECT count(*) FROM " + table + where, Long.class, arguments.toArray());
+    String direction = "occurred_at_asc".equals(sort) ? " ASC" : " DESC";
+    var pageArguments = new ArrayList<>(arguments);
+    pageArguments.add(size);
+    pageArguments.add((long) page * size);
+    var logs =
+        jdbcTemplate.query(
+            "SELECT * FROM "
+                + table
+                + where
+                + " ORDER BY occurred_at"
+                + direction
+                + ", id"
+                + direction
+                + " LIMIT ? OFFSET ?",
+            (rs, row) ->
+                AuditLogResponse.from(
+                    new AuditLog(
+                        rs.getObject("id", UUID.class),
+                        rs.getObject("occurred_at", OffsetDateTime.class),
+                        rs.getObject("organization_id", UUID.class),
+                        rs.getString("actor_type"),
+                        rs.getObject("actor_id", UUID.class),
+                        rs.getString("action"),
+                        rs.getString("target_type"),
+                        rs.getString("target_id"),
+                        rs.getString("detail"),
+                        rs.getObject("environment_id", UUID.class)),
+                    jsonMapper),
+            pageArguments.toArray());
+    return new ListAuditLogsResponse(logs, total, page, size);
   }
 
   private static OffsetDateTime boundary(String text, boolean end) {

@@ -9,7 +9,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.invoice.entity.Invoice;
 import com.meterengine.invoice.repository.InvoiceRepository;
 import com.meterengine.payment.client.TossPaymentsApproveBillingRequest;
@@ -39,17 +38,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
-import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-@Import(TestcontainersConfiguration.class)
 @ExtendWith(OutputCaptureExtension.class)
-@SpringBootTest
-class PaymentRetryServiceTest {
+class PaymentRetryServiceTest extends com.meterengine.SideEffectTestSupport {
 
   private static final String CLIENT_KEY = "test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq";
   private static final String RETRYABLE_FAILURE_CODE = "REJECT_CARD_COMPANY";
@@ -451,7 +446,7 @@ class PaymentRetryServiceTest {
     UUID invoiceId = invoice(organization);
     UUID failedAttemptId =
         failedAttempt(organization, invoiceId, "NOT_FOUND_PAYMENT", Duration.ofHours(25));
-    jdbcTemplate.update(
+    businessUpdate(
         "UPDATE toss_payments_credential SET updated_at = now() WHERE organization_id = ?",
         organization.organizationId());
     when(tossPaymentsClient.findPaymentByOrderId(
@@ -461,7 +456,12 @@ class PaymentRetryServiceTest {
     paymentRetryService.retry();
 
     assertNotRetried(organization, invoiceId, 1);
-    assertSkipped(output, failedAttemptId, LOOKUP_SKIPPED_LOG + failedAttemptId);
+    assertSkipped(
+        output,
+        failedAttemptId,
+        "payment retry skipped: failed_attempt_id="
+            + failedAttemptId
+            + ", mode=test, reason=toss_payments_credential_missing");
   }
 
   @Test
@@ -469,11 +469,14 @@ class PaymentRetryServiceTest {
     Organization organization = organization(true);
     UUID invoiceId = invoice(organization);
     failedAttempt(organization, invoiceId, RETRYABLE_FAILURE_CODE, Duration.ofHours(25));
-    jdbcTemplate.update(
-        "INSERT INTO payment_setting (organization_id, mode, updated_at) VALUES (?, 'live', now())",
-        organization.organizationId());
+    org.assertj.core.api.Assertions.assertThatThrownBy(
+            () ->
+                businessUpdate(
+                    "INSERT INTO payment_setting (organization_id, mode, updated_at) VALUES (?, 'live', now())",
+                    organization.organizationId()))
+        .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
 
-    paymentRetryService.retry();
+    in("live", () -> paymentRetryService.retry());
 
     assertNotRetried(organization, invoiceId, 1);
   }
@@ -500,7 +503,7 @@ class PaymentRetryServiceTest {
             organization.secretKey(), failedAttemptId.toString()))
         .thenAnswer(
             invocation -> {
-              jdbcTemplate.update(
+              businessUpdate(
                   "UPDATE billing_key SET archived_at = now() WHERE organization_id = ?",
                   organization.organizationId());
               return new TossPaymentsResult.Rejected<>(404, "NOT_FOUND_PAYMENT", "없는 결제");
@@ -550,7 +553,7 @@ class PaymentRetryServiceTest {
             RETRYABLE_FAILURE_CODE,
             Duration.ofHours(25),
             OffsetDateTime.parse("2026-10-01T00:00:00Z"));
-    jdbcTemplate.update(
+    businessUpdate(
         "UPDATE toss_payments_credential SET archived_at = now() WHERE organization_id = ?",
         organization.organizationId());
 
@@ -575,7 +578,7 @@ class PaymentRetryServiceTest {
     when(tossPaymentsClient.findPaymentByOrderId(eq(organization.secretKey()), anyString()))
         .thenAnswer(
             invocation -> {
-              jdbcTemplate.update(
+              businessUpdate(
                   "UPDATE toss_payments_credential SET archived_at = now() WHERE organization_id = ?",
                   organization.organizationId());
               return new TossPaymentsResult.Rejected<>(404, "NOT_FOUND_PAYMENT", "없는 결제");
@@ -615,18 +618,28 @@ class PaymentRetryServiceTest {
 
     laterAttempt(organization, invoiceId, "pending", Duration.ZERO);
     PaymentAttempt fourth =
-        paymentAttemptRepository.findById(attemptIdWithStatus(invoiceId, "pending")).orElseThrow();
-    assertThat(paymentAttemptService.markFailed(fourth, RETRYABLE_FAILURE_CODE, "거절")).isTrue();
+        in(
+            "test",
+            () ->
+                paymentAttemptRepository
+                    .findById(attemptIdWithStatus(invoiceId, "pending"))
+                    .orElseThrow());
+    assertThat(
+            in(
+                "test",
+                () -> paymentAttemptService.markFailed(fourth, RETRYABLE_FAILURE_CODE, "거절")))
+        .isTrue();
     assertThat(attemptRows(invoiceId)).hasSize(4);
     assertThat(exhaustedCount()).isEqualTo(exhaustedBefore + 1);
   }
 
   private UUID attemptIdWithStatus(UUID invoiceId, String status) {
-    return jdbcTemplate.queryForObject(
-        "SELECT id FROM payment_attempt WHERE invoice_id = ? AND status = ?",
-        UUID.class,
-        invoiceId,
-        status);
+    return ownerJdbc()
+        .queryForObject(
+            "SELECT id FROM test.payment_attempt WHERE invoice_id = ? AND status = ?",
+            UUID.class,
+            invoiceId,
+            status);
   }
 
   private void lookupReturns(
@@ -652,9 +665,10 @@ class PaymentRetryServiceTest {
   }
 
   private List<Map<String, Object>> attemptRows(UUID invoiceId) {
-    return jdbcTemplate.queryForList(
-        "SELECT * FROM payment_attempt WHERE invoice_id = ? ORDER BY requested_at DESC, id DESC",
-        invoiceId);
+    return ownerJdbc()
+        .queryForList(
+            "SELECT * FROM test.payment_attempt WHERE invoice_id = ? ORDER BY requested_at DESC, id DESC",
+            invoiceId);
   }
 
   private double exhaustedCount() {
@@ -677,7 +691,7 @@ class PaymentRetryServiceTest {
       Duration age,
       OffsetDateTime credentialUpdatedAt) {
     UUID attemptId = UUID.randomUUID();
-    jdbcTemplate.update(
+    businessUpdate(
         """
         INSERT INTO payment_attempt
           (id, organization_id, customer_id, invoice_id, mode, amount, order_name, status,
@@ -700,7 +714,7 @@ class PaymentRetryServiceTest {
       Organization organization, UUID invoiceId, String status, Duration age) {
     UUID attemptId = UUID.randomUUID();
     boolean done = "done".equals(status);
-    jdbcTemplate.update(
+    businessUpdate(
         """
         INSERT INTO payment_attempt
           (id, organization_id, customer_id, invoice_id, mode, amount, order_name, status,
@@ -719,18 +733,21 @@ class PaymentRetryServiceTest {
   }
 
   private UUID invoice(Organization organization) {
-    return invoiceRepository
-        .save(
-            new Invoice(
-                UUID.randomUUID(),
-                organization.organizationId(),
-                organization.customerId(),
-                "재시도 고객",
-                "2026-08",
-                12000,
-                1200,
-                OffsetDateTime.parse("2026-09-01T05:00:00Z")))
-        .getId();
+    return in(
+        "test",
+        () ->
+            invoiceRepository
+                .save(
+                    new Invoice(
+                        UUID.randomUUID(),
+                        organization.organizationId(),
+                        organization.customerId(),
+                        "재시도 고객",
+                        "2026-08",
+                        12000,
+                        1200,
+                        OffsetDateTime.parse("2026-09-01T05:00:00Z")))
+                .getId());
   }
 
   private Organization organization(boolean withBillingKey) {
@@ -742,33 +759,45 @@ class PaymentRetryServiceTest {
         jdbcTemplate.queryForObject(
             "INSERT INTO organization (name) VALUES ('재시도 도입사') RETURNING id", UUID.class);
     UUID customerId =
-        jdbcTemplate.queryForObject(
-            "INSERT INTO customer (organization_id, name) VALUES (?, '재시도 고객') RETURNING id",
-            UUID.class,
-            organizationId);
-    String secretKey = "test_sk_" + UUID.randomUUID().toString().replace("-", "");
-    tossPaymentsCredentialRepository.saveAndFlush(
-        new TossPaymentsCredential(
-            organizationId,
+        in(
             "test",
-            CLIENT_KEY,
-            secretKey,
-            OffsetDateTime.parse("2026-10-01T00:00:00Z")));
+            () ->
+                jdbcTemplate.queryForObject(
+                    "INSERT INTO customer (organization_id, name) VALUES (?, '재시도 고객') RETURNING id",
+                    UUID.class,
+                    organizationId));
+    String secretKey = "test_sk_" + UUID.randomUUID().toString().replace("-", "");
     String billingKey = "bill_" + UUID.randomUUID();
-    if (withBillingKey) {
-      billingKeyRepository.saveAndFlush(
-          new BillingKey(
-              organizationId,
-              customerId,
-              "test",
-              billingKey,
-              "61",
-              "43301234****123*",
-              authenticatedAt,
-              "2026-10-01",
-              OffsetDateTime.parse("2026-10-01T00:00:00Z")));
-    }
+    in(
+        "test",
+        () -> {
+          tossPaymentsCredentialRepository.saveAndFlush(
+              new TossPaymentsCredential(
+                  organizationId,
+                  "test",
+                  CLIENT_KEY,
+                  secretKey,
+                  OffsetDateTime.parse("2026-10-01T00:00:00Z")));
+
+          if (withBillingKey) {
+            billingKeyRepository.saveAndFlush(
+                new BillingKey(
+                    organizationId,
+                    customerId,
+                    "test",
+                    billingKey,
+                    "61",
+                    "43301234****123*",
+                    authenticatedAt,
+                    "2026-10-01",
+                    OffsetDateTime.parse("2026-10-01T00:00:00Z")));
+          }
+        });
     return new Organization(organizationId, customerId, secretKey, billingKey);
+  }
+
+  private int businessUpdate(String sql, Object... arguments) {
+    return in("test", () -> jdbcTemplate.update(sql, arguments));
   }
 
   private record Organization(

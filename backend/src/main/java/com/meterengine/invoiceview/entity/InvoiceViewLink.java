@@ -14,8 +14,7 @@ public class InvoiceViewLink {
   @Column(name = "organization_id", nullable = false, updatable = false)
   private UUID organizationId;
 
-  @Column(name = "environment_id", updatable = false)
-  private UUID environmentId;
+  @jakarta.persistence.Transient private UUID environmentId;
 
   @Column(name = "invoice_id", nullable = false, updatable = false)
   private UUID invoiceId;

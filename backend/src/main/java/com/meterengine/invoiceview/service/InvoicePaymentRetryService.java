@@ -19,21 +19,24 @@ public class InvoicePaymentRetryService {
 
   public PublicInvoiceResponse retry(String token, String version) {
     InvoicePaymentRetryAuthorization authorization = invoiceViewLinkService.get(token, version);
-    return BusinessEnvironmentContext.run(
-        new BusinessEnvironment(
-            authorization.organizationId(),
-            authorization.environmentId(),
-            authorization.environmentId() == null ? null : authorization.mode()),
-        () -> {
-          paymentAttemptService.retry(
-              authorization.organizationId(),
-              authorization.invoiceId(),
-              authorization.mode(),
-              authorization.failedAttemptId(),
-              authorization.attemptCount(),
-              authorization.actor(),
-              () -> invoiceViewLinkService.get(token, version));
-          return invoiceViewLinkService.get(authorization);
-        });
+    return com.meterengine.global.database.DatabaseScopes.call(
+        authorization.databaseScope(),
+        () ->
+            BusinessEnvironmentContext.run(
+                new BusinessEnvironment(
+                    authorization.organizationId(),
+                    authorization.environmentId(),
+                    authorization.mode()),
+                () -> {
+                  paymentAttemptService.retry(
+                      authorization.organizationId(),
+                      authorization.invoiceId(),
+                      authorization.mode(),
+                      authorization.failedAttemptId(),
+                      authorization.attemptCount(),
+                      authorization.actor(),
+                      () -> invoiceViewLinkService.get(token, version));
+                  return invoiceViewLinkService.get(authorization);
+                }));
   }
 }

@@ -20,8 +20,6 @@ import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.entity.BillableMetricId;
 import com.meterengine.metric.repository.BillableMetricRepository;
 import com.meterengine.metric.service.BillableMetricUsageService;
-import com.meterengine.organization.entity.Organization;
-import com.meterengine.organization.repository.OrganizationRepository;
 import com.meterengine.pricing.dto.CreatePriceRateRequest;
 import com.meterengine.pricing.dto.PriceRateResponse;
 import com.meterengine.pricing.entity.PriceRate;
@@ -39,6 +37,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.jdbc.core.JdbcTemplate;
 import tools.jackson.databind.json.JsonMapper;
 
 @ExtendWith(MockitoExtension.class)
@@ -52,21 +51,23 @@ class PriceRateServiceTest {
   @Mock private BillableMetricRepository billableMetricRepository;
   @Mock private AuditLogService auditLogService;
   @Mock private CustomerRepository customerRepository;
-  @Mock private OrganizationRepository organizationRepository;
+  @Mock private JdbcTemplate jdbcTemplate;
 
   private PriceRateService priceRateService;
 
   @BeforeEach
   void setUp() {
     org.mockito.Mockito.lenient()
-        .when(organizationRepository.findForUpdateById(ORGANIZATION_ID))
-        .thenReturn(Optional.of(mock(Organization.class)));
+        .when(
+            jdbcTemplate.queryForList(
+                "SELECT id FROM shared.lock_organization(?)", UUID.class, ORGANIZATION_ID))
+        .thenReturn(List.of(ORGANIZATION_ID));
     priceRateService =
         new PriceRateService(
             priceRateRepository,
             billableMetricRepository,
             customerRepository,
-            organizationRepository,
+            jdbcTemplate,
             JsonMapper.builder().build(),
             auditLogService);
   }
@@ -186,8 +187,9 @@ class PriceRateServiceTest {
   }
 
   private void allowWrite() {
-    when(organizationRepository.findForUpdateById(ORGANIZATION_ID))
-        .thenReturn(Optional.of(new Organization(ORGANIZATION_ID, "도입사", "active")));
+    when(jdbcTemplate.queryForList(
+            "SELECT id FROM shared.lock_organization(?)", UUID.class, ORGANIZATION_ID))
+        .thenReturn(List.of(ORGANIZATION_ID));
   }
 
   private void billableMetricDeclares(List<String> dimensionProperties) {

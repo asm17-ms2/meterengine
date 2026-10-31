@@ -81,9 +81,9 @@ class OpenApiConfig {
                     요청마다 Authorization 헤더에 Bearer 값으로 API 키(me_live_ 또는 me_test_로 시작)나
                     로그인 세션 토큰을 싣는다. 도입사는 키나 세션이 정한다. 헤더가 없으면 401이다.
 
-                    X-MeterEngine-Environment: test 또는 live로 업무 환경을 지정한다. 새 키는 발급 환경에 고정된다.
-                    기존 데이터와 키는 환경 미지정 범위로 보존하며 자동으로 test/live에 배정하지 않는다.
-                    환경 분리가 지원되지 않는 업무는 명시 환경 요청에 409를 반환한다.
+                    업무 요청은 X-MeterEngine-Environment: test 또는 live로 환경을 지정한다.
+                    세션은 환경을 반드시 보내고 API 키는 생략하면 발급 환경을 쓴다. 발급 환경이 없는 키의 업무 요청은 403이다.
+                    세션, 계정, 조직과 운영자 공통 경로는 환경 없이 동작한다. 키 관리와 도입사 감사 조회는 환경이 필요하다.
                     X-MeterEngine-Organization-Id: 화면의 도입사를 고정하는 선택 UUID 헤더다.
                     인증된 도입사와 다르면 403이며 이 헤더로 인증이나 도입사 전환을 대신할 수 없다.
 

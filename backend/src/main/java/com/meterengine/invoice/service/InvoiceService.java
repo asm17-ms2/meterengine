@@ -3,7 +3,6 @@ package com.meterengine.invoice.service;
 import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
-import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.invoice.dto.InvoiceResponse;
 import com.meterengine.invoice.dto.InvoiceResponse.InvoiceLineResponse;
 import com.meterengine.invoice.dto.ListInvoicesResponse;
@@ -46,36 +45,24 @@ public class InvoiceService {
 
   @Transactional(readOnly = true)
   public long count(UUID organizationId) {
-    return invoiceRepository.countScoped(organizationId, BusinessEnvironmentContext.scopeId());
+    return invoiceRepository.countByOrganizationId(organizationId);
   }
 
   @Transactional(readOnly = true)
   public ListInvoicesResponse list(UUID organizationId, UUID customerId, YearMonth month) {
     if (customerId != null
-        && !(BusinessEnvironmentContext.environmentId() == null
-            ? customerRepository.existsByOrganizationIdAndId(organizationId, customerId)
-            : customerRepository
-                .findScoped(organizationId, BusinessEnvironmentContext.environmentId(), customerId)
-                .isPresent())) {
+        && !customerRepository.existsByOrganizationIdAndId(organizationId, customerId)) {
       throw new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND);
     }
 
     String period = month == null ? null : month.toString();
-    List<Invoice> invoices =
-        (BusinessEnvironmentContext.environmentId() == null
-            ? invoiceRepository.findNewestFirst(organizationId, customerId, period)
-            : invoiceRepository.findNewestFirstScoped(
-                organizationId, BusinessEnvironmentContext.environmentId(), customerId, period));
+    List<Invoice> invoices = invoiceRepository.findNewestFirst(organizationId, customerId, period);
     Map<UUID, List<InvoiceLine>> invoiceLinesByInvoiceId =
-        (BusinessEnvironmentContext.environmentId() == null
-                ? invoiceLineRepository
-                    .findByOrganizationIdAndInvoiceIdInOrderByBillableMetricCodeAscDimensionValuesAsc(
-                        organizationId, invoices.stream().map(Invoice::getId).toList())
-                : invoiceLineRepository.listScoped(
-                    organizationId,
-                    BusinessEnvironmentContext.environmentId(),
-                    invoices.stream().map(Invoice::getId).toList()))
-            .stream().collect(Collectors.groupingBy(InvoiceLine::getInvoiceId));
+        invoiceLineRepository
+            .findByOrganizationIdAndInvoiceIdInOrderByBillableMetricCodeAscDimensionValuesAsc(
+                organizationId, invoices.stream().map(Invoice::getId).toList())
+            .stream()
+            .collect(Collectors.groupingBy(InvoiceLine::getInvoiceId));
 
     return new ListInvoicesResponse(
         invoices.stream()
@@ -89,19 +76,14 @@ public class InvoiceService {
   @Transactional(readOnly = true)
   public InvoiceResponse get(UUID organizationId, UUID id) {
     Invoice invoice =
-        (BusinessEnvironmentContext.environmentId() == null
-                ? invoiceRepository.findByOrganizationIdAndId(organizationId, id)
-                : invoiceRepository.findScoped(
-                    organizationId, BusinessEnvironmentContext.environmentId(), id))
+        invoiceRepository
+            .findByOrganizationIdAndId(organizationId, id)
             .orElseThrow(() -> new NotFoundException(ErrorCode.INVOICE_NOT_FOUND));
     return toInvoiceResponse(
         invoice,
-        (BusinessEnvironmentContext.environmentId() == null
-            ? invoiceLineRepository
-                .findByOrganizationIdAndInvoiceIdOrderByBillableMetricCodeAscDimensionValuesAsc(
-                    organizationId, id)
-            : invoiceLineRepository.listScoped(
-                organizationId, BusinessEnvironmentContext.environmentId(), id)));
+        invoiceLineRepository
+            .findByOrganizationIdAndInvoiceIdOrderByBillableMetricCodeAscDimensionValuesAsc(
+                organizationId, id));
   }
 
   private InvoiceResponse toInvoiceResponse(Invoice invoice, List<InvoiceLine> invoiceLines) {

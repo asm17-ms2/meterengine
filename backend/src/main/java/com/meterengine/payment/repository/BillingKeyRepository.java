@@ -10,9 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 public interface BillingKeyRepository extends JpaRepository<BillingKey, BillingKeyId> {
 
   @Query(
-      "select b from BillingKey b where b.organizationId = :organizationId and b.mode = :mode and"
-          + " b.environmentId IS NOT DISTINCT FROM"
-          + " :#{T(com.meterengine.global.security.BusinessEnvironmentContext).environmentId()}"
+      "select b from BillingKey b where b.organizationId = :organizationId and b.mode = :mode"
           + " order by b.customerId")
   List<BillingKey> findByOrganizationIdAndModeOrderByCustomerIdAsc(
       UUID organizationId, String mode);

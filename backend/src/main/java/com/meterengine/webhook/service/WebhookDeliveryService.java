@@ -2,12 +2,15 @@ package com.meterengine.webhook.service;
 
 import com.meterengine.audit.service.AuditLogService;
 import com.meterengine.global.crypto.EncryptedStringConverter;
+import com.meterengine.global.database.DatabaseScope;
+import com.meterengine.global.database.DatabaseScopes;
 import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
 import com.meterengine.scheduling.dto.ScheduledJobResult;
 import com.meterengine.webhook.client.WebhookClient;
 import com.meterengine.webhook.dto.ListWebhookDeliveriesResponse;
+import com.meterengine.webhook.dto.WebhookBacklog;
 import com.meterengine.webhook.dto.WebhookClaim;
 import com.meterengine.webhook.dto.WebhookOutcome;
 import com.meterengine.webhook.repository.WebhookDeliveryRepository;
@@ -27,6 +30,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class WebhookDeliveryService {
+  @org.springframework.beans.factory.annotation.Autowired
+  private com.meterengine.global.database.CutoverPolicy cutover;
+
   private static final Logger logger = LoggerFactory.getLogger(WebhookDeliveryService.class);
   private static final long RUN_BUDGET_NANOS = Duration.ofSeconds(15).toNanos();
   private final WebhookDeliveryRepository webhookDeliveryRepository;
@@ -37,6 +43,7 @@ public class WebhookDeliveryService {
   private final AuditLogService auditLogService;
   private final WebhookDeliveryMetrics webhookDeliveryMetrics;
   private final LongSupplier nanoTime;
+  private final Map<String, WebhookBacklog> backlogByEnvironment = new java.util.HashMap<>();
 
   @Autowired
   WebhookDeliveryService(
@@ -77,12 +84,20 @@ public class WebhookDeliveryService {
     this.nanoTime = nanoTime;
   }
 
-  // 스크레이프 경로에서 DB를 읽지 않도록 발송 작업 틱마다 적체, 재시도 대기, 미전달 최장 경과를 업무 환경별로 세어 둔다.
-  public void measure() {
-    webhookDeliveryMetrics.updateBacklog(webhookDeliveryRepository.backlog());
+  public synchronized void measure() {
+    if (cutover.readOnly()) return;
+    String environment = scopeName();
+    WebhookBacklog measured =
+        webhookDeliveryRepository
+            .backlog()
+            .getOrDefault(environment, new WebhookBacklog(0, 0, 0, 0));
+    backlogByEnvironment.put(environment, measured);
+    webhookDeliveryMetrics.updateBacklog(Map.copyOf(backlogByEnvironment));
   }
 
   public ScheduledJobResult deliver() {
+    if (cutover.readOnly()) return new ScheduledJobResult(0, 0, 0);
+    scopeName();
     countExpiredLeases();
     int processed = 0;
     int skipped = 0;
@@ -163,10 +178,7 @@ public class WebhookDeliveryService {
     }
     String reason = outcome.failureReason() == null ? "none" : outcome.failureReason();
     String result = "pending".equals(status.get()) ? "retry" : status.get();
-    String environment =
-        claim.environmentId() == null
-            ? "legacy"
-            : webhookDeliveryRepository.environmentOf(claim.environmentId());
+    String environment = scopeName();
     webhookDeliveryMetrics.countAttempt(result, environment, claim.isFirstAttempt(), outcome);
     webhookDeliveryMetrics.recordResponse(environment, outcome);
     if ("done".equals(result)) {
@@ -197,6 +209,7 @@ public class WebhookDeliveryService {
 
   @Transactional
   public void retry(UUID organizationId, UUID endpointId, UUID id) {
+    cutover.requireWritable();
     webhookEndpointService.get(organizationId, endpointId);
     if (webhookDeliveryRepository.retry(organizationId, endpointId, id) == 0) {
       if (!webhookDeliveryRepository.exists(organizationId, endpointId, id))
@@ -205,6 +218,13 @@ public class WebhookDeliveryService {
     }
     auditLogService.record(
         organizationId, "webhook_delivery_retried", "webhook_delivery", id.toString(), Map.of());
+  }
+
+  private static String scopeName() {
+    DatabaseScope scope = DatabaseScopes.current();
+    if (scope == DatabaseScope.SHARED)
+      throw new IllegalStateException("webhook delivery requires a business database scope");
+    return scope.name().toLowerCase(java.util.Locale.ROOT);
   }
 
   private enum Tally {

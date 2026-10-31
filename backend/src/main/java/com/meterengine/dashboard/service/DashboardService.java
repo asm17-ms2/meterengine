@@ -2,7 +2,9 @@ package com.meterengine.dashboard.service;
 
 import com.meterengine.dashboard.dto.DashboardResponse;
 import com.meterengine.dashboard.dto.DashboardResponse.DashboardInvoice;
-import com.meterengine.global.security.BusinessEnvironmentContext;
+import com.meterengine.global.database.DatabaseScope;
+import com.meterengine.global.database.DatabaseScopes;
+import com.meterengine.global.database.ScopeTransactions;
 import com.meterengine.invoice.entity.Invoice;
 import com.meterengine.invoice.repository.InvoiceRepository;
 import com.meterengine.invoice.service.DraftInvoiceService;
@@ -20,7 +22,6 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class DashboardService {
@@ -33,6 +34,7 @@ public class DashboardService {
   private final PaymentSettingService paymentSettingService;
   private final Clock clock;
   private final InvoiceRepository invoiceRepository;
+  private final ScopeTransactions scopeTransactions;
 
   DashboardService(
       JdbcTemplate jdbcTemplate,
@@ -40,21 +42,35 @@ public class DashboardService {
       InvoicePaymentService invoicePaymentService,
       PaymentSettingService paymentSettingService,
       Clock clock,
-      InvoiceRepository invoiceRepository) {
+      InvoiceRepository invoiceRepository,
+      ScopeTransactions scopeTransactions) {
     this.jdbcTemplate = jdbcTemplate;
     this.draftInvoiceService = draftInvoiceService;
     this.invoicePaymentService = invoicePaymentService;
     this.paymentSettingService = paymentSettingService;
     this.clock = clock;
     this.invoiceRepository = invoiceRepository;
+    this.scopeTransactions = scopeTransactions;
   }
 
-  @Transactional(readOnly = true)
   public DashboardResponse get(UUID organizationId, YearMonth month) {
-    String mode =
-        BusinessEnvironmentContext.mode() == null
-            ? paymentSettingService.get(organizationId).mode()
-            : BusinessEnvironmentContext.mode();
+    DatabaseScope scope = DatabaseScopes.current();
+    String mode = paymentSettingService.get(organizationId).mode();
+    long activeApiKeyCount =
+        scopeTransactions.read(
+            DatabaseScope.SHARED,
+            () ->
+                count(
+                    "SELECT count(*) FROM shared.api_key WHERE organization_id = ? AND mode = ? AND environment_id IS NOT NULL AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > ?)",
+                    organizationId,
+                    mode,
+                    OffsetDateTime.now(clock)));
+    return scopeTransactions.read(
+        scope, () -> inScope(organizationId, month, mode, activeApiKeyCount));
+  }
+
+  private DashboardResponse inScope(
+      UUID organizationId, YearMonth month, String mode, long activeApiKeyCount) {
     var draft = draftInvoiceService.preview(organizationId, month);
     List<InvoicePaymentResponse> payments =
         invoicePaymentService.list(organizationId, month, null, mode).invoicePayments();
@@ -82,52 +98,30 @@ public class DashboardService {
         month.toString(),
         OffsetDateTime.now(clock),
         count(
-            "select count(*) from customer where organization_id = ? and environment_id IS NOT"
-                + " DISTINCT FROM ?::uuid and archived_at is null",
-            organizationId,
-            BusinessEnvironmentContext.environmentId()),
+            "select count(*) from customer where organization_id = ? and archived_at is null",
+            organizationId),
         count(
-            "select count(*) from billable_metric where organization_id = ? and environment_id IS"
-                + " NOT DISTINCT FROM ?::uuid and archived_at is null",
-            organizationId,
-            BusinessEnvironmentContext.environmentId()),
+            "select count(*) from billable_metric where organization_id = ? and archived_at is null",
+            organizationId),
+        activeApiKeyCount,
         count(
-            "select count(*) from api_key where organization_id = ? and environment_id IS NOT"
-                + " DISTINCT FROM ?::uuid and revoked_at is null and (expires_at is null or"
-                + " expires_at > ?)",
+            "select count(*) from event where organization_id = ? and occurred_at >= ? and occurred_at < ?",
             organizationId,
-            BusinessEnvironmentContext.environmentId(),
-            OffsetDateTime.now(clock)),
-        count(
-            "select count(*) from event where organization_id = ? and environment_id IS NOT"
-                + " DISTINCT FROM ?::uuid and occurred_at >= ? and occurred_at < ?",
-            organizationId,
-            BusinessEnvironmentContext.environmentId(),
             month.atDay(1).atStartOfDay(BillableMetricUsageService.BILLING_ZONE).toOffsetDateTime(),
             month
                 .plusMonths(1)
                 .atDay(1)
                 .atStartOfDay(BillableMetricUsageService.BILLING_ZONE)
                 .toOffsetDateTime()),
-        (BusinessEnvironmentContext.environmentId() == null
-                ? count(
-                    "select count(*) from organization where id = ? and"
-                        + " business_registration_number is not null and representative_name is not"
-                        + " null and business_address is not null",
-                    organizationId)
-                : count(
-                    "select count(*) from organization_environment where organization_id = ? and id"
-                        + " = ? and business_registration_number is not null and"
-                        + " representative_name is not null and business_address is not null",
-                    organizationId,
-                    BusinessEnvironmentContext.environmentId()))
+        count(
+                "select count(*) from supplier where organization_id = ? and business_registration_number is not null and representative_name is not null and business_address is not null",
+                organizationId)
             > 0,
         count(
                 "select count(*) from toss_payments_credential where organization_id = ? and"
-                    + " environment_id IS NOT DISTINCT FROM ?::uuid and mode = ? and"
+                    + " mode = ? and"
                     + " archived_at is null",
                 organizationId,
-                BusinessEnvironmentContext.environmentId(),
                 mode)
             > 0,
         mode,
@@ -148,11 +142,8 @@ public class DashboardService {
       UUID organizationId, List<InvoicePaymentResponse> payments, String period) {
     if (payments.isEmpty()) return List.of();
     Map<UUID, Invoice> invoiceById =
-        (BusinessEnvironmentContext.environmentId() == null
-                ? invoiceRepository.findNewestFirst(organizationId, null, period)
-                : invoiceRepository.findNewestFirstScoped(
-                    organizationId, BusinessEnvironmentContext.environmentId(), null, period))
-            .stream().collect(Collectors.toMap(Invoice::getId, invoice -> invoice));
+        invoiceRepository.findNewestFirst(organizationId, null, period).stream()
+            .collect(Collectors.toMap(Invoice::getId, invoice -> invoice));
     return payments.stream()
         .map(
             payment -> {

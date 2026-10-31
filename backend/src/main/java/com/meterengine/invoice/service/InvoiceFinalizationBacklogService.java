@@ -1,5 +1,8 @@
 package com.meterengine.invoice.service;
 
+import com.meterengine.global.database.DatabaseScope;
+import com.meterengine.global.database.DatabaseScopes;
+import com.meterengine.global.database.ScopeTransactions;
 import com.meterengine.global.security.BusinessEnvironment;
 import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.global.security.OrganizationEnvironments;
@@ -15,7 +18,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,8 +41,6 @@ public class InvoiceFinalizationBacklogService {
   private static final String OLDEST_CUTOFF =
       "meterengine.invoice.finalization.backlog.oldest.cutoff";
   private static final String ENVIRONMENT_TAG = "environment";
-  private static final String LEGACY = "legacy";
-  private static final List<String> ENVIRONMENTS = List.of(LEGACY, "test", "live");
   // 달마다 그 도입사 이벤트를 다시 집계하는 무거운 계산이라 최근 1년만 본다.
   private static final int LOOKBACK_MONTHS = 12;
   private static final long NO_WAITING_MONTH = 0;
@@ -51,6 +51,7 @@ public class InvoiceFinalizationBacklogService {
   private final InvoiceRepository invoiceRepository;
   private final MeterRegistry meterRegistry;
   private final Clock clock;
+  private final ScopeTransactions transactions;
   private final Map<String, AtomicLong> backlogByEnvironment = new ConcurrentHashMap<>();
   private final Map<String, AtomicLong> oldestCutoffByEnvironment = new ConcurrentHashMap<>();
   // 집계 마감 뒤에는 사용량이 바뀌지 않고 확정도 되돌리지 않으므로, 처음 센 대기 고객에서 그 뒤 확정된 고객만 뺀다.
@@ -63,18 +64,21 @@ public class InvoiceFinalizationBacklogService {
       DraftInvoiceService draftInvoiceService,
       InvoiceRepository invoiceRepository,
       MeterRegistry meterRegistry,
-      Clock clock) {
+      Clock clock,
+      ScopeTransactions transactions) {
     this.organizationRepository = organizationRepository;
     this.organizationEnvironments = organizationEnvironments;
     this.draftInvoiceService = draftInvoiceService;
     this.invoiceRepository = invoiceRepository;
     this.meterRegistry = meterRegistry;
     this.clock = clock;
+    this.transactions = transactions;
   }
 
   // 집계 마감이 지난 달에 0원이 아닌 청구 예정액이 남은 고객과 달의 수, 가장 오래 기다린 달의 마감 시각을 환경별로 낸다.
   // 결과의 처리는 청구 예정액을 새로 계산한 달, 건너뜀은 앞서 센 고객을 다시 쓴 달이다.
   public ScheduledJobResult measure() {
+    DatabaseScope scope = businessScope();
     YearMonth lastEndedMonth = lastEndedMonth(BillingMonth.now(clock));
     YearMonth firstLookbackMonth = lastEndedMonth.minusMonths(LOOKBACK_MONTHS - 1);
     waitingCustomerIdsByMonth
@@ -82,17 +86,20 @@ public class InvoiceFinalizationBacklogService {
         .removeIf(environmentMonth -> environmentMonth.month().isBefore(firstLookbackMonth));
     Tally tally = new Tally();
     for (Organization organization :
-        organizationRepository.findByStatusOrderByCreatedAtAscIdAsc(Organization.ACTIVE)) {
+        transactions.read(
+            DatabaseScope.SHARED,
+            () ->
+                organizationRepository.findByStatusOrderByCreatedAtAscIdAsc(Organization.ACTIVE))) {
       List<YearMonth> months =
           monthsBetween(firstMonth(organization, firstLookbackMonth), lastEndedMonth);
-      for (BusinessEnvironment environment : environments(organization, tally)) {
+      for (BusinessEnvironment environment : environments(organization, scope, tally)) {
         for (YearMonth month : months) {
           count(new EnvironmentMonth(environment, month), tally);
         }
       }
     }
     // 실패한 도입사는 합계에서 빠지고, 실패 건수는 예약 작업 지표로 드러난다.
-    ENVIRONMENTS.forEach(environment -> publish(environment, tally));
+    publish(scope.name().toLowerCase(java.util.Locale.ROOT), tally);
     return tally.result();
   }
 
@@ -115,19 +122,33 @@ public class InvoiceFinalizationBacklogService {
         .toList();
   }
 
-  private List<BusinessEnvironment> environments(Organization organization, Tally tally) {
-    List<BusinessEnvironment> environments = new ArrayList<>();
-    environments.add(new BusinessEnvironment(organization.getId(), null, null));
+  private List<BusinessEnvironment> environments(
+      Organization organization, DatabaseScope scope, Tally tally) {
     try {
-      environments.addAll(organizationEnvironments.list(organization.getId()));
+      var selected =
+          transactions
+              .read(DatabaseScope.SHARED, () -> organizationEnvironments.list(organization.getId()))
+              .stream()
+              .filter(environment -> scope.name().equalsIgnoreCase(environment.mode()))
+              .toList();
+      if (selected.size() != 1)
+        throw new IllegalStateException("one business environment required");
+      return selected;
     } catch (RuntimeException exception) {
       logger.error(
           "invoice finalization backlog environments failed: organization_id={}",
           organization.getId(),
           exception);
       tally.failed();
+      return List.of();
     }
-    return environments;
+  }
+
+  private static DatabaseScope businessScope() {
+    DatabaseScope scope = DatabaseScopes.current();
+    if (scope == DatabaseScope.SHARED)
+      throw new IllegalStateException("invoice backlog requires a business database scope");
+    return scope;
   }
 
   private void count(EnvironmentMonth environmentMonth, Tally tally) {
@@ -157,16 +178,19 @@ public class InvoiceFinalizationBacklogService {
 
   private Set<UUID> previewWaitingCustomerIds(EnvironmentMonth environmentMonth) {
     BusinessEnvironment environment = environmentMonth.environment();
-    return BusinessEnvironmentContext.run(
-        environment,
+    return transactions.read(
+        businessScope(),
         () ->
-            draftInvoiceService
-                .preview(environment.organizationId(), environmentMonth.month())
-                .customers()
-                .stream()
-                .filter(draftInvoiceCustomer -> draftInvoiceCustomer.amount() != 0)
-                .map(DraftInvoiceCustomer::customerId)
-                .collect(Collectors.toUnmodifiableSet()));
+            BusinessEnvironmentContext.run(
+                environment,
+                () ->
+                    draftInvoiceService
+                        .preview(environment.organizationId(), environmentMonth.month())
+                        .customers()
+                        .stream()
+                        .filter(draftInvoiceCustomer -> draftInvoiceCustomer.amount() != 0)
+                        .map(DraftInvoiceCustomer::customerId)
+                        .collect(Collectors.toUnmodifiableSet())));
   }
 
   private Set<UUID> withoutFinalized(EnvironmentMonth environmentMonth, Set<UUID> counted) {
@@ -175,11 +199,12 @@ public class InvoiceFinalizationBacklogService {
     }
     BusinessEnvironment environment = environmentMonth.environment();
     Set<UUID> finalized =
-        Set.copyOf(
-            invoiceRepository.findCustomerIdsScoped(
-                environment.organizationId(),
-                environment.environmentId(),
-                environmentMonth.month().toString()));
+        transactions.read(
+            businessScope(),
+            () ->
+                Set.copyOf(
+                    invoiceRepository.findCustomerIds(
+                        environment.organizationId(), environmentMonth.month().toString())));
     return counted.stream()
         .filter(customerId -> !finalized.contains(customerId))
         .collect(Collectors.toUnmodifiableSet());
@@ -220,7 +245,7 @@ public class InvoiceFinalizationBacklogService {
   private record EnvironmentMonth(BusinessEnvironment environment, YearMonth month) {
 
     String label() {
-      return environment.mode() == null ? LEGACY : environment.mode();
+      return environment.mode();
     }
   }
 

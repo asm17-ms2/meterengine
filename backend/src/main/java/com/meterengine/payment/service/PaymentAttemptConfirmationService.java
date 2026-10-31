@@ -24,6 +24,8 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class PaymentAttemptConfirmationService {
+  @org.springframework.beans.factory.annotation.Autowired
+  private com.meterengine.global.database.CutoverPolicy cutover;
 
   private static final Logger logger =
       LoggerFactory.getLogger(PaymentAttemptConfirmationService.class);
@@ -62,6 +64,10 @@ public class PaymentAttemptConfirmationService {
   }
 
   public PaymentJobResult confirm() {
+    if (cutover.readOnly()) return new PaymentJobResult(0, 0, 0);
+    if (com.meterengine.global.database.DatabaseScopes.current()
+        == com.meterengine.global.database.DatabaseScope.SHARED)
+      return PaymentEnvironments.all(this::confirm);
     OffsetDateTime now = OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS);
     OffsetDateTime confirmableFrom = now.minus(CONFIRMATION_WINDOW);
     OffsetDateTime confirmableBefore = now.minus(paymentProperties.confirmationDelay());
@@ -74,7 +80,6 @@ public class PaymentAttemptConfirmationService {
         tally.count(
             PaymentEnvironments.call(
                 attempt.getOrganizationId(),
-                attempt.getEnvironmentId(),
                 attempt.getMode(),
                 () -> confirmAttempt(attempt, notFoundFailableBefore)));
       } catch (RuntimeException exception) {
@@ -93,7 +98,6 @@ public class PaymentAttemptConfirmationService {
         tally.count(
             PaymentEnvironments.call(
                 cancellation.getOrganizationId(),
-                cancellation.getEnvironmentId(),
                 cancellation.getMode(),
                 () -> confirmCancellation(cancellation, notFoundFailableBefore)));
       } catch (RuntimeException exception) {

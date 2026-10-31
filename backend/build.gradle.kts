@@ -73,6 +73,8 @@ val openApiGenerated = layout.buildDirectory.file("openapi/openapi.yaml")
 val openApiSnapshot = layout.projectDirectory.file("openapi.yaml")
 
 tasks.test {
+	systemProperty("METERENGINE_DEPLOYMENT_ENVIRONMENT", "test")
+	systemProperty("METERENGINE_CUTOVER_MODE", "active")
 	systemProperty("meterengine.openapi.snapshot", openApiGenerated.get().asFile.absolutePath)
 	systemProperty("springdoc.writer-with-order-by-keys", "true")
 	systemProperty("springdoc.cache.disabled", "true")
@@ -94,3 +96,23 @@ val copyOpenApiSnapshot =
 	}
 
 tasks.named("build") { dependsOn(copyOpenApiSnapshot) }
+
+val environmentRoutes = layout.projectDirectory.file("src/main/resources/contracts/environment-routes.json")
+val frontendEnvironmentRoutes = layout.projectDirectory.file("../frontend/src/lib/api/environment-routes.json")
+val verifyEnvironmentRoutes = tasks.register("verifyEnvironmentRoutes") {
+	mustRunAfter("generateFrontendEnvironmentRoutes")
+	description = "백엔드 환경 경로와 프론트엔드 생성본의 바이트 일치를 검사한다"
+	inputs.files(environmentRoutes, frontendEnvironmentRoutes)
+	doLast {
+		check(environmentRoutes.asFile.readBytes().contentEquals(frontendEnvironmentRoutes.asFile.readBytes())) {
+			"Run ./gradlew generateFrontendEnvironmentRoutes"
+		}
+	}
+}
+tasks.register("generateFrontendEnvironmentRoutes") {
+	description = "백엔드 환경 경로를 프론트엔드 생성본으로 복사한다"
+	inputs.file(environmentRoutes)
+	outputs.file(frontendEnvironmentRoutes)
+	doLast { environmentRoutes.asFile.copyTo(frontendEnvironmentRoutes.asFile, overwrite = true) }
+}
+tasks.test { dependsOn(verifyEnvironmentRoutes) }

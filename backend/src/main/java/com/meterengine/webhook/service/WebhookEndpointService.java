@@ -28,6 +28,12 @@ import org.springframework.transaction.support.TransactionOperations;
 
 @Service
 public class WebhookEndpointService {
+  @org.springframework.beans.factory.annotation.Autowired
+  private com.meterengine.global.database.EnvironmentSideEffectPolicy sideEffects;
+
+  @org.springframework.beans.factory.annotation.Autowired
+  private com.meterengine.global.database.CutoverPolicy cutover;
+
   private static final SecureRandom SECURE_RANDOM = new SecureRandom();
   private static final Set<String> EVENT_TYPES =
       Arrays.stream(WebhookEventType.values())
@@ -75,6 +81,7 @@ public class WebhookEndpointService {
 
   // 주소의 DNS 조회는 느릴 수 있어 DB 커넥션을 쥐는 트랜잭션 밖에서 한다.
   public WebhookEndpointResponse create(UUID organizationId, CreateWebhookEndpointRequest request) {
+    cutover.requireWritable();
     validate(request.url(), request.eventTypes());
     return transactionOperations.execute(status -> insertEndpoint(organizationId, request));
   }
@@ -110,6 +117,7 @@ public class WebhookEndpointService {
 
   public WebhookEndpointResponse update(
       UUID organizationId, UUID id, UpdateWebhookEndpointRequest request) {
+    cutover.requireWritable();
     if (get(organizationId, id).archivedAt() != null)
       throw new ConflictException(ErrorCode.RESOURCE_ARCHIVED);
     validate(request.url(), request.eventTypes());
@@ -136,6 +144,7 @@ public class WebhookEndpointService {
 
   @Transactional
   public void delete(UUID organizationId, UUID id) {
+    cutover.requireWritable();
     if (get(organizationId, id).archivedAt() != null) return;
     webhookEndpointRepository.delete(organizationId, id);
     auditLogService.record(
@@ -144,6 +153,7 @@ public class WebhookEndpointService {
 
   @Transactional
   public UUID test(UUID organizationId, UUID id) {
+    cutover.requireWritable();
     if (!get(organizationId, id).enabled()) {
       throw new ConflictException(ErrorCode.WEBHOOK_ENDPOINT_DISABLED);
     }
@@ -155,6 +165,7 @@ public class WebhookEndpointService {
   }
 
   public WebhookEndpointResponse restore(UUID organizationId, UUID id) {
+    cutover.requireWritable();
     WebhookEndpointResponse endpoint = get(organizationId, id);
     if (endpoint.archivedAt() == null) return endpoint;
     validate(endpoint.url(), endpoint.eventTypes());
@@ -174,6 +185,8 @@ public class WebhookEndpointService {
     if (!EVENT_TYPES.containsAll(eventTypes)) {
       throw new InvalidRequestException(ErrorCode.INVALID_WEBHOOK_EVENT_TYPE);
     }
+    if (!sideEffects.allowsWebhook(url))
+      throw new InvalidRequestException(ErrorCode.INVALID_WEBHOOK_URL);
     try {
       webhookAddressPolicy.resolve(url);
     } catch (IOException | IllegalArgumentException exception) {

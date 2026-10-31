@@ -6,12 +6,14 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.PostLoad;
 import jakarta.persistence.PostPersist;
+import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 import org.springframework.data.domain.Persistable;
 
 @Entity
+@Table(schema = "shared")
 public class ScheduledJobRun implements Persistable<UUID> {
 
   public static final String RUNNING = "running";
@@ -19,6 +21,9 @@ public class ScheduledJobRun implements Persistable<UUID> {
   public static final String FAILED = "failed";
 
   @Id private UUID id;
+
+  @Column(nullable = false)
+  private String scope;
 
   @Column(name = "job_name", nullable = false)
   private String jobName;
@@ -54,6 +59,10 @@ public class ScheduledJobRun implements Persistable<UUID> {
   private ScheduledJobRun(
       UUID id, String jobName, OffsetDateTime scheduledAt, OffsetDateTime startedAt) {
     this.id = id;
+    this.scope =
+        com.meterengine.global.database.DatabaseScopes.current()
+            .name()
+            .toLowerCase(java.util.Locale.ROOT);
     this.jobName = jobName;
     this.scheduledAt = scheduledAt;
     this.status = RUNNING;
@@ -97,6 +106,10 @@ public class ScheduledJobRun implements Persistable<UUID> {
 
   public String getJobName() {
     return jobName;
+  }
+
+  public String getScope() {
+    return scope;
   }
 
   public OffsetDateTime getScheduledAt() {

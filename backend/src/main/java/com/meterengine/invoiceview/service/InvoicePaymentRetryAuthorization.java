@@ -12,6 +12,11 @@ public record InvoicePaymentRetryAuthorization(
     AuditActor actor,
     String organizationName,
     UUID environmentId) {
+  public com.meterengine.global.database.DatabaseScope databaseScope() {
+    return com.meterengine.global.database.DatabaseScope.valueOf(
+        mode.toUpperCase(java.util.Locale.ROOT));
+  }
+
   public InvoicePaymentRetryAuthorization(
       UUID organizationId,
       UUID invoiceId,

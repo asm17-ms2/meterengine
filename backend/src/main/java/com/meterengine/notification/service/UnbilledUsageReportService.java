@@ -22,6 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class UnbilledUsageReportService {
+  @org.springframework.beans.factory.annotation.Autowired
+  private com.meterengine.global.database.CutoverPolicy cutover;
+
   private final UnbilledEventService unbilledEventService;
   private final BillableMetricUsageService billableMetricUsageService;
   private final ChargeService chargeService;
@@ -43,6 +46,7 @@ public class UnbilledUsageReportService {
 
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public boolean report(UUID organizationId) {
+    if (cutover.readOnly()) return false;
     WebhookEventType type = WebhookEventType.UNBILLED_USAGE_DETECTED;
     if (!webhookEndpointRepository.existsByEventType(organizationId, type.getValue())) {
       return false;

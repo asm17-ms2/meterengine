@@ -1,6 +1,7 @@
 package com.meterengine.webhook.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -8,18 +9,23 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.meterengine.audit.service.AuditLogService;
 import com.meterengine.global.crypto.EncryptedStringConverter;
+import com.meterengine.global.database.DatabaseScope;
+import com.meterengine.global.database.DatabaseScopes;
 import com.meterengine.scheduling.dto.ScheduledJobResult;
 import com.meterengine.webhook.client.WebhookClient;
+import com.meterengine.webhook.dto.WebhookBacklog;
 import com.meterengine.webhook.dto.WebhookClaim;
 import com.meterengine.webhook.dto.WebhookOutcome;
 import com.meterengine.webhook.repository.WebhookDeliveryRepository;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.OffsetDateTime;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -58,10 +64,11 @@ class WebhookDeliveryServiceTest {
             mock(AuditLogService.class),
             new WebhookDeliveryMetrics(new SimpleMeterRegistry()),
             now::get);
-    assertThat(service.deliver().processedCount()).isEqualTo(1);
+    initialize(service);
+    assertThat(deliver(service).processedCount()).isEqualTo(1);
     verify(repository, times(1)).claim(any());
     verify(repository).complete(first, new WebhookOutcome(200, null, 15_000));
-    assertThat(service.deliver().processedCount()).isEqualTo(1);
+    assertThat(deliver(service).processedCount()).isEqualTo(1);
     verify(repository, times(3)).claim(any());
     verify(repository).complete(second, new WebhookOutcome(200, null, 15_000));
   }
@@ -77,7 +84,7 @@ class WebhookDeliveryServiceTest {
     when(client.send(anyString(), anyString(), anyString(), anyString(), anyString()))
         .thenReturn(new WebhookOutcome(503, "unexpected_status", 10));
 
-    ScheduledJobResult result = service(repository, client, meterRegistry).deliver();
+    ScheduledJobResult result = deliver(service(repository, client, meterRegistry));
 
     assertThat(result.failedCount()).isZero();
     assertThat(result.processedCount()).isEqualTo(1);
@@ -95,7 +102,7 @@ class WebhookDeliveryServiceTest {
         .thenReturn(Optional.of(claim("v1:cipher", false, 1)), Optional.empty());
     when(repository.complete(any(), any())).thenReturn(Optional.of("failed"));
 
-    ScheduledJobResult result = service(repository, client, meterRegistry).deliver();
+    ScheduledJobResult result = deliver(service(repository, client, meterRegistry));
 
     assertThat(result.failedCount()).isZero();
     assertThat(deliveryCount(meterRegistry, "failed", "endpoint_disabled")).isEqualTo(1);
@@ -116,7 +123,7 @@ class WebhookDeliveryServiceTest {
     when(client.send(anyString(), anyString(), anyString(), anyString(), anyString()))
         .thenReturn(new WebhookOutcome(200, null, 10));
 
-    ScheduledJobResult result = service(repository, client, meterRegistry).deliver();
+    ScheduledJobResult result = deliver(service(repository, client, meterRegistry));
 
     assertThat(result.failedCount()).isEqualTo(1);
     assertThat(result.processedCount()).isEqualTo(1);
@@ -137,12 +144,12 @@ class WebhookDeliveryServiceTest {
     when(client.send(anyString(), anyString(), anyString(), anyString(), anyString()))
         .thenReturn(new WebhookOutcome(200, null, 10));
 
-    service(repository, client, meterRegistry).deliver();
+    deliver(service(repository, client, meterRegistry));
 
     assertThat(
             meterRegistry
                 .get(WebhookDeliveryMetrics.LATENCY_TIMER_NAME)
-                .tag("environment", "legacy")
+                .tag("environment", "test")
                 .timer()
                 .totalTime(TimeUnit.SECONDS))
         .isGreaterThanOrEqualTo(300);
@@ -158,7 +165,7 @@ class WebhookDeliveryServiceTest {
     when(client.send(anyString(), anyString(), anyString(), anyString(), anyString()))
         .thenReturn(new WebhookOutcome(503, "unexpected_status", 10));
 
-    service(repository, client, meterRegistry).deliver();
+    deliver(service(repository, client, meterRegistry));
 
     assertThat(meterRegistry.find(WebhookDeliveryMetrics.LATENCY_TIMER_NAME).timer()).isNull();
   }
@@ -173,12 +180,12 @@ class WebhookDeliveryServiceTest {
     when(client.send(anyString(), anyString(), anyString(), anyString(), anyString()))
         .thenReturn(new WebhookOutcome(503, "unexpected_status", 1500));
 
-    service(repository, client, meterRegistry).deliver();
+    deliver(service(repository, client, meterRegistry));
 
     Timer responseTimer =
         meterRegistry
             .get(WebhookDeliveryMetrics.RESPONSE_TIMER_NAME)
-            .tag("environment", "legacy")
+            .tag("environment", "test")
             .timer();
     assertThat(responseTimer.count()).isEqualTo(1);
     assertThat(responseTimer.totalTime(TimeUnit.MILLISECONDS)).isEqualTo(1500);
@@ -193,7 +200,7 @@ class WebhookDeliveryServiceTest {
         .thenReturn(Optional.of(claim("v1:cipher", false, 1)), Optional.empty());
     when(repository.complete(any(), any())).thenReturn(Optional.of("failed"));
 
-    service(repository, client, meterRegistry).deliver();
+    deliver(service(repository, client, meterRegistry));
 
     assertThat(meterRegistry.find(WebhookDeliveryMetrics.RESPONSE_TIMER_NAME).timer()).isNull();
   }
@@ -224,7 +231,7 @@ class WebhookDeliveryServiceTest {
     when(client.send(anyString(), anyString(), anyString(), anyString(), anyString()))
         .thenReturn(new WebhookOutcome(200, null, 10));
 
-    service(repository, client, meterRegistry).deliver();
+    deliver(service(repository, client, meterRegistry));
 
     return meterRegistry.get("meterengine.webhook.delivery").counters().stream()
         .filter(counter -> counter.count() > 0)
@@ -232,6 +239,105 @@ class WebhookDeliveryServiceTest {
         .orElseThrow()
         .getId()
         .getTag("first_attempt");
+  }
+
+  @Test
+  void 한_scope의_적체를_다시_재도_반대_scope의_네_측정값을_보존한다() {
+    WebhookDeliveryRepository repository = mock(WebhookDeliveryRepository.class);
+    SimpleMeterRegistry registry = new SimpleMeterRegistry();
+    WebhookDeliveryService service = service(repository, mock(WebhookClient.class), registry);
+    when(repository.backlog())
+        .thenReturn(
+            Map.of("test", new WebhookBacklog(2, 10, 3, 20)),
+            Map.of("live", new WebhookBacklog(5, 30, 7, 40)),
+            Map.of());
+    measure(service, DatabaseScope.TEST);
+    measure(service, DatabaseScope.LIVE);
+    assertBacklog(registry, "test", 2, 10, 3, 20);
+    assertBacklog(registry, "live", 5, 30, 7, 40);
+    measure(service, DatabaseScope.TEST);
+    assertBacklog(registry, "test", 0, 0, 0, 0);
+    assertBacklog(registry, "live", 5, 30, 7, 40);
+    assertThat(DatabaseScopes.current()).isEqualTo(DatabaseScope.SHARED);
+  }
+
+  @Test
+  void read_only에서는_적체_조회와_전송을_실행하지_않는다() {
+    WebhookDeliveryRepository repository = mock(WebhookDeliveryRepository.class);
+    SimpleMeterRegistry registry = new SimpleMeterRegistry();
+    WebhookDeliveryService service = service(repository, mock(WebhookClient.class), registry);
+    org.springframework.test.util.ReflectionTestUtils.setField(
+        service,
+        "cutover",
+        new com.meterengine.global.database.CutoverPolicy(
+            new org.springframework.mock.env.MockEnvironment()
+                .withProperty("METERENGINE_DEPLOYMENT_ENVIRONMENT", "test")
+                .withProperty("METERENGINE_CUTOVER_MODE", "read_only")));
+    service.measure();
+    assertThat(deliver(service)).isEqualTo(new ScheduledJobResult(0, 0, 0));
+    verifyNoInteractions(repository);
+    assertBacklog(registry, "test", 0, 0, 0, 0);
+    assertBacklog(registry, "live", 0, 0, 0, 0);
+  }
+
+  @Test
+  void SHARED에서는_업무_적체를_대신_조회하지_않는다() {
+    WebhookDeliveryRepository repository = mock(WebhookDeliveryRepository.class);
+    WebhookDeliveryService service =
+        service(repository, mock(WebhookClient.class), new SimpleMeterRegistry());
+    assertThatThrownBy(service::measure).isInstanceOf(IllegalStateException.class);
+    assertThatThrownBy(service::deliver).isInstanceOf(IllegalStateException.class);
+    verifyNoInteractions(repository);
+  }
+
+  private static void assertBacklog(
+      SimpleMeterRegistry registry,
+      String environment,
+      long due,
+      long age,
+      long waiting,
+      long oldest) {
+    assertThat(
+            registry
+                .get(WebhookDeliveryMetrics.BACKLOG_GAUGE_NAME)
+                .tag("environment", environment)
+                .gauge()
+                .value())
+        .isEqualTo(due);
+    assertThat(
+            registry
+                .get(WebhookDeliveryMetrics.BACKLOG_AGE_GAUGE_NAME)
+                .tag("environment", environment)
+                .gauge()
+                .value())
+        .isEqualTo(age);
+    assertThat(
+            registry
+                .get(WebhookDeliveryMetrics.RETRY_WAITING_GAUGE_NAME)
+                .tag("environment", environment)
+                .gauge()
+                .value())
+        .isEqualTo(waiting);
+    assertThat(
+            registry
+                .get(WebhookDeliveryMetrics.PENDING_OLDEST_AGE_GAUGE_NAME)
+                .tag("environment", environment)
+                .gauge()
+                .value())
+        .isEqualTo(oldest);
+  }
+
+  private static ScheduledJobResult deliver(WebhookDeliveryService service) {
+    return DatabaseScopes.call(DatabaseScope.TEST, service::deliver);
+  }
+
+  private static void measure(WebhookDeliveryService service, DatabaseScope scope) {
+    DatabaseScopes.call(
+        scope,
+        () -> {
+          service.measure();
+          return null;
+        });
   }
 
   private static WebhookDeliveryService service(
@@ -243,15 +349,27 @@ class WebhookDeliveryServiceTest {
     WebhookSignatureService signer = mock(WebhookSignatureService.class);
     when(signer.sign(anyString(), anyString(), anyString(), anyString()))
         .thenReturn("v1,signature");
-    return new WebhookDeliveryService(
-        repository,
-        mock(WebhookEndpointService.class),
-        converter,
-        signer,
-        client,
-        mock(AuditLogService.class),
-        new WebhookDeliveryMetrics(registry),
-        System::nanoTime);
+    return initialize(
+        new WebhookDeliveryService(
+            repository,
+            mock(WebhookEndpointService.class),
+            converter,
+            signer,
+            client,
+            mock(AuditLogService.class),
+            new WebhookDeliveryMetrics(registry),
+            System::nanoTime));
+  }
+
+  private static WebhookDeliveryService initialize(WebhookDeliveryService service) {
+    org.springframework.test.util.ReflectionTestUtils.setField(
+        service,
+        "cutover",
+        new com.meterengine.global.database.CutoverPolicy(
+            new org.springframework.mock.env.MockEnvironment()
+                .withProperty("METERENGINE_DEPLOYMENT_ENVIRONMENT", "test")
+                .withProperty("METERENGINE_CUTOVER_MODE", "active")));
+    return service;
   }
 
   private static double deliveryCount(

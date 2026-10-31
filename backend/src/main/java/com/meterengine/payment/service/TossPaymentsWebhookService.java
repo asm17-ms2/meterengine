@@ -20,6 +20,14 @@ import tools.jackson.databind.json.JsonMapper;
 
 @Service
 public class TossPaymentsWebhookService {
+  @org.springframework.beans.factory.annotation.Autowired
+  private com.meterengine.global.database.CutoverPolicy cutover;
+
+  @org.springframework.beans.factory.annotation.Autowired
+  private com.meterengine.global.database.PublicResourceLocator locator;
+
+  @org.springframework.beans.factory.annotation.Autowired
+  private com.meterengine.global.database.ScopeTransactions transactions;
 
   private static final Logger logger = LoggerFactory.getLogger(TossPaymentsWebhookService.class);
 
@@ -52,6 +60,7 @@ public class TossPaymentsWebhookService {
   }
 
   public void receive(UUID organizationId, String body) {
+    if (cutover.readOnly()) return;
     JsonNode event = parse(body);
     String eventType = stringField(event.path("eventType"));
     if (!PaymentMetrics.PAYMENT_STATUS_CHANGED.equals(eventType)) {
@@ -59,16 +68,39 @@ public class TossPaymentsWebhookService {
       return;
     }
     JsonNode data = event.path("data");
-    Optional<PaymentAttempt> attempt =
+    var route =
         parseUuid(stringField(data.path("orderId")))
-            .flatMap(orderId -> paymentAttemptRepository.findUnscoped(organizationId, orderId));
+            .flatMap(orderId -> locator.order(organizationId, orderId));
+    if (route.isEmpty()) {
+      paymentMetrics.countWebhook(eventType, PaymentMetrics.IGNORED);
+      return;
+    }
+    com.meterengine.global.database.DatabaseScopes.call(
+        route.get().scope(),
+        () -> {
+          receiveScoped(organizationId, eventType, data, route.get());
+          return null;
+        });
+  }
+
+  private void receiveScoped(
+      UUID organizationId,
+      String eventType,
+      JsonNode data,
+      com.meterengine.global.database.PublicResourceLocator.Route route) {
+    Optional<PaymentAttempt> attempt =
+        transactions.read(
+            route.scope(),
+            () ->
+                paymentAttemptRepository
+                    .findUnscoped(organizationId, route.id())
+                    .filter(this::awaitsSettlement));
     if (attempt.isEmpty() || !awaitsSettlement(attempt.get())) {
       paymentMetrics.countWebhook(eventType, PaymentMetrics.IGNORED);
       return;
     }
     PaymentEnvironments.call(
         organizationId,
-        attempt.get().getEnvironmentId(),
         attempt.get().getMode(),
         () -> {
           receiveAttempt(organizationId, eventType, data, attempt.get());

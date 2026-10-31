@@ -1,6 +1,5 @@
 package com.meterengine.mail.entity;
 
-import com.meterengine.global.security.BusinessEnvironmentContext;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -17,9 +16,6 @@ public class OutboundEmail implements Persistable<UUID> {
 
   @Column(name = "organization_id", nullable = false)
   private UUID organizationId;
-
-  @Column(name = "environment_id", updatable = false)
-  private UUID environmentId;
 
   @Column(nullable = false)
   private String kind;
@@ -54,33 +50,8 @@ public class OutboundEmail implements Persistable<UUID> {
       String subject,
       String htmlBody,
       OffsetDateTime createdAt) {
-    this(
-        id,
-        organizationId,
-        kind,
-        period,
-        invoiceId,
-        recipientEmail,
-        subject,
-        htmlBody,
-        createdAt,
-        BusinessEnvironmentContext.environmentId());
-  }
-
-  public OutboundEmail(
-      UUID id,
-      UUID organizationId,
-      String kind,
-      String period,
-      UUID invoiceId,
-      String recipientEmail,
-      String subject,
-      String htmlBody,
-      OffsetDateTime createdAt,
-      UUID environmentId) {
     this.id = id;
     this.organizationId = organizationId;
-    this.environmentId = environmentId;
     this.kind = kind;
     this.period = period;
     this.invoiceId = invoiceId;
@@ -102,10 +73,6 @@ public class OutboundEmail implements Persistable<UUID> {
 
   public UUID getOrganizationId() {
     return organizationId;
-  }
-
-  public UUID getEnvironmentId() {
-    return environmentId;
   }
 
   public String getKind() {

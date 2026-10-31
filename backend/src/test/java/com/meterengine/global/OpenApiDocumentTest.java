@@ -7,8 +7,9 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.meterengine.TestClockConfiguration;
 import com.meterengine.TestCredentials;
-import com.meterengine.TestcontainersConfiguration;
+import com.meterengine.global.database.SideEffectEnvironmentTestConfig;
 import com.meterengine.webhook.entity.WebhookEventType;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
@@ -32,11 +33,21 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
-@Import(TestcontainersConfiguration.class)
-@SpringBootTest
+@SpringBootTest(
+    classes = SideEffectEnvironmentTestConfig.class,
+    webEnvironment = SpringBootTest.WebEnvironment.MOCK,
+    properties = {
+      "spring.docker.compose.enabled=false",
+      "meterengine.scheduling.enabled=false",
+      "meterengine.webhook.enabled=false",
+      "meterengine.webhook.allow-private-network=true",
+      "METERENGINE_DEPLOYMENT_ENVIRONMENT=test",
+      "METERENGINE_CUTOVER_MODE=active",
+      "crypto.encryption-key=AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE="
+    })
+@Import(TestClockConfiguration.class)
 class OpenApiDocumentTest {
 
   private static final String SNAPSHOT_PATH_PROPERTY = "meterengine.openapi.snapshot";
@@ -673,7 +684,6 @@ class OpenApiDocumentTest {
   }
 
   @Test
-  @Transactional
   void 오류_스키마가_실제_본문과_같은_모양이다() {
     assertSchemaHasField("ErrorResponse", "code");
     assertSchemaHasField("ErrorResponse", "errors");

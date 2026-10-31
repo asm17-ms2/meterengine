@@ -7,7 +7,6 @@ import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.ErrorResponse.FieldError;
 import com.meterengine.global.error.InvalidRequestException;
 import com.meterengine.global.error.NotFoundException;
-import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.global.validation.ArchiveStatus;
 import com.meterengine.global.validation.VersionPrecondition;
 import com.meterengine.metric.dto.BillableMetricResponse;
@@ -20,7 +19,6 @@ import com.meterengine.metric.entity.BillableMetricPeriod;
 import com.meterengine.metric.entity.MetricAggregation;
 import com.meterengine.metric.repository.BillableMetricPeriodRepository;
 import com.meterengine.metric.repository.BillableMetricRepository;
-import com.meterengine.organization.repository.OrganizationRepository;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -31,6 +29,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,7 +42,7 @@ public class BillableMetricService {
   private final BillableMetricRepository billableMetricRepository;
   private final EventPresence eventPresence;
   private final BillableMetricPeriodRepository billableMetricPeriodRepository;
-  private final OrganizationRepository organizationRepository;
+  private final JdbcTemplate jdbcTemplate;
   private final AuditLogService auditLogService;
   private final EntityManager entityManager;
 
@@ -51,13 +50,13 @@ public class BillableMetricService {
       BillableMetricRepository billableMetricRepository,
       EventPresence eventPresence,
       BillableMetricPeriodRepository billableMetricPeriodRepository,
-      OrganizationRepository organizationRepository,
+      JdbcTemplate jdbcTemplate,
       AuditLogService auditLogService,
       EntityManager entityManager) {
     this.billableMetricRepository = billableMetricRepository;
     this.eventPresence = eventPresence;
     this.billableMetricPeriodRepository = billableMetricPeriodRepository;
-    this.organizationRepository = organizationRepository;
+    this.jdbcTemplate = jdbcTemplate;
     this.auditLogService = auditLogService;
     this.entityManager = entityManager;
   }
@@ -78,9 +77,7 @@ public class BillableMetricService {
     List<String> dimensionProperties = dimensionPropertiesOrEmpty(request.dimensionProperties());
     validateDimensionProperties(dimensionProperties);
 
-    BillableMetricId id =
-        new BillableMetricId(
-            organizationId, request.code(), BusinessEnvironmentContext.environmentId());
+    BillableMetricId id = new BillableMetricId(organizationId, request.code());
     if (billableMetricRepository.existsById(id)) {
       throw new ConflictException(ErrorCode.BILLABLE_METRIC_ALREADY_EXISTS);
     }
@@ -97,8 +94,7 @@ public class BillableMetricService {
             calculation.unitSize(),
             calculation.roundingMode(),
             calculation.roundingPrecision(),
-            calculation.percentile(),
-            BusinessEnvironmentContext.environmentId());
+            calculation.percentile());
     billableMetricRepository.saveAndFlush(billableMetric);
     auditLogService.record(
         organizationId,
@@ -144,9 +140,7 @@ public class BillableMetricService {
 
     BillableMetric billableMetric =
         billableMetricRepository
-            .findById(
-                new BillableMetricId(
-                    organizationId, code, BusinessEnvironmentContext.environmentId()))
+            .findById(new BillableMetricId(organizationId, code))
             .orElseThrow(() -> new NotFoundException(ErrorCode.BILLABLE_METRIC_NOT_FOUND));
 
     VersionPrecondition.requireMatch(expectedVersion, billableMetric.getVersion());
@@ -197,21 +191,14 @@ public class BillableMetricService {
     lock(organizationId);
     BillableMetric billableMetric =
         billableMetricRepository
-            .findById(
-                new BillableMetricId(
-                    organizationId, code, BusinessEnvironmentContext.environmentId()))
+            .findById(new BillableMetricId(organizationId, code))
             .orElseThrow(() -> new NotFoundException(ErrorCode.BILLABLE_METRIC_NOT_FOUND));
 
     if (billableMetric.getArchivedAt() != null) return;
     String cutoff = BillableMetricUsageService.currentMonth().plusMonths(1).toString();
     if (billableMetric.getActiveFrom().compareTo(cutoff) < 0)
       billableMetricPeriodRepository.save(
-          new BillableMetricPeriod(
-              organizationId,
-              code,
-              billableMetric.getActiveFrom(),
-              cutoff,
-              BusinessEnvironmentContext.environmentId()));
+          new BillableMetricPeriod(organizationId, code, billableMetric.getActiveFrom(), cutoff));
     billableMetric.archive(cutoff);
     auditLogService.record(
         organizationId,
@@ -253,24 +240,21 @@ public class BillableMetricService {
   public ListBillableMetricsResponse list(UUID organizationId, String status) {
     ArchiveStatus filter = ArchiveStatus.parse(status);
     return ListBillableMetricsResponse.from(
-        (BusinessEnvironmentContext.environmentId() == null
-                ? billableMetricRepository.findByOrganizationIdOrderByCodeAsc(organizationId)
-                : billableMetricRepository.listScoped(
-                    organizationId, BusinessEnvironmentContext.environmentId()))
-            .stream().filter(metric -> filter.includes(metric.getArchivedAt())).toList());
+        billableMetricRepository.findByOrganizationIdOrderByCodeAsc(organizationId).stream()
+            .filter(metric -> filter.includes(metric.getArchivedAt()))
+            .toList());
   }
 
   private BillableMetric metric(UUID organizationId, String code) {
     return billableMetricRepository
-        .findById(
-            new BillableMetricId(organizationId, code, BusinessEnvironmentContext.environmentId()))
+        .findById(new BillableMetricId(organizationId, code))
         .orElseThrow(() -> new NotFoundException(ErrorCode.BILLABLE_METRIC_NOT_FOUND));
   }
 
   private void lock(UUID organizationId) {
-    organizationRepository
-        .findForUpdateById(organizationId)
-        .orElseThrow(() -> new NotFoundException(ErrorCode.ORGANIZATION_NOT_FOUND));
+    if (jdbcTemplate
+        .queryForList("SELECT id FROM shared.lock_organization(?)", UUID.class, organizationId)
+        .isEmpty()) throw new NotFoundException(ErrorCode.ORGANIZATION_NOT_FOUND);
   }
 
   private record Calculation(

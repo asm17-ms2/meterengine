@@ -38,7 +38,7 @@ public class OrganizationEnvironmentService implements OrganizationEnvironments 
   @Transactional(readOnly = true)
   public List<BusinessEnvironment> list(UUID organizationId) {
     return jdbcTemplate.query(
-        "SELECT organization_id, id, mode FROM organization_environment WHERE organization_id = ? ORDER BY CASE mode WHEN 'test' THEN 0 ELSE 1 END",
+        "SELECT organization_id, id, mode FROM shared.organization_environment WHERE organization_id = ? ORDER BY CASE mode WHEN 'test' THEN 0 ELSE 1 END",
         (rs, row) ->
             new BusinessEnvironment(
                 rs.getObject("organization_id", UUID.class),

@@ -26,8 +26,6 @@ import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.entity.BillableMetricId;
 import com.meterengine.metric.repository.BillableMetricPeriodRepository;
 import com.meterengine.metric.repository.BillableMetricRepository;
-import com.meterengine.organization.entity.Organization;
-import com.meterengine.organization.repository.OrganizationRepository;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.util.List;
@@ -41,6 +39,7 @@ import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 @ExtendWith(MockitoExtension.class)
 class BillableMetricServiceTest {
@@ -51,7 +50,7 @@ class BillableMetricServiceTest {
   @Mock private BillableMetricRepository billableMetricRepository;
   @Mock private EventPresence eventService;
   @Mock private BillableMetricPeriodRepository periodRepository;
-  @Mock private OrganizationRepository organizationRepository;
+  @Mock private JdbcTemplate jdbcTemplate;
   @Mock private AuditLogService auditLogService;
   @Mock private EntityManager entityManager;
 
@@ -64,12 +63,14 @@ class BillableMetricServiceTest {
             billableMetricRepository,
             eventService,
             periodRepository,
-            organizationRepository,
+            jdbcTemplate,
             auditLogService,
             entityManager);
     org.mockito.Mockito.lenient()
-        .when(organizationRepository.findForUpdateById(ORGANIZATION_ID))
-        .thenReturn(Optional.of(org.mockito.Mockito.mock(Organization.class)));
+        .when(
+            jdbcTemplate.queryForList(
+                "SELECT id FROM shared.lock_organization(?)", UUID.class, ORGANIZATION_ID))
+        .thenReturn(List.of(ORGANIZATION_ID));
   }
 
   @Test
@@ -277,9 +278,11 @@ class BillableMetricServiceTest {
 
     update("embedding", "chars");
 
-    InOrder order = inOrder(eventService, organizationRepository);
+    InOrder order = inOrder(eventService, jdbcTemplate);
     order.verify(eventService).exists(ORGANIZATION_ID, "chat_completion");
-    order.verify(organizationRepository).findForUpdateById(ORGANIZATION_ID);
+    order
+        .verify(jdbcTemplate)
+        .queryForList("SELECT id FROM shared.lock_organization(?)", UUID.class, ORGANIZATION_ID);
   }
 
   @Test
@@ -341,9 +344,11 @@ class BillableMetricServiceTest {
         .isInstanceOf(ConflictException.class)
         .extracting(exception -> ((BusinessException) exception).getErrorCode())
         .isEqualTo(ErrorCode.BILLABLE_METRIC_HAS_EVENTS);
-    InOrder order = inOrder(eventService, organizationRepository, entityManager);
+    InOrder order = inOrder(eventService, jdbcTemplate, entityManager);
     order.verify(eventService).exists(ORGANIZATION_ID, "chat_completion");
-    order.verify(organizationRepository).findForUpdateById(ORGANIZATION_ID);
+    order
+        .verify(jdbcTemplate)
+        .queryForList("SELECT id FROM shared.lock_organization(?)", UUID.class, ORGANIZATION_ID);
     order.verify(entityManager).refresh(stored);
     order.verify(eventService).exists(ORGANIZATION_ID, "legacy_completion");
   }

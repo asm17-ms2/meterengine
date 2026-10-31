@@ -59,7 +59,11 @@ class TossPaymentsClientTest {
     server = MockRestServiceServer.bindTo(builder).build();
     TossPaymentsConfig.withTossDefaults(builder, new TossPaymentsProperties(URI.create(BASE)));
     meterRegistry = new SimpleMeterRegistry();
-    client = new TossPaymentsClient(builder.build(), meterRegistry);
+    client =
+        new TossPaymentsClient(
+            builder.build(),
+            meterRegistry,
+            com.meterengine.global.database.PolicyTestSupport.active());
   }
 
   @Test
@@ -519,7 +523,10 @@ class TossPaymentsClientTest {
                     + "&endDate=2026-10-26T00:00:00&limit=100"))
         .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
 
-    new TossPaymentsClient(builder.build(), observedMeterRegistry)
+    new TossPaymentsClient(
+            builder.build(),
+            observedMeterRegistry,
+            com.meterengine.global.database.PolicyTestSupport.active())
         .listTransactions(
             SECRET_KEY,
             LocalDateTime.parse("2026-10-25T00:00:00"),

@@ -6,7 +6,6 @@ import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
-import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.global.validation.ArchiveStatus;
 import com.meterengine.global.validation.VersionPrecondition;
 import java.util.ArrayList;
@@ -36,11 +35,7 @@ public class CustomerService {
   @Transactional(readOnly = true)
   public List<Customer> list(UUID organizationId, String status) {
     ArchiveStatus filter = ArchiveStatus.parse(status);
-    var customers =
-        BusinessEnvironmentContext.environmentId() == null
-            ? customerRepository.findByOrganizationIdOrderByNameAscIdAsc(organizationId)
-            : customerRepository.listScoped(
-                organizationId, BusinessEnvironmentContext.environmentId());
+    var customers = customerRepository.findByOrganizationIdOrderByNameAscIdAsc(organizationId);
     return customers.stream()
         .filter(customer -> filter.includes(customer.getArchivedAt()))
         .toList();
@@ -48,10 +43,7 @@ public class CustomerService {
 
   @Transactional(readOnly = true)
   public Customer get(UUID organizationId, UUID id) {
-    return (BusinessEnvironmentContext.environmentId() == null
-            ? customerRepository.findByOrganizationIdAndId(organizationId, id)
-            : customerRepository.findScoped(
-                organizationId, BusinessEnvironmentContext.environmentId(), id))
+    return (customerRepository.findByOrganizationIdAndId(organizationId, id))
         .orElseThrow(() -> new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND));
   }
 
@@ -59,12 +51,7 @@ public class CustomerService {
   public Customer create(UUID organizationId, String name, String billingEmail) {
     Customer customer =
         customerRepository.saveAndFlush(
-            new Customer(
-                UUID.randomUUID(),
-                organizationId,
-                name,
-                billingEmail,
-                BusinessEnvironmentContext.environmentId()));
+            new Customer(UUID.randomUUID(), organizationId, name, billingEmail));
     var fields = new ArrayList<>(List.of("name"));
     if (billingEmail != null) fields.add("billing_email");
     auditLogService.record(
@@ -128,10 +115,7 @@ public class CustomerService {
   }
 
   private Customer lock(UUID organizationId, UUID customerId) {
-    return (BusinessEnvironmentContext.environmentId() == null
-            ? customerRepository.lock(organizationId, customerId)
-            : customerRepository.lockScoped(
-                organizationId, BusinessEnvironmentContext.environmentId(), customerId))
+    return (customerRepository.lock(organizationId, customerId))
         .orElseThrow(() -> new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND));
   }
 }

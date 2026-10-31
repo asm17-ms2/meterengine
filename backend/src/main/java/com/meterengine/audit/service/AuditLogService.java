@@ -2,6 +2,8 @@ package com.meterengine.audit.service;
 
 import com.meterengine.audit.entity.AuditLog;
 import com.meterengine.audit.repository.AuditLogRepository;
+import com.meterengine.global.database.DatabaseScope;
+import com.meterengine.global.database.DatabaseScopes;
 import com.meterengine.global.security.AuthenticatedPrincipal;
 import com.meterengine.global.security.BusinessEnvironment;
 import com.meterengine.global.security.BusinessEnvironmentContext;
@@ -9,6 +11,7 @@ import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -16,6 +19,8 @@ import tools.jackson.databind.json.JsonMapper;
 
 @Service
 public class AuditLogService {
+  @org.springframework.beans.factory.annotation.Autowired
+  private com.meterengine.global.database.CutoverPolicy cutover;
 
   // 계정, 소속, 초대와 세션은 환경과 무관한 도입사 공통 작업이라 감사에 환경을 붙이지 않는다.
   static final Set<String> ORGANIZATION_WIDE_ACTIONS =
@@ -39,10 +44,13 @@ public class AuditLogService {
 
   private final AuditLogRepository auditLogRepository;
   private final JsonMapper jsonMapper;
+  private final JdbcTemplate jdbcTemplate;
 
-  AuditLogService(AuditLogRepository auditLogRepository, JsonMapper jsonMapper) {
+  AuditLogService(
+      AuditLogRepository auditLogRepository, JsonMapper jsonMapper, JdbcTemplate jdbcTemplate) {
     this.auditLogRepository = auditLogRepository;
     this.jsonMapper = jsonMapper;
+    this.jdbcTemplate = jdbcTemplate;
   }
 
   // 요청 주체를 행위자로 남기고, 주체가 없으면 시스템이 한 일로 남긴다.
@@ -85,6 +93,22 @@ public class AuditLogService {
       String targetId,
       Map<String, Object> detail,
       UUID environmentId) {
+    if (cutover.readOnly()) return;
+    if (DatabaseScopes.current() != DatabaseScope.SHARED) {
+      jdbcTemplate.queryForObject(
+          "SELECT shared.append_business_audit(?, ?, ?, ?, ?, ?, ?, ?, CAST(? AS jsonb))",
+          UUID.class,
+          UUID.randomUUID(),
+          OffsetDateTime.now(),
+          actor.organizationId(),
+          actor.type(),
+          actor.id(),
+          action,
+          targetType,
+          targetId,
+          jsonMapper.writeValueAsString(detail == null ? Map.of() : detail));
+      return;
+    }
     auditLogRepository.save(
         new AuditLog(
             UUID.randomUUID(),

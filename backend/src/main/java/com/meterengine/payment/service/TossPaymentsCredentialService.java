@@ -7,7 +7,6 @@ import com.meterengine.global.error.ErrorResponse.FieldError;
 import com.meterengine.global.error.InvalidRequestException;
 import com.meterengine.global.error.NotFoundException;
 import com.meterengine.global.error.ServiceUnavailableException;
-import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.global.validation.ArchiveStatus;
 import com.meterengine.payment.client.TossPaymentsClient;
 import com.meterengine.payment.client.TossPaymentsPayment;
@@ -34,6 +33,11 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class TossPaymentsCredentialService {
+  @org.springframework.beans.factory.annotation.Autowired
+  private com.meterengine.global.database.CutoverPolicy cutover;
+
+  @org.springframework.beans.factory.annotation.Autowired
+  private com.meterengine.global.database.EnvironmentSideEffectPolicy sideEffects;
 
   private static final String CREDENTIAL_CHECK_ORDER_ID_PREFIX = "credential-check-";
   private static final String CLIENT_KEY_INFIX = "_ck_";
@@ -84,8 +88,7 @@ public class TossPaymentsCredentialService {
 
   Optional<TossPaymentsCredential> find(UUID organizationId, String mode) {
     return tossPaymentsCredentialRepository.findById(
-        new TossPaymentsCredentialId(
-            organizationId, mode, BusinessEnvironmentContext.environmentId()));
+        new TossPaymentsCredentialId(organizationId, mode));
   }
 
   Optional<TossPaymentsCredential> historical(
@@ -108,6 +111,7 @@ public class TossPaymentsCredentialService {
 
   @Transactional
   public void delete(UUID organizationId, String mode) {
+    cutover.requireWritable();
     requireMode(mode);
     paymentArchiveRepository.lock(organizationId);
     TossPaymentsCredential credential =
@@ -137,6 +141,7 @@ public class TossPaymentsCredentialService {
     if (principalMode != null && !principalMode.equals(mode)) {
       throw new ConflictException(ErrorCode.PAYMENT_MODE_MISMATCH);
     }
+    sideEffects.requirePaymentMode(mode);
     checkPrefixes(mode, request);
     verify(request.secretKey());
     return transactionTemplate.execute(status -> save(organizationId, mode, request));
@@ -174,8 +179,7 @@ public class TossPaymentsCredentialService {
   }
 
   private static void requireMode(String mode) {
-    if (BusinessEnvironmentContext.mode() != null
-        && !BusinessEnvironmentContext.mode().equals(mode)) {
+    if (!PaymentSettingService.selectedMode().equals(mode)) {
       throw new ConflictException(ErrorCode.PAYMENT_MODE_MISMATCH);
     }
   }

@@ -1,7 +1,6 @@
 package com.meterengine.payment.entity;
 
 import com.meterengine.global.crypto.EncryptedStringConverter;
-import com.meterengine.global.security.BusinessEnvironmentContext;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
@@ -24,14 +23,7 @@ public class TossPaymentsCredential implements Persistable<TossPaymentsCredentia
   @Column(name = "organization_id")
   private UUID organizationId;
 
-  @Column(name = "environment_id")
-  private UUID environmentId;
-
   @Id private String mode;
-
-  @Id
-  @Column(name = "environment_scope_id", updatable = false)
-  private UUID environmentScopeId = new UUID(0, 0);
 
   @Column(name = "client_key", nullable = false)
   private String clientKey;
@@ -71,8 +63,6 @@ public class TossPaymentsCredential implements Persistable<TossPaymentsCredentia
       String secretKey,
       OffsetDateTime verifiedAt) {
     this.organizationId = organizationId;
-    this.environmentId = BusinessEnvironmentContext.environmentId();
-    this.environmentScopeId = environmentId == null ? new UUID(0, 0) : environmentId;
     this.mode = mode;
     update(clientKey, secretKey, verifiedAt);
   }
@@ -107,16 +97,12 @@ public class TossPaymentsCredential implements Persistable<TossPaymentsCredentia
 
   @Override
   public TossPaymentsCredentialId getId() {
-    return new TossPaymentsCredentialId(organizationId, mode, environmentId);
+    return new TossPaymentsCredentialId(organizationId, mode);
   }
 
   @Override
   public boolean isNew() {
     return isNew;
-  }
-
-  public UUID getEnvironmentId() {
-    return environmentId;
   }
 
   public UUID getOrganizationId() {

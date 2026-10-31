@@ -19,7 +19,7 @@ public class UserAccountRegistrationRepository {
     List<UUID> inserted =
         jdbcTemplate.query(
             """
-            INSERT INTO user_account
+            INSERT INTO shared.user_account
               (id, email, password_hash, name, role, created_at, consent_required)
             VALUES (?, ?, ?, ?, 'operator', ?, TRUE)
             ON CONFLICT (lower(email)) DO NOTHING

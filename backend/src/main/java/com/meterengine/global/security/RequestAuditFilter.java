@@ -97,6 +97,8 @@ public class RequestAuditFilter extends OncePerRequestFilter {
   // 운영자 전용 경로는 플랫폼 전체를 다루므로 운영자 세션이 고른 도입사에 요청 감사를 남기지 않는다.
   private static AuthenticatedPrincipal attributedActor(
       HttpServletRequest request, AuthenticatedPrincipal principal) {
+    if (!EnvironmentRoutePolicy.classify(request.getRequestURI()).environmentRequired())
+      principal = principal.inEnvironment(null);
     if (!(request.getAttribute(HandlerMapping.BEST_MATCHING_HANDLER_ATTRIBUTE)
             instanceof HandlerMethod handler)
         || !handler.hasMethodAnnotation(OperatorAccess.class)) return principal;

@@ -11,15 +11,13 @@ public interface TossPaymentsCredentialRepository
     extends JpaRepository<TossPaymentsCredential, TossPaymentsCredentialId> {
 
   @Query(
-      "select c from TossPaymentsCredential c where c.organizationId = :organizationId and"
-          + " c.environmentId IS NOT DISTINCT FROM"
-          + " :#{T(com.meterengine.global.security.BusinessEnvironmentContext).environmentId()}"
+      "select c from TossPaymentsCredential c where c.organizationId = :organizationId"
           + " order by c.mode")
   List<TossPaymentsCredential> findByOrganizationIdOrderByModeAsc(UUID organizationId);
 
   @Query(
-      "select new com.meterengine.payment.entity.TossPaymentsCredentialId(c.organizationId, c.mode,"
-          + " c.environmentId) from TossPaymentsCredential c order by c.organizationId asc, c.mode"
+      "select new com.meterengine.payment.entity.TossPaymentsCredentialId(c.organizationId, c.mode)"
+          + " from TossPaymentsCredential c order by c.organizationId asc, c.mode"
           + " asc")
   List<TossPaymentsCredentialId> findAllIds();
 }

@@ -12,8 +12,7 @@ import org.springframework.data.jpa.repository.Query;
 public interface InvoiceViewLinkRepository extends JpaRepository<InvoiceViewLink, UUID> {
   @Query(
       "SELECT l FROM InvoiceViewLink l WHERE l.organizationId=:organizationId AND"
-          + " l.invoiceId=:invoiceId AND l.environmentId IS NOT DISTINCT FROM"
-          + " :#{T(com.meterengine.global.security.BusinessEnvironmentContext).environmentId()}"
+          + " l.invoiceId=:invoiceId"
           + " ORDER BY l.createdAt DESC, l.id DESC")
   List<InvoiceViewLink> findByOrganizationIdAndInvoiceIdOrderByCreatedAtDescIdDesc(
       UUID organizationId, UUID invoiceId);
@@ -27,8 +26,7 @@ public interface InvoiceViewLinkRepository extends JpaRepository<InvoiceViewLink
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query(
       "SELECT l FROM InvoiceViewLink l WHERE l.organizationId=:organizationId AND"
-          + " l.invoiceId=:invoiceId AND l.id=:id AND l.environmentId IS NOT DISTINCT FROM"
-          + " :#{T(com.meterengine.global.security.BusinessEnvironmentContext).environmentId()}")
+          + " l.invoiceId=:invoiceId AND l.id=:id")
   Optional<InvoiceViewLink> findForUpdateByOrganizationIdAndInvoiceIdAndId(
       UUID organizationId, UUID invoiceId, UUID id);
 }

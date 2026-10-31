@@ -37,6 +37,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class SessionService {
+  @org.springframework.beans.factory.annotation.Autowired
+  private com.meterengine.global.database.CutoverPolicy cutover;
 
   public static final String TARGET_TYPE = "user_session";
 
@@ -103,6 +105,7 @@ public class SessionService {
 
   // bcrypt 비교가 DB 커넥션을 잡지 않게 트랜잭션 밖에서 확인하고, 가장 먼저 소속된 활성 도입사로 세션을 만든다.
   public IssuedSession create(String email, String password) {
+    cutover.requireWritable();
     UserAccount userAccount = verifiedUserAccount(email, password);
     List<Organization> organizations = organizationsOf(userAccount.getId());
     Organization organization =
@@ -166,6 +169,7 @@ public class SessionService {
 
   @Transactional
   public void delete(UUID userSessionId) {
+    cutover.requireWritable();
     UserSession session = lockedSessionOf(userSessionId);
     session.revoke(OffsetDateTime.now());
     auditLogService.record(DELETED_ACTION, TARGET_TYPE, session.getId().toString(), Map.of());
@@ -174,6 +178,7 @@ public class SessionService {
   // 세션의 도입사를 사용자가 소속된 도입사로 바꾸며, 활성이 아닌 도입사로도 바꿀 수 있다.
   @Transactional
   public CurrentSession update(UUID userSessionId, UUID organizationId) {
+    cutover.requireWritable();
     UserSession session = lockedSessionOf(userSessionId);
     if (!session.isUsableAt(OffsetDateTime.now())) {
       throw new UnauthorizedException(ErrorCode.INVALID_CREDENTIALS);

@@ -1,6 +1,5 @@
 package com.meterengine.payment.entity;
 
-import com.meterengine.global.security.BusinessEnvironmentContext;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -21,9 +20,6 @@ public class PaymentAttempt implements Persistable<UUID> {
 
   @Column(name = "organization_id", nullable = false)
   private UUID organizationId;
-
-  @Column(name = "environment_id")
-  private UUID environmentId;
 
   @Column(name = "credential_updated_at")
   private OffsetDateTime credentialUpdatedAt;
@@ -85,7 +81,6 @@ public class PaymentAttempt implements Persistable<UUID> {
       OffsetDateTime requestedAt) {
     this.id = id;
     this.organizationId = organizationId;
-    this.environmentId = BusinessEnvironmentContext.environmentId();
     this.customerId = customerId;
     this.invoiceId = invoiceId;
     this.mode = mode;
@@ -131,10 +126,6 @@ public class PaymentAttempt implements Persistable<UUID> {
   public PaymentAttempt pinCredential(OffsetDateTime credentialUpdatedAt) {
     this.credentialUpdatedAt = credentialUpdatedAt;
     return this;
-  }
-
-  public UUID getEnvironmentId() {
-    return environmentId;
   }
 
   public UUID getOrganizationId() {

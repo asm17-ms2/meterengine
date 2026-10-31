@@ -41,13 +41,20 @@ class ScheduledJobRunServiceTest {
   void setUp() {
     meterRegistry = new SimpleMeterRegistry();
     scheduledJobRunService = new ScheduledJobRunService(scheduledJobRunRepository, meterRegistry);
+    org.springframework.test.util.ReflectionTestUtils.setField(
+        scheduledJobRunService,
+        "cutover",
+        new com.meterengine.global.database.CutoverPolicy(
+            new org.springframework.mock.env.MockEnvironment()
+                .withProperty("METERENGINE_DEPLOYMENT_ENVIRONMENT", "test")
+                .withProperty("METERENGINE_CUTOVER_MODE", "active")));
   }
 
   @Test
   void 게이지를_읽을_때는_DB를_조회하지_않는다() {
     when(scheduledJobRunRepository.findLastSucceededFinishedAt(JOB_NAME))
         .thenReturn(Optional.of(OffsetDateTime.parse("2026-10-26T12:00:00Z")));
-    scheduledJobRunService.register(JOB_NAME);
+    register(JOB_NAME);
 
     lastSuccessGauge().gauge().value();
     lastSuccessGauge().gauge().value();
@@ -57,14 +64,14 @@ class ScheduledJobRunServiceTest {
 
   @Test
   void 다른_인스턴스가_슬롯을_잡았으면_DB의_마지막_성공_시각을_지표에_반영한다() {
-    scheduledJobRunService.register(JOB_NAME);
+    register(JOB_NAME);
     OffsetDateTime otherSuccess = OffsetDateTime.parse("2026-10-26T12:00:00Z");
     when(scheduledJobRunRepository.insertIfAbsent(any(), eq(JOB_NAME), eq(SCHEDULED_AT), any()))
         .thenReturn(0);
     when(scheduledJobRunRepository.findLastSucceededFinishedAt(JOB_NAME))
         .thenReturn(Optional.of(otherSuccess));
 
-    scheduledJobRunService.run(JOB_NAME, SCHEDULED_AT, () -> new ScheduledJobResult(0, 0, 0));
+    run(JOB_NAME, SCHEDULED_AT, () -> new ScheduledJobResult(0, 0, 0));
 
     assertThat(lastSuccessGauge().gauge().value()).isEqualTo(otherSuccess.toEpochSecond());
   }
@@ -73,7 +80,7 @@ class ScheduledJobRunServiceTest {
   void 성공하면_succeeded와_세_카운트와_끝난_시각을_남긴다() {
     claimSlot();
 
-    scheduledJobRunService.run(JOB_NAME, SCHEDULED_AT, () -> new ScheduledJobResult(3, 1, 2));
+    run(JOB_NAME, SCHEDULED_AT, () -> new ScheduledJobResult(3, 1, 2));
 
     ScheduledJobRun saved = savedRun();
     assertThat(saved.getStatus()).isEqualTo(ScheduledJobRun.SUCCEEDED);
@@ -88,7 +95,7 @@ class ScheduledJobRunServiceTest {
   void 성공하면_succeeded_건수를_올리고_마지막_성공_시각을_기록한다() {
     claimSlot();
 
-    scheduledJobRunService.run(JOB_NAME, SCHEDULED_AT, () -> new ScheduledJobResult(0, 0, 0));
+    run(JOB_NAME, SCHEDULED_AT, () -> new ScheduledJobResult(0, 0, 0));
 
     assertThat(runCounter("succeeded").counter().count()).isEqualTo(1.0);
     assertThat(runCounter("failed").counter()).isNull();
@@ -105,7 +112,7 @@ class ScheduledJobRunServiceTest {
   void 성공하면_결과_건수만큼_items_카운터를_올린다() {
     claimSlot();
 
-    scheduledJobRunService.run(JOB_NAME, SCHEDULED_AT, () -> new ScheduledJobResult(3, 1, 2));
+    run(JOB_NAME, SCHEDULED_AT, () -> new ScheduledJobResult(3, 1, 2));
 
     assertThat(itemsCounter(ScheduledJobRunService.PROCESSED).counter().count()).isEqualTo(3.0);
     assertThat(itemsCounter(ScheduledJobRunService.SKIPPED).counter().count()).isEqualTo(1.0);
@@ -118,7 +125,7 @@ class ScheduledJobRunServiceTest {
 
     assertThatThrownBy(
         () ->
-            scheduledJobRunService.run(
+            run(
                 JOB_NAME,
                 SCHEDULED_AT,
                 () -> {
@@ -135,7 +142,7 @@ class ScheduledJobRunServiceTest {
 
     assertThatThrownBy(
             () ->
-                scheduledJobRunService.run(
+                run(
                     JOB_NAME,
                     SCHEDULED_AT,
                     () -> {
@@ -157,7 +164,7 @@ class ScheduledJobRunServiceTest {
 
     assertThatThrownBy(
         () ->
-            scheduledJobRunService.run(
+            run(
                 JOB_NAME,
                 SCHEDULED_AT,
                 () -> {
@@ -173,7 +180,7 @@ class ScheduledJobRunServiceTest {
         .thenReturn(0);
     AtomicInteger executions = new AtomicInteger();
 
-    scheduledJobRunService.run(
+    run(
         JOB_NAME,
         SCHEDULED_AT,
         () -> {
@@ -193,7 +200,7 @@ class ScheduledJobRunServiceTest {
     when(scheduledJobRunRepository.findLastSucceededFinishedAt(JOB_NAME))
         .thenReturn(Optional.of(lastSucceededAt));
 
-    scheduledJobRunService.register(JOB_NAME);
+    register(JOB_NAME);
 
     assertThat(lastSuccessGauge().gauge().value())
         .isEqualTo((double) lastSucceededAt.toEpochSecond());
@@ -204,7 +211,7 @@ class ScheduledJobRunServiceTest {
     when(scheduledJobRunRepository.findLastSucceededFinishedAt(JOB_NAME))
         .thenReturn(Optional.empty());
 
-    scheduledJobRunService.register(JOB_NAME);
+    register(JOB_NAME);
 
     assertThat(lastSuccessGauge().gauge()).isNull();
   }
@@ -265,12 +272,12 @@ class ScheduledJobRunServiceTest {
   @Test
   void 실행으로_기록한_성공_시각을_더_이른_DB_시각으로_되돌리지_않는다() {
     claimSlot();
-    scheduledJobRunService.run(JOB_NAME, SCHEDULED_AT, () -> new ScheduledJobResult(0, 0, 0));
+    run(JOB_NAME, SCHEDULED_AT, () -> new ScheduledJobResult(0, 0, 0));
     double recordedByRun = lastSuccessGauge().gauge().value();
     when(scheduledJobRunRepository.findLastSucceededFinishedAt(JOB_NAME))
         .thenReturn(Optional.of(OffsetDateTime.parse("2026-01-01T00:00:00Z")));
 
-    scheduledJobRunService.register(JOB_NAME);
+    register(JOB_NAME);
 
     assertThat(lastSuccessGauge().gauge().value()).isEqualTo(recordedByRun);
   }
@@ -280,19 +287,61 @@ class ScheduledJobRunServiceTest {
     when(scheduledJobRunRepository.insertIfAbsent(
             idCaptor.capture(), eq(JOB_NAME), eq(SCHEDULED_AT), any()))
         .thenReturn(1);
-    when(scheduledJobRunRepository.findById(any()))
-        .thenAnswer(
-            invocation ->
-                Optional.of(
-                    ScheduledJobRun.running(
-                        idCaptor.getValue(), JOB_NAME, SCHEDULED_AT, OffsetDateTime.now())));
+    when(scheduledJobRunRepository.complete(
+            any(),
+            any(),
+            org.mockito.ArgumentMatchers.anyInt(),
+            org.mockito.ArgumentMatchers.anyInt(),
+            org.mockito.ArgumentMatchers.anyInt(),
+            org.mockito.ArgumentMatchers.nullable(String.class),
+            any()))
+        .thenReturn(true);
   }
 
   private ScheduledJobRun savedRun() {
-    ArgumentCaptor<ScheduledJobRun> captor = ArgumentCaptor.forClass(ScheduledJobRun.class);
-    verify(scheduledJobRunRepository).save(captor.capture());
-    verify(scheduledJobRunRepository).findById(captor.getValue().getId());
-    return captor.getValue();
+    ArgumentCaptor<UUID> id = ArgumentCaptor.forClass(UUID.class);
+    ArgumentCaptor<String> status = ArgumentCaptor.forClass(String.class);
+    ArgumentCaptor<Integer> processed = ArgumentCaptor.forClass(Integer.class);
+    ArgumentCaptor<Integer> skipped = ArgumentCaptor.forClass(Integer.class);
+    ArgumentCaptor<Integer> failed = ArgumentCaptor.forClass(Integer.class);
+    ArgumentCaptor<String> error = ArgumentCaptor.forClass(String.class);
+    ArgumentCaptor<OffsetDateTime> finished = ArgumentCaptor.forClass(OffsetDateTime.class);
+    verify(scheduledJobRunRepository)
+        .complete(
+            id.capture(),
+            status.capture(),
+            processed.capture(),
+            skipped.capture(),
+            failed.capture(),
+            error.capture(),
+            finished.capture());
+    var saved =
+        ScheduledJobRun.running(id.getValue(), JOB_NAME, SCHEDULED_AT, OffsetDateTime.now());
+    if (ScheduledJobRun.SUCCEEDED.equals(status.getValue()))
+      saved.succeed(
+          new ScheduledJobResult(processed.getValue(), skipped.getValue(), failed.getValue()),
+          finished.getValue());
+    else saved.fail(error.getValue(), finished.getValue());
+    return saved;
+  }
+
+  private void register(String name) {
+    com.meterengine.global.database.DatabaseScopes.call(
+        com.meterengine.global.database.DatabaseScope.TEST,
+        () -> {
+          scheduledJobRunService.register(name);
+          return null;
+        });
+  }
+
+  private void run(
+      String name, OffsetDateTime slot, java.util.function.Supplier<ScheduledJobResult> action) {
+    com.meterengine.global.database.DatabaseScopes.call(
+        com.meterengine.global.database.DatabaseScope.TEST,
+        () -> {
+          scheduledJobRunService.run(name, slot, action);
+          return null;
+        });
   }
 
   private Search lastSuccessGauge() {

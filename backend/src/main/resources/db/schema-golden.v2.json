@@ -1,0 +1,20 @@
+{
+  "schema_version": 2,
+  "postgresql_version_num": 180004,
+  "sources": {
+    "source49": {
+      "source_commit": "be62d9138d10f8df69bfdbad53a9b405564eff2d",
+      "flyway_version": "49",
+      "schema_sha256": "ccbf69043951f38a77d0e378cbb912a90de04219b258406c27eff592d7d265b7"
+    },
+    "source53": {
+      "source_commit": "7889d845c9f908528a156c3f5d363e14565e9582",
+      "flyway_version": "53",
+      "schema_sha256": "a1a6de1265059fc61919d1cf15b053c13ce7fdd61b8a2f2025972b0416324e62"
+    }
+  },
+  "target": {
+    "flyway_version": "3",
+    "schema_sha256": "da97d052f496d269b5fdba8a1f529f5e64d5f31d60d3a105bd82c1ee298cb610"
+  }
+}

@@ -12,12 +12,13 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ScheduledJobRunService {
+  @org.springframework.beans.factory.annotation.Autowired
+  private com.meterengine.global.database.CutoverPolicy cutover;
 
   static final String RUN_COUNTER_NAME = "meterengine.scheduled.job.run";
   static final String ITEMS_COUNTER_NAME = "meterengine.scheduled.job.items";
@@ -45,11 +46,36 @@ public class ScheduledJobRunService {
   }
 
   public void register(String jobName) {
-    refreshLastSuccess(jobName);
-    refreshLastCompletion(jobName);
+    if (cutover.readOnly()) return;
+    eachScope(
+        () -> {
+          refreshLastSuccess(jobName);
+          refreshLastCompletion(jobName);
+        });
   }
 
   public void run(String jobName, OffsetDateTime scheduledAt, Supplier<ScheduledJobResult> job) {
+    run(jobName, scheduledAt, job, () -> {});
+  }
+
+  public void run(
+      String jobName,
+      OffsetDateTime scheduledAt,
+      Supplier<ScheduledJobResult> job,
+      Runnable after) {
+    if (cutover.readOnly()) return;
+    eachScope(
+        () -> {
+          try {
+            runScoped(jobName, scheduledAt, job);
+          } finally {
+            after.run();
+          }
+        });
+  }
+
+  private void runScoped(
+      String jobName, OffsetDateTime scheduledAt, Supplier<ScheduledJobResult> job) {
     UUID id = UUID.randomUUID();
     if (scheduledJobRunRepository.insertIfAbsent(id, jobName, scheduledAt, OffsetDateTime.now())
         == 0) {
@@ -63,14 +89,19 @@ public class ScheduledJobRunService {
       result = job.get();
     } catch (RuntimeException exception) {
       OffsetDateTime failedAt = OffsetDateTime.now();
-      finish(id, run -> run.fail(errorSummaryOf(exception), failedAt));
+      complete(
+          id,
+          ScheduledJobRun.FAILED,
+          new ScheduledJobResult(0, 0, 0),
+          errorSummaryOf(exception),
+          failedAt);
       countRun(jobName, ScheduledJobRun.FAILED);
       recordCompletion(jobName, failedAt);
       throw exception;
     }
 
     OffsetDateTime finishedAt = OffsetDateTime.now();
-    finish(id, run -> run.succeed(result, finishedAt));
+    complete(id, ScheduledJobRun.SUCCEEDED, result, null, finishedAt);
     countRun(jobName, ScheduledJobRun.SUCCEEDED);
     countItems(jobName, result);
     recordSuccess(jobName, finishedAt);
@@ -105,10 +136,42 @@ public class ScheduledJobRunService {
     lastCompletionOf(jobName).accumulateAndGet(finishedAt.toEpochSecond(), Math::max);
   }
 
-  private void finish(UUID id, Consumer<ScheduledJobRun> transition) {
-    ScheduledJobRun run = scheduledJobRunRepository.findById(id).orElseThrow();
-    transition.accept(run);
-    scheduledJobRunRepository.save(run);
+  private void complete(
+      UUID id, String status, ScheduledJobResult result, String error, OffsetDateTime finished) {
+    if (!scheduledJobRunRepository.complete(
+        id,
+        status,
+        result.processedCount(),
+        result.skippedCount(),
+        result.failedCount(),
+        error,
+        finished)) throw new IllegalStateException("job completion lost its running scope");
+  }
+
+  private void eachScope(Runnable action) {
+    if (com.meterengine.global.database.DatabaseScopes.current()
+        != com.meterengine.global.database.DatabaseScope.SHARED) {
+      action.run();
+      return;
+    }
+    RuntimeException failure = null;
+    for (var scope :
+        java.util.List.of(
+            com.meterengine.global.database.DatabaseScope.TEST,
+            com.meterengine.global.database.DatabaseScope.LIVE)) {
+      try {
+        com.meterengine.global.database.DatabaseScopes.call(
+            scope,
+            () -> {
+              action.run();
+              return null;
+            });
+      } catch (RuntimeException exception) {
+        if (failure == null) failure = exception;
+        else failure.addSuppressed(exception);
+      }
+    }
+    if (failure != null) throw failure;
   }
 
   private static String errorSummaryOf(RuntimeException exception) {
@@ -122,6 +185,7 @@ public class ScheduledJobRunService {
     Counter.builder(RUN_COUNTER_NAME)
         .description("예약 작업 실행 건수. 다른 인스턴스가 먼저 잡은 슬롯은 세지 않는다")
         .tag(JOB_TAG, jobName)
+        .tag("scope", scopeName())
         .tag(RESULT_TAG, result)
         .register(meterRegistry)
         .increment();
@@ -137,6 +201,7 @@ public class ScheduledJobRunService {
     Counter.builder(ITEMS_COUNTER_NAME)
         .description("성공한 예약 작업 실행이 처리, 건너뜀, 실패로 끝낸 대상 건수")
         .tag(JOB_TAG, jobName)
+        .tag("scope", scopeName())
         .tag(RESULT_TAG, result)
         .register(meterRegistry)
         .increment(count);
@@ -144,13 +209,15 @@ public class ScheduledJobRunService {
 
   private AtomicLong lastSuccessOf(String jobName) {
     return lastSuccessEpochSecondsByJobName.computeIfAbsent(
-        jobName, name -> epochSecondsGauge(LAST_SUCCESS_GAUGE_NAME, "예약 작업이 마지막으로 성공한 시각", name));
+        scopeName() + ":" + jobName,
+        name -> epochSecondsGauge(LAST_SUCCESS_GAUGE_NAME, "예약 작업이 마지막으로 성공한 시각", jobName));
   }
 
   private AtomicLong lastCompletionOf(String jobName) {
     return lastCompletionEpochSecondsByJobName.computeIfAbsent(
-        jobName,
-        name -> epochSecondsGauge(LAST_COMPLETION_GAUGE_NAME, "예약 작업이 성공이나 실패로 마지막으로 끝난 시각", name));
+        scopeName() + ":" + jobName,
+        name ->
+            epochSecondsGauge(LAST_COMPLETION_GAUGE_NAME, "예약 작업이 성공이나 실패로 마지막으로 끝난 시각", jobName));
   }
 
   private AtomicLong epochSecondsGauge(String gaugeName, String description, String jobName) {
@@ -159,7 +226,14 @@ public class ScheduledJobRunService {
         .description(description)
         .baseUnit("seconds")
         .tag(JOB_TAG, jobName)
+        .tag("scope", scopeName())
         .register(meterRegistry);
     return epochSeconds;
+  }
+
+  private static String scopeName() {
+    return com.meterengine.global.database.DatabaseScopes.current()
+        .name()
+        .toLowerCase(java.util.Locale.ROOT);
   }
 }

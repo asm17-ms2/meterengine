@@ -15,6 +15,7 @@ public record OperationsResponse(
     List<OperationsJob> jobs) {
 
   public record OperationsJob(
+      String scope,
       @JsonProperty("job_name") String jobName,
       @JsonProperty("last_success_at") OffsetDateTime lastSuccessAt,
       @JsonProperty("last_started_at") OffsetDateTime lastStartedAt,

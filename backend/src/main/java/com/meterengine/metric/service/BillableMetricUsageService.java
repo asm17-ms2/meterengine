@@ -2,7 +2,6 @@ package com.meterengine.metric.service;
 
 import com.meterengine.customer.entity.Customer;
 import com.meterengine.customer.repository.CustomerRepository;
-import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.global.time.BillingMonth;
 import com.meterengine.metric.dto.BillableMetricUsage;
 import com.meterengine.metric.dto.CustomerUsage;
@@ -74,10 +73,7 @@ public class BillableMetricUsageService {
   public List<BillableMetricUsage> aggregate(
       UUID organizationId, YearMonth month, OffsetDateTime cutoff) {
     List<BillableMetric> billableMetrics =
-        (BusinessEnvironmentContext.environmentId() == null
-            ? billableMetricRepository.findByOrganizationIdOrderByCodeAsc(organizationId)
-            : billableMetricRepository.listScoped(
-                organizationId, BusinessEnvironmentContext.environmentId()));
+        billableMetricRepository.findByOrganizationIdOrderByCodeAsc(organizationId);
     if (billableMetrics.isEmpty()) {
       return List.of();
     }
@@ -86,16 +82,9 @@ public class BillableMetricUsageService {
     OffsetDateTime end = aggregationEnd(month, cutoff);
 
     List<Customer> customers =
-        (BusinessEnvironmentContext.environmentId() == null
-            ? customerRepository.findByOrganizationIdOrderByNameAscIdAsc(organizationId)
-            : customerRepository.listScoped(
-                organizationId, BusinessEnvironmentContext.environmentId()));
+        (customerRepository.findByOrganizationIdOrderByNameAscIdAsc(organizationId));
 
-    var periods =
-        (BusinessEnvironmentContext.environmentId() == null
-            ? billableMetricPeriodRepository.findByOrganizationId(organizationId)
-            : billableMetricPeriodRepository.listScoped(
-                organizationId, BusinessEnvironmentContext.environmentId()));
+    var periods = billableMetricPeriodRepository.findByOrganizationId(organizationId);
     String period = month.toString();
     return billableMetrics.stream()
         .filter(

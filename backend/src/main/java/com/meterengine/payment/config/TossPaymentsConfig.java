@@ -17,7 +17,10 @@ public class TossPaymentsConfig {
 
   @Bean
   TossPaymentsClient tossPaymentsClient(
-      RestClient.Builder builder, TossPaymentsProperties properties, MeterRegistry meterRegistry) {
+      RestClient.Builder builder,
+      TossPaymentsProperties properties,
+      MeterRegistry meterRegistry,
+      com.meterengine.global.database.EnvironmentSideEffectPolicy sideEffects) {
     return new TossPaymentsClient(
         withTossDefaults(
                 builder.requestFactory(
@@ -27,7 +30,8 @@ public class TossPaymentsConfig {
                                 .withTimeouts(CONNECT_TIMEOUT, READ_TIMEOUT))),
                 properties)
             .build(),
-        meterRegistry);
+        meterRegistry,
+        sideEffects);
   }
 
   public static RestClient.Builder withTossDefaults(

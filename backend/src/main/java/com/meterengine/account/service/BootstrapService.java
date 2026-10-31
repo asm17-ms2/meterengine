@@ -26,10 +26,14 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class BootstrapService implements ApplicationRunner {
+  @org.springframework.beans.factory.annotation.Autowired
+  private com.meterengine.global.database.CutoverPolicy cutover;
+
+  @org.springframework.beans.factory.annotation.Autowired
+  private com.meterengine.global.database.ScopeTransactions transactions;
 
   private static final Logger logger = LoggerFactory.getLogger(BootstrapService.class);
 
@@ -68,8 +72,17 @@ public class BootstrapService implements ApplicationRunner {
 
   // 환경변수의 운영자와 프론트 콘솔 키를 넣고, 값이 어긋나면 아무것도 쓰지 않고 기동을 멈춘다.
   @Override
-  @Transactional
   public void run(ApplicationArguments args) {
+    if (cutover.readOnly()) return;
+    transactions.write(
+        com.meterengine.global.database.DatabaseScope.SHARED,
+        () -> {
+          bootstrap();
+          return null;
+        });
+  }
+
+  private void bootstrap() {
     String email = textOf(bootstrapProperties.operatorEmail());
     String password = textOf(bootstrapProperties.operatorPassword());
     String rawApiKey = textOf(bootstrapProperties.frontendApiKey());

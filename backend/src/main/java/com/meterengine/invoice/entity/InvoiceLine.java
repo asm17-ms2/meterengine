@@ -16,9 +16,6 @@ public class InvoiceLine {
   @Column(name = "organization_id", nullable = false)
   private UUID organizationId;
 
-  @Column(name = "environment_id", updatable = false)
-  private UUID environmentId;
-
   @Column(name = "invoice_id", nullable = false)
   private UUID invoiceId;
 
@@ -159,10 +156,6 @@ public class InvoiceLine {
     return id;
   }
 
-  public UUID getEnvironmentId() {
-    return environmentId;
-  }
-
   public UUID getOrganizationId() {
     return organizationId;
   }
@@ -209,7 +202,6 @@ public class InvoiceLine {
       int tierIndex,
       BigDecimal quantityNumerator,
       BigDecimal quantityDenominator,
-      UUID environmentId,
       String billableMetricName) {
     this(
         id,
@@ -225,7 +217,6 @@ public class InvoiceLine {
         tierIndex,
         quantityNumerator,
         quantityDenominator);
-    this.environmentId = environmentId;
     this.billableMetricName = billableMetricName;
   }
 

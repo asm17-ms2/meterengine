@@ -95,10 +95,14 @@ class EnvironmentBillingIntegrationTest {
         .isEqualTo(3);
     for (String mode : List.of("test", "live")) {
       var reloaded =
-          metricRepository
-              .findById(new BillableMetricId(organizationId, CODE, environment(mode)))
-              .orElseThrow();
-      assertThat(reloaded.getEnvironmentId()).isEqualTo(environment(mode));
+          com.meterengine.global.database.DatabaseScopes.call(
+              com.meterengine.global.database.DatabaseScope.valueOf(
+                  mode.toUpperCase(java.util.Locale.ROOT)),
+              () ->
+                  metricRepository
+                      .findById(new BillableMetricId(organizationId, CODE))
+                      .orElseThrow());
+      assertThat(reloaded.getOrganizationId()).isEqualTo(organizationId);
       assertThat(reloaded.getName()).isEqualTo(mode + "-meter");
     }
     assertThat(
@@ -115,12 +119,7 @@ class EnvironmentBillingIntegrationTest {
         .isEqualTo("live-meter");
     assertThat(ok(get("test", "/v1/billable-metrics/" + CODE)).get("name").asString())
         .isEqualTo("renamed-test");
-    assertThat(
-            metricRepository
-                .findById(new BillableMetricId(organizationId, CODE))
-                .orElseThrow()
-                .getEnvironmentId())
-        .isNull();
+    assertThat(get("legacy", "/v1/billable-metrics/" + CODE)).hasStatus(400);
   }
 
   @Test

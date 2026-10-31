@@ -24,18 +24,12 @@ public class OperationsService {
     List<OperationsJob> jobs =
         jdbcTemplate.query(
             """
-            select expected.job_name,
-              (select max(finished_at) from scheduled_job_run r
-                 where r.job_name = expected.job_name and r.status = 'succeeded') last_success_at,
-              latest.started_at last_started_at, latest.status latest_status
-            from (values ('payment_attempt_confirmation'), ('payment_retry'), ('payment_reconciliation'),
-                         ('webhook_delivery'), ('unbilled_usage_report')) expected(job_name)
-            left join lateral (select started_at, status from scheduled_job_run r
-              where r.job_name = expected.job_name order by started_at desc limit 1) latest on true
-            order by expected.job_name
+            SELECT scope,job_name,last_success_at,last_started_at,latest_status
+            FROM shared.operations_job_status ORDER BY scope,job_name
             """,
             (row, index) ->
                 new OperationsJob(
+                    row.getString("scope"),
                     row.getString("job_name"),
                     row.getObject("last_success_at", OffsetDateTime.class),
                     row.getObject("last_started_at", OffsetDateTime.class),
@@ -45,16 +39,12 @@ public class OperationsService {
         count("select count(*) from organization where status = 'pending'"),
         count("select count(*) from organization where status = 'active'"),
         count("select count(*) from user_account"),
-        count("select count(*) from payment_attempt where status = 'pending' and mode = 'live'"),
         count(
-            "select count(*) from payment_attempt where status = 'failed' and mode = 'live' and"
-                + " requested_at >= now() - interval '24 hours'"),
+            "SELECT pending_payment_count FROM shared.operations_business_counts WHERE scope='live'"),
         count(
-            "select count(*) from webhook_delivery d where d.status = 'failed' and exists (select 1"
-                + " from webhook_endpoint e where e.organization_id = d.organization_id and"
-                + " e.environment_scope_id = d.environment_scope_id and e.id = d.webhook_endpoint_id"
-                + " and e.deleted_at is null) and not exists (select 1 from organization_environment"
-                + " oe where oe.id = d.environment_id and oe.mode = 'test')"),
+            "SELECT failed_payment_24h_count FROM shared.operations_business_counts WHERE scope='live'"),
+        count(
+            "SELECT failed_webhook_count FROM shared.operations_business_counts WHERE scope='live'"),
         jobs);
   }
 

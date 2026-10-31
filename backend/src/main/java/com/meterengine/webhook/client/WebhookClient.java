@@ -31,24 +31,36 @@ public class WebhookClient implements AutoCloseable {
   private static final int CONNECT_TIMEOUT_MS = 5000;
   private static final int READ_TIMEOUT_MS = 10000;
   private static final String USER_AGENT = "MeterEngine-Webhooks/1.0";
+  private final com.meterengine.global.database.EnvironmentSideEffectPolicy sideEffects;
   private final WebhookAddressPolicy webhookAddressPolicy;
   private final Duration requestTimeout;
   private final SSLSocketFactory sslSocketFactory;
   private final ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor();
 
   @Autowired
-  WebhookClient(WebhookAddressPolicy webhookAddressPolicy) {
-    this(webhookAddressPolicy, Duration.ofSeconds(15));
-  }
-
-  WebhookClient(WebhookAddressPolicy webhookAddressPolicy, Duration requestTimeout) {
-    this(webhookAddressPolicy, requestTimeout, (SSLSocketFactory) SSLSocketFactory.getDefault());
+  WebhookClient(
+      WebhookAddressPolicy webhookAddressPolicy,
+      com.meterengine.global.database.EnvironmentSideEffectPolicy sideEffects) {
+    this(webhookAddressPolicy, Duration.ofSeconds(15), sideEffects);
   }
 
   WebhookClient(
       WebhookAddressPolicy webhookAddressPolicy,
       Duration requestTimeout,
-      SSLSocketFactory sslSocketFactory) {
+      com.meterengine.global.database.EnvironmentSideEffectPolicy sideEffects) {
+    this(
+        webhookAddressPolicy,
+        requestTimeout,
+        (SSLSocketFactory) SSLSocketFactory.getDefault(),
+        sideEffects);
+  }
+
+  WebhookClient(
+      WebhookAddressPolicy webhookAddressPolicy,
+      Duration requestTimeout,
+      SSLSocketFactory sslSocketFactory,
+      com.meterengine.global.database.EnvironmentSideEffectPolicy sideEffects) {
+    this.sideEffects = sideEffects;
     this.webhookAddressPolicy = webhookAddressPolicy;
     this.requestTimeout = requestTimeout;
     this.sslSocketFactory = sslSocketFactory;
@@ -56,6 +68,7 @@ public class WebhookClient implements AutoCloseable {
 
   public WebhookOutcome send(
       String url, String id, String timestamp, String signature, String body) {
+    if (!sideEffects.allowsWebhook(url)) return new WebhookOutcome(null, "blocked_address", 0);
     long started = System.nanoTime();
     Future<WebhookOutcome> result =
         executorService.submit(() -> sendPinned(url, id, timestamp, signature, body));

@@ -3,7 +3,6 @@ package com.meterengine.invoice.service;
 import com.meterengine.audit.service.AuditLogService;
 import com.meterengine.customer.entity.Customer;
 import com.meterengine.customer.repository.CustomerRepository;
-import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceCustomer;
 import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceLine;
 import com.meterengine.invoice.entity.Invoice;
@@ -13,7 +12,6 @@ import com.meterengine.invoice.repository.InvoiceRepository;
 import com.meterengine.metric.entity.BillableMetric;
 import com.meterengine.metric.repository.BillableMetricRepository;
 import com.meterengine.metric.service.BillableMetricUsageService;
-import com.meterengine.organization.repository.OrganizationRepository;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
@@ -22,6 +20,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
@@ -35,7 +34,7 @@ public class InvoiceFinalizationService {
   private final InvoiceRepository invoiceRepository;
   private final InvoiceLineRepository invoiceLineRepository;
   private final CustomerRepository customerRepository;
-  private final OrganizationRepository organizationRepository;
+  private final JdbcTemplate jdbcTemplate;
   private final InvoiceEmailService invoiceEmailService;
   private final JsonMapper jsonMapper;
   private final AuditLogService auditLogService;
@@ -47,7 +46,7 @@ public class InvoiceFinalizationService {
       InvoiceRepository invoiceRepository,
       InvoiceLineRepository invoiceLineRepository,
       CustomerRepository customerRepository,
-      OrganizationRepository organizationRepository,
+      JdbcTemplate jdbcTemplate,
       InvoiceEmailService invoiceEmailService,
       JsonMapper jsonMapper,
       AuditLogService auditLogService,
@@ -57,7 +56,7 @@ public class InvoiceFinalizationService {
     this.invoiceRepository = invoiceRepository;
     this.invoiceLineRepository = invoiceLineRepository;
     this.customerRepository = customerRepository;
-    this.organizationRepository = organizationRepository;
+    this.jdbcTemplate = jdbcTemplate;
     this.invoiceEmailService = invoiceEmailService;
     this.jsonMapper = jsonMapper;
     this.auditLogService = auditLogService;
@@ -68,8 +67,8 @@ public class InvoiceFinalizationService {
   // 도입사의 고객 중 그 달 청구 예정액이 0원이 아닌 고객을 확정하고, 고객마다 청구 메일을 남긴다.
   @Transactional
   public List<Invoice> finalize(UUID organizationId, YearMonth month) {
-    if (BusinessEnvironmentContext.environmentId() != null)
-      organizationRepository.findForUpdateById(organizationId).orElseThrow();
+    jdbcTemplate.queryForObject(
+        "SELECT id FROM shared.lock_organization(?)", UUID.class, organizationId);
     List<DraftInvoiceCustomer> draftInvoiceCustomers =
         draftInvoiceService.preview(organizationId, month).customers().stream()
             .filter(draftInvoiceCustomer -> draftInvoiceCustomer.amount() != 0)
@@ -80,12 +79,12 @@ public class InvoiceFinalizationService {
     }
 
     String organizationName =
-        organizationRepository.findById(organizationId).orElseThrow().getName();
+        jdbcTemplate.queryForObject(
+            "SELECT name FROM shared.organization_reference WHERE id = ?",
+            String.class,
+            organizationId);
     Map<UUID, Customer> customerById =
-        (BusinessEnvironmentContext.environmentId() == null
-                ? customerRepository.findByOrganizationIdOrderByNameAscIdAsc(organizationId)
-                : customerRepository.listScoped(
-                    organizationId, BusinessEnvironmentContext.environmentId()))
+        (customerRepository.findByOrganizationIdOrderByNameAscIdAsc(organizationId))
             .stream().collect(Collectors.toMap(Customer::getId, Function.identity()));
 
     return draftInvoiceCustomers.stream()
@@ -121,15 +120,11 @@ public class InvoiceFinalizationService {
                 month.toString(),
                 supplyAmount,
                 Math.multiplyExact(supplyAmount, TAX_RATE_PERCENT) / 100,
-                OffsetDateTime.now(clock.withZone(BillableMetricUsageService.BILLING_ZONE)),
-                BusinessEnvironmentContext.environmentId()));
+                OffsetDateTime.now(clock.withZone(BillableMetricUsageService.BILLING_ZONE))));
 
     Map<String, String> metricNames =
-        (BusinessEnvironmentContext.environmentId() == null
-                ? billableMetricRepository.findByOrganizationIdOrderByCodeAsc(organizationId)
-                : billableMetricRepository.listScoped(
-                    organizationId, BusinessEnvironmentContext.environmentId()))
-            .stream().collect(Collectors.toMap(BillableMetric::getCode, BillableMetric::getName));
+        billableMetricRepository.findByOrganizationIdOrderByCodeAsc(organizationId).stream()
+            .collect(Collectors.toMap(BillableMetric::getCode, BillableMetric::getName));
     invoiceLineRepository.saveAll(
         draftInvoiceCustomer.lines().stream()
             .map(
@@ -172,7 +167,6 @@ public class InvoiceFinalizationService {
         draftInvoiceLine.tierIndex(),
         draftInvoiceLine.quantityNumerator(),
         draftInvoiceLine.quantityDenominator(),
-        invoice.getEnvironmentId(),
         billableMetricName);
   }
 }

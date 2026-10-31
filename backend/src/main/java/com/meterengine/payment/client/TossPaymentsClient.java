@@ -47,11 +47,16 @@ public class TossPaymentsClient {
   private static final ParameterizedTypeReference<List<TossPaymentsTransaction>> TRANSACTIONS =
       new ParameterizedTypeReference<>() {};
 
+  private final com.meterengine.global.database.EnvironmentSideEffectPolicy sideEffects;
   private final RestClient restClient;
   private final MeterRegistry meterRegistry;
   private final Map<String, Timer> timersByOperationAndOutcome = new HashMap<>();
 
-  public TossPaymentsClient(RestClient restClient, MeterRegistry meterRegistry) {
+  public TossPaymentsClient(
+      RestClient restClient,
+      MeterRegistry meterRegistry,
+      com.meterengine.global.database.EnvironmentSideEffectPolicy sideEffects) {
+    this.sideEffects = sideEffects;
     this.restClient = restClient;
     this.meterRegistry = meterRegistry;
     for (String operation : OPERATIONS) {
@@ -68,6 +73,7 @@ public class TossPaymentsClient {
 
   public TossPaymentsResult<TossPaymentsBilling> issueBillingKey(
       String secretKey, String authKey, String customerKey) {
+    sideEffects.requirePayment(secretKey);
     return send(
         ISSUE_BILLING_KEY,
         secretKey,
@@ -85,6 +91,7 @@ public class TossPaymentsClient {
       TossPaymentsApproveBillingRequest approval,
       String idempotencyKey,
       String testCode) {
+    sideEffects.requirePayment(secretKey);
     return send(
         APPROVE_BILLING,
         secretKey,
@@ -104,6 +111,7 @@ public class TossPaymentsClient {
   }
 
   public TossPaymentsResult<Void> deleteBillingKey(String secretKey, String billingKey) {
+    sideEffects.requirePayment(secretKey);
     return send(
         DELETE_BILLING_KEY,
         secretKey,
@@ -113,6 +121,7 @@ public class TossPaymentsClient {
 
   public TossPaymentsResult<TossPaymentsPayment> findPaymentByOrderId(
       String secretKey, String orderId) {
+    sideEffects.requirePayment(secretKey);
     return send(
         FIND_PAYMENT_BY_ORDER_ID,
         secretKey,
@@ -121,6 +130,7 @@ public class TossPaymentsClient {
   }
 
   public TossPaymentsResult<TossPaymentsPayment> findPayment(String secretKey, String paymentKey) {
+    sideEffects.requirePayment(secretKey);
     return send(
         FIND_PAYMENT,
         secretKey,
@@ -133,6 +143,7 @@ public class TossPaymentsClient {
       String paymentKey,
       TossPaymentsCancelRequest cancellation,
       String idempotencyKey) {
+    sideEffects.requirePayment(secretKey);
     return send(
         CANCEL,
         secretKey,
@@ -151,6 +162,7 @@ public class TossPaymentsClient {
       LocalDateTime endDate,
       String startingAfter,
       int limit) {
+    sideEffects.requirePayment(secretKey);
     return send(
         LIST_TRANSACTIONS,
         secretKey,
@@ -186,6 +198,7 @@ public class TossPaymentsClient {
       String secretKey,
       RestClient.RequestHeadersSpec<?> request,
       Class<T> bodyType) {
+    sideEffects.requirePayment(secretKey);
     return send(operation, secretKey, request, ParameterizedTypeReference.forType(bodyType));
   }
 
@@ -194,6 +207,7 @@ public class TossPaymentsClient {
       String secretKey,
       RestClient.RequestHeadersSpec<?> request,
       ParameterizedTypeReference<T> bodyType) {
+    sideEffects.requirePayment(secretKey);
     Timer.Sample sample = Timer.start(meterRegistry);
     TossPaymentsResult<T> result =
         exchange(request.headers(headers -> headers.setBasicAuth(secretKey, "")), bodyType);

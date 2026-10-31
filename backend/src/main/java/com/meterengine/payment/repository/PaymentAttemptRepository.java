@@ -17,9 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 public interface PaymentAttemptRepository extends JpaRepository<PaymentAttempt, UUID> {
 
   @Query(
-      "select a from PaymentAttempt a where a.organizationId = :organizationId and a.environmentId"
-          + " IS NOT DISTINCT FROM"
-          + " :#{T(com.meterengine.global.security.BusinessEnvironmentContext).environmentId()} and"
+      "select a from PaymentAttempt a where a.organizationId = :organizationId and"
           + " a.invoiceId = :invoiceId and a.mode = :mode and a.status in ('pending', 'done')")
   Optional<PaymentAttempt> findActive(UUID organizationId, UUID invoiceId, String mode);
 
@@ -38,10 +36,7 @@ public interface PaymentAttemptRepository extends JpaRepository<PaymentAttempt, 
           + " where a.id = :id and a.status = 'pending'")
   int markFailed(UUID id, String failureCode, String failureMessage, OffsetDateTime completedAt);
 
-  @Query(
-      "select a from PaymentAttempt a where a.organizationId = :organizationId and a.id = :id and"
-          + " a.environmentId IS NOT DISTINCT FROM"
-          + " :#{T(com.meterengine.global.security.BusinessEnvironmentContext).environmentId()}")
+  @Query("select a from PaymentAttempt a where a.organizationId = :organizationId and a.id = :id")
   Optional<PaymentAttempt> findByOrganizationIdAndId(UUID organizationId, UUID id);
 
   @Query("select a from PaymentAttempt a where a.organizationId = :organizationId and a.id = :id")
@@ -49,16 +44,14 @@ public interface PaymentAttemptRepository extends JpaRepository<PaymentAttempt, 
 
   @Query(
       "select a from PaymentAttempt a where a.organizationId = :organizationId and a.invoiceId ="
-          + " :invoiceId and a.environmentId IS NOT DISTINCT FROM"
-          + " :#{T(com.meterengine.global.security.BusinessEnvironmentContext).environmentId()}"
+          + " :invoiceId"
           + " order by a.requestedAt desc, a.id desc")
   List<PaymentAttempt> findByOrganizationIdAndInvoiceIdOrderByRequestedAtDesc(
       UUID organizationId, UUID invoiceId);
 
   @Query(
       "select count(a) from PaymentAttempt a where a.organizationId = :organizationId and"
-          + " a.invoiceId = :invoiceId and a.mode = :mode and a.environmentId IS NOT DISTINCT FROM"
-          + " :#{T(com.meterengine.global.security.BusinessEnvironmentContext).environmentId()}")
+          + " a.invoiceId = :invoiceId and a.mode = :mode")
   long countByOrganizationIdAndInvoiceIdAndMode(UUID organizationId, UUID invoiceId, String mode);
 
   boolean existsByOrganizationIdAndCustomerId(UUID organizationId, UUID customerId);
@@ -80,14 +73,12 @@ public interface PaymentAttemptRepository extends JpaRepository<PaymentAttempt, 
             ON bk.organization_id = i.organization_id
            AND bk.customer_id = i.customer_id
            AND bk.mode = :mode
-           AND bk.environment_id IS NOT DISTINCT FROM i.environment_id
            AND bk.archived_at IS NULL
           LEFT JOIN LATERAL (
             SELECT a.id, a.status, a.failure_code, a.completed_at
             FROM payment_attempt a
             WHERE a.organization_id = i.organization_id
               AND a.invoice_id = i.id
-              AND a.environment_id IS NOT DISTINCT FROM i.environment_id
               AND a.mode = :mode
             ORDER BY a.requested_at DESC, a.id DESC
             LIMIT 1
@@ -97,7 +88,6 @@ public interface PaymentAttemptRepository extends JpaRepository<PaymentAttempt, 
             FROM payment_attempt a
             WHERE a.organization_id = i.organization_id
               AND a.invoice_id = i.id
-              AND a.environment_id IS NOT DISTINCT FROM i.environment_id
               AND a.mode = :mode
           ) attempts ON true
           LEFT JOIN LATERAL (
@@ -109,7 +99,6 @@ public interface PaymentAttemptRepository extends JpaRepository<PaymentAttempt, 
               AND c.status = 'done'
           ) cancellations ON true
           WHERE i.organization_id = :organizationId
-            AND i.environment_id IS NOT DISTINCT FROM CAST(:#{T(com.meterengine.global.security.BusinessEnvironmentContext).environmentId()} AS UUID)
             AND (CAST(:customerId AS UUID) IS NULL OR i.customer_id = CAST(:customerId AS UUID))
             AND (CAST(:period AS VARCHAR) IS NULL OR i.period = CAST(:period AS VARCHAR))
           ORDER BY i.period DESC, i.customer_name ASC, i.customer_id ASC
@@ -143,7 +132,6 @@ public interface PaymentAttemptRepository extends JpaRepository<PaymentAttempt, 
           FROM payment_attempt
           WHERE organization_id = :organizationId
             AND invoice_id = :invoiceId
-            AND payment_attempt.environment_id IS NOT DISTINCT FROM CAST(:#{T(com.meterengine.global.security.BusinessEnvironmentContext).environmentId()} AS UUID)
             AND mode = :mode
           ORDER BY requested_at DESC, id DESC
           LIMIT 1
@@ -156,7 +144,6 @@ public interface PaymentAttemptRepository extends JpaRepository<PaymentAttempt, 
           """
           SELECT a.id AS "id",
                  a.organization_id AS "organizationId",
-                 a.environment_id AS "environmentId",
                  a.invoice_id AS "invoiceId",
                  a.mode AS "mode",
                  a.failure_code AS "failureCode",
@@ -165,13 +152,11 @@ public interface PaymentAttemptRepository extends JpaRepository<PaymentAttempt, 
                  attempts.attempt_count AS "attemptCount",
                  bk.authenticated_at AS "billingKeyAuthenticatedAt"
           FROM payment_attempt a
-          JOIN organization o ON o.id = a.organization_id
-          LEFT JOIN payment_setting s ON s.organization_id = a.organization_id
+          JOIN shared.organization_reference o ON o.id = a.organization_id
           JOIN billing_key bk
             ON bk.organization_id = a.organization_id
            AND bk.customer_id = a.customer_id
            AND bk.mode = a.mode
-           AND bk.environment_id IS NOT DISTINCT FROM a.environment_id
            AND bk.archived_at IS NULL
           CROSS JOIN LATERAL (
             SELECT count(*) AS attempt_count
@@ -179,11 +164,9 @@ public interface PaymentAttemptRepository extends JpaRepository<PaymentAttempt, 
             WHERE c.organization_id = a.organization_id
               AND c.invoice_id = a.invoice_id
               AND c.mode = a.mode
-              AND c.environment_id IS NOT DISTINCT FROM a.environment_id
           ) attempts
           WHERE a.status = 'failed'
             AND o.status = 'active'
-            AND (a.environment_id IS NOT NULL OR a.mode = coalesce(s.mode, 'test'))
             AND a.completed_at <= :completedBefore
             AND attempts.attempt_count < :maxAttempts
             AND (a.failure_code NOT IN (:nonRetryableFailureCodes)
@@ -198,7 +181,6 @@ public interface PaymentAttemptRepository extends JpaRepository<PaymentAttempt, 
               WHERE newer.organization_id = a.organization_id
                 AND newer.invoice_id = a.invoice_id
                 AND newer.mode = a.mode
-                AND newer.environment_id IS NOT DISTINCT FROM a.environment_id
                 AND (newer.requested_at, newer.id) > (a.requested_at, a.id)
             )
           ORDER BY a.completed_at ASC, a.id ASC
@@ -212,9 +194,7 @@ public interface PaymentAttemptRepository extends JpaRepository<PaymentAttempt, 
       OffsetDateTime notFoundRetryableFrom);
 
   @Query(
-      "select a from PaymentAttempt a where a.organizationId = :organizationId and a.environmentId"
-          + " IS NOT DISTINCT FROM"
-          + " :#{T(com.meterengine.global.security.BusinessEnvironmentContext).environmentId()} and"
+      "select a from PaymentAttempt a where a.organizationId = :organizationId and"
           + " a.mode = :mode and a.status = 'done' and a.completedAt >= :completedFrom and"
           + " a.completedAt < :completedTo order by a.completedAt asc, a.id asc")
   List<PaymentAttempt> findDoneCompletedBetween(
@@ -222,15 +202,11 @@ public interface PaymentAttemptRepository extends JpaRepository<PaymentAttempt, 
 
   @Query(
       "select a from PaymentAttempt a where a.organizationId = :organizationId and a.mode = :mode"
-          + " and a.id in :ids and a.environmentId IS NOT DISTINCT FROM"
-          + " :#{T(com.meterengine.global.security.BusinessEnvironmentContext).environmentId()}")
+          + " and a.id in :ids")
   List<PaymentAttempt> findByOrganizationIdAndModeAndIdIn(
       UUID organizationId, String mode, Collection<UUID> ids);
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)
-  @Query(
-      "select a from PaymentAttempt a where a.organizationId = :organizationId and a.id = :id and"
-          + " a.environmentId IS NOT DISTINCT FROM"
-          + " :#{T(com.meterengine.global.security.BusinessEnvironmentContext).environmentId()}")
+  @Query("select a from PaymentAttempt a where a.organizationId = :organizationId and a.id = :id")
   Optional<PaymentAttempt> findForUpdate(UUID organizationId, UUID id);
 }

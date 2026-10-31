@@ -5,7 +5,6 @@ import com.meterengine.event.dto.UnbilledEventsResponse.MetricCount;
 import com.meterengine.event.dto.UnbilledEventsResponse.MetricCounts;
 import com.meterengine.event.dto.UnbilledEventsResponse.TypeCount;
 import com.meterengine.event.dto.UnbilledEventsResponse.UnmatchedType;
-import com.meterengine.global.security.BusinessEnvironmentContext;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -26,13 +25,12 @@ public class UnbilledEventRepository {
         jdbcTemplate.query(
             """
             SELECT e.type, count(*) AS event_count FROM event e
-            WHERE e.organization_id = ? AND e.environment_scope_id = ? AND e.occurred_at >= ? AND e.occurred_at < ?
-              AND NOT EXISTS (SELECT 1 FROM billable_metric m WHERE m.organization_id = e.organization_id AND m.environment_scope_id = e.environment_scope_id AND m.event_type = e.type AND ((m.archived_at IS NULL AND m.active_from <= to_char(e.occurred_at AT TIME ZONE 'Asia/Seoul', 'YYYY-MM')) OR EXISTS (SELECT 1 FROM billable_metric_period p WHERE p.organization_id = m.organization_id AND p.environment_scope_id = m.environment_scope_id AND p.billable_metric_code = m.code AND p.active_from <= to_char(e.occurred_at AT TIME ZONE 'Asia/Seoul', 'YYYY-MM') AND p.active_until > to_char(e.occurred_at AT TIME ZONE 'Asia/Seoul', 'YYYY-MM'))))
+            WHERE e.organization_id = ? AND e.occurred_at >= ? AND e.occurred_at < ?
+              AND NOT EXISTS (SELECT 1 FROM billable_metric m WHERE m.organization_id = e.organization_id AND m.event_type = e.type AND ((m.archived_at IS NULL AND m.active_from <= to_char(e.occurred_at AT TIME ZONE 'Asia/Seoul', 'YYYY-MM')) OR EXISTS (SELECT 1 FROM billable_metric_period p WHERE p.organization_id = m.organization_id AND p.billable_metric_code = m.code AND p.active_from <= to_char(e.occurred_at AT TIME ZONE 'Asia/Seoul', 'YYYY-MM') AND p.active_until > to_char(e.occurred_at AT TIME ZONE 'Asia/Seoul', 'YYYY-MM'))))
             GROUP BY e.type ORDER BY event_count DESC, e.type
             """,
             (rs, rowNum) -> new TypeCount(rs.getString("type"), rs.getLong("event_count")),
             organizationId,
-            BusinessEnvironmentContext.scopeId(),
             startAt,
             cutoffAt);
     return new UnmatchedType(
@@ -66,7 +64,7 @@ public class UnbilledEventRepository {
       UUID organizationId, OffsetDateTime startAt, OffsetDateTime endAt, OffsetDateTime cutoffAt) {
     return jdbcTemplate.queryForObject(
         "SELECT count(*) AS event_count, min(occurred_at) AS earliest_occurred_at, max(occurred_at)"
-            + " AS latest_occurred_at FROM event WHERE organization_id = ? AND environment_scope_id = ? AND occurred_at >= ? AND occurred_at < ? AND occurred_at"
+            + " AS latest_occurred_at FROM event WHERE organization_id = ? AND occurred_at >= ? AND occurred_at < ? AND occurred_at"
             + " >= ?",
         (rs, rowNum) ->
             new FutureTimestamp(
@@ -74,7 +72,6 @@ public class UnbilledEventRepository {
                 rs.getObject("earliest_occurred_at", OffsetDateTime.class),
                 rs.getObject("latest_occurred_at", OffsetDateTime.class)),
         organizationId,
-        BusinessEnvironmentContext.scopeId(),
         startAt,
         endAt,
         cutoffAt);
@@ -84,19 +81,17 @@ public class UnbilledEventRepository {
       UUID organizationId, OffsetDateTime startAt, OffsetDateTime cutoffAt, String condition) {
     String matched =
         " FROM event e JOIN billable_metric m ON"
-            + " m.organization_id = e.organization_id AND m.environment_scope_id ="
-            + " e.environment_scope_id AND m.event_type = e.type AND ((m.archived_at IS NULL"
+            + " m.organization_id = e.organization_id AND m.event_type = e.type AND ((m.archived_at IS NULL"
             + " AND m.active_from <= to_char(e.occurred_at AT TIME ZONE 'Asia/Seoul',"
             + " 'YYYY-MM')) OR EXISTS (SELECT 1 FROM billable_metric_period p WHERE"
-            + " p.organization_id = m.organization_id AND p.environment_scope_id ="
-            + " m.environment_scope_id AND p.billable_metric_code = m.code AND p.active_from <="
+            + " p.organization_id = m.organization_id AND p.billable_metric_code = m.code AND p.active_from <="
             + " to_char(e.occurred_at AT TIME ZONE 'Asia/Seoul', 'YYYY-MM') AND p.active_until"
             + " > to_char(e.occurred_at AT TIME ZONE 'Asia/Seoul', 'YYYY-MM'))) WHERE"
-            + " e.organization_id = ? AND e.environment_scope_id = ? AND"
+            + " e.organization_id = ? AND"
             + " e.occurred_at >= ? AND e.occurred_at < ? AND ("
             + condition
             + ")";
-    Object[] parameters = {organizationId, BusinessEnvironmentContext.scopeId(), startAt, cutoffAt};
+    Object[] parameters = {organizationId, startAt, cutoffAt};
     // 미터별 수와 서로 다른 이벤트 수를 같은 JOIN 한 번으로 센다. 빈 묶음 () 줄이 전체 합계다.
     List<GroupedCount> grouped =
         jdbcTemplate.query(

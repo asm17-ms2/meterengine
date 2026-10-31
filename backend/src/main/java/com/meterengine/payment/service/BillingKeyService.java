@@ -33,6 +33,11 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class BillingKeyService {
+  @org.springframework.beans.factory.annotation.Autowired
+  private com.meterengine.global.database.EnvironmentSideEffectPolicy sideEffects;
+
+  @org.springframework.beans.factory.annotation.Autowired
+  private com.meterengine.global.database.CutoverPolicy cutover;
 
   private static final Logger logger = LoggerFactory.getLogger(BillingKeyService.class);
   private static final String CUSTOMER_KEY_MISMATCH_MESSAGE = "카드 등록 링크의 고객과 맞지 않습니다";
@@ -63,15 +68,29 @@ public class BillingKeyService {
   }
 
   public PaymentMethodResponse create(String token, CreateBillingKeyRequest request) {
+    cutover.requireWritable();
+    var route = paymentMethodRegistrationService.locate(token);
+    return com.meterengine.global.database.DatabaseScopes.call(
+        route.scope(), () -> createScoped(token, request, route));
+  }
+
+  private PaymentMethodResponse createScoped(
+      String token,
+      CreateBillingKeyRequest request,
+      com.meterengine.global.database.PublicResourceLocator.Route route) {
     OffsetDateTime consentedAt = now();
     Issuance issuance =
-        transactionTemplate.execute(status -> prepare(token, request.customerKey()));
+        transactionTemplate.execute(
+            status -> {
+              var prepared = prepare(token, request.customerKey());
+              paymentMethodRegistrationService.requireRoute(prepared.registration(), route);
+              return prepared;
+            });
     TossPaymentsBilling billing =
         issue(issuance.secretKey(), request.authKey(), request.customerKey());
     Optional<Replacement> replacement =
         PaymentEnvironments.call(
             issuance.registration().getOrganizationId(),
-            issuance.registration().getEnvironmentId(),
             issuance.registration().getMode(),
             () ->
                 transactionTemplate.execute(
@@ -110,6 +129,7 @@ public class BillingKeyService {
 
   private Issuance prepare(String token, String customerKey) {
     PaymentMethodRegistration registration = paymentMethodRegistrationService.findUsable(token);
+    sideEffects.requirePaymentMode(registration.getMode());
     if (!registration.getCustomerId().toString().equals(customerKey)) {
       throw new InvalidRequestException(
           ErrorCode.VALIDATION_ERROR,

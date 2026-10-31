@@ -21,8 +21,7 @@ public class PaymentReconciliationMismatch implements Persistable<UUID> {
   @Column(name = "organization_id", nullable = false)
   private UUID organizationId;
 
-  @Column(name = "environment_id")
-  private UUID environmentId;
+  @jakarta.persistence.Transient private UUID environmentId;
 
   @Column(nullable = false)
   private String mode;

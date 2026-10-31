@@ -6,6 +6,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.PostLoad;
 import jakarta.persistence.PostPersist;
+import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -15,6 +16,7 @@ import org.hibernate.type.SqlTypes;
 import org.springframework.data.domain.Persistable;
 
 @Entity
+@Table(schema = "shared")
 public class ApiKey implements Persistable<UUID> {
 
   public static final int LABEL_MAX_LENGTH = 255;

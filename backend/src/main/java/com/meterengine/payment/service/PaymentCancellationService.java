@@ -1,10 +1,10 @@
 package com.meterengine.payment.service;
 
 import com.meterengine.audit.service.AuditLogService;
+import com.meterengine.global.database.DatabaseScopes;
 import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
-import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.payment.client.TossPaymentsCancelRequest;
 import com.meterengine.payment.client.TossPaymentsClient;
 import com.meterengine.payment.client.TossPaymentsError;
@@ -43,6 +43,11 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class PaymentCancellationService {
+  @org.springframework.beans.factory.annotation.Autowired
+  private com.meterengine.global.database.EnvironmentSideEffectPolicy sideEffects;
+
+  @org.springframework.beans.factory.annotation.Autowired
+  private com.meterengine.global.database.CutoverPolicy cutover;
 
   private static final Logger logger = LoggerFactory.getLogger(PaymentCancellationService.class);
   private static final String TOSS_CANCEL_DONE = "DONE";
@@ -81,6 +86,7 @@ public class PaymentCancellationService {
 
   public PaymentCancellationResponse create(
       UUID organizationId, UUID paymentAttemptId, CreatePaymentCancellationRequest request) {
+    cutover.requireWritable();
     return create(organizationId, paymentAttemptId, request, null);
   }
 
@@ -89,6 +95,7 @@ public class PaymentCancellationService {
       UUID paymentAttemptId,
       CreatePaymentCancellationRequest request,
       UUID idempotencyKey) {
+    cutover.requireWritable();
     return create(organizationId, paymentAttemptId, request, idempotencyKey, null);
   }
 
@@ -98,6 +105,8 @@ public class PaymentCancellationService {
       CreatePaymentCancellationRequest request,
       UUID idempotencyKey,
       String principalMode) {
+    cutover.requireWritable();
+    sideEffects.requirePaymentMode(PaymentSettingService.selectedMode());
     PendingCancellation pending =
         transactionTemplate.execute(
             status ->
@@ -119,6 +128,7 @@ public class PaymentCancellationService {
   }
 
   boolean markDone(PaymentCancellation cancellation, String transactionKey) {
+    cutover.requireWritable();
     UUID cancellationId = cancellation.getId();
     boolean applied =
         Boolean.TRUE.equals(
@@ -157,6 +167,7 @@ public class PaymentCancellationService {
   }
 
   boolean markFailed(PaymentCancellation cancellation, String failureCode, String failureMessage) {
+    cutover.requireWritable();
     UUID cancellationId = cancellation.getId();
     boolean applied =
         Boolean.TRUE.equals(
@@ -198,11 +209,6 @@ public class PaymentCancellationService {
       CreatePaymentCancellationRequest request,
       UUID idempotencyKey,
       String principalMode) {
-    if (BusinessEnvironmentContext.environmentId() != null) {
-      paymentAttemptRepository
-          .findByOrganizationIdAndId(organizationId, paymentAttemptId)
-          .orElseThrow(() -> new NotFoundException(ErrorCode.PAYMENT_ATTEMPT_NOT_FOUND));
-    }
     UUID cancellationId =
         idempotencyKey == null ? UUID.randomUUID() : cancellationId(organizationId, idempotencyKey);
     String fingerprint = idempotencyKey == null ? null : fingerprint(paymentAttemptId, request);
@@ -213,8 +219,7 @@ public class PaymentCancellationService {
           paymentCancellationRepository.findById(cancellationId);
       if (existing.isPresent()) {
         PaymentCancellation cancellation = existing.get();
-        if (!BusinessEnvironmentContext.matches(cancellation.getEnvironmentId())
-            || !organizationId.equals(cancellation.getOrganizationId())
+        if (!organizationId.equals(cancellation.getOrganizationId())
             || !fingerprint.equals(cancellation.getIdempotencyFingerprint())) {
           throw new ConflictException(ErrorCode.PAYMENT_CANCELLATION_IDEMPOTENCY_CONFLICT);
         }
@@ -273,7 +278,8 @@ public class PaymentCancellationService {
   }
 
   private static void validateMode(String principalMode, String paymentMode) {
-    if (principalMode != null && !principalMode.equals(paymentMode)) {
+    if (!PaymentSettingService.selectedMode().equals(paymentMode)
+        || (principalMode != null && !principalMode.equals(paymentMode))) {
       throw new ConflictException(ErrorCode.PAYMENT_MODE_MISMATCH);
     }
   }
@@ -358,9 +364,12 @@ public class PaymentCancellationService {
 
   private static UUID cancellationId(UUID organizationId, UUID idempotencyKey) {
     String environment =
-        BusinessEnvironmentContext.environmentId() == null
-            ? ""
-            : BusinessEnvironmentContext.environmentId() + ":";
+        switch (DatabaseScopes.current()) {
+          case TEST -> "";
+          case LIVE -> "live:";
+          case SHARED ->
+              throw new IllegalStateException("cancellation requires a business database scope");
+        };
     byte[] value =
         sha256(
             (organizationId + ":" + environment + idempotencyKey).getBytes(StandardCharsets.UTF_8));

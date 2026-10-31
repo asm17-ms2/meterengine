@@ -1,0 +1,281 @@
+{
+  "source_commit": "7889d845c9f908528a156c3f5d363e14565e9582",
+  "flyway_version": "53",
+  "files": {
+    "R__seed.sql": {
+      "source_path": "backend/src/main/resources/db/migration/R__seed.sql",
+      "git_blob": "be57b4016563dbca589be88a4bd2478acf0bf039",
+      "sha256": "074f26af522c80d963c56945949dc525137e101ee41172dfe411658776131767"
+    },
+    "V10__lowercase_billable_metric_aggregation.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V10__lowercase_billable_metric_aggregation.sql",
+      "git_blob": "c66caa6cabb7e2b77125e5149adf37e855e00f38",
+      "sha256": "650ef2cceab8ac6cca64a61e26ddf35a97e5054d33e459e971ee4a377809db60"
+    },
+    "V11__add_billable_metric_event_type_target_property_unique.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V11__add_billable_metric_event_type_target_property_unique.sql",
+      "git_blob": "d126f0917129f4a1f76345c0cbd2d52f3198cfde",
+      "sha256": "28bbcf4f114705a8ab60af4e29167f5424128535e80c7baad9db978cd32a58ba"
+    },
+    "V12__create_billing_key_table.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V12__create_billing_key_table.sql",
+      "git_blob": "3b2ab03e64952826c248d0d44712d6a22040c765",
+      "sha256": "4c20177b6241fc5598ef0d0c3d18a9bbe46c433218a5bb6b0d2e27a866e7336d"
+    },
+    "V13__create_payment_attempt_table.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V13__create_payment_attempt_table.sql",
+      "git_blob": "363c98a1eba3750bb9ad0d7c957f50f70179535d",
+      "sha256": "46cc09a4d4c1953f3f9165a933c32ff4d3c738964103c8283badc936de57f5ea"
+    },
+    "V14__add_payment_attempt_guards.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V14__add_payment_attempt_guards.sql",
+      "git_blob": "210c6e8e19ec7a24e91a5129dc4714619fb95c05",
+      "sha256": "848e3c00b69187d707221ecc6074c2200728a3721c03eae08cddf9a1ca8d2ed9"
+    },
+    "V15__add_invoice_total_amount_and_block_mutation.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V15__add_invoice_total_amount_and_block_mutation.sql",
+      "git_blob": "920f2831fedfaf392302500a2547041ab18eb7b1",
+      "sha256": "f6313c04f3077a8779cda89d912775806b979b13d55420f3cfec3284e193b23d"
+    },
+    "V16__add_invoice_customer_name.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V16__add_invoice_customer_name.sql",
+      "git_blob": "27672e0947bf8895119028c2d5bc8afd358e73a6",
+      "sha256": "b00ffa7bef6fe3c24c86ffd0998a8c1757c6cc026631583380643874a5da2567"
+    },
+    "V17__drop_billing_key_table.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V17__drop_billing_key_table.sql",
+      "git_blob": "cb54f2fa7a276caa3f1b912e8149126a725757bd",
+      "sha256": "59aeb8fc693f863bd2d663d5daac5ef91c770c7cd79935cc28e2a15f109f332a"
+    },
+    "V18__drop_payment_attempt_pending_requested_at_index.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V18__drop_payment_attempt_pending_requested_at_index.sql",
+      "git_blob": "1452623ca9d9f93ab81cfcc2d3fe826322c1ff5d",
+      "sha256": "1a4a9cd4f7b2e5db843f7bc05647d47b20edd3ec4b4992331e98d46f570e0b31"
+    },
+    "V19__move_dimension_properties_to_billable_metric.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V19__move_dimension_properties_to_billable_metric.sql",
+      "git_blob": "8cc2cf4c37fcf7d202550d403b0b9ee99a45190b",
+      "sha256": "e60dd4de5bb73b3a3b3a349076c8438a72a63385081469c744ca8c81b4ef82e5"
+    },
+    "V1__create_initial_tables.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V1__create_initial_tables.sql",
+      "git_blob": "fe4d634136eccad2687f67f17c34a80f7d812838",
+      "sha256": "e001cf4f694e6841dc2a613f7b96b66f6d757cc15e2dafc03add7e5c11398ca0"
+    },
+    "V20__drop_price_policy.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V20__drop_price_policy.sql",
+      "git_blob": "306d6d12be2b68074c98998c9c1f6be2c45c4b36",
+      "sha256": "e1eff84e6b3833331b1acb8d9b4f003c899d834540b58a4c309ee3e4e2163977"
+    },
+    "V21__add_customer_billing_email.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V21__add_customer_billing_email.sql",
+      "git_blob": "9c03a39294cc723471b4e0385fb41018469fdb81",
+      "sha256": "8d596f46d13d12e46cb57f8f5d56861f06e2ff8d62ee3e00cafaecb21076ea98"
+    },
+    "V22__create_outbound_email_table.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V22__create_outbound_email_table.sql",
+      "git_blob": "b07f485e0411e905dd401c3a63ed52aafc6b9e3c",
+      "sha256": "b41b03f02f69696c79e6c5643c50d1bccc6f8ed69fffb2b0c27472bd3a40842d"
+    },
+    "V23__create_scheduled_job_run_table.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V23__create_scheduled_job_run_table.sql",
+      "git_blob": "a849fe941994d16bb7e84e44f4cf4850a7f4a03f",
+      "sha256": "5901ca5b15210a128a886080f8c6f48c5434b00e0c3b113a2557320c5990e411"
+    },
+    "V24__create_account_and_api_key_tables.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V24__create_account_and_api_key_tables.sql",
+      "git_blob": "3a6370eeacbefff0b47d10945ce0005d6938d38a",
+      "sha256": "5581376f5a9484bd937da46fb58e94cce260cbe1b9d635dea0147c2ef404871e"
+    },
+    "V25__create_audit_log_table.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V25__create_audit_log_table.sql",
+      "git_blob": "280f0e67aac20cd02a4bcfd6ce78335609414b16",
+      "sha256": "f700a382625923b2806e67b47b4bb63e14039662c9e443f6586a8de8d8d80d8a"
+    },
+    "V26__organization_people_and_invitations.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V26__organization_people_and_invitations.sql",
+      "git_blob": "87eb5f0841dfe2832f0f30d04bdaaaf063fd0b58",
+      "sha256": "8173c3788a03cc9f6e7b64df9d4fff9b548803c1ca167773c5d8a2acfe265874"
+    },
+    "V27__add_member_and_invitation_scopes.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V27__add_member_and_invitation_scopes.sql",
+      "git_blob": "6baf674bd701942588482da3c23ae023474a2840",
+      "sha256": "dc5ed8433914ee8e9b6121ff7ec2b7bca54aa9633f970f6d2cb61b097adf15c8"
+    },
+    "V28__create_webhook_tables.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V28__create_webhook_tables.sql",
+      "git_blob": "4a91e781c91158c2dec2fd44193a07161b2ccc12",
+      "sha256": "b0724c70e972e5a0791613228ec6f786d732066861f4977ea25c9c0ff68eb029"
+    },
+    "V29__add_payment_attempt_invoice_fk.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V29__add_payment_attempt_invoice_fk.sql",
+      "git_blob": "58078dd528e27e40658f04248676fc209586469b",
+      "sha256": "b9e864a93c92218008de2440078c251ab4e010c4b82ef52a81cc804abc5d803d"
+    },
+    "V2__split_price_policy_from_billable_metric.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V2__split_price_policy_from_billable_metric.sql",
+      "git_blob": "0fd3b1d2bb358367e677a75a5554c87571689bf8",
+      "sha256": "630b06f55990e48d5522663a798635201d6e1f4bbb4d6fb4ec5e8dc428b80dc2"
+    },
+    "V30__add_payment_attempt_mode.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V30__add_payment_attempt_mode.sql",
+      "git_blob": "92aa8c2ead5f6008adeab18cf758706a307e3ced",
+      "sha256": "18cb68236e6ef4aae1029ed5eaa03268ab05f2f6609303cc4757bf3875a59036"
+    },
+    "V31__create_toss_payments_credential_and_payment_setting_tables.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V31__create_toss_payments_credential_and_payment_setting_tables.sql",
+      "git_blob": "67526a2cf6e9e0f53305934577381022687c181e",
+      "sha256": "861c2d3cbb80b5bcb63483f3699c56290f06333933c43e6f7c2401763cbe47cd"
+    },
+    "V32__create_payment_method_registration_and_billing_key_tables.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V32__create_payment_method_registration_and_billing_key_tables.sql",
+      "git_blob": "e664f3ba13f2689de0abf82b77860023e38140bb",
+      "sha256": "650385d58fba3f201d8cc454b141d6f2bdeb47870880041af04230a3c37eea87"
+    },
+    "V33__create_payment_cancellation_table.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V33__create_payment_cancellation_table.sql",
+      "git_blob": "ea395aeccc633eba00c286a2de80a5653579f59e",
+      "sha256": "5caaf41592ca4249d4d2d5fba32eb5d0a7806b40f90579c0605ad190e5d22c58"
+    },
+    "V34__create_payment_reconciliation_mismatch_table.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V34__create_payment_reconciliation_mismatch_table.sql",
+      "git_blob": "995f4db9cbd6a4c48f8c98363d037cf026678e02",
+      "sha256": "cdf76cc757dd419b11a9b9498ee393c55baf018bfe09a75e1d0a3210893c67b0"
+    },
+    "V35__add_payment_cancellation_idempotency.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V35__add_payment_cancellation_idempotency.sql",
+      "git_blob": "6508d750408b4a0a4a26ed1f4be9c9d15d8c62ab",
+      "sha256": "843a4b1c003db13667e03b08340dec89a9da7a74feb467bb9cce7a3fe2e397c4"
+    },
+    "V36__version_price_rates.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V36__version_price_rates.sql",
+      "git_blob": "78bbebb73a71f2f32e9b2bff36aad81ce93e680c",
+      "sha256": "e634ebb4e295ed8aab1cc3e943a3bd1dcc4f663f576475648a706ca719c8469c"
+    },
+    "V37__create_price_plans_and_supplier.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V37__create_price_plans_and_supplier.sql",
+      "git_blob": "d7826310a48c4c0e41c3c8116b3d26c852ed3e5c",
+      "sha256": "4fdb2af052e959b402f74a6f5caac303097fb8057a4b882b1ad8642b033b56d2"
+    },
+    "V38__extend_invoice_line_types.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V38__extend_invoice_line_types.sql",
+      "git_blob": "94cfa04b9580654129c48002cc1a88663134a158",
+      "sha256": "d0661e3875c5b883e7a5a7354079c6c5e8f0a592c15e9d5aa5a8bf0e42881ff2"
+    },
+    "V39__extend_metric_aggregations.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V39__extend_metric_aggregations.sql",
+      "git_blob": "f5ba48f36c977422705bc00863fc7deaddc61de6",
+      "sha256": "667a2709c806f1853402d271af6f2aacb99a3f422b4ac561e45cfaae1139cf29"
+    },
+    "V3__add_customer_created_at.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V3__add_customer_created_at.sql",
+      "git_blob": "4ccd1e0859fccfe73aa934635138088383c4df0f",
+      "sha256": "52ee6f12d8538c7fbc59261717e4c1255527c5e047f7e3b7b12a12a93d979b41"
+    },
+    "V40__preserve_exact_invoice_quantities.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V40__preserve_exact_invoice_quantities.sql",
+      "git_blob": "c613f373e540b4af8bffe36d921bb838caccd6bb",
+      "sha256": "805b59d0abf509dabec609c68d27a0f24cd13f5ec6a1d5fdb557633a65ec0f80"
+    },
+    "V41__create_invoice_view_links.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V41__create_invoice_view_links.sql",
+      "git_blob": "362f1cdfa6cf00efeef66d35a6780ecd98daa661",
+      "sha256": "d761e808e6c078ba50642fa16d83ac761beebe24efa1beea2521cd1d23284481"
+    },
+    "V42__add_customer_external_id.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V42__add_customer_external_id.sql",
+      "git_blob": "fa0b020dec8740c385be8b4f0bccbfd9d59de696",
+      "sha256": "4b939df3d5dc88c53db6ec3639441e8ad291467b334018628fe2bb07dba2e910"
+    },
+    "V43__archive_business_resources.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V43__archive_business_resources.sql",
+      "git_blob": "925fe8da97e9d148b7ba33cdc39ba3339107f390",
+      "sha256": "23ec6578a0a932c75d8aa22722be0727ff9f24c398f3b59b57b382f8a87143cb"
+    },
+    "V44__allow_customer_payment_retry.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V44__allow_customer_payment_retry.sql",
+      "git_blob": "8382d0fd8b936da33fef8475498ef8df5cb1f320",
+      "sha256": "d4773a5c77f296ef51d1db580364f350a4290ba31e3e161b420b5b337eca7fbd"
+    },
+    "V45__create_organization_environments.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V45__create_organization_environments.sql",
+      "git_blob": "f0b4b39b20b7f5a7a1c4139a8f5def884f119a24",
+      "sha256": "a6d2d94c4f4a1c19f432b034e271dd29afb046d015e47ae5b2424bd976d9ae2a"
+    },
+    "V46_1__validate_event_constraints.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V46_1__validate_event_constraints.sql",
+      "git_blob": "c800608b279e242b1c8a692e08c7aeae3eac05ef",
+      "sha256": "c17dee5209cfb18c3246a7d00385f74975c354e51108f754d17262e40a2f382b"
+    },
+    "V46__create_event_rejections.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V46__create_event_rejections.sql",
+      "git_blob": "068d45e718368d38179056cac515e8f775e7bb51",
+      "sha256": "917ce754ff3293f4686a816b9f7c4513fee9e1cdba7ad5164bc89f8494045a4e"
+    },
+    "V47__add_conditional_resource_updates.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V47__add_conditional_resource_updates.sql",
+      "git_blob": "2d67ebff9b57186d6a85430081e6cb3a0cb37fe4",
+      "sha256": "973e43571a37ec290dfb67aebfc94ae304a4bc22747e01d76dbe3b0d866782bb"
+    },
+    "V48__isolate_billing_payment_and_delivery_environments.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V48__isolate_billing_payment_and_delivery_environments.sql",
+      "git_blob": "cb162c628084f1f606d749ad46844ac14abe234e",
+      "sha256": "0a5a4f4df1b5185bd3bb9d9432729eb92a62b8fa8cedcb35e64efc423d909b59"
+    },
+    "V49__create_auth_request_rate_limits.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V49__create_auth_request_rate_limits.sql",
+      "git_blob": "efd3b967fdec2b5fb67dd563647ed93527b649d1",
+      "sha256": "77206c709540eaca8dcc5c6b03d3e936ea4196c1d74df6f84e58d4d91936f9f0"
+    },
+    "V4__collate_names_for_korean.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V4__collate_names_for_korean.sql",
+      "git_blob": "0301be9a52a6927660cd599b790d1abdd3dfd84b",
+      "sha256": "d53adc81d9e31fb042aedc2b34bef1c1e564c2e748fdd750602de3ad7dbb06ef"
+    },
+    "V50__index_price_rate_organization.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V50__index_price_rate_organization.sql",
+      "git_blob": "5f917e8770ca58fd910c4ebc48ca2f9790b095f2",
+      "sha256": "c6e534bc13e26d03143283aa7f0d28f0e673f9ffdb489990fc8531033ec4dd9e"
+    },
+    "V51__rename_aggregation_and_quantity_checks.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V51__rename_aggregation_and_quantity_checks.sql",
+      "git_blob": "079edc79a59fa80763bcf8772edc713db9820ad9",
+      "sha256": "4ac8d19684692669c0057f176e6e819f8d0921b2d94167961c3cc31bdbc85f3b"
+    },
+    "V52__check_webhook_delivery_failure_reason.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V52__check_webhook_delivery_failure_reason.sql",
+      "git_blob": "b561a916951d439594aa01727790eab20f129736",
+      "sha256": "f25c262b6145a7d3cfa00346ff9122626fef6ee54627714d14ddfa8a9fd22026"
+    },
+    "V53__add_invoice_line_billable_metric_name.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V53__add_invoice_line_billable_metric_name.sql",
+      "git_blob": "24e76da339ca54f36a4fc4f63d831368452cc001",
+      "sha256": "2673346277da47451a2e709b30c27a982a11f0f1ef020d51f0876ecc23824a9a"
+    },
+    "V5__create_invoice_tables.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V5__create_invoice_tables.sql",
+      "git_blob": "88bdc2a39cd230f5eda47bcaec384339f09b3da8",
+      "sha256": "81e244c4c808cfe480dc40e350f6eeb0adf26633870edd67019b7d3466310a27"
+    },
+    "V6__rename_metric_code_to_billable_metric_code.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V6__rename_metric_code_to_billable_metric_code.sql",
+      "git_blob": "784e411e55b86c01d2e143178872dfd402edd2f7",
+      "sha256": "cf000b04eae00d70ca8daf11850e861a3c3d3fb31960161346fb1d9352117711"
+    },
+    "V7__rename_usage_event_to_event.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V7__rename_usage_event_to_event.sql",
+      "git_blob": "11f16f72beb82d901b9583e9800f094103723125",
+      "sha256": "759395ec9beeeda42d8e174c4972087e62942135220c7bfab6ef96b2db83407f"
+    },
+    "V8__name_organization_fk_and_pk_constraints.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V8__name_organization_fk_and_pk_constraints.sql",
+      "git_blob": "4babfe879c59f1c28d4bb71c5973529e4fed56b4",
+      "sha256": "f26bc5656765872a64cd69a3de46434082b198f409d09c680d575a051ac080dc"
+    },
+    "V9__rename_organization_and_billable_metric_in_constraint_names.sql": {
+      "source_path": "backend/src/main/resources/db/migration/V9__rename_organization_and_billable_metric_in_constraint_names.sql",
+      "git_blob": "00e728ebd0d3cc0c1713acef2d825fd48f31b206",
+      "sha256": "b4de0817ff2b49c5ef98e1a1e59b09beab03ff69e7a8bc25b50235451a3e2eb5"
+    }
+  }
+}

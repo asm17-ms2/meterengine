@@ -27,6 +27,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class SignupService {
+  @org.springframework.beans.factory.annotation.Autowired
+  private com.meterengine.global.database.CutoverPolicy cutover;
 
   private static final List<String> REQUIRED_DOCUMENTS =
       List.of(Consent.TERMS_OF_SERVICE, Consent.PRIVACY_POLICY);
@@ -66,6 +68,7 @@ public class SignupService {
       String email,
       String password,
       List<SignupConsent> consents) {
+    cutover.requireWritable();
     validate(password, consents);
     if (userAccountRepository.findByEmailIgnoreCase(email).isPresent()) {
       throw new ConflictException(ErrorCode.EMAIL_ALREADY_EXISTS);

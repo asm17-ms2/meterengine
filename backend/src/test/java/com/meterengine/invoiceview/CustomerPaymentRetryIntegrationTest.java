@@ -3,6 +3,7 @@ package com.meterengine.invoiceview;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -12,7 +13,6 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 
 import com.jayway.jsonpath.JsonPath;
 import com.meterengine.TestCredentials;
-import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.payment.client.TossPaymentsApproveBillingRequest;
 import com.meterengine.payment.client.TossPaymentsClient;
 import com.meterengine.payment.client.TossPaymentsPayment;
@@ -36,8 +36,6 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -46,14 +44,9 @@ import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.context.WebApplicationContext;
 
-@Import(TestcontainersConfiguration.class)
-@SpringBootTest(
-    properties = {
-      "payment.retry-max-attempts=3",
-      "payment.retry-interval=PT24H",
-      "payment.retry-cron=-"
-    })
-class CustomerPaymentRetryIntegrationTest {
+@org.springframework.test.annotation.DirtiesContext(
+    classMode = org.springframework.test.annotation.DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+class CustomerPaymentRetryIntegrationTest extends com.meterengine.SideEffectTestSupport {
   private static final String SECRET_KEY = "test_sk_customer_retry_mock_00000001";
   private static final String BILLING_KEY = "customer-retry-mock-billing-key";
   @Autowired private WebApplicationContext webApplicationContext;
@@ -89,10 +82,11 @@ class CustomerPaymentRetryIntegrationTest {
         .extractingPath("$.code")
         .isEqualTo("payment_retry_unavailable");
     assertThat(
-            jdbcTemplate.queryForObject(
-                "SELECT allow_payment_retry FROM invoice_view_link WHERE id=?",
-                Boolean.class,
-                UUID.fromString(value(created, "$.id"))))
+            ownerJdbc()
+                .queryForObject(
+                    "SELECT allow_payment_retry FROM test.invoice_view_link WHERE id=?",
+                    Boolean.class,
+                    UUID.fromString(value(created, "$.id"))))
         .isFalse();
     verifyNoInteractions(tossPaymentsClient);
   }
@@ -148,16 +142,17 @@ class CustomerPaymentRetryIntegrationTest {
             "mock-payment-");
     assertThat(count(fixture)).isEqualTo(2);
     Map<String, Object> audit =
-        jdbcTemplate.queryForMap(
-            "SELECT actor_type,actor_id FROM audit_log WHERE organization_id=? AND action='payment_attempt_created'",
-            fixture.organizationId());
+        ownerJdbc()
+            .queryForMap(
+                "SELECT actor_type,actor_id FROM shared.audit_log WHERE organization_id=? AND action='payment_attempt_created'",
+                fixture.organizationId());
     assertThat(audit)
         .containsEntry("actor_type", "invoice_view_link")
         .containsEntry("actor_id", UUID.fromString(value(created, "$.id")));
     String details =
-        jdbcTemplate
+        ownerJdbc()
             .queryForList(
-                "SELECT detail::text FROM audit_log WHERE organization_id=?",
+                "SELECT detail::text FROM shared.audit_log WHERE organization_id=?",
                 String.class,
                 fixture.organizationId())
             .toString();
@@ -218,7 +213,7 @@ class CustomerPaymentRetryIntegrationTest {
                 null,
                 OffsetDateTime.now().minusMinutes(1));
         if (List.of("partial", "canceled").contains(state))
-          jdbcTemplate.update(
+          businessUpdate(
               "INSERT INTO payment_cancellation(id,organization_id,payment_attempt_id,mode,amount,reason,status,transaction_key,requested_at,completed_at) VALUES (?,?,?,'test',?,'검증','done',?,now(),now())",
               UUID.randomUUID(),
               fixture.organizationId(),
@@ -245,12 +240,13 @@ class CustomerPaymentRetryIntegrationTest {
       String version = value(lookup(token), "$.payment_retry.version");
       if ("revoked".equals(condition)) revoke(fixture, value(created, "$.id"));
       if ("expired".equals(condition))
-        jdbcTemplate.update(
+        businessUpdate(
             "UPDATE invoice_view_link SET created_at=now()-interval '2 days',expires_at=now()-interval '1 second' WHERE id=?",
             UUID.fromString(value(created, "$.id")));
       if ("inactive".equals(condition))
         jdbcTemplate.update(
-            "UPDATE organization SET status='suspended' WHERE id=?", fixture.organizationId());
+            "UPDATE shared.organization SET status='suspended' WHERE id=?",
+            fixture.organizationId());
       assertThat(retry(token, version)).hasStatus(404);
       assertThat(count(fixture)).isEqualTo(1);
     }
@@ -258,18 +254,16 @@ class CustomerPaymentRetryIntegrationTest {
   }
 
   @Test
-  void 조회_후_결제모드를_바꾸면_다른_모드의_카드로_재시도하지_않는다() {
+  void 조회_후_반대_모드설정은_DB가_거절하고_링크의_고정_모드를_유지한다() {
     Fixture fixture = fixture(true, "REJECT_CARD_PAYMENT");
     String token = value(create(fixture, true), "$.token");
-    String version = value(lookup(token), "$.payment_retry.version");
-    jdbcTemplate.update(
-        "INSERT INTO payment_setting(organization_id,mode,updated_at) VALUES (?,'live',now())",
-        fixture.organizationId());
-    assertThat(lookup(token))
-        .bodyJson()
-        .extractingPath("$.payment_retry.reason")
-        .isEqualTo("payment_mode_changed");
-    assertThat(retry(token, version)).hasStatus(409);
+    org.assertj.core.api.Assertions.assertThatThrownBy(
+            () ->
+                businessUpdate(
+                    "INSERT INTO payment_setting(organization_id,mode,updated_at) VALUES (?,'live',now())",
+                    fixture.organizationId()))
+        .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+    assertThat(lookup(token)).bodyJson().extractingPath("$.payment.mode").isEqualTo("test");
     assertThat(count(fixture)).isEqualTo(1);
     verifyNoInteractions(tossPaymentsClient);
   }
@@ -280,7 +274,7 @@ class CustomerPaymentRetryIntegrationTest {
       Fixture fixture = fixture(true, "REJECT_CARD_PAYMENT");
       String token = value(create(fixture, true), "$.token");
       String version = value(lookup(token), "$.payment_retry.version");
-      jdbcTemplate.update(
+      businessUpdate(
           "UPDATE " + table + " SET archived_at=now() WHERE organization_id=?",
           fixture.organizationId());
       assertThat(lookup(token))
@@ -302,18 +296,23 @@ class CustomerPaymentRetryIntegrationTest {
         .bodyJson()
         .extractingPath("$.payment_retry.reason")
         .isEqualTo("card_update_required");
-    BillingKey card =
-        billingKeyRepository
-            .findById(new BillingKeyId(fixture.organizationId(), fixture.customerId(), "test"))
-            .orElseThrow();
-    card.update(
-        "customer-renewed-billing-key",
-        "61",
-        "1234****5678",
-        OffsetDateTime.now(),
-        "2026-10-01",
-        OffsetDateTime.now());
-    billingKeyRepository.saveAndFlush(card);
+    in(
+        "test",
+        () -> {
+          BillingKey card =
+              billingKeyRepository
+                  .findById(
+                      new BillingKeyId(fixture.organizationId(), fixture.customerId(), "test"))
+                  .orElseThrow();
+          card.update(
+              "customer-renewed-billing-key",
+              "61",
+              "1234****5678",
+              OffsetDateTime.now(),
+              "2026-10-01",
+              OffsetDateTime.now());
+          billingKeyRepository.saveAndFlush(card);
+        });
     assertThat(lookup(token)).bodyJson().extractingPath("$.payment_retry.allowed").isEqualTo(true);
     verifyNoInteractions(tossPaymentsClient);
   }
@@ -349,13 +348,13 @@ class CustomerPaymentRetryIntegrationTest {
     Fixture fixture = fixture(true, "NOT_FOUND_PAYMENT");
     String token = value(create(fixture, true), "$.token");
     String version = value(lookup(token), "$.payment_retry.version");
-    jdbcTemplate.update(
+    businessUpdate(
         "UPDATE toss_payments_credential SET updated_at=now() WHERE organization_id=?",
         fixture.organizationId());
     assertThat(lookup(token))
         .bodyJson()
         .extractingPath("$.payment_retry.reason")
-        .isEqualTo("payment_result_unconfirmed");
+        .isEqualTo("credentials_missing");
     assertThat(retry(token, version)).hasStatus(409);
     verifyNoInteractions(tossPaymentsClient);
   }
@@ -393,7 +392,7 @@ class CustomerPaymentRetryIntegrationTest {
     String version = value(lookup(token), "$.payment_retry.version");
     rejectApproval();
     try (var executor = Executors.newFixedThreadPool(2);
-        Connection connection = dataSource.getConnection()) {
+        Connection connection = businessConnection()) {
       connection.setAutoCommit(false);
       try (var statement =
           connection.prepareStatement("SELECT id FROM invoice WHERE id=? FOR UPDATE")) {
@@ -407,9 +406,10 @@ class CustomerPaymentRetryIntegrationTest {
         int waiting = 0;
         while (System.nanoTime() < deadline) {
           waiting =
-              jdbcTemplate.queryForObject(
-                  "SELECT count(*) FROM pg_stat_activity WHERE datname=current_database() AND state='active' AND wait_event_type='Lock' AND lower(query) LIKE '%from invoice%'",
-                  Integer.class);
+              ownerJdbc()
+                  .queryForObject(
+                      "SELECT count(*) FROM pg_stat_activity WHERE datname=current_database() AND state='active' AND wait_event_type='Lock' AND lower(query) LIKE '%from invoice%'",
+                      Integer.class);
           if (waiting >= 2) break;
           Thread.sleep(10);
         }
@@ -440,7 +440,7 @@ class CustomerPaymentRetryIntegrationTest {
   }
 
   @Test
-  void 인보이스_예약을_기다리는_동안_모드가_바뀌면_옛_캐시로_승인하지_않는다() throws Exception {
+  void 인보이스_예약_중_반대모드_설정은_거절되고_폐기된_링크로_승인하지_않는다() throws Exception {
     changeWhileWaiting("invoice", "mode");
   }
 
@@ -470,10 +470,20 @@ class CustomerPaymentRetryIntegrationTest {
     insertAttempt(ids.get(0), fixture, "failed", "NOT_FOUND_PAYMENT", requestedAt);
     insertAttempt(ids.get(1), fixture, "failed", "REJECT_CARD_PAYMENT", requestedAt);
     String token = value(create(fixture, true), "$.token");
-    String version = value(lookup(token), "$.payment_retry.version");
+    var before = lookup(token);
+    assertThat(before)
+        .as(new String(before.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8))
+        .bodyJson()
+        .extractingPath("$.payment_retry.allowed")
+        .isEqualTo(true);
+    String version = value(before, "$.payment_retry.version");
+    when(tossPaymentsClient.findPaymentByOrderId(eq(SECRET_KEY), eq(ids.get(0).toString())))
+        .thenReturn(new TossPaymentsResult.Rejected<>(404, "NOT_FOUND_PAYMENT", "fixture"));
     when(tossPaymentsClient.approveBilling(anyString(), anyString(), any(), anyString(), any()))
         .thenReturn(approved(fixture));
-    assertThat(retry(token, version))
+    var actual = retry(token, version);
+    assertThat(actual)
+        .as(new String(actual.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8))
         .hasStatusOk()
         .bodyJson()
         .extractingPath("$.payment.status")
@@ -505,7 +515,7 @@ class CustomerPaymentRetryIntegrationTest {
     when(tossPaymentsClient.findPaymentByOrderId(anyString(), anyString()))
         .thenReturn(new TossPaymentsResult.Rejected<>(404, "NOT_FOUND_PAYMENT", "없는 결제"));
     try (var executor = Executors.newFixedThreadPool(1);
-        Connection connection = dataSource.getConnection()) {
+        Connection connection = businessConnection()) {
       connection.setAutoCommit(false);
       try (var statement =
           connection.prepareStatement("SELECT id FROM " + table + " WHERE id=? FOR UPDATE")) {
@@ -519,32 +529,40 @@ class CustomerPaymentRetryIntegrationTest {
         int waiting = 0;
         while (System.nanoTime() < deadline) {
           waiting =
-              jdbcTemplate.queryForObject(
-                  "SELECT count(*) FROM pg_stat_activity WHERE datname=current_database() AND state='active' AND wait_event_type='Lock' AND lower(query) LIKE '%"
-                      + table
-                      + "%'",
-                  Integer.class);
+              ownerJdbc()
+                  .queryForObject(
+                      "SELECT count(*) FROM pg_stat_activity WHERE datname=current_database() AND state='active' AND wait_event_type='Lock' AND lower(query) LIKE '%"
+                          + table
+                          + "%'",
+                      Integer.class);
           if (waiting > 0) break;
           Thread.sleep(10);
         }
         assertThat(waiting).isPositive();
         if ("expired".equals(change))
-          jdbcTemplate.update(
+          businessUpdate(
               "UPDATE invoice_view_link SET created_at=now()-interval '2 days',expires_at=now()-interval '1 second' WHERE id=?",
               UUID.fromString(value(created, "$.id")));
-        if ("mode".equals(change))
-          jdbcTemplate.update(
-              "INSERT INTO payment_setting(organization_id,mode,updated_at) VALUES (?,'live',now())",
-              fixture.organizationId());
+        if ("mode".equals(change)) {
+          org.assertj.core.api.Assertions.assertThatThrownBy(
+                  () ->
+                      businessUpdate(
+                          "INSERT INTO payment_setting(organization_id,mode,updated_at) VALUES (?,'live',now())",
+                          fixture.organizationId()))
+              .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+          businessUpdate(
+              "UPDATE invoice_view_link SET revoked_at=now() WHERE id=?",
+              UUID.fromString(value(created, "$.id")));
+        }
         if ("credential".equals(change))
-          jdbcTemplate.update(
+          businessUpdate(
               "UPDATE toss_payments_credential SET updated_at=now() WHERE organization_id=?",
               fixture.organizationId());
       } finally {
         connection.commit();
       }
       assertThat(response.get(10, TimeUnit.SECONDS))
-          .hasStatus("expired".equals(change) ? 404 : 409);
+          .hasStatus("credential".equals(change) ? 409 : 404);
     }
     assertThat(count(fixture)).isEqualTo(1);
     verify(tossPaymentsClient, never())
@@ -570,7 +588,7 @@ class CustomerPaymentRetryIntegrationTest {
       var response = executor.submit(() -> retry(token, version));
       assertThat(entered.await(10, TimeUnit.SECONDS)).isTrue();
       if (isExpired)
-        jdbcTemplate.update(
+        businessUpdate(
             "UPDATE invoice_view_link SET created_at=now()-interval '2 days',expires_at=now()-interval '1 second' WHERE id=?",
             UUID.fromString(value(created, "$.id")));
       else assertThat(revoke(fixture, value(created, "$.id"))).hasStatusOk();
@@ -666,30 +684,38 @@ class CustomerPaymentRetryIntegrationTest {
         TestCredentials.issueApiKey(jdbcTemplate, organizationId, "test", "admin");
     UUID customerId = UUID.randomUUID();
     UUID invoiceId = UUID.randomUUID();
-    jdbcTemplate.update(
+    businessUpdate(
         "INSERT INTO customer(id,organization_id,name) VALUES (?,?,'재시도 고객')",
         customerId,
         organizationId);
-    jdbcTemplate.update(
+    businessUpdate(
         "INSERT INTO invoice(id,organization_id,customer_id,customer_name,period,supply_amount,tax_amount,total_amount,finalized_at) VALUES (?,?,?,'재시도 고객','2026-10',1000,100,1100,now())",
         invoiceId,
         organizationId,
         customerId);
-    OffsetDateTime before = OffsetDateTime.now().minusDays(3);
-    credentialRepository.saveAndFlush(
-        new TossPaymentsCredential(
-            organizationId, "test", "test_ck_customer_retry_mock_00000001", SECRET_KEY, before));
-    billingKeyRepository.saveAndFlush(
-        new BillingKey(
-            organizationId,
-            customerId,
-            "test",
-            BILLING_KEY,
-            "61",
-            "1234****5678",
-            before,
-            "2026-10-01",
-            before));
+    OffsetDateTime before = OffsetDateTime.now().minusDays(30);
+    in(
+        "test",
+        () -> {
+          credentialRepository.saveAndFlush(
+              new TossPaymentsCredential(
+                  organizationId,
+                  "test",
+                  "test_ck_customer_retry_mock_00000001",
+                  SECRET_KEY,
+                  before));
+          billingKeyRepository.saveAndFlush(
+              new BillingKey(
+                  organizationId,
+                  customerId,
+                  "test",
+                  BILLING_KEY,
+                  "61",
+                  "1234****5678",
+                  before,
+                  "2026-10-01",
+                  before));
+        });
     Fixture fixture = new Fixture(organizationId, customerId, invoiceId, authorization, null);
     UUID failed = hasFailure ? insertAttempt(fixture, "failed", failureCode, requestedAt) : null;
     return new Fixture(organizationId, customerId, invoiceId, authorization, failed);
@@ -702,7 +728,7 @@ class CustomerPaymentRetryIntegrationTest {
 
   private UUID insertAttempt(
       UUID id, Fixture fixture, String status, String code, OffsetDateTime requestedAt) {
-    jdbcTemplate.update(
+    businessUpdate(
         "INSERT INTO payment_attempt(id,organization_id,customer_id,invoice_id,mode,amount,order_name,status,payment_key,failure_code,requested_at,completed_at) VALUES (?,?,?,?,'test',1100,'2026-10 사용료',?,?,?,?,?)",
         id,
         fixture.organizationId(),
@@ -717,10 +743,11 @@ class CustomerPaymentRetryIntegrationTest {
   }
 
   private int count(Fixture fixture) {
-    return jdbcTemplate.queryForObject(
-        "SELECT count(*) FROM payment_attempt WHERE invoice_id=?",
-        Integer.class,
-        fixture.invoiceId());
+    return ownerJdbc()
+        .queryForObject(
+            "SELECT count(*) FROM test.payment_attempt WHERE invoice_id=?",
+            Integer.class,
+            fixture.invoiceId());
   }
 
   private MvcTestResult create(Fixture fixture, boolean allow) {
@@ -758,6 +785,22 @@ class CustomerPaymentRetryIntegrationTest {
   private static String value(MvcTestResult result, String path) {
     return JsonPath.read(
         new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8), path);
+  }
+
+  private int businessUpdate(String sql, Object... arguments) {
+    return in("test", () -> jdbcTemplate.update(sql, arguments));
+  }
+
+  private Connection businessConnection() {
+    return in(
+        "test",
+        () -> {
+          try {
+            return dataSource.getConnection();
+          } catch (java.sql.SQLException exception) {
+            throw new IllegalStateException(exception);
+          }
+        });
   }
 
   private record Fixture(

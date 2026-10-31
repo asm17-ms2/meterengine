@@ -4,7 +4,6 @@ import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.ErrorResponse.FieldError;
 import com.meterengine.global.error.InvalidRequestException;
-import com.meterengine.global.security.BusinessEnvironmentContext;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -42,21 +41,17 @@ public class IdempotencyService {
       throw new InvalidRequestException(
           ErrorCode.VALIDATION_ERROR,
           List.of(new FieldError("Idempotency-Key", "1부터 255자까지의 재시도 키를 보내세요")));
-    UUID environmentId = BusinessEnvironmentContext.environmentId();
-    String scope = environmentId == null ? "legacy" : environmentId.toString();
     String keyHash = hash(key);
     String requestHash = hash(jsonMapper.writeValueAsString(request));
     boolean created =
         jdbcTemplate.update(
                 """
         INSERT INTO idempotent_request
-          (organization_id, environment_id, environment_scope, operation, key_hash, request_hash)
-        VALUES (?, ?, ?, ?, ?, ?)
-        ON CONFLICT (organization_id, environment_scope, operation, key_hash) DO NOTHING
+          (organization_id, operation, key_hash, request_hash)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT (organization_id, operation, key_hash) DO NOTHING
         """,
                 organizationId,
-                environmentId,
-                scope,
                 operation,
                 keyHash,
                 requestHash)
@@ -66,7 +61,7 @@ public class IdempotencyService {
           jdbcTemplate.queryForObject(
               """
           SELECT request_hash, response_status, response_body FROM idempotent_request
-          WHERE organization_id = ? AND environment_scope = ? AND operation = ? AND key_hash = ?
+          WHERE organization_id = ? AND operation = ? AND key_hash = ?
           FOR UPDATE
           """,
               (rs, row) ->
@@ -75,7 +70,6 @@ public class IdempotencyService {
                       rs.getInt("response_status"),
                       rs.getString("response_body")),
               organizationId,
-              scope,
               operation,
               keyHash);
       if (!requestHash.equals(cached.requestHash()))
@@ -91,12 +85,11 @@ public class IdempotencyService {
     jdbcTemplate.update(
         """
         UPDATE idempotent_request SET response_status = ?, response_body = ?
-        WHERE organization_id = ? AND environment_scope = ? AND operation = ? AND key_hash = ?
+        WHERE organization_id = ? AND operation = ? AND key_hash = ?
         """,
         response.getStatusCode().value(),
         jsonMapper.writeValueAsString(response.getBody()),
         organizationId,
-        scope,
         operation,
         keyHash);
     return response;

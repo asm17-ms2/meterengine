@@ -3,7 +3,6 @@ package com.meterengine.event.repository;
 import com.meterengine.event.dto.Event;
 import com.meterengine.event.dto.EventInsertion;
 import com.meterengine.event.service.EventSearch;
-import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.global.security.RequestIdentity;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -36,9 +35,9 @@ public class EventRepository {
     return jdbcTemplate.update(
         """
         INSERT INTO event
-          (organization_id, transaction_id, customer_id, type, properties, occurred_at, environment_id, request_id, actor_type, actor_id)
-        VALUES (?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?)
-        ON CONFLICT (organization_id, environment_scope_id, transaction_id) DO NOTHING
+          (organization_id, transaction_id, customer_id, type, properties, occurred_at, request_id, actor_type, actor_id)
+        VALUES (?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?)
+        ON CONFLICT (organization_id, transaction_id) DO NOTHING
         """,
         organizationId,
         transactionId,
@@ -46,7 +45,6 @@ public class EventRepository {
         type,
         propertiesJson,
         occurredAt,
-        BusinessEnvironmentContext.environmentId(),
         identity.requestId(),
         identity.actorType(),
         identity.actorId());
@@ -60,7 +58,7 @@ public class EventRepository {
     String placeholders =
         String.join(
             ",",
-            java.util.Collections.nCopies(events.size(), "(?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?)"));
+            java.util.Collections.nCopies(events.size(), "(?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?)"));
     List<Object> parameters = new ArrayList<>();
     for (EventInsertion event : events) {
       parameters.add(organizationId);
@@ -69,15 +67,14 @@ public class EventRepository {
       parameters.add(event.type());
       parameters.add(event.properties());
       parameters.add(event.occurredAt());
-      parameters.add(BusinessEnvironmentContext.environmentId());
       parameters.add(identity.requestId());
       parameters.add(identity.actorType());
       parameters.add(identity.actorId());
     }
     return jdbcTemplate.query(
-        "INSERT INTO event (organization_id, transaction_id, customer_id, type, properties, occurred_at, environment_id, request_id, actor_type, actor_id) VALUES "
+        "INSERT INTO event (organization_id, transaction_id, customer_id, type, properties, occurred_at, request_id, actor_type, actor_id) VALUES "
             + placeholders
-            + " ON CONFLICT (organization_id, environment_scope_id, transaction_id) DO NOTHING RETURNING transaction_id",
+            + " ON CONFLICT (organization_id, transaction_id) DO NOTHING RETURNING transaction_id",
         (rs, rowNum) -> rs.getString("transaction_id"),
         parameters.toArray());
   }
@@ -88,10 +85,9 @@ public class EventRepository {
     }
     List<Object> parameters = new ArrayList<>();
     parameters.add(organizationId);
-    parameters.add(BusinessEnvironmentContext.scopeId());
     parameters.addAll(transactionIds);
     return jdbcTemplate.query(
-        "SELECT transaction_id FROM event WHERE organization_id = ? AND environment_scope_id = ? AND transaction_id IN ("
+        "SELECT transaction_id FROM event WHERE organization_id = ? AND transaction_id IN ("
             + String.join(",", java.util.Collections.nCopies(transactionIds.size(), "?"))
             + ")",
         (rs, rowNum) -> rs.getString("transaction_id"),
@@ -184,7 +180,7 @@ public class EventRepository {
     List<Object> parameters = new ArrayList<>();
     String where = buildSearchWhere(organizationId, customerId, null, search, parameters);
     return jdbcTemplate.query(
-        "SELECT DISTINCT e.type COLLATE korean AS type FROM event e LEFT JOIN customer c ON c.organization_id=e.organization_id AND c.id=e.customer_id "
+        "SELECT DISTINCT e.type COLLATE shared.korean AS type FROM event e LEFT JOIN customer c ON c.organization_id=e.organization_id AND c.id=e.customer_id "
             + where
             + " ORDER BY type",
         (rs, rowNum) -> rs.getString("type"),
@@ -193,12 +189,11 @@ public class EventRepository {
 
   public List<String> findMonths(UUID organizationId) {
     return jdbcTemplate.query(
-        "SELECT DISTINCT to_char(occurred_at AT TIME ZONE 'Asia/Seoul', 'YYYY-MM') AS month FROM event WHERE organization_id = ? AND environment_scope_id = ?"
+        "SELECT DISTINCT to_char(occurred_at AT TIME ZONE 'Asia/Seoul', 'YYYY-MM') AS month FROM event WHERE organization_id = ?"
             + OPENABLE_MONTH_CONDITION
             + " ORDER BY month DESC",
         (rs, rowNum) -> rs.getString("month"),
-        organizationId,
-        BusinessEnvironmentContext.scopeId());
+        organizationId);
   }
 
   public java.util.Optional<Event> find(UUID organizationId, String transactionId) {
@@ -208,7 +203,7 @@ public class EventRepository {
         SELECT e.transaction_id, e.customer_id, c.name AS customer_name, e.type,
                e.properties::text AS properties, e.occurred_at, e.received_at, e.request_id, e.actor_type, e.actor_id
         FROM event e LEFT JOIN customer c ON c.organization_id=e.organization_id AND c.id=e.customer_id
-        WHERE e.organization_id=? AND e.environment_scope_id = ? AND e.transaction_id=?
+        WHERE e.organization_id=? AND e.transaction_id=?
         """,
             (rs, rowNum) ->
                 new Event(
@@ -223,7 +218,6 @@ public class EventRepository {
                     rs.getString("actor_type"),
                     rs.getObject("actor_id", UUID.class)),
             organizationId,
-            BusinessEnvironmentContext.scopeId(),
             transactionId)
         .stream()
         .findFirst();
@@ -257,8 +251,8 @@ public class EventRepository {
     return switch (field) {
       case "received_at" -> "e.received_at";
       case "transaction_id" -> "e.transaction_id";
-      case "customer_name" -> "c.name COLLATE korean";
-      case "type" -> "e.type COLLATE korean";
+      case "customer_name" -> "c.name COLLATE shared.korean";
+      case "type" -> "e.type COLLATE shared.korean";
       default -> "e.occurred_at";
     };
   }
@@ -270,10 +264,9 @@ public class EventRepository {
   public boolean existsWithType(UUID organizationId, String type) {
     return Boolean.TRUE.equals(
         jdbcTemplate.queryForObject(
-            "SELECT EXISTS(SELECT 1 FROM event WHERE organization_id = ? AND environment_scope_id = ? AND type = ?)",
+            "SELECT EXISTS(SELECT 1 FROM event WHERE organization_id = ? AND type = ?)",
             Boolean.class,
             organizationId,
-            BusinessEnvironmentContext.scopeId(),
             type));
   }
 
@@ -284,14 +277,12 @@ public class EventRepository {
             SELECT EXISTS(
               SELECT 1 FROM event
               WHERE organization_id = ?
-                AND environment_scope_id = ?
                 AND type = ?
                 AND jsonb_typeof(properties -> ?::text) = 'number'
             )
             """,
             Boolean.class,
             organizationId,
-            BusinessEnvironmentContext.scopeId(),
             type,
             property));
   }
@@ -302,12 +293,11 @@ public class EventRepository {
             """
             SELECT EXISTS(
               SELECT 1 FROM event
-              WHERE organization_id = ? AND environment_scope_id = ? AND transaction_id = ?
+              WHERE organization_id = ? AND transaction_id = ?
             )
             """,
             Boolean.class,
             organizationId,
-            BusinessEnvironmentContext.scopeId(),
             transactionId));
   }
 
@@ -317,12 +307,11 @@ public class EventRepository {
             """
             SELECT EXISTS(
               SELECT 1 FROM event
-              WHERE organization_id = ? AND environment_scope_id = ? AND customer_id = ?
+              WHERE organization_id = ? AND customer_id = ?
             )
             """,
             Boolean.class,
             organizationId,
-            BusinessEnvironmentContext.scopeId(),
             customerId));
   }
 
@@ -335,9 +324,8 @@ public class EventRepository {
       List<Object> parameters) {
     StringBuilder where =
         new StringBuilder(
-            "WHERE e.organization_id = ? AND e.environment_scope_id = ? AND e.occurred_at >= ? AND e.occurred_at < ?");
+            "WHERE e.organization_id = ? AND e.occurred_at >= ? AND e.occurred_at < ?");
     parameters.add(organizationId);
-    parameters.add(BusinessEnvironmentContext.scopeId());
     parameters.add(start);
     parameters.add(end);
 

@@ -2,7 +2,7 @@ package com.meterengine.event.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.meterengine.TestcontainersConfiguration;
+import com.meterengine.MeteringEnvironmentTestSupport;
 import com.meterengine.event.controller.EventRejectionController;
 import com.meterengine.global.error.ErrorCode;
 import jakarta.validation.constraints.Pattern;
@@ -11,14 +11,10 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.RequestParam;
 
-@Import(TestcontainersConfiguration.class)
-@SpringBootTest
-class EventRejectionServiceTest {
+class EventRejectionServiceTest extends MeteringEnvironmentTestSupport {
   @Autowired private JdbcTemplate jdbcTemplate;
 
   @Test
@@ -26,10 +22,13 @@ class EventRejectionServiceTest {
     Set<String> recorded =
         EventRejectionService.REASONS.stream().map(ErrorCode::getCode).collect(Collectors.toSet());
     String constraint =
-        jdbcTemplate.queryForObject(
-            "SELECT pg_get_constraintdef(c.oid) FROM pg_constraint c JOIN pg_class t ON t.oid = c.conrelid"
-                + " WHERE t.relname = 'event_rejection' AND c.contype = 'c' AND pg_get_constraintdef(c.oid) LIKE '%error_code%'",
-            String.class);
+        transactions.read(
+            scope("test"),
+            () ->
+                jdbcTemplate.queryForObject(
+                    "SELECT pg_get_constraintdef(c.oid) FROM pg_constraint c JOIN pg_class t ON t.oid = c.conrelid"
+                        + " WHERE t.oid = 'event_rejection'::regclass AND c.contype = 'c' AND pg_get_constraintdef(c.oid) LIKE '%error_code%'",
+                    String.class));
     Set<String> stored =
         java.util.regex.Pattern.compile("'([a-z_]+)'")
             .matcher(constraint)

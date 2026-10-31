@@ -7,6 +7,7 @@
   - 컴포넌트 파일명은 PascalCase.
   - URL 버전은 `/v1/` 경로 접두사.
 - 표에 없는 영역 안의 이름은 아래 "원칙"대로 담당자가 정한다.
+- 엔티티는 클래스 이름으로 테이블명을 정하고 `@Table`의 name, catalog를 지정하지 않는다. UserAccount, UserSession, Consent, Organization, OrganizationMember, OrganizationInvitation, ApiKey, AuditLog, ScheduledJobRun만 `@Table(schema = "shared")`를 지정한다. 업무 엔티티에는 schema를 지정하지 않는다.
 
 ## 원칙
 

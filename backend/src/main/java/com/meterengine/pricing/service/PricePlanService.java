@@ -7,10 +7,8 @@ import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.ErrorResponse.FieldError;
 import com.meterengine.global.error.InvalidRequestException;
 import com.meterengine.global.error.NotFoundException;
-import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.global.validation.ArchiveStatus;
 import com.meterengine.metric.service.BillableMetricUsageService;
-import com.meterengine.organization.repository.OrganizationRepository;
 import com.meterengine.pricing.dto.CreatePricePlanRequest;
 import com.meterengine.pricing.dto.ListPricePlansResponse;
 import com.meterengine.pricing.dto.PricePlanResponse;
@@ -22,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,17 +28,17 @@ import org.springframework.transaction.annotation.Transactional;
 public class PricePlanService {
   private final PricePlanRepository pricePlanRepository;
   private final CustomerRepository customerRepository;
-  private final OrganizationRepository organizationRepository;
+  private final JdbcTemplate jdbcTemplate;
   private final AuditLogService auditLogService;
 
   PricePlanService(
       PricePlanRepository pricePlanRepository,
       CustomerRepository customerRepository,
-      OrganizationRepository organizationRepository,
+      JdbcTemplate jdbcTemplate,
       AuditLogService auditLogService) {
     this.pricePlanRepository = pricePlanRepository;
     this.customerRepository = customerRepository;
-    this.organizationRepository = organizationRepository;
+    this.jdbcTemplate = jdbcTemplate;
     this.auditLogService = auditLogService;
   }
 
@@ -54,30 +53,24 @@ public class PricePlanService {
     validateCustomer(organizationId, customerId);
     ArchiveStatus filter = ArchiveStatus.parse(status);
     return new ListPricePlansResponse(
-        (BusinessEnvironmentContext.environmentId() == null
-                ? pricePlanRepository.findByOrganizationIdOrderByEffectiveFromDesc(organizationId)
-                : pricePlanRepository.listScoped(
-                    organizationId, BusinessEnvironmentContext.environmentId()))
-            .stream()
-                .filter(
-                    plan ->
-                        Objects.equals(plan.getCustomerId(), customerId)
-                            && filter.includes(plan.getArchivedAt()))
-                .filter(
-                    plan ->
-                        month == null
-                            || (plan.getEffectiveFrom().compareTo(month.toString()) <= 0
-                                && (plan.getEffectiveUntil() == null
-                                    || plan.getEffectiveUntil().compareTo(month.toString()) > 0)))
-                .map(PricePlanResponse::from)
-                .toList());
+        pricePlanRepository.findByOrganizationIdOrderByEffectiveFromDesc(organizationId).stream()
+            .filter(
+                plan ->
+                    Objects.equals(plan.getCustomerId(), customerId)
+                        && filter.includes(plan.getArchivedAt()))
+            .filter(
+                plan ->
+                    month == null
+                        || (plan.getEffectiveFrom().compareTo(month.toString()) <= 0
+                            && (plan.getEffectiveUntil() == null
+                                || plan.getEffectiveUntil().compareTo(month.toString()) > 0)))
+            .map(PricePlanResponse::from)
+            .toList());
   }
 
   @Transactional
   public PricePlanResponse create(UUID organizationId, CreatePricePlanRequest request) {
-    organizationRepository
-        .findForUpdateById(organizationId)
-        .orElseThrow(() -> new NotFoundException(ErrorCode.ORGANIZATION_NOT_FOUND));
+    lock(organizationId);
     YearMonth current = YearMonth.now(BillableMetricUsageService.BILLING_ZONE);
     YearMonth start = request.effectiveFrom() == null ? current : request.effectiveFrom();
     if (start.isBefore(current))
@@ -88,43 +81,29 @@ public class PricePlanService {
     validateCustomer(organizationId, request.customerId());
     if (request.customerId() != null) {
       var customer =
-          (BusinessEnvironmentContext.environmentId() == null
-                  ? customerRepository.lock(organizationId, java.util.List.of(request.customerId()))
-                  : customerRepository.lockScoped(
-                      organizationId,
-                      BusinessEnvironmentContext.environmentId(),
-                      java.util.List.of(request.customerId())))
-              .stream()
-                  .findFirst()
-                  .orElseThrow(() -> new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND));
+          customerRepository.lock(organizationId, java.util.List.of(request.customerId())).stream()
+              .findFirst()
+              .orElseThrow(() -> new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND));
       if (customer.getArchivedAt() != null)
         throw new ConflictException(ErrorCode.CUSTOMER_ARCHIVED);
     }
-    if ((BusinessEnvironmentContext.environmentId() == null
-            ? pricePlanRepository.findByOrganizationIdOrderByEffectiveFromDesc(organizationId)
-            : pricePlanRepository.listScoped(
-                organizationId, BusinessEnvironmentContext.environmentId()))
-        .stream()
-            .anyMatch(
-                value ->
-                    value.getArchivedAt() != null
-                        && value.applies(current.toString())
-                        && Objects.equals(value.getCustomerId(), request.customerId())
-                        && value.getEffectiveFrom().equals(start.toString())))
+    if (pricePlanRepository.findByOrganizationIdOrderByEffectiveFromDesc(organizationId).stream()
+        .anyMatch(
+            value ->
+                value.getArchivedAt() != null
+                    && value.applies(current.toString())
+                    && Objects.equals(value.getCustomerId(), request.customerId())
+                    && value.getEffectiveFrom().equals(start.toString())))
       throw new ConflictException(ErrorCode.ARCHIVE_RESTORATION_CONFLICT);
     PricePlan plan =
-        (BusinessEnvironmentContext.environmentId() == null
-                ? pricePlanRepository.findByOrganizationIdOrderByEffectiveFromDesc(organizationId)
-                : pricePlanRepository.listScoped(
-                    organizationId, BusinessEnvironmentContext.environmentId()))
-            .stream()
-                .filter(
-                    value ->
-                        value.getArchivedAt() == null
-                            && Objects.equals(value.getCustomerId(), request.customerId())
-                            && value.getEffectiveFrom().equals(start.toString()))
-                .findFirst()
-                .orElse(null);
+        pricePlanRepository.findByOrganizationIdOrderByEffectiveFromDesc(organizationId).stream()
+            .filter(
+                value ->
+                    value.getArchivedAt() == null
+                        && Objects.equals(value.getCustomerId(), request.customerId())
+                        && value.getEffectiveFrom().equals(start.toString()))
+            .findFirst()
+            .orElse(null);
     String until = request.effectiveUntil() == null ? null : request.effectiveUntil().toString();
     Map<String, Object> previous = plan == null ? null : detail(plan);
     if (plan == null)
@@ -135,8 +114,7 @@ public class PricePlanService {
               start.toString(),
               until,
               request.baseFee(),
-              request.minimumAmount(),
-              BusinessEnvironmentContext.environmentId());
+              request.minimumAmount());
     else plan.update(until, request.baseFee(), request.minimumAmount());
     pricePlanRepository.saveAndFlush(plan);
     Map<String, Object> detail = detail(plan);
@@ -148,18 +126,11 @@ public class PricePlanService {
 
   @Transactional
   public void delete(UUID organizationId, UUID id) {
-    organizationRepository
-        .findForUpdateById(organizationId)
-        .orElseThrow(() -> new NotFoundException(ErrorCode.ORGANIZATION_NOT_FOUND));
+    lock(organizationId);
     PricePlan plan =
-        (BusinessEnvironmentContext.environmentId() == null
-                ? pricePlanRepository.findById(id)
-                : pricePlanRepository.findScoped(
-                    organizationId, BusinessEnvironmentContext.environmentId(), id))
-            .filter(
-                value ->
-                    value.getOrganizationId().equals(organizationId)
-                        && BusinessEnvironmentContext.matches(value.getEnvironmentId()))
+        pricePlanRepository
+            .findById(id)
+            .filter(value -> value.getOrganizationId().equals(organizationId))
             .orElseThrow(() -> new NotFoundException(ErrorCode.PRICE_PLAN_NOT_FOUND));
     if (plan.getArchivedAt() != null) return;
     String next = BillableMetricUsageService.currentMonth().plusMonths(1).toString();
@@ -170,31 +141,20 @@ public class PricePlanService {
 
   @Transactional
   public PricePlanResponse restore(UUID organizationId, UUID id) {
-    organizationRepository
-        .findForUpdateById(organizationId)
-        .orElseThrow(() -> new NotFoundException(ErrorCode.ORGANIZATION_NOT_FOUND));
+    lock(organizationId);
     PricePlan plan =
-        (BusinessEnvironmentContext.environmentId() == null
-                ? pricePlanRepository.findById(id)
-                : pricePlanRepository.findScoped(
-                    organizationId, BusinessEnvironmentContext.environmentId(), id))
-            .filter(
-                value ->
-                    value.getOrganizationId().equals(organizationId)
-                        && BusinessEnvironmentContext.matches(value.getEnvironmentId()))
+        pricePlanRepository
+            .findById(id)
+            .filter(value -> value.getOrganizationId().equals(organizationId))
             .orElseThrow(() -> new NotFoundException(ErrorCode.PRICE_PLAN_NOT_FOUND));
     if (plan.getArchivedAt() == null) return PricePlanResponse.from(plan);
     boolean collision =
-        (BusinessEnvironmentContext.environmentId() == null
-                ? pricePlanRepository.findByOrganizationIdOrderByEffectiveFromDesc(organizationId)
-                : pricePlanRepository.listScoped(
-                    organizationId, BusinessEnvironmentContext.environmentId()))
-            .stream()
-                .anyMatch(
-                    other ->
-                        other.getArchivedAt() == null
-                            && Objects.equals(other.getCustomerId(), plan.getCustomerId())
-                            && other.getEffectiveFrom().equals(plan.getEffectiveFrom()));
+        pricePlanRepository.findByOrganizationIdOrderByEffectiveFromDesc(organizationId).stream()
+            .anyMatch(
+                other ->
+                    other.getArchivedAt() == null
+                        && Objects.equals(other.getCustomerId(), plan.getCustomerId())
+                        && other.getEffectiveFrom().equals(plan.getEffectiveFrom()));
     if (collision
         || plan.getArchivedFrom().compareTo(BillableMetricUsageService.currentMonth().toString())
             <= 0) throw new ConflictException(ErrorCode.ARCHIVE_RESTORATION_CONFLICT);
@@ -217,10 +177,13 @@ public class PricePlanService {
 
   private void validateCustomer(UUID organizationId, UUID customerId) {
     if (customerId != null
-        && !(BusinessEnvironmentContext.environmentId() == null
-            ? customerRepository.existsByOrganizationIdAndId(organizationId, customerId)
-            : customerRepository
-                .findScoped(organizationId, BusinessEnvironmentContext.environmentId(), customerId)
-                .isPresent())) throw new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND);
+        && !customerRepository.existsByOrganizationIdAndId(organizationId, customerId))
+      throw new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND);
+  }
+
+  private void lock(UUID organizationId) {
+    if (jdbcTemplate
+        .queryForList("SELECT id FROM shared.lock_organization(?)", UUID.class, organizationId)
+        .isEmpty()) throw new NotFoundException(ErrorCode.ORGANIZATION_NOT_FOUND);
   }
 }

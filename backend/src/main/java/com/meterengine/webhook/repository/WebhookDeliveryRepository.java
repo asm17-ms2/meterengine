@@ -1,6 +1,5 @@
 package com.meterengine.webhook.repository;
 
-import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.webhook.dto.WebhookBacklog;
 import com.meterengine.webhook.dto.WebhookClaim;
 import com.meterengine.webhook.dto.WebhookDeliveryResponse;
@@ -39,21 +38,18 @@ public class WebhookDeliveryRepository {
         WITH expired AS (
           UPDATE webhook_delivery SET status = 'failed', failure_reason = 'lease_expired', next_attempt_at = NULL
           WHERE status = 'pending' AND attempt_count >= ? AND next_attempt_at <= clock_timestamp()
-          RETURNING environment_id
+          RETURNING id
         )
-        SELECT coalesce(e.mode, 'legacy') AS environment, count(*) AS expired
-        FROM expired x LEFT JOIN organization_environment e ON e.id = x.environment_id GROUP BY 1
+        SELECT shared.runtime_scope() AS environment, count(*) AS expired FROM expired HAVING count(*) > 0
         """,
         (RowCallbackHandler) rs -> expired.put(rs.getString("environment"), rs.getInt("expired")),
         MAX_ATTEMPTS);
     return expired;
   }
 
-  // 전송의 업무 환경 이름. 환경이 없으면 기존 데이터 범위인 legacy다.
+  // 전송은 선택한 DB scope에서만 처리한다.
   public String environmentOf(UUID environmentId) {
-    if (environmentId == null) return "legacy";
-    return jdbcTemplate.queryForObject(
-        "SELECT mode FROM organization_environment WHERE id = ?", String.class, environmentId);
+    return jdbcTemplate.queryForObject("SELECT shared.runtime_scope()", String.class);
   }
 
   // 이번 차례에 이미 꺼낸 도입사 환경을 먼저 빼고 찾아, 한 도입사가 쌓은 전송이 큐를 독차지하지 못하게 한다.
@@ -64,10 +60,10 @@ public class WebhookDeliveryRepository {
     if (!servedThisTurn.isEmpty()) {
       Optional<WebhookClaim> unserved =
           claim(
-              " AND (organization_id, environment_scope_id) NOT IN (SELECT * FROM unnest(?::uuid[], ?::uuid[]))",
+              " AND organization_id <> ALL(?::uuid[])",
               MAX_ATTEMPTS,
-              servedThisTurn.stream().map(WebhookClaim::organizationId).toArray(UUID[]::new),
-              servedThisTurn.stream().map(WebhookDeliveryRepository::scope).toArray(UUID[]::new));
+              (Object)
+                  servedThisTurn.stream().map(WebhookClaim::organizationId).toArray(UUID[]::new));
       if (unserved.isPresent()) return unserved;
     }
     return claim("", MAX_ATTEMPTS);
@@ -77,21 +73,21 @@ public class WebhookDeliveryRepository {
     return jdbcTemplate
         .query(
             """
-        WITH picked AS (
-          SELECT id FROM webhook_delivery WHERE status = 'pending'
-            AND attempt_count < ? AND next_attempt_at <= clock_timestamp()%s
-          ORDER BY next_attempt_at, id LIMIT 1 FOR UPDATE SKIP LOCKED
-        ), claimed AS (
-          UPDATE webhook_delivery d SET attempt_count = attempt_count + 1,
-            last_attempted_at = clock_timestamp(), next_attempt_at = clock_timestamp() + interval '2 minutes',
-            claim_token = gen_random_uuid()
-          FROM picked WHERE d.id = picked.id RETURNING d.*
-        )
-        SELECT c.*, e.url, e.secret, e.enabled, e.deleted_at, v.payload::text AS payload, v.created_at AS event_created_at,
-          EXISTS (SELECT 1 FROM webhook_delivery_attempt a WHERE a.organization_id = c.organization_id AND a.webhook_delivery_id = c.id) AS attempted_before
-        FROM claimed c JOIN webhook_endpoint e ON e.organization_id = c.organization_id AND e.environment_scope_id = c.environment_scope_id AND e.id = c.webhook_endpoint_id
-        JOIN webhook_event v ON v.organization_id = c.organization_id AND v.environment_scope_id = c.environment_scope_id AND v.id = c.webhook_event_id
-        """
+            WITH picked AS (
+              SELECT id FROM webhook_delivery WHERE status = 'pending'
+                AND attempt_count < ? AND next_attempt_at <= clock_timestamp()%s
+              ORDER BY next_attempt_at, id LIMIT 1 FOR UPDATE SKIP LOCKED
+            ), claimed AS (
+              UPDATE webhook_delivery d SET attempt_count = attempt_count + 1,
+                last_attempted_at = clock_timestamp(), next_attempt_at = clock_timestamp() + interval '2 minutes',
+                claim_token = gen_random_uuid()
+              FROM picked WHERE d.id = picked.id RETURNING d.*
+            )
+            SELECT c.*, e.url, e.secret, e.enabled, e.deleted_at, v.payload::text AS payload, v.created_at AS event_created_at,
+              EXISTS (SELECT 1 FROM webhook_delivery_attempt a WHERE a.organization_id = c.organization_id AND a.webhook_delivery_id = c.id) AS attempted_before
+            FROM claimed c JOIN webhook_endpoint e ON e.organization_id = c.organization_id AND e.id = c.webhook_endpoint_id
+            JOIN webhook_event v ON v.organization_id = c.organization_id AND v.id = c.webhook_event_id
+            """
                 .formatted(exclusion),
             (rs, rowNum) ->
                 new WebhookClaim(
@@ -106,7 +102,7 @@ public class WebhookDeliveryRepository {
                     rs.getObject("deleted_at") != null,
                     rs.getInt("attempt_count"),
                     rs.getObject("last_attempted_at", OffsetDateTime.class),
-                    rs.getObject("environment_id", UUID.class),
+                    null,
                     rs.getObject("event_created_at", OffsetDateTime.class),
                     rs.getBoolean("attempted_before")),
             arguments)
@@ -130,23 +126,25 @@ public class WebhookDeliveryRepository {
                     RETRY_SECONDS[Math.min(claim.attemptCount() - 1, RETRY_SECONDS.length - 1)]);
     int changed =
         jdbcTemplate.update(
-            "UPDATE webhook_delivery SET status = ?, response_status = ?, failure_reason = ?, next_attempt_at = ?, claim_token = NULL WHERE id = ? AND organization_id = ? AND environment_scope_id = ? AND claim_token = ? AND status = 'pending'",
+            "UPDATE webhook_delivery SET status = ?, response_status = ?, failure_reason = ?,"
+                + " next_attempt_at = ?, claim_token = NULL WHERE id = ? AND organization_id = ?"
+                + " AND claim_token = ? AND status = 'pending'",
             status,
             outcome.responseStatus(),
             outcome.failureReason(),
             nextAttemptAt,
             claim.id(),
             claim.organizationId(),
-            scope(claim),
             claim.claimToken());
     if (changed == 0) {
       return Optional.empty();
     }
     jdbcTemplate.update(
-        "INSERT INTO webhook_delivery_attempt (id, organization_id, environment_id, webhook_delivery_id, attempted_at, response_status, failure_reason, duration_ms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO webhook_delivery_attempt (id, organization_id, webhook_delivery_id,"
+            + " attempted_at, response_status, failure_reason, duration_ms) VALUES (?, ?, ?, ?, ?,"
+            + " ?, ?)",
         UUID.randomUUID(),
         claim.organizationId(),
-        claim.environmentId(),
         claim.id(),
         claim.lastAttemptedAt(),
         outcome.responseStatus(),
@@ -161,13 +159,12 @@ public class WebhookDeliveryRepository {
     Map<String, WebhookBacklog> backlog = new LinkedHashMap<>();
     jdbcTemplate.query(
         """
-        SELECT coalesce(e.mode, 'legacy') AS environment,
+        SELECT shared.runtime_scope() AS environment,
           count(*) FILTER (WHERE d.next_attempt_at <= c.now) AS due_count,
           coalesce(floor(extract(epoch FROM c.now - min(d.next_attempt_at) FILTER (WHERE d.next_attempt_at <= c.now))), 0) AS oldest_due_age_seconds,
           count(*) FILTER (WHERE d.next_attempt_at > c.now AND d.attempt_count > 0 AND d.claim_token IS NULL) AS waiting_retry_count,
           coalesce(floor(extract(epoch FROM c.now - min(d.created_at))), 0) AS oldest_pending_age_seconds
         FROM webhook_delivery d CROSS JOIN (SELECT clock_timestamp() AS now) c
-        LEFT JOIN organization_environment e ON e.id = d.environment_id
         WHERE d.status = 'pending'
         GROUP BY 1, c.now
         """,
@@ -185,10 +182,10 @@ public class WebhookDeliveryRepository {
 
   public long countByEndpoint(UUID organizationId, UUID endpointId, String status) {
     return jdbcTemplate.queryForObject(
-        "SELECT count(*) FROM webhook_delivery WHERE organization_id = ? AND environment_scope_id = ? AND webhook_endpoint_id = ? AND (?::varchar IS NULL OR status = ?)",
+        "SELECT count(*) FROM webhook_delivery WHERE organization_id = ? AND webhook_endpoint_id ="
+            + " ? AND (?::varchar IS NULL OR status = ?)",
         Long.class,
         organizationId,
-        BusinessEnvironmentContext.scopeId(),
         endpointId,
         status,
         status);
@@ -196,13 +193,12 @@ public class WebhookDeliveryRepository {
 
   public List<WebhookDeliveryResponse> findByEndpoint(
       UUID organizationId, UUID endpointId, String status, int page, int size) {
-    UUID scopeId = BusinessEnvironmentContext.scopeId();
     List<WebhookDeliveryResponse> deliveries =
         jdbcTemplate.query(
             """
             SELECT d.*, e.type FROM webhook_delivery d
-            JOIN webhook_event e ON e.organization_id = d.organization_id AND e.environment_scope_id = d.environment_scope_id AND e.id = d.webhook_event_id
-            WHERE d.organization_id = ? AND d.environment_scope_id = ? AND d.webhook_endpoint_id = ? AND (?::varchar IS NULL OR d.status = ?)
+            JOIN webhook_event e ON e.organization_id = d.organization_id AND e.id = d.webhook_event_id
+            WHERE d.organization_id = ? AND d.webhook_endpoint_id = ? AND (?::varchar IS NULL OR d.status = ?)
             ORDER BY d.created_at DESC, d.id DESC LIMIT ? OFFSET ?
             """,
             (rs, rowNum) ->
@@ -219,7 +215,6 @@ public class WebhookDeliveryRepository {
                     rs.getObject("created_at", OffsetDateTime.class),
                     List.of()),
             organizationId,
-            scopeId,
             endpointId,
             status,
             status,
@@ -229,8 +224,7 @@ public class WebhookDeliveryRepository {
       return deliveries;
     }
     Map<UUID, List<Attempt>> attempts =
-        attempts(
-            organizationId, scopeId, deliveries.stream().map(WebhookDeliveryResponse::id).toList());
+        attempts(organizationId, deliveries.stream().map(WebhookDeliveryResponse::id).toList());
     return deliveries.stream()
         .map(
             delivery ->
@@ -251,9 +245,12 @@ public class WebhookDeliveryRepository {
 
   public int retry(UUID organizationId, UUID endpointId, UUID id) {
     return jdbcTemplate.update(
-        "UPDATE webhook_delivery d SET status = 'pending', attempt_count = 0, next_attempt_at = clock_timestamp(), claim_token = NULL WHERE d.organization_id = ? AND d.environment_scope_id = ? AND d.webhook_endpoint_id = ? AND d.id = ? AND d.status = 'failed' AND EXISTS (SELECT 1 FROM webhook_endpoint e WHERE e.organization_id = d.organization_id AND e.environment_scope_id = d.environment_scope_id AND e.id = d.webhook_endpoint_id AND e.enabled AND e.deleted_at IS NULL)",
+        "UPDATE webhook_delivery d SET status = 'pending', attempt_count = 0, next_attempt_at ="
+            + " clock_timestamp(), claim_token = NULL WHERE d.organization_id = ? AND"
+            + " d.webhook_endpoint_id = ? AND d.id = ? AND d.status = 'failed' AND EXISTS (SELECT 1"
+            + " FROM webhook_endpoint e WHERE e.organization_id = d.organization_id AND e.id ="
+            + " d.webhook_endpoint_id AND e.enabled AND e.deleted_at IS NULL)",
         organizationId,
-        BusinessEnvironmentContext.scopeId(),
         endpointId,
         id);
   }
@@ -261,28 +258,23 @@ public class WebhookDeliveryRepository {
   public boolean exists(UUID organizationId, UUID endpointId, UUID id) {
     return Boolean.TRUE.equals(
         jdbcTemplate.queryForObject(
-            "SELECT EXISTS (SELECT 1 FROM webhook_delivery WHERE organization_id = ? AND environment_scope_id = ? AND webhook_endpoint_id = ? AND id = ?)",
+            "SELECT EXISTS (SELECT 1 FROM webhook_delivery WHERE organization_id = ? AND"
+                + " webhook_endpoint_id = ? AND id = ?)",
             Boolean.class,
             organizationId,
-            BusinessEnvironmentContext.scopeId(),
             endpointId,
             id));
   }
 
-  private static UUID scope(WebhookClaim claim) {
-    return claim.environmentId() == null ? new UUID(0, 0) : claim.environmentId();
-  }
-
-  private Map<UUID, List<Attempt>> attempts(
-      UUID organizationId, UUID scopeId, List<UUID> deliveryIds) {
+  private Map<UUID, List<Attempt>> attempts(UUID organizationId, List<UUID> deliveryIds) {
     Map<UUID, List<Attempt>> attempts = new HashMap<>();
     jdbcTemplate.query(
-        "SELECT * FROM webhook_delivery_attempt WHERE organization_id = ? AND environment_scope_id = ? AND webhook_delivery_id = ANY(?) ORDER BY attempted_at, id",
+        "SELECT * FROM webhook_delivery_attempt WHERE organization_id = ? AND webhook_delivery_id ="
+            + " ANY(?) ORDER BY attempted_at, id",
         preparedStatement -> {
           preparedStatement.setObject(1, organizationId);
-          preparedStatement.setObject(2, scopeId);
           preparedStatement.setArray(
-              3,
+              2,
               preparedStatement
                   .getConnection()
                   .createArrayOf("uuid", deliveryIds.toArray(UUID[]::new)));

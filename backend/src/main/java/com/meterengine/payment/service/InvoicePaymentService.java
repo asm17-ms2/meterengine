@@ -3,7 +3,6 @@ package com.meterengine.payment.service;
 import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
-import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.metric.service.BillableMetricUsageService;
 import com.meterengine.payment.dto.InvoicePaymentResponse;
 import com.meterengine.payment.dto.ListInvoicePaymentsResponse;
@@ -45,13 +44,10 @@ public class InvoicePaymentService {
   public ListInvoicePaymentsResponse list(
       UUID organizationId, YearMonth month, UUID customerId, String mode) {
     if (customerId != null
-        && !customerRepository
-            .findScoped(organizationId, BusinessEnvironmentContext.environmentId(), customerId)
-            .isPresent()) {
+        && !customerRepository.findByOrganizationIdAndId(organizationId, customerId).isPresent()) {
       throw new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND);
     }
-    if (BusinessEnvironmentContext.mode() != null
-        && !BusinessEnvironmentContext.mode().equals(mode)) {
+    if (!PaymentSettingService.selectedMode().equals(mode)) {
       throw new com.meterengine.global.error.ConflictException(ErrorCode.PAYMENT_MODE_MISMATCH);
     }
     String period = month == null ? null : month.toString();

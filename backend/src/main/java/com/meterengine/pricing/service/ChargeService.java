@@ -1,7 +1,6 @@
 package com.meterengine.pricing.service;
 
 import com.meterengine.global.math.DecimalFraction;
-import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.metric.dto.BillableMetricUsage;
 import com.meterengine.metric.dto.CustomerUsage;
 import com.meterengine.metric.dto.DimensionUsage;
@@ -53,11 +52,8 @@ public class ChargeService {
     String period = month.toString();
     Map<PriceRateKey, PriceRate> priceRateByPriceRateKey = new LinkedHashMap<>();
     for (PriceRate rate :
-        (BusinessEnvironmentContext.environmentId() == null
-            ? priceRateRepository
-                .findByOrganizationIdOrderByBillableMetricCodeAscDimensionValuesAsc(organizationId)
-            : priceRateRepository.listScoped(
-                organizationId, BusinessEnvironmentContext.environmentId()))) {
+        priceRateRepository.findByOrganizationIdOrderByBillableMetricCodeAscDimensionValuesAsc(
+            organizationId)) {
       if (!rate.applies(period) && !rate.stops(period)) continue;
       PriceRateKey key =
           new PriceRateKey(
@@ -74,10 +70,7 @@ public class ChargeService {
     priceRateByPriceRateKey.values().removeIf(rate -> !rate.applies(period));
     Map<UUID, PricePlan> pricePlanByCustomerId = new LinkedHashMap<>();
     for (PricePlan plan :
-        (BusinessEnvironmentContext.environmentId() == null
-            ? pricePlanRepository.findByOrganizationIdOrderByEffectiveFromDesc(organizationId)
-            : pricePlanRepository.listScoped(
-                organizationId, BusinessEnvironmentContext.environmentId()))) {
+        pricePlanRepository.findByOrganizationIdOrderByEffectiveFromDesc(organizationId)) {
       if (plan.applies(period) || plan.stops(period))
         pricePlanByCustomerId.putIfAbsent(plan.getCustomerId(), plan);
     }

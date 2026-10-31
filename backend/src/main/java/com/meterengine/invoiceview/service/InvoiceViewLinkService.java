@@ -2,6 +2,10 @@ package com.meterengine.invoiceview.service;
 
 import com.meterengine.audit.service.AuditActor;
 import com.meterengine.audit.service.AuditLogService;
+import com.meterengine.global.database.DatabaseScope;
+import com.meterengine.global.database.DatabaseScopes;
+import com.meterengine.global.database.PublicResourceLocator;
+import com.meterengine.global.database.ScopeTransactions;
 import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
@@ -19,7 +23,6 @@ import com.meterengine.invoiceview.dto.PublicInvoiceResponse.PublicInvoicePaymen
 import com.meterengine.invoiceview.dto.PublicInvoiceResponse.PublicInvoicePaymentRetry;
 import com.meterengine.invoiceview.entity.InvoiceViewLink;
 import com.meterengine.invoiceview.repository.InvoiceViewLinkRepository;
-import com.meterengine.organization.entity.Organization;
 import com.meterengine.organization.repository.OrganizationRepository;
 import com.meterengine.payment.dto.InvoicePaymentResponse;
 import com.meterengine.payment.service.InvoicePaymentService;
@@ -39,6 +42,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class InvoiceViewLinkService {
+  @org.springframework.beans.factory.annotation.Autowired
+  private com.meterengine.global.database.CutoverPolicy cutover;
+
+  @org.springframework.beans.factory.annotation.Autowired private PublicResourceLocator locator;
+  @org.springframework.beans.factory.annotation.Autowired private ScopeTransactions transactions;
+
+  @org.springframework.beans.factory.annotation.Autowired
+  private org.springframework.jdbc.core.JdbcTemplate jdbc;
+
   private static final String TOKEN_PREFIX = "me_invoice_";
   private static final String TOKEN_PATTERN = "me_invoice_[A-Za-z0-9]{32}";
   private final InvoiceViewLinkRepository invoiceViewLinkRepository;
@@ -74,12 +86,14 @@ public class InvoiceViewLinkService {
 
   @Transactional
   public InvoiceViewLinkSecretResponse create(UUID organizationId, UUID invoiceId, Integer days) {
+    cutover.requireWritable();
     return create(organizationId, invoiceId, days, false);
   }
 
   @Transactional
   public InvoiceViewLinkSecretResponse create(
       UUID organizationId, UUID invoiceId, Integer days, boolean allowPaymentRetry) {
+    cutover.requireWritable();
     return create(organizationId, invoiceId, days, allowPaymentRetry, null);
   }
 
@@ -90,6 +104,7 @@ public class InvoiceViewLinkService {
       Integer days,
       boolean allowPaymentRetry,
       String principalMode) {
+    cutover.requireWritable();
     requireInvoice(organizationId, invoiceId);
     String mode = paymentSettingService.get(organizationId).mode();
     if (allowPaymentRetry && principalMode != null && !principalMode.equals(mode)) {
@@ -138,6 +153,7 @@ public class InvoiceViewLinkService {
 
   @Transactional
   public InvoiceViewLinkResponse revoke(UUID organizationId, UUID invoiceId, UUID id) {
+    cutover.requireWritable();
     requireInvoice(organizationId, invoiceId);
     InvoiceViewLink link =
         invoiceViewLinkRepository
@@ -155,27 +171,22 @@ public class InvoiceViewLinkService {
     return InvoiceViewLinkResponse.from(link);
   }
 
-  @Transactional
   public PublicInvoiceResponse get(String token) {
-    InvoiceViewLink link = requireLink(token, false);
-    return inLink(link, () -> getPublic(link));
+    return scopedToken(token, false, link -> inLink(link, () -> getPublic(link)));
   }
 
   private PublicInvoiceResponse getPublic(InvoiceViewLink link) {
-    Organization organization =
-        organizationRepository
-            .findById(link.getOrganizationId())
-            .filter(value -> Organization.ACTIVE.equals(value.getStatus()))
-            .orElseThrow(() -> new NotFoundException(ErrorCode.INVOICE_VIEW_LINK_NOT_FOUND));
-    return invoice(link, organization.getName(), publicRetry(link));
+    return invoice(link, organizationName(link.getOrganizationId()), publicRetry(link));
   }
 
-  @Transactional
   public PublicInvoiceResponse get(InvoicePaymentRetryAuthorization authorization) {
+    return transactions.write(authorization.databaseScope(), () -> authorized(authorization));
+  }
+
+  private PublicInvoiceResponse authorized(InvoicePaymentRetryAuthorization authorization) {
     InvoiceViewLink link =
         invoiceViewLinkRepository.findById(authorization.actor().id()).orElseThrow();
     if (!Objects.equals(link.getOrganizationId(), authorization.organizationId())
-        || !Objects.equals(link.getEnvironmentId(), authorization.environmentId())
         || !Objects.equals(link.getInvoiceId(), authorization.invoiceId())) {
       throw new NotFoundException(ErrorCode.INVOICE_VIEW_LINK_NOT_FOUND);
     }
@@ -184,12 +195,7 @@ public class InvoiceViewLinkService {
 
   private PublicInvoiceResponse getAuthorized(
       InvoiceViewLink link, InvoicePaymentRetryAuthorization authorization) {
-    boolean isUsable =
-        link.isUsable(OffsetDateTime.now(clock))
-            && organizationRepository
-                .findById(link.getOrganizationId())
-                .filter(value -> Organization.ACTIVE.equals(value.getStatus()))
-                .isPresent();
+    boolean isUsable = link.isUsable(OffsetDateTime.now(clock)) && active(link.getOrganizationId());
     return invoice(
         link,
         authorization.organizationName(),
@@ -234,10 +240,8 @@ public class InvoiceViewLinkService {
         InvoiceViewLinkResponse.from(link).expiresAt());
   }
 
-  @Transactional
   public InvoicePaymentRetryAuthorization get(String token, String version) {
-    InvoiceViewLink link = requireLink(token, true);
-    return inLink(link, () -> authorize(link, version));
+    return scopedToken(token, true, link -> inLink(link, () -> authorize(link, version)));
   }
 
   private InvoicePaymentRetryAuthorization authorize(InvoiceViewLink link, String version) {
@@ -256,7 +260,7 @@ public class InvoiceViewLinkService {
         eligibility.failedAttemptId(),
         eligibility.attemptCount(),
         new AuditActor("invoice_view_link", link.getId(), link.getOrganizationId()),
-        organizationRepository.findById(link.getOrganizationId()).orElseThrow().getName(),
+        organizationName(link.getOrganizationId()),
         link.getEnvironmentId());
   }
 
@@ -269,11 +273,44 @@ public class InvoiceViewLinkService {
                 : invoiceViewLinkRepository.findByTokenHash(SecureTokens.hash(token)))
             .filter(value -> value.isUsable(OffsetDateTime.now(clock)))
             .orElseThrow(() -> new NotFoundException(ErrorCode.INVOICE_VIEW_LINK_NOT_FOUND));
-    organizationRepository
-        .findById(link.getOrganizationId())
-        .filter(value -> Organization.ACTIVE.equals(value.getStatus()))
-        .orElseThrow(() -> new NotFoundException(ErrorCode.INVOICE_VIEW_LINK_NOT_FOUND));
+    if (!active(link.getOrganizationId()))
+      throw new NotFoundException(ErrorCode.INVOICE_VIEW_LINK_NOT_FOUND);
     return link;
+  }
+
+  private <T> T scopedToken(
+      String token, boolean locking, java.util.function.Function<InvoiceViewLink, T> action) {
+    if (token == null || !token.matches(TOKEN_PATTERN))
+      throw new NotFoundException(ErrorCode.INVOICE_VIEW_LINK_NOT_FOUND);
+    if (DatabaseScopes.current() != DatabaseScope.SHARED)
+      return transactions.write(
+          DatabaseScopes.current(), () -> action.apply(requireLink(token, locking)));
+    var route =
+        locator
+            .invoice(SecureTokens.hash(token))
+            .orElseThrow(() -> new NotFoundException(ErrorCode.INVOICE_VIEW_LINK_NOT_FOUND));
+    return transactions.write(
+        route.scope(),
+        () -> {
+          var link = requireLink(token, locking);
+          if (!route.id().equals(link.getId())
+              || !route.organizationId().equals(link.getOrganizationId()))
+            throw new NotFoundException(ErrorCode.INVOICE_VIEW_LINK_NOT_FOUND);
+          return action.apply(link);
+        });
+  }
+
+  private boolean active(UUID id) {
+    return Boolean.TRUE.equals(
+        jdbc.queryForObject(
+            "SELECT EXISTS(SELECT 1 FROM shared.organization_reference WHERE id=? AND status='active')",
+            Boolean.class,
+            id));
+  }
+
+  private String organizationName(UUID id) {
+    return jdbc.queryForObject(
+        "SELECT name FROM shared.organization_reference WHERE id=?", String.class, id);
   }
 
   private PublicInvoicePaymentRetry publicRetry(InvoiceViewLink link) {
@@ -303,19 +340,13 @@ public class InvoiceViewLinkService {
   }
 
   private void requireInvoice(UUID organizationId, UUID invoiceId) {
-    if ((BusinessEnvironmentContext.environmentId() == null
-            ? invoiceRepository.findByOrganizationIdAndId(organizationId, invoiceId)
-            : invoiceRepository.findScoped(
-                organizationId, BusinessEnvironmentContext.environmentId(), invoiceId))
-        .isEmpty()) throw new NotFoundException(ErrorCode.INVOICE_NOT_FOUND);
+    if (invoiceRepository.findByOrganizationIdAndId(organizationId, invoiceId).isEmpty())
+      throw new NotFoundException(ErrorCode.INVOICE_NOT_FOUND);
   }
 
   private <T> T inLink(InvoiceViewLink link, java.util.function.Supplier<T> action) {
     return BusinessEnvironmentContext.run(
-        new BusinessEnvironment(
-            link.getOrganizationId(),
-            link.getEnvironmentId(),
-            link.getEnvironmentId() == null ? null : link.getMode()),
+        new BusinessEnvironment(link.getOrganizationId(), link.getEnvironmentId(), link.getMode()),
         action);
   }
 

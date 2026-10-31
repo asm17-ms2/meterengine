@@ -6,7 +6,6 @@ import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
-import com.meterengine.global.security.BusinessEnvironmentContext;
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
@@ -22,11 +21,7 @@ public class CustomerDirectoryService implements CustomerDirectory {
   }
 
   public boolean exists(UUID organizationId, UUID customerId) {
-    return BusinessEnvironmentContext.environmentId() == null
-        ? customerRepository.existsByOrganizationIdAndId(organizationId, customerId)
-        : customerRepository
-            .findScoped(organizationId, BusinessEnvironmentContext.environmentId(), customerId)
-            .isPresent();
+    return customerRepository.existsByOrganizationIdAndId(organizationId, customerId);
   }
 
   public void check(UUID organizationId, UUID customerId) {
@@ -37,11 +32,7 @@ public class CustomerDirectoryService implements CustomerDirectory {
 
   public Map<UUID, Boolean> active(UUID organizationId, Collection<UUID> customerIds) {
     if (customerIds.isEmpty()) return Map.of();
-    var customers =
-        BusinessEnvironmentContext.environmentId() == null
-            ? customerRepository.lock(organizationId, customerIds)
-            : customerRepository.lockScoped(
-                organizationId, BusinessEnvironmentContext.environmentId(), customerIds);
+    var customers = customerRepository.lock(organizationId, customerIds);
     return customers.stream()
         .collect(Collectors.toMap(Customer::getId, customer -> customer.getArchivedAt() == null));
   }

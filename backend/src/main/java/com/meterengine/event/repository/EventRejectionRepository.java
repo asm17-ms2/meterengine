@@ -4,7 +4,6 @@ import com.meterengine.event.dto.EventRejectionResponse;
 import com.meterengine.event.dto.EventRejectionsResponse;
 import com.meterengine.event.service.EventRejection;
 import com.meterengine.global.security.AuthenticatedPrincipal;
-import com.meterengine.global.security.BusinessEnvironmentContext;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.util.ArrayList;
@@ -49,7 +48,6 @@ public class EventRejectionRepository {
     List<Object> values = new ArrayList<>();
     for (EventRejection rejection : rejections) {
       values.add(organizationId);
-      values.add(BusinessEnvironmentContext.environmentId());
       values.add(rejection.transactionId());
       values.add(rejection.customerId());
       values.add(rejection.type());
@@ -62,11 +60,10 @@ public class EventRejectionRepository {
       values.add(rejection.batchIndex());
     }
     jdbcTemplate.update(
-        "INSERT INTO event_rejection (organization_id,environment_id,transaction_id,customer_id,type,occurred_at,error_code,error_fields,request_id,actor_type,actor_id,batch_index) VALUES "
+        "INSERT INTO event_rejection (organization_id,transaction_id,customer_id,type,occurred_at,error_code,error_fields,request_id,actor_type,actor_id,batch_index) VALUES "
             + String.join(
                 ",",
-                java.util.Collections.nCopies(
-                    rejections.size(), "(?,?,?,?,?,?,?,?::jsonb,?,?,?,?)")),
+                java.util.Collections.nCopies(rejections.size(), "(?,?,?,?,?,?,?::jsonb,?,?,?,?)")),
         values.toArray());
   }
 
@@ -80,15 +77,10 @@ public class EventRejectionRepository {
       String query,
       int page,
       int size) {
-    UUID environmentId = BusinessEnvironmentContext.environmentId();
     StringBuilder where =
-        new StringBuilder(
-            environmentId == null
-                ? " WHERE organization_id=? AND environment_id IS NULL AND recorded_at>=? AND recorded_at<?"
-                : " WHERE organization_id=? AND environment_id=?::uuid AND recorded_at>=? AND recorded_at<?");
+        new StringBuilder(" WHERE organization_id=? AND recorded_at>=? AND recorded_at<?");
     List<Object> parameters = new ArrayList<>();
     parameters.add(organizationId);
-    if (environmentId != null) parameters.add(environmentId);
     parameters.add(start);
     parameters.add(end);
     if (customerId != null) {

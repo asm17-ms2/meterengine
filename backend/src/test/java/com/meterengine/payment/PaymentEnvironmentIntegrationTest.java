@@ -13,7 +13,6 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 
 import com.jayway.jsonpath.JsonPath;
 import com.meterengine.TestCredentials;
-import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.dashboard.dto.OperationsResponse;
 import com.meterengine.dashboard.service.OperationsService;
 import com.meterengine.global.security.BusinessEnvironment;
@@ -43,8 +42,6 @@ import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -52,9 +49,7 @@ import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.web.context.WebApplicationContext;
 
-@Import(TestcontainersConfiguration.class)
-@SpringBootTest
-class PaymentEnvironmentIntegrationTest {
+class PaymentEnvironmentIntegrationTest extends com.meterengine.SideEffectTestSupport {
   private static final OffsetDateTime KEY_TIME = OffsetDateTime.parse("2026-10-01T00:00:00Z");
   private static final String TEST_SECRET = "test_sk_original_environment";
   private static final String LIVE_SECRET = "live_sk_original_environment";
@@ -99,9 +94,12 @@ class PaymentEnvironmentIntegrationTest {
   void 환경별_PG키와_카드로_청구하고_다른_환경_고객과_청구서는_조회하거나_청구하지_못한다() {
     Payable test = payable("test");
     Payable live = payable("live");
-    jdbcTemplate.update(
-        "INSERT INTO payment_setting (organization_id, mode, updated_at) VALUES (?, 'live', now())",
-        organizationId);
+    in(
+        "live",
+        () ->
+            jdbcTemplate.update(
+                "INSERT INTO payment_setting (organization_id, mode, updated_at) VALUES (?, 'live', now())",
+                organizationId));
     UUID testAttempt = createAttempt("test", test.invoice());
     UUID liveAttempt = createAttempt("live", live.invoice());
     verify(toss)
@@ -110,25 +108,31 @@ class PaymentEnvironmentIntegrationTest {
     verify(toss)
         .approveBilling(
             eq(LIVE_SECRET), eq("billing-live"), any(), eq(liveAttempt.toString()), isNull());
-    assertThat(get("test", "/v1/invoices/" + live.invoice() + "/payment-attempts")).hasStatus(404);
+    assertThat(managedGet("test", "/v1/invoices/" + live.invoice() + "/payment-attempts"))
+        .hasStatus(404);
     assertThat(post("test", "/v1/invoices/" + live.invoice() + "/payment-attempts", null))
         .hasStatus(404);
-    assertThat(get("test", "/v1/customers/" + live.customer() + "/payment-method")).hasStatus(404);
-    assertThat(get("test", "/v1/payment-methods"))
+    assertThat(managedGet("test", "/v1/customers/" + live.customer() + "/payment-method"))
+        .hasStatus(404);
+    assertThat(managedGet("test", "/v1/payment-methods"))
         .hasStatusOk()
         .bodyJson()
         .extractingPath("$.payment_methods")
         .asArray()
         .hasSize(1);
     assertThat(
-            jdbcTemplate.queryForMap(
-                "SELECT environment_id, mode FROM payment_attempt WHERE id=?", testAttempt))
-        .containsEntry("environment_id", environment("test"))
+            ownerJdbc()
+                .queryForMap(
+                    "SELECT 'test' AS scope, mode FROM test.payment_attempt WHERE id=?",
+                    testAttempt))
+        .containsEntry("scope", "test")
         .containsEntry("mode", "test");
     assertThat(
-            jdbcTemplate.queryForMap(
-                "SELECT environment_id, mode FROM payment_attempt WHERE id=?", liveAttempt))
-        .containsEntry("environment_id", environment("live"))
+            ownerJdbc()
+                .queryForMap(
+                    "SELECT 'live' AS scope, mode FROM live.payment_attempt WHERE id=?",
+                    liveAttempt))
+        .containsEntry("scope", "live")
         .containsEntry("mode", "live");
   }
 
@@ -149,14 +153,14 @@ class PaymentEnvironmentIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"mode\":\"live\"}")
                 .exchange())
-        .hasStatus(409);
-    assertThat(get("test", "/v1/payment-setting"))
+        .hasStatus(405);
+    assertThat(managedGet("test", "/v1/payment-setting"))
         .hasStatusOk()
         .bodyJson()
         .extractingPath("$.mode")
         .isEqualTo("test");
     assertThat(putCredential("test", "live", "live_sk_rejected_environment")).hasStatus(409);
-    assertThat(get("live", "/v1/toss-payments-credentials"))
+    assertThat(managedGet("live", "/v1/toss-payments-credentials"))
         .hasStatusOk()
         .bodyJson()
         .extractingPath("$.toss_payments_credentials")
@@ -189,10 +193,12 @@ class PaymentEnvironmentIntegrationTest {
     verify(toss).cancel(eq(LIVE_SECRET), eq("payment-" + live), any(), eq(liveId.toString()));
     assertThat(cancel("test", live, UUID.randomUUID())).hasStatus(404);
     assertThat(
-            jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM payment_cancellation WHERE organization_id=?",
-                Integer.class,
-                organizationId))
+            ownerJdbc()
+                .queryForObject(
+                    "SELECT (SELECT count(*) FROM test.payment_cancellation WHERE organization_id=?) + (SELECT count(*) FROM live.payment_cancellation WHERE organization_id=?)",
+                    Integer.class,
+                    organizationId,
+                    organizationId))
         .isEqualTo(2);
   }
 
@@ -237,10 +243,11 @@ class PaymentEnvironmentIntegrationTest {
             eq(attempt.toString()),
             isNull());
     assertThat(
-            jdbcTemplate.queryForMap(
-                "SELECT environment_id, credential_updated_at FROM payment_attempt WHERE id=?",
-                attempt))
-        .containsEntry("environment_id", environment("test"));
+            ownerJdbc()
+                .queryForMap(
+                    "SELECT 'test' AS scope, credential_updated_at FROM test.payment_attempt WHERE id=?",
+                    attempt))
+        .containsEntry("scope", "test");
   }
 
   @Test
@@ -288,16 +295,18 @@ class PaymentEnvironmentIntegrationTest {
     verify(toss, never()).issueBillingKey(anyString(), anyString(), anyString());
     verify(toss, never()).deleteBillingKey(anyString(), anyString());
     assertThat(
-            jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM billing_key WHERE customer_id=?",
-                Integer.class,
-                payable.customer()))
+            ownerJdbc()
+                .queryForObject(
+                    "SELECT count(*) FROM test.billing_key WHERE customer_id=?",
+                    Integer.class,
+                    payable.customer()))
         .isZero();
     assertThat(
-            jdbcTemplate.queryForObject(
-                "SELECT used_at FROM payment_method_registration WHERE customer_id=?",
-                OffsetDateTime.class,
-                payable.customer()))
+            ownerJdbc()
+                .queryForObject(
+                    "SELECT used_at FROM test.payment_method_registration WHERE customer_id=?",
+                    OffsetDateTime.class,
+                    payable.customer()))
         .isNull();
   }
 
@@ -349,10 +358,9 @@ class PaymentEnvironmentIntegrationTest {
               try (var connection = dataSource.getConnection();
                   var statement =
                       connection.prepareStatement(
-                          "SELECT archived_at IS NOT NULL FROM billing_key WHERE organization_id=? AND environment_id=? AND customer_id=? AND mode='test'")) {
+                          "SELECT archived_at IS NOT NULL FROM billing_key WHERE organization_id=? AND customer_id=? AND mode='test'")) {
                 statement.setObject(1, organizationId);
-                statement.setObject(2, environment("test"));
-                statement.setObject(3, payable.customer());
+                statement.setObject(2, payable.customer());
                 try (var rows = statement.executeQuery()) {
                   assertThat(rows.next()).isTrue();
                   committed.add(rows.getBoolean(1));
@@ -379,11 +387,11 @@ class PaymentEnvironmentIntegrationTest {
     Payable payable = payable("test");
     assertThat(putCredential("test", "test", "test_sk_replacement_environment")).hasStatusOk();
     assertThat(
-            jdbcTemplate.update(
-                "DELETE FROM toss_payments_credential_history WHERE organization_id=? AND environment_id=? AND mode='test' AND updated_at=?",
-                organizationId,
-                environment("test"),
-                KEY_TIME))
+            ownerJdbc()
+                .update(
+                    "DELETE FROM test.toss_payments_credential_history WHERE organization_id=? AND mode='test' AND updated_at=?",
+                    organizationId,
+                    KEY_TIME))
         .isEqualTo(1);
     when(toss.deleteBillingKey(anyString(), anyString()))
         .thenReturn(new TossPaymentsResult.Success<>(null));
@@ -397,12 +405,12 @@ class PaymentEnvironmentIntegrationTest {
         .hasStatus(204);
 
     assertThat(
-            jdbcTemplate.queryForObject(
-                "SELECT archived_at IS NOT NULL FROM billing_key WHERE organization_id=? AND environment_id=? AND customer_id=? AND mode='test'",
-                Boolean.class,
-                organizationId,
-                environment("test"),
-                payable.customer()))
+            ownerJdbc()
+                .queryForObject(
+                    "SELECT archived_at IS NOT NULL FROM test.billing_key WHERE organization_id=? AND customer_id=? AND mode='test'",
+                    Boolean.class,
+                    organizationId,
+                    payable.customer()))
         .isTrue();
     verify(toss, never()).deleteBillingKey(anyString(), anyString());
   }
@@ -433,21 +441,28 @@ class PaymentEnvironmentIntegrationTest {
                 .exchange())
         .hasStatusOk();
     assertThat(
-            jdbcTemplate.queryForObject(
-                "SELECT status FROM payment_attempt WHERE id=?", String.class, testAttempt))
+            ownerJdbc()
+                .queryForObject(
+                    "SELECT status FROM test.payment_attempt WHERE id=?",
+                    String.class,
+                    testAttempt))
         .isEqualTo("done");
     assertThat(
-            jdbcTemplate.queryForObject(
-                "SELECT status FROM payment_attempt WHERE id=?", String.class, liveAttempt))
+            ownerJdbc()
+                .queryForObject(
+                    "SELECT status FROM live.payment_attempt WHERE id=?",
+                    String.class,
+                    liveAttempt))
         .isEqualTo("pending");
     assertThat(
-            jdbcTemplate.queryForObject(
-                "SELECT environment_id FROM webhook_event WHERE organization_id=? AND"
-                    + " type='payment_succeeded' AND payload->'data'->>'payment_attempt_id'=?",
-                UUID.class,
-                organizationId,
-                testAttempt.toString()))
-        .isEqualTo(environment("test"));
+            ownerJdbc()
+                .queryForObject(
+                    "SELECT payload->>'environment' FROM test.webhook_event WHERE organization_id=? AND"
+                        + " type='payment_succeeded' AND payload->'data'->>'payment_attempt_id'=?",
+                    String.class,
+                    organizationId,
+                    testAttempt.toString()))
+        .isEqualTo("test");
   }
 
   @Test
@@ -468,32 +483,35 @@ class PaymentEnvironmentIntegrationTest {
     retry.retry();
     assertThat(BusinessEnvironmentContext.current()).isNull();
     assertThat(
-            jdbcTemplate.queryForObject(
-                "SELECT status FROM payment_attempt WHERE id=?", String.class, pending))
+            ownerJdbc()
+                .queryForObject(
+                    "SELECT status FROM test.payment_attempt WHERE id=?", String.class, pending))
         .isEqualTo("done");
     List<Map<String, Object>> retries =
-        jdbcTemplate.queryForList(
-            "SELECT id, environment_id, mode, status FROM payment_attempt WHERE invoice_id=? AND"
-                + " id<>?",
-            live.invoice(),
-            failed);
+        ownerJdbc()
+            .queryForList(
+                "SELECT id, 'live' AS scope, mode, status FROM live.payment_attempt WHERE invoice_id=? AND"
+                    + " id<>?",
+                live.invoice(),
+                failed);
     assertThat(retries).hasSize(1);
     Map<String, Object> retried = retries.getFirst();
     assertThat(retried)
-        .containsEntry("environment_id", environment("live"))
+        .containsEntry("scope", "live")
         .containsEntry("mode", "live")
         .containsEntry("status", "done");
     verify(toss)
         .approveBilling(
             eq(LIVE_SECRET), eq("billing-live"), any(), eq(retried.get("id").toString()), isNull());
     assertThat(
-            jdbcTemplate.queryForObject(
-                "SELECT environment_id FROM webhook_event WHERE organization_id=? AND"
-                    + " type='payment_succeeded' AND payload->'data'->>'payment_attempt_id'=?",
-                UUID.class,
-                organizationId,
-                pending.toString()))
-        .isEqualTo(environment("test"));
+            ownerJdbc()
+                .queryForObject(
+                    "SELECT payload->>'environment' FROM test.webhook_event WHERE organization_id=? AND"
+                        + " type='payment_succeeded' AND payload->'data'->>'payment_attempt_id'=?",
+                    String.class,
+                    organizationId,
+                    pending.toString()))
+        .isEqualTo("test");
   }
 
   @Test
@@ -501,33 +519,39 @@ class PaymentEnvironmentIntegrationTest {
     Payable live = payable("live");
     payable("test");
     assertThat(putCredential("live", "live", "live_sk_rotated_environment")).hasStatusOk();
-    jdbcTemplate.update(
-        "UPDATE toss_payments_credential SET updated_at = now() - interval '20 minutes' WHERE"
-            + " organization_id=? AND environment_id=? AND mode='live'",
-        organizationId,
-        environment("live"));
+    in(
+        "live",
+        () ->
+            jdbcTemplate.update(
+                "UPDATE toss_payments_credential SET updated_at = now() - interval '20 minutes' WHERE"
+                    + " organization_id=? AND mode='live'",
+                organizationId));
     UUID attempt = UUID.randomUUID();
-    jdbcTemplate.update(
-        "INSERT INTO payment_attempt (id, organization_id, environment_id, customer_id,"
-            + " invoice_id, mode, amount, order_name, status, payment_key, requested_at,"
-            + " completed_at, credential_updated_at) VALUES (?, ?, ?, ?, ?, 'live', 1100, '사용료',"
-            + " 'done', 'cancel-confirm-live', now() - interval '10 minutes', now() - interval '9"
-            + " minutes', ?)",
-        attempt,
-        organizationId,
-        environment("live"),
-        live.customer(),
-        live.invoice(),
-        KEY_TIME);
+    in(
+        "live",
+        () ->
+            jdbcTemplate.update(
+                "INSERT INTO payment_attempt (id, organization_id, customer_id,"
+                    + " invoice_id, mode, amount, order_name, status, payment_key, requested_at,"
+                    + " completed_at, credential_updated_at) VALUES (?, ?, ?, ?, 'live', 1100, '사용료',"
+                    + " 'done', 'cancel-confirm-live', now() - interval '10 minutes', now() - interval '9"
+                    + " minutes', ?)",
+                attempt,
+                organizationId,
+                live.customer(),
+                live.invoice(),
+                KEY_TIME));
     UUID cancellation = UUID.randomUUID();
-    jdbcTemplate.update(
-        "INSERT INTO payment_cancellation (id, organization_id, environment_id,"
-            + " payment_attempt_id, mode, amount, reason, status, requested_at) VALUES (?, ?, ?,"
-            + " ?, 'live', 400, '부분 취소', 'pending', now() - interval '3 minutes')",
-        cancellation,
-        organizationId,
-        environment("live"),
-        attempt);
+    in(
+        "live",
+        () ->
+            jdbcTemplate.update(
+                "INSERT INTO payment_cancellation (id, organization_id,"
+                    + " payment_attempt_id, mode, amount, reason, status, requested_at) VALUES (?, ?,"
+                    + " ?, 'live', 400, '부분 취소', 'pending', now() - interval '3 minutes')",
+                cancellation,
+                organizationId,
+                attempt));
     when(toss.findPayment(eq(LIVE_SECRET), eq("cancel-confirm-live")))
         .thenReturn(
             new TossPaymentsResult.Success<>(
@@ -549,20 +573,22 @@ class PaymentEnvironmentIntegrationTest {
 
     assertThat(BusinessEnvironmentContext.current()).isNull();
     assertThat(
-            jdbcTemplate.queryForMap(
-                "SELECT status, transaction_key FROM payment_cancellation WHERE id=?",
-                cancellation))
+            ownerJdbc()
+                .queryForMap(
+                    "SELECT status, transaction_key FROM live.payment_cancellation WHERE id=?",
+                    cancellation))
         .containsEntry("status", "done")
         .containsEntry("transaction_key", "cancel-transaction-live");
     verify(toss, never()).findPayment(eq("live_sk_rotated_environment"), anyString());
     verify(toss, never()).findPayment(eq(TEST_SECRET), anyString());
     assertThat(
-            jdbcTemplate.queryForList(
-                "SELECT environment_id FROM webhook_event WHERE organization_id=? AND"
-                    + " type='payment_canceled'",
-                UUID.class,
-                organizationId))
-        .containsExactly(environment("live"));
+            ownerJdbc()
+                .queryForList(
+                    "SELECT payload->>'environment' FROM live.webhook_event WHERE organization_id=? AND"
+                        + " type='payment_canceled'",
+                    String.class,
+                    organizationId))
+        .containsExactly("live");
   }
 
   @Test
@@ -573,16 +599,22 @@ class PaymentEnvironmentIntegrationTest {
     UUID testAttempt = insertAttempt(test, "test", false);
     UUID liveAttempt = insertAttempt(live, "live", false);
     OffsetDateTime completed = OffsetDateTime.now().minusMinutes(20);
-    jdbcTemplate.update(
-        "UPDATE payment_attempt SET status='done', payment_key=?, completed_at=? WHERE id=?",
-        "reconciled-test",
-        completed,
-        testAttempt);
-    jdbcTemplate.update(
-        "UPDATE payment_attempt SET status='done', payment_key=?, completed_at=? WHERE id=?",
-        "reconciled-live",
-        completed,
-        liveAttempt);
+    in(
+        "test",
+        () ->
+            jdbcTemplate.update(
+                "UPDATE payment_attempt SET status='done', payment_key=?, completed_at=? WHERE id=?",
+                "reconciled-test",
+                completed,
+                testAttempt));
+    in(
+        "live",
+        () ->
+            jdbcTemplate.update(
+                "UPDATE payment_attempt SET status='done', payment_key=?, completed_at=? WHERE id=?",
+                "reconciled-live",
+                completed,
+                liveAttempt));
     assertThat(putCredential("test", "test", "test_sk_reconciliation_rotated")).hasStatusOk();
     TossPaymentsTransaction testTransaction =
         new TossPaymentsTransaction(
@@ -600,10 +632,11 @@ class PaymentEnvironmentIntegrationTest {
     verify(toss).listTransactions(eq(originalSecret), any(), any(), isNull(), eq(1000));
     verify(toss, never()).findPayment(eq(originalSecret), eq("reconciled-test"));
     assertThat(
-            jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM payment_reconciliation_mismatch WHERE organization_id=?",
-                Integer.class,
-                organizationId))
+            ownerJdbc()
+                .queryForObject(
+                    "SELECT count(*) FROM test.payment_reconciliation_mismatch WHERE organization_id=?",
+                    Integer.class,
+                    organizationId))
         .isZero();
     assertThat(BusinessEnvironmentContext.current()).isNull();
   }
@@ -614,19 +647,21 @@ class PaymentEnvironmentIntegrationTest {
     Payable live = payable("live");
     OperationsResponse before = operations.get();
     for (String status : List.of("pending", "failed")) {
-      jdbcTemplate.update(
-          "INSERT INTO payment_attempt (id, organization_id, environment_id, customer_id, invoice_id,"
-              + " mode, amount, order_name, status, requested_at, completed_at, failure_code,"
-              + " failure_message) VALUES (?, ?, ?, ?, ?, 'test', 1100, '사용료', ?, now(), ?, ?, ?)",
-          UUID.randomUUID(),
-          organizationId,
-          environment("test"),
-          test.customer(),
-          test.invoice(),
-          status,
-          status.equals("failed") ? OffsetDateTime.now() : null,
-          status.equals("failed") ? "REJECT_CARD_PAYMENT" : null,
-          status.equals("failed") ? "거절" : null);
+      in(
+          "test",
+          () ->
+              jdbcTemplate.update(
+                  "INSERT INTO payment_attempt (id, organization_id, customer_id, invoice_id,"
+                      + " mode, amount, order_name, status, requested_at, completed_at, failure_code,"
+                      + " failure_message) VALUES (?, ?, ?, ?, 'test', 1100, '사용료', ?, now(), ?, ?, ?)",
+                  UUID.randomUUID(),
+                  organizationId,
+                  test.customer(),
+                  test.invoice(),
+                  status,
+                  status.equals("failed") ? OffsetDateTime.now() : null,
+                  status.equals("failed") ? "REJECT_CARD_PAYMENT" : null,
+                  status.equals("failed") ? "거절" : null));
     }
     assertThat(operations.get().pendingPaymentCount()).isEqualTo(before.pendingPaymentCount());
     assertThat(operations.get().failedPaymentCount()).isEqualTo(before.failedPaymentCount());
@@ -642,11 +677,14 @@ class PaymentEnvironmentIntegrationTest {
     assertThat(putCredential("test", "test", midSecret)).hasStatusOk();
     UUID midAttempt = insertAttempt(test, "test", false);
     OffsetDateTime completed = OffsetDateTime.now().minusMinutes(20);
-    jdbcTemplate.update(
-        "UPDATE payment_attempt SET status='done', payment_key=?, completed_at=? WHERE id=?",
-        "reconciled-retired",
-        completed,
-        midAttempt);
+    in(
+        "test",
+        () ->
+            jdbcTemplate.update(
+                "UPDATE payment_attempt SET status='done', payment_key=?, completed_at=? WHERE id=?",
+                "reconciled-retired",
+                completed,
+                midAttempt));
     assertThat(putCredential("test", "test", "test_sk_reconciliation_current")).hasStatusOk();
     when(toss.listTransactions(anyString(), any(), any(), any(), eq(1000)))
         .thenReturn(new TossPaymentsResult.Success<>(List.of()));
@@ -670,10 +708,11 @@ class PaymentEnvironmentIntegrationTest {
     verify(toss, never()).listTransactions(eq(oldSecret), any(), any(), any(), eq(1000));
     verify(toss).listTransactions(eq(midSecret), any(), any(), isNull(), eq(1000));
     assertThat(
-            jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM payment_reconciliation_mismatch WHERE organization_id=?",
-                Integer.class,
-                organizationId))
+            ownerJdbc()
+                .queryForObject(
+                    "SELECT count(*) FROM test.payment_reconciliation_mismatch WHERE organization_id=?",
+                    Integer.class,
+                    organizationId))
         .isZero();
   }
 
@@ -683,11 +722,14 @@ class PaymentEnvironmentIntegrationTest {
     String currentSecret = "test_sk_reconciliation_external_current";
     Payable test = payable("test", oldSecret);
     UUID oldAttempt = insertAttempt(test, "test", false);
-    jdbcTemplate.update(
-        "UPDATE payment_attempt SET status='done', payment_key=?, completed_at=? WHERE id=?",
-        "external-cancel-old",
-        OffsetDateTime.now().minusMinutes(25 * 60 + 30),
-        oldAttempt);
+    in(
+        "test",
+        () ->
+            jdbcTemplate.update(
+                "UPDATE payment_attempt SET status='done', payment_key=?, completed_at=? WHERE id=?",
+                "external-cancel-old",
+                OffsetDateTime.now().minusMinutes(25 * 60 + 30),
+                oldAttempt));
     assertThat(putCredential("test", "test", currentSecret)).hasStatusOk();
     when(toss.listTransactions(anyString(), any(), any(), any(), eq(1000)))
         .thenReturn(new TossPaymentsResult.Success<>(List.of()));
@@ -707,10 +749,11 @@ class PaymentEnvironmentIntegrationTest {
 
     verify(toss, never()).listTransactions(eq(oldSecret), any(), any(), any(), eq(1000));
     assertThat(
-            jdbcTemplate.queryForList(
-                "SELECT kind, transaction_key FROM payment_reconciliation_mismatch WHERE"
-                    + " organization_id=?",
-                organizationId))
+            ownerJdbc()
+                .queryForList(
+                    "SELECT kind, transaction_key FROM test.payment_reconciliation_mismatch WHERE"
+                        + " organization_id=?",
+                    organizationId))
         .containsExactly(
             Map.of(
                 "kind", "missing_in_meterengine",
@@ -729,11 +772,14 @@ class PaymentEnvironmentIntegrationTest {
     assertThat(putCredential("test", "test", retiredSecret)).hasStatusOk();
     UUID retiredAttempt = insertAttempt(test, "test", false);
     OffsetDateTime completed = OffsetDateTime.now().minusMinutes(20);
-    jdbcTemplate.update(
-        "UPDATE payment_attempt SET status='done', payment_key=?, completed_at=? WHERE id=?",
-        "reconciled-partial",
-        completed,
-        retiredAttempt);
+    in(
+        "test",
+        () ->
+            jdbcTemplate.update(
+                "UPDATE payment_attempt SET status='done', payment_key=?, completed_at=? WHERE id=?",
+                "reconciled-partial",
+                completed,
+                retiredAttempt));
     assertThat(putCredential("test", "test", currentSecret)).hasStatusOk();
     when(toss.listTransactions(eq(currentSecret), any(), any(), any(), eq(1000)))
         .thenReturn(new TossPaymentsResult.Rejected<>(503, "PROVIDER_ERROR", "일시 장애"));
@@ -755,39 +801,41 @@ class PaymentEnvironmentIntegrationTest {
     verify(toss).listTransactions(eq(currentSecret), any(), any(), any(), eq(1000));
     verify(toss).listTransactions(eq(retiredSecret), any(), any(), isNull(), eq(1000));
     assertThat(
-            jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM payment_reconciliation_mismatch WHERE organization_id=?",
-                Integer.class,
-                organizationId))
+            ownerJdbc()
+                .queryForObject(
+                    "SELECT count(*) FROM test.payment_reconciliation_mismatch WHERE organization_id=?",
+                    Integer.class,
+                    organizationId))
         .isZero();
   }
 
   private UUID insertAttempt(Payable payable, String mode, boolean failed) {
-    UUID id = UUID.randomUUID();
-    jdbcTemplate.update(
-        "INSERT INTO payment_attempt (id, organization_id, environment_id, customer_id, invoice_id,"
-            + " mode, amount, order_name, status, requested_at, completed_at, failure_code,"
-            + " failure_message, credential_updated_at) VALUES (?, ?, ?, ?, ?, ?, 1100, '사용료', ?,"
-            + " ?, ?, ?, ?, ?)",
-        id,
-        organizationId,
-        environment(mode),
-        payable.customer(),
-        payable.invoice(),
+    return in(
         mode,
-        failed ? "failed" : "pending",
-        OffsetDateTime.now().minusHours(26),
-        failed ? OffsetDateTime.now().minusHours(25) : null,
-        failed ? "REJECT_CARD_PAYMENT" : null,
-        failed ? "거절" : null,
-        jdbcTemplate.queryForObject(
-            "SELECT updated_at FROM toss_payments_credential WHERE organization_id=? AND"
-                + " environment_id=? AND mode=?",
-            OffsetDateTime.class,
-            organizationId,
-            environment(mode),
-            mode));
-    return id;
+        () -> {
+          UUID id = UUID.randomUUID();
+          jdbcTemplate.update(
+              "INSERT INTO payment_attempt (id, organization_id, customer_id, invoice_id,"
+                  + " mode, amount, order_name, status, requested_at, completed_at, failure_code,"
+                  + " failure_message, credential_updated_at) VALUES (?, ?, ?, ?, ?, 1100, '사용료', ?,"
+                  + " ?, ?, ?, ?, ?)",
+              id,
+              organizationId,
+              payable.customer(),
+              payable.invoice(),
+              mode,
+              failed ? "failed" : "pending",
+              OffsetDateTime.now().minusHours(26),
+              failed ? OffsetDateTime.now().minusHours(25) : null,
+              failed ? "REJECT_CARD_PAYMENT" : null,
+              failed ? "거절" : null,
+              jdbcTemplate.queryForObject(
+                  "SELECT updated_at FROM toss_payments_credential WHERE organization_id=? AND mode=?",
+                  OffsetDateTime.class,
+                  organizationId,
+                  mode));
+          return id;
+        });
   }
 
   private Payable payable(String mode) {
@@ -819,40 +867,46 @@ class PaymentEnvironmentIntegrationTest {
   }
 
   private Payable invoice(String mode) {
-    UUID environmentId = environment(mode);
-    UUID customer =
-        jdbcTemplate.queryForObject(
-            "INSERT INTO customer (organization_id, environment_id, external_id, name) VALUES (?,"
-                + " ?, 'same', '고객') RETURNING id",
-            UUID.class,
-            organizationId,
-            environmentId);
-    Invoice invoice =
-        invoiceRepository.saveAndFlush(
-            new Invoice(
-                UUID.randomUUID(),
-                organizationId,
-                customer,
-                "고객",
-                "2026-08",
-                1000,
-                100,
-                OffsetDateTime.now(),
-                environmentId));
-    return new Payable(customer, invoice.getId());
+    return in(
+        mode,
+        () -> {
+          UUID environmentId = environment(mode);
+          UUID customer =
+              jdbcTemplate.queryForObject(
+                  "INSERT INTO customer (organization_id, external_id, name) VALUES (?, 'same', '고객') RETURNING id",
+                  UUID.class,
+                  organizationId);
+          Invoice invoice =
+              invoiceRepository.saveAndFlush(
+                  new Invoice(
+                      UUID.randomUUID(),
+                      organizationId,
+                      customer,
+                      "고객",
+                      "2026-08",
+                      1000,
+                      100,
+                      OffsetDateTime.now()));
+          return new Payable(customer, invoice.getId());
+        });
   }
 
   private UUID environment(String mode) {
-    return jdbcTemplate.queryForObject(
-        "SELECT id FROM organization_environment WHERE organization_id=? AND mode=?",
-        UUID.class,
-        organizationId,
-        mode);
+    return ownerJdbc()
+        .queryForObject(
+            "SELECT id FROM shared.organization_environment WHERE organization_id=? AND mode=?",
+            UUID.class,
+            organizationId,
+            mode);
   }
 
-  private void in(String mode, Runnable action) {
-    BusinessEnvironmentContext.run(
-        new BusinessEnvironment(organizationId, environment(mode), mode), action);
+  @Override
+  protected void in(String mode, Runnable action) {
+    super.in(
+        mode,
+        () ->
+            BusinessEnvironmentContext.run(
+                new BusinessEnvironment(organizationId, environment(mode), mode), action));
   }
 
   private UUID createAttempt(String mode, UUID invoice) {
@@ -887,7 +941,7 @@ class PaymentEnvironmentIntegrationTest {
         .exchange();
   }
 
-  private MvcTestResult get(String mode, String path) {
+  private MvcTestResult managedGet(String mode, String path) {
     return mvc.get()
         .uri(path)
         .header("Authorization", session)

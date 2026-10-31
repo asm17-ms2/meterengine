@@ -12,7 +12,6 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 
 import com.jayway.jsonpath.JsonPath;
 import com.meterengine.TestCredentials;
-import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.global.security.BusinessEnvironment;
 import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.invoice.entity.Invoice;
@@ -32,8 +31,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -41,9 +38,7 @@ import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
 import org.springframework.web.context.WebApplicationContext;
 
-@Import(TestcontainersConfiguration.class)
-@SpringBootTest
-class InvoiceViewLinkEnvironmentIntegrationTest {
+class InvoiceViewLinkEnvironmentIntegrationTest extends com.meterengine.SideEffectTestSupport {
   private static final OffsetDateTime KEY_TIME = OffsetDateTime.parse("2026-10-01T00:00:00Z");
   private static final String SECRET = "test_sk_invoice_link_original";
   @Autowired private WebApplicationContext context;
@@ -84,13 +79,13 @@ class InvoiceViewLinkEnvironmentIntegrationTest {
     Payable live = payable("live");
     Link testLink = createLink("test", test.invoice());
     Link liveLink = createLink("live", live.invoice());
-    assertThat(get("test", "/v1/invoices/" + test.invoice() + "/view-links"))
+    assertThat(managedGet("test", "/v1/invoices/" + test.invoice() + "/view-links"))
         .hasStatusOk()
         .bodyJson()
         .extractingPath("$.invoice_view_links")
         .asArray()
         .hasSize(1);
-    assertThat(get("live", "/v1/invoices/" + test.invoice() + "/view-links")).hasStatus(404);
+    assertThat(managedGet("live", "/v1/invoices/" + test.invoice() + "/view-links")).hasStatus(404);
     assertThat(post("test", "/v1/invoices/" + live.invoice() + "/view-links", "{}")).hasStatus(404);
     assertThat(
             post(
@@ -109,11 +104,12 @@ class InvoiceViewLinkEnvironmentIntegrationTest {
         .extractingPath("$.payment.mode")
         .isEqualTo("live");
     assertThat(
-            jdbcTemplate.queryForObject(
-                "SELECT environment_id FROM invoice_view_link WHERE id=?",
-                UUID.class,
-                testLink.id()))
-        .isEqualTo(environment("test"));
+            ownerJdbc()
+                .queryForObject(
+                    "SELECT organization_id FROM test.invoice_view_link WHERE id=?",
+                    UUID.class,
+                    testLink.id()))
+        .isEqualTo(organizationId);
     assertThat(
             post(
                 "test",
@@ -154,29 +150,33 @@ class InvoiceViewLinkEnvironmentIntegrationTest {
     assertThat(retried).hasStatusOk().bodyJson().extractingPath("$.payment.mode").isEqualTo("test");
     assertThat(retried).bodyJson().extractingPath("$.payment.status").isEqualTo("paid");
     UUID attempt =
-        jdbcTemplate.queryForObject(
-            "SELECT id FROM payment_attempt WHERE invoice_id=? AND id<>?",
-            UUID.class,
-            test.invoice(),
-            testFailed);
+        ownerJdbc()
+            .queryForObject(
+                "SELECT id FROM test.payment_attempt WHERE invoice_id=? AND id<>?",
+                UUID.class,
+                test.invoice(),
+                testFailed);
     verify(toss)
         .approveBilling(eq(SECRET), eq("billing-test"), any(), eq(attempt.toString()), isNull());
     assertThat(post("live", "/v1/public/invoice-links/payment-retries", request)).hasStatus(409);
     assertThat(
-            jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM payment_attempt WHERE invoice_id=?",
-                Integer.class,
-                test.invoice()))
+            ownerJdbc()
+                .queryForObject(
+                    "SELECT count(*) FROM test.payment_attempt WHERE invoice_id=?",
+                    Integer.class,
+                    test.invoice()))
         .isEqualTo(2);
     assertThat(
-            jdbcTemplate.queryForObject(
-                "SELECT status FROM payment_attempt WHERE id=?", String.class, liveFailed))
+            ownerJdbc()
+                .queryForObject(
+                    "SELECT status FROM live.payment_attempt WHERE id=?", String.class, liveFailed))
         .isEqualTo("failed");
     assertThat(
-            jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM payment_attempt WHERE invoice_id=?",
-                Integer.class,
-                live.invoice()))
+            ownerJdbc()
+                .queryForObject(
+                    "SELECT count(*) FROM live.payment_attempt WHERE invoice_id=?",
+                    Integer.class,
+                    live.invoice()))
         .isEqualTo(1);
     assertThat(
             jdbcTemplate.queryForObject(
@@ -219,71 +219,75 @@ class InvoiceViewLinkEnvironmentIntegrationTest {
   }
 
   private Payable payable(String mode) {
-    UUID env = environment(mode);
-    UUID customer =
-        jdbcTemplate.queryForObject(
-            "INSERT INTO customer (organization_id, environment_id, name) VALUES (?, ?, '고객')"
-                + " RETURNING id",
-            UUID.class,
-            organizationId,
-            env);
-    UUID invoice =
-        invoices
-            .saveAndFlush(
-                new Invoice(
-                    UUID.randomUUID(),
-                    organizationId,
-                    customer,
-                    "고객",
-                    "2026-08",
-                    1000,
-                    100,
-                    OffsetDateTime.now(),
-                    env))
-            .getId();
-    BusinessEnvironmentContext.run(
-        new BusinessEnvironment(organizationId, env, mode),
+    return in(
+        mode,
         () -> {
-          credentials.saveAndFlush(
-              new TossPaymentsCredential(
-                  organizationId,
-                  mode,
-                  mode + "_ck_invoice_link_original",
-                  mode.equals("test") ? SECRET : "live_sk_invoice_link_original",
-                  KEY_TIME));
-          cards.saveAndFlush(
-              new BillingKey(
-                      organizationId,
-                      customer,
-                      mode,
-                      "billing-" + mode,
-                      "61",
-                      "4330****1234",
-                      KEY_TIME,
-                      "v1",
-                      KEY_TIME)
-                  .pinCredential(KEY_TIME));
+          UUID env = environment(mode);
+          UUID customer =
+              jdbcTemplate.queryForObject(
+                  "INSERT INTO customer (organization_id, name) VALUES (?, '고객')" + " RETURNING id",
+                  UUID.class,
+                  organizationId);
+          UUID invoice =
+              invoices
+                  .saveAndFlush(
+                      new Invoice(
+                          UUID.randomUUID(),
+                          organizationId,
+                          customer,
+                          "고객",
+                          "2026-08",
+                          1000,
+                          100,
+                          OffsetDateTime.now()))
+                  .getId();
+          BusinessEnvironmentContext.run(
+              new BusinessEnvironment(organizationId, env, mode),
+              () -> {
+                credentials.saveAndFlush(
+                    new TossPaymentsCredential(
+                        organizationId,
+                        mode,
+                        mode + "_ck_invoice_link_original",
+                        mode.equals("test") ? SECRET : "live_sk_invoice_link_original",
+                        KEY_TIME));
+                cards.saveAndFlush(
+                    new BillingKey(
+                            organizationId,
+                            customer,
+                            mode,
+                            "billing-" + mode,
+                            "61",
+                            "4330****1234",
+                            KEY_TIME,
+                            "v1",
+                            KEY_TIME)
+                        .pinCredential(KEY_TIME));
+              });
+          return new Payable(customer, invoice);
         });
-    return new Payable(customer, invoice);
   }
 
   private UUID failed(Payable payable, String mode) {
-    UUID id = UUID.randomUUID();
-    jdbcTemplate.update(
-        "INSERT INTO payment_attempt (id, organization_id, environment_id, customer_id, invoice_id,"
-            + " mode, amount, order_name, status, requested_at, completed_at, failure_code,"
-            + " failure_message, credential_updated_at) VALUES (?, ?, ?, ?, ?, ?, 1100, '사용료',"
-            + " 'failed', ?, ?, 'REJECT_CARD_PAYMENT', '거절', ?)",
-        id,
-        organizationId,
-        environment(mode),
-        payable.customer(),
-        payable.invoice(),
+    return in(
         mode,
-        OffsetDateTime.now().minusHours(26),
-        OffsetDateTime.now().minusHours(25),
-        KEY_TIME);
-    return id;
+        () -> {
+          UUID id = UUID.randomUUID();
+          jdbcTemplate.update(
+              "INSERT INTO payment_attempt (id, organization_id, customer_id, invoice_id,"
+                  + " mode, amount, order_name, status, requested_at, completed_at, failure_code,"
+                  + " failure_message, credential_updated_at) VALUES (?, ?, ?, ?, ?, 1100, '사용료',"
+                  + " 'failed', ?, ?, 'REJECT_CARD_PAYMENT', '거절', ?)",
+              id,
+              organizationId,
+              payable.customer(),
+              payable.invoice(),
+              mode,
+              OffsetDateTime.now().minusHours(26),
+              OffsetDateTime.now().minusHours(25),
+              KEY_TIME);
+          return id;
+        });
   }
 
   private Link createLink(String mode, UUID invoice) {
@@ -299,7 +303,7 @@ class InvoiceViewLinkEnvironmentIntegrationTest {
     return post(mode, "/v1/public/invoice-links/lookup", "{\"token\":\"" + token + "\"}");
   }
 
-  private MvcTestResult get(String mode, String path) {
+  private MvcTestResult managedGet(String mode, String path) {
     return mvc.get()
         .uri(path)
         .header("Authorization", session)
@@ -318,11 +322,12 @@ class InvoiceViewLinkEnvironmentIntegrationTest {
   }
 
   private UUID environment(String mode) {
-    return jdbcTemplate.queryForObject(
-        "SELECT id FROM organization_environment WHERE organization_id=? AND mode=?",
-        UUID.class,
-        organizationId,
-        mode);
+    return ownerJdbc()
+        .queryForObject(
+            "SELECT id FROM shared.organization_environment WHERE organization_id=? AND mode=?",
+            UUID.class,
+            organizationId,
+            mode);
   }
 
   private String body(MvcTestResult result) {

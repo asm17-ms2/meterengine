@@ -1,6 +1,5 @@
 package com.meterengine.payment.service;
 
-import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.invoice.repository.InvoiceRepository;
 import com.meterengine.payment.config.PaymentProperties;
 import com.meterengine.payment.dto.PaymentJobResult;
@@ -24,6 +23,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class PaymentRetryService {
+  @org.springframework.beans.factory.annotation.Autowired
+  private com.meterengine.global.database.CutoverPolicy cutover;
 
   private static final Logger logger = LoggerFactory.getLogger(PaymentRetryService.class);
 
@@ -59,6 +60,10 @@ public class PaymentRetryService {
   }
 
   public PaymentJobResult retry() {
+    if (cutover.readOnly()) return new PaymentJobResult(0, 0, 0);
+    if (com.meterengine.global.database.DatabaseScopes.current()
+        == com.meterengine.global.database.DatabaseScope.SHARED)
+      return PaymentEnvironments.all(this::retry);
     OffsetDateTime now = OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS);
     PaymentJobTally tally = new PaymentJobTally();
     for (PaymentRetryCandidateProjection candidate :
@@ -76,7 +81,6 @@ public class PaymentRetryService {
         tally.count(
             PaymentEnvironments.call(
                 candidate.getOrganizationId(),
-                candidate.getEnvironmentId(),
                 candidate.getMode(),
                 () -> retryCandidate(candidate)));
       } catch (RuntimeException exception) {
@@ -116,11 +120,8 @@ public class PaymentRetryService {
                 candidate.getOrganizationId(),
                 candidate.getMode(),
                 original.getCredentialUpdatedAt())
-            : candidate.getEnvironmentId() == null
-                ? tossPaymentsCredentialService.active(
-                    candidate.getOrganizationId(), candidate.getMode())
-                : tossPaymentsCredentialService.historical(
-                    candidate.getOrganizationId(), candidate.getMode(), original.getRequestedAt());
+            : tossPaymentsCredentialService.historical(
+                candidate.getOrganizationId(), candidate.getMode(), original.getRequestedAt());
     if (credential.isEmpty()) {
       logSkipped(candidate, "toss_payments_credential_missing");
       return false;
@@ -143,10 +144,7 @@ public class PaymentRetryService {
     UUID organizationId = candidate.getOrganizationId();
     UUID invoiceId = candidate.getInvoiceId();
     String mode = candidate.getMode();
-    (candidate.getEnvironmentId() == null
-            ? invoiceRepository.findForUpdate(organizationId, invoiceId)
-            : invoiceRepository.lockScoped(organizationId, candidate.getEnvironmentId(), invoiceId))
-        .orElseThrow();
+    invoiceRepository.findForUpdate(organizationId, invoiceId).orElseThrow();
     PaymentAttempt failedAttempt =
         paymentAttemptRepository.findForUpdate(organizationId, candidate.getId()).orElseThrow();
     PaymentAttempt latestAttempt =
@@ -166,7 +164,6 @@ public class PaymentRetryService {
     }
     if (billingKeyRepository
         .findById(new BillingKeyId(organizationId, failedAttempt.getCustomerId(), mode))
-        .filter(key -> BusinessEnvironmentContext.matches(key.getEnvironmentId()))
         .filter(key -> key.getArchivedAt() == null)
         .isEmpty()) {
       logSkipped(candidate, "payment_method_missing");

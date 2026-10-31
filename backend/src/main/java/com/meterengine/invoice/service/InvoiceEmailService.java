@@ -17,6 +17,8 @@ import org.thymeleaf.context.Context;
 
 @Service
 class InvoiceEmailService {
+  @org.springframework.beans.factory.annotation.Autowired
+  private com.meterengine.global.database.CutoverPolicy cutover;
 
   private final TemplateEngine templateEngine;
   private final OutboundEmailRepository outboundEmailRepository;
@@ -33,6 +35,7 @@ class InvoiceEmailService {
       Invoice invoice,
       List<DraftInvoiceLine> draftInvoiceLines,
       String recipientEmail) {
+    cutover.requireWritable();
     String subject = "[%s] %s 사용료 청구서".formatted(organizationName, invoice.getPeriod());
 
     Context context = new Context(Locale.KOREA);
@@ -55,8 +58,7 @@ class InvoiceEmailService {
             recipientEmail,
             subject,
             templateEngine.process("mail/invoice", context),
-            invoice.getFinalizedAt(),
-            invoice.getEnvironmentId()));
+            invoice.getFinalizedAt()));
   }
 
   private static EmailLine toEmailLine(DraftInvoiceLine draftInvoiceLine) {

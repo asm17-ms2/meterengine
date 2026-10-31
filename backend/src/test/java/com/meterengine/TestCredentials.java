@@ -39,15 +39,18 @@ public final class TestCredentials {
     jdbcTemplate.update(
         """
         INSERT INTO api_key
-          (id, organization_id, mode, label, key_hash, last_four, scopes, created_at)
-        VALUES (?, ?, ?, '테스트 키', sha256(convert_to(?, 'UTF8')), ?, CAST(? AS VARCHAR[]), now())
+          (id, organization_id, mode, label, key_hash, last_four, scopes, created_at, environment_id)
+        VALUES (?, ?, ?, '테스트 키', sha256(convert_to(?, 'UTF8')), ?, CAST(? AS VARCHAR[]), now(),
+          (SELECT id FROM shared.organization_environment WHERE organization_id=? AND mode=?))
         """,
         UUID.randomUUID(),
         organizationId,
         mode,
         rawKey,
         rawKey.substring(rawKey.length() - 4),
-        "{" + String.join(",", scopes.isEmpty() ? List.of("admin") : scopes) + "}");
+        "{" + String.join(",", scopes.isEmpty() ? List.of("admin") : scopes) + "}",
+        organizationId,
+        mode);
     return BEARER_PREFIX + rawKey;
   }
 

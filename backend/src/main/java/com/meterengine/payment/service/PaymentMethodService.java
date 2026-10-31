@@ -4,7 +4,6 @@ import com.meterengine.audit.service.AuditLogService;
 import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
-import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.global.validation.ArchiveStatus;
 import com.meterengine.payment.client.TossPaymentsClient;
 import com.meterengine.payment.client.TossPaymentsResult;
@@ -29,6 +28,8 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 @Service
 public class PaymentMethodService {
+  @org.springframework.beans.factory.annotation.Autowired
+  private com.meterengine.global.database.CutoverPolicy cutover;
 
   private static final Logger logger = LoggerFactory.getLogger(PaymentMethodService.class);
 
@@ -59,15 +60,12 @@ public class PaymentMethodService {
 
   @Transactional(readOnly = true)
   public PaymentMethodResponse get(UUID organizationId, UUID customerId) {
-    if (!customerRepository
-        .findScoped(organizationId, BusinessEnvironmentContext.environmentId(), customerId)
-        .isPresent()) {
+    if (!customerRepository.findByOrganizationIdAndId(organizationId, customerId).isPresent()) {
       throw new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND);
     }
     String mode = paymentSettingService.findMode(organizationId);
     return billingKeyRepository
         .findById(new BillingKeyId(organizationId, customerId, mode))
-        .filter(value -> BusinessEnvironmentContext.matches(value.getEnvironmentId()))
         .map(PaymentMethodResponse::from)
         .orElseThrow(() -> new NotFoundException(ErrorCode.PAYMENT_METHOD_NOT_FOUND));
   }
@@ -97,7 +95,6 @@ public class PaymentMethodService {
     var methods =
         new ArrayList<>(
             keys.filter(key -> filter.includes(key.getArchivedAt()))
-                .filter(value -> BusinessEnvironmentContext.matches(value.getEnvironmentId()))
                 .map(PaymentMethodResponse::from)
                 .toList());
     if (filter != ArchiveStatus.ACTIVE)
@@ -110,12 +107,12 @@ public class PaymentMethodService {
 
   @Transactional
   public void delete(UUID organizationId, UUID customerId) {
+    cutover.requireWritable();
     paymentArchiveRepository.lock(organizationId);
     String mode = paymentSettingService.findMode(organizationId);
     var key =
         billingKeyRepository
             .findById(new BillingKeyId(organizationId, customerId, mode))
-            .filter(value -> BusinessEnvironmentContext.matches(value.getEnvironmentId()))
             .orElseThrow(() -> new NotFoundException(ErrorCode.PAYMENT_METHOD_NOT_FOUND));
     if (key.getArchivedAt() != null) return;
     String billingKey = key.getBillingKey();

@@ -9,6 +9,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.meterengine.global.database.CutoverPolicy;
+import com.meterengine.global.database.EnvironmentSideEffectPolicy;
 import com.meterengine.webhook.dto.WebhookOutcome;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -22,9 +24,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.KeyStore;
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLException;
@@ -37,6 +41,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.springframework.mock.env.MockEnvironment;
 
 @ExtendWith(OutputCaptureExtension.class)
 class WebhookClientTest {
@@ -50,7 +55,10 @@ class WebhookClientTest {
     try (ServerSocket serverSocket = new ServerSocket(0, 1, InetAddress.getByName("127.0.0.1"));
         var receiver = Executors.newSingleThreadExecutor();
         WebhookClient client =
-            new WebhookClient(new WebhookAddressPolicy(true), Duration.ofMillis(500))) {
+            new WebhookClient(
+                new WebhookAddressPolicy(true),
+                Duration.ofMillis(500),
+                com.meterengine.global.database.PolicyTestSupport.active())) {
       serverSocket.setReceiveBufferSize(1024);
       var received =
           receiver.submit(
@@ -97,7 +105,10 @@ class WebhookClientTest {
     try (ServerSocket serverSocket = new ServerSocket(0, 1, InetAddress.getByName("127.0.0.1"));
         var receiver = Executors.newSingleThreadExecutor();
         WebhookClient client =
-            new WebhookClient(new WebhookAddressPolicy(true), Duration.ofSeconds(5))) {
+            new WebhookClient(
+                new WebhookAddressPolicy(true),
+                Duration.ofSeconds(5),
+                com.meterengine.global.database.PolicyTestSupport.active())) {
       var received =
           receiver.submit(
               () -> {
@@ -133,7 +144,10 @@ class WebhookClientTest {
       closedPort = serverSocket.getLocalPort();
     }
     try (WebhookClient client =
-        new WebhookClient(new WebhookAddressPolicy(true), Duration.ofSeconds(5))) {
+        new WebhookClient(
+            new WebhookAddressPolicy(true),
+            Duration.ofSeconds(5),
+            com.meterengine.global.database.PolicyTestSupport.active())) {
       WebhookOutcome outcome =
           client.send(
               "http://127.0.0.1:" + closedPort + "/hook?token=receiver-secret",
@@ -159,7 +173,10 @@ class WebhookClientTest {
     try (ServerSocket serverSocket = new ServerSocket(0, 1, InetAddress.getByName("127.0.0.1"));
         WebhookClient client =
             new WebhookClient(
-                new WebhookAddressPolicy(true), Duration.ofSeconds(5), brokenFactory)) {
+                new WebhookAddressPolicy(true),
+                Duration.ofSeconds(5),
+                brokenFactory,
+                com.meterengine.global.database.PolicyTestSupport.active())) {
       WebhookOutcome outcome =
           client.send(
               "https://127.0.0.1:" + serverSocket.getLocalPort() + "/hook",
@@ -180,7 +197,10 @@ class WebhookClientTest {
   void 운영_정책은_전송_시점에_차단_주소면_연결하지_않고_blocked_address로_끝낸다() throws Exception {
     try (ServerSocket serverSocket = new ServerSocket(0, 1, InetAddress.getByName("127.0.0.1"));
         WebhookClient client =
-            new WebhookClient(new WebhookAddressPolicy(false), Duration.ofSeconds(2))) {
+            new WebhookClient(
+                new WebhookAddressPolicy(false),
+                Duration.ofSeconds(2),
+                com.meterengine.global.database.PolicyTestSupport.active())) {
       WebhookOutcome outcome =
           client.send(
               "https://127.0.0.1:" + serverSocket.getLocalPort() + "/hook",
@@ -208,7 +228,8 @@ class WebhookClientTest {
             new WebhookClient(
                 new WebhookAddressPolicy(true),
                 Duration.ofSeconds(5),
-                clientContext(keyStore).getSocketFactory())) {
+                clientContext(keyStore).getSocketFactory(),
+                com.meterengine.global.database.PolicyTestSupport.active())) {
       var received =
           receiver.submit(
               () -> {
@@ -256,7 +277,8 @@ class WebhookClientTest {
             new WebhookClient(
                 new WebhookAddressPolicy(true),
                 Duration.ofSeconds(5),
-                clientContext(keyStore).getSocketFactory())) {
+                clientContext(keyStore).getSocketFactory(),
+                com.meterengine.global.database.PolicyTestSupport.active())) {
       var handshake =
           receiver.submit(
               () -> {
@@ -285,7 +307,7 @@ class WebhookClientTest {
     }
   }
 
-  private static KeyStore selfSignedKeyStore(Path directory, String host) throws Exception {
+  static KeyStore selfSignedKeyStore(Path directory, String host) throws Exception {
     Path file = directory.resolve(host + ".p12");
     Process process =
         new ProcessBuilder(
@@ -321,7 +343,7 @@ class WebhookClientTest {
     return keyStore;
   }
 
-  private static SSLContext serverContext(KeyStore keyStore) throws Exception {
+  static SSLContext serverContext(KeyStore keyStore) throws Exception {
     KeyManagerFactory keyManagers =
         KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
     keyManagers.init(keyStore, PASSWORD);
@@ -330,7 +352,7 @@ class WebhookClientTest {
     return context;
   }
 
-  private static SSLContext clientContext(KeyStore keyStore) throws Exception {
+  static SSLContext clientContext(KeyStore keyStore) throws Exception {
     KeyStore trusted = KeyStore.getInstance("PKCS12");
     trusted.load(null, null);
     trusted.setCertificateEntry("webhook", keyStore.getCertificate("webhook"));
@@ -342,7 +364,7 @@ class WebhookClientTest {
     return context;
   }
 
-  private static String readRequest(InputStream input) throws IOException {
+  static String readRequest(InputStream input) throws IOException {
     ByteArrayOutputStream buffer = new ByteArrayOutputStream();
     int contentLength = -1;
     while (true) {
@@ -364,5 +386,95 @@ class WebhookClientTest {
       }
     }
     return buffer.toString(StandardCharsets.UTF_8);
+  }
+
+  @org.junit.jupiter.api.Nested
+  class Staging {
+
+    @Test
+    void 빈목록과_다른_URI는_private허용과_무관하게_DNS와_connect_전에_차단된다() {
+      var dns = new AtomicInteger();
+      var address =
+          new WebhookAddressPolicy(true) {
+            @Override
+            public InetAddress resolve(String url) {
+              dns.incrementAndGet();
+              throw new AssertionError("unexpected DNS");
+            }
+          };
+      for (String urls : List.of("", "https://example.com/exact?A=%2f")) {
+        try (var client = new WebhookClient(address, Duration.ofSeconds(1), policy(urls))) {
+          for (String url :
+              List.of(
+                  "https://example.com/exact?A=%2F",
+                  "http://example.com/exact?A=%2f",
+                  "https://example.com:444/exact?A=%2f",
+                  "https://example.com/Exact?A=%2f",
+                  "https://other.example.com/exact?A=%2f",
+                  "https://example.com/exact?A=%2f#x"))
+            assertThat(client.send(url, "id", "1", "signature", "{}").failureReason())
+                .as(url)
+                .isEqualTo("blocked_address");
+        }
+      }
+      assertThat(dns).hasValue(0);
+    }
+
+    @Test
+    void 정확한_HTTPS_시험주소만_수신하고_redirect는_추가전송하지_않는다(@TempDir Path directory) throws Exception {
+      var keyStore = WebhookClientTest.selfSignedKeyStore(directory, "localhost");
+      var address = InetAddress.getAllByName("localhost")[0];
+      try (var server =
+              (SSLServerSocket)
+                  WebhookClientTest.serverContext(keyStore)
+                      .getServerSocketFactory()
+                      .createServerSocket(0, 2, address);
+          var executor = Executors.newSingleThreadExecutor()) {
+        String url = "https://localhost:" + server.getLocalPort() + "/Exact%2f?A=%2f";
+        var received =
+            executor.submit(
+                () -> {
+                  try (var socket = (SSLSocket) server.accept()) {
+                    socket.setSoTimeout(3000);
+                    socket.startHandshake();
+                    String request = WebhookClientTest.readRequest(socket.getInputStream());
+                    socket
+                        .getOutputStream()
+                        .write(
+                            "HTTP/1.1 302 Found\r\nLocation: https://localhost/other\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+                                .getBytes(StandardCharsets.US_ASCII));
+                    return request;
+                  }
+                });
+        try (var client =
+            new WebhookClient(
+                new WebhookAddressPolicy(true),
+                Duration.ofSeconds(5),
+                WebhookClientTest.clientContext(keyStore).getSocketFactory(),
+                policy(url))) {
+          assertThat(client.send(url, "fixture", "1", "signature", "{}").responseStatus())
+              .isEqualTo(302);
+          assertThat(received.get(5, TimeUnit.SECONDS)).startsWith("POST /Exact%2f?A=%2f HTTP/1.1");
+          server.setSoTimeout(250);
+          org.assertj.core.api.Assertions.assertThatThrownBy(server::accept)
+              .isInstanceOf(SocketTimeoutException.class);
+        }
+        try (var blocked =
+            new WebhookClient(
+                new WebhookAddressPolicy(false), Duration.ofSeconds(1), policy(url))) {
+          assertThat(blocked.send(url, "fixture", "1", "signature", "{}").failureReason())
+              .isEqualTo("blocked_address");
+        }
+      }
+    }
+
+    private static EnvironmentSideEffectPolicy policy(String urls) {
+      var environment =
+          new MockEnvironment()
+              .withProperty("METERENGINE_DEPLOYMENT_ENVIRONMENT", "staging")
+              .withProperty("METERENGINE_CUTOVER_MODE", "active")
+              .withProperty("METERENGINE_STAGING_WEBHOOK_ALLOWED_URLS", urls);
+      return new EnvironmentSideEffectPolicy(new CutoverPolicy(environment), environment);
+    }
   }
 }

@@ -3,11 +3,13 @@ package com.meterengine.account.entity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 import org.springframework.data.domain.Persistable;
 
 @Entity
+@Table(schema = "shared")
 public class Consent implements Persistable<UUID> {
 
   public static final String TERMS_OF_SERVICE = "terms_of_service";

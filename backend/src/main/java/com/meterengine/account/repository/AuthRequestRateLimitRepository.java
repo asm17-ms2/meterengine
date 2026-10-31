@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthRequestRateLimitRepository {
   private static final String CONSUME_SQL =
       """
-      INSERT INTO auth_request_rate_limit AS counter
+      INSERT INTO shared.auth_request_rate_limit AS counter
         (scope, identity_hash, attempts, expires_at)
       VALUES (?, ?, 1, statement_timestamp() + make_interval(secs => ?))
       ON CONFLICT (scope, identity_hash) DO UPDATE
@@ -27,7 +27,7 @@ public class AuthRequestRateLimitRepository {
   private static final String LIMITED_SQL =
       """
       SELECT GREATEST(1, CEIL(EXTRACT(EPOCH FROM expires_at - statement_timestamp())))
-      FROM auth_request_rate_limit
+      FROM shared.auth_request_rate_limit
       WHERE scope = ? AND identity_hash = ? AND expires_at > statement_timestamp() AND attempts > ?
       """;
 
@@ -60,9 +60,9 @@ public class AuthRequestRateLimitRepository {
   public void cleanExpired() {
     jdbcTemplate.update(
         """
-        DELETE FROM auth_request_rate_limit
+        DELETE FROM shared.auth_request_rate_limit
         WHERE (scope, identity_hash) IN (
-          SELECT scope, identity_hash FROM auth_request_rate_limit
+          SELECT scope, identity_hash FROM shared.auth_request_rate_limit
           WHERE expires_at <= statement_timestamp()
           ORDER BY expires_at LIMIT 100 FOR UPDATE SKIP LOCKED
         )

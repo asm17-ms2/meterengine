@@ -39,7 +39,8 @@ public class SecurityConfig {
       ErrorResponseWriter errorResponseWriter,
       RequestAuditRecorder requestAuditRecorder,
       MeterRegistry meterRegistry,
-      Clock clock)
+      Clock clock,
+      OrganizationEnvironments organizationEnvironments)
       throws Exception {
     return http.csrf(AbstractHttpConfigurer::disable)
         .formLogin(AbstractHttpConfigurer::disable)
@@ -98,6 +99,9 @@ public class SecurityConfig {
         .addFilterAfter(
             new RateLimitFilter(clock, errorResponseWriter, meterRegistry),
             ApiCredentialAuthenticationFilter.class)
+        .addFilterAfter(
+            new BusinessEnvironmentFilter(organizationEnvironments, errorResponseWriter),
+            RateLimitFilter.class)
         .build();
   }
 }

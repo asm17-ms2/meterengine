@@ -8,7 +8,6 @@ import org.springframework.web.context.request.RequestContextHolder;
 
 public final class BusinessEnvironmentContext {
   public static final String ATTRIBUTE = BusinessEnvironment.class.getName();
-  private static final UUID LEGACY_SCOPE = new UUID(0, 0);
   private static final ThreadLocal<BusinessEnvironment> TASK_ENVIRONMENT = new ThreadLocal<>();
 
   private BusinessEnvironmentContext() {}
@@ -32,7 +31,7 @@ public final class BusinessEnvironmentContext {
   }
 
   public static UUID scopeId(UUID environmentId) {
-    return environmentId == null ? LEGACY_SCOPE : environmentId;
+    return Objects.requireNonNull(environmentId, "Explicit business environment required");
   }
 
   public static <T> T run(BusinessEnvironment environment, Supplier<T> action) {

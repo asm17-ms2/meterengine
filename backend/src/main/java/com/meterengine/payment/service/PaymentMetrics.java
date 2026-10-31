@@ -1,5 +1,7 @@
 package com.meterengine.payment.service;
 
+import com.meterengine.global.database.DatabaseScope;
+import com.meterengine.global.database.DatabaseScopes;
 import com.meterengine.payment.entity.PaymentAttempt;
 import com.meterengine.payment.entity.PaymentReconciliationMismatch;
 import com.meterengine.payment.entity.PaymentSetting;
@@ -54,6 +56,9 @@ public class PaymentMetrics {
   // 나이 대신 요청 시각을 내야 확인 작업이 멈춰도 대시보드의 경과가 계속 늘어난다.
   private final Map<String, AtomicLong> stalePendingOldestRequestedByMode = new HashMap<>();
 
+  private final Map<ScopeMode, Long> stalePendingCountsByScope = new HashMap<>();
+  private final Map<ScopeMode, Long> stalePendingOldestByScope = new HashMap<>();
+
   public PaymentMetrics(MeterRegistry meterRegistry) {
     for (String mode : MODES) {
       for (String attempt : ATTEMPTS) {
@@ -101,19 +106,50 @@ public class PaymentMetrics {
     counter(CANCELLATION, mode, result).increment();
   }
 
-  public void setStalePending(String mode, long count) {
-    gaugeValue(stalePendingByMode, STALE_PENDING, mode).set(count);
+  public synchronized void setStalePending(String mode, long count) {
+    ScopeMode key = scopeMode(mode);
+    AtomicLong value = gaugeValue(stalePendingByMode, STALE_PENDING, mode);
+    stalePendingCountsByScope.put(key, count);
+    value.set(
+        stalePendingCountsByScope.entrySet().stream()
+            .filter(entry -> entry.getKey().mode().equals(mode))
+            .mapToLong(Map.Entry::getValue)
+            .sum());
   }
 
-  public void setStalePendingOldestRequestedAt(String mode, OffsetDateTime requestedAt) {
-    gaugeValue(stalePendingOldestRequestedByMode, STALE_PENDING_OLDEST_REQUESTED, mode)
-        .set(requestedAt.toEpochSecond());
+  public synchronized void setStalePendingOldestRequestedAt(
+      String mode, OffsetDateTime requestedAt) {
+    ScopeMode key = scopeMode(mode);
+    AtomicLong value =
+        gaugeValue(stalePendingOldestRequestedByMode, STALE_PENDING_OLDEST_REQUESTED, mode);
+    stalePendingOldestByScope.put(key, requestedAt.toEpochSecond());
+    value.set(oldestRequestedAt(mode));
   }
 
-  public void clearStalePendingOldestRequestedAt(String mode) {
-    gaugeValue(stalePendingOldestRequestedByMode, STALE_PENDING_OLDEST_REQUESTED, mode)
-        .set(NO_STALE_PENDING);
+  public synchronized void clearStalePendingOldestRequestedAt(String mode) {
+    ScopeMode key = scopeMode(mode);
+    AtomicLong value =
+        gaugeValue(stalePendingOldestRequestedByMode, STALE_PENDING_OLDEST_REQUESTED, mode);
+    stalePendingOldestByScope.remove(key);
+    value.set(oldestRequestedAt(mode));
   }
+
+  private long oldestRequestedAt(String mode) {
+    return stalePendingOldestByScope.entrySet().stream()
+        .filter(entry -> entry.getKey().mode().equals(mode))
+        .mapToLong(Map.Entry::getValue)
+        .min()
+        .orElse(NO_STALE_PENDING);
+  }
+
+  private static ScopeMode scopeMode(String mode) {
+    DatabaseScope scope = DatabaseScopes.current();
+    if (scope == DatabaseScope.SHARED)
+      throw new IllegalStateException("stale pending requires a business database scope");
+    return new ScopeMode(scope, mode);
+  }
+
+  private record ScopeMode(DatabaseScope scope, String mode) {}
 
   public void countReconciliationMismatch(String mode, String kind) {
     counter(RECONCILIATION_MISMATCH, mode, kind).increment();

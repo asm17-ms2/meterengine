@@ -1,6 +1,5 @@
 package com.meterengine.customer.repository;
 
-import com.meterengine.global.security.BusinessEnvironmentContext;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -19,9 +18,9 @@ public class CustomerRegistrationRepository {
     List<UUID> inserted =
         jdbcTemplate.query(
             """
-        INSERT INTO customer (id, organization_id, name, billing_email, external_id, environment_id)
-        VALUES (?, ?, ?, ?, ?, ?)
-        ON CONFLICT (organization_id, environment_scope_id, external_id) WHERE external_id IS NOT NULL DO NOTHING
+        INSERT INTO customer (id, organization_id, name, billing_email, external_id)
+        VALUES (?, ?, ?, ?, ?)
+        ON CONFLICT (organization_id, external_id) WHERE external_id IS NOT NULL DO NOTHING
         RETURNING id
         """,
             (rs, rowNum) -> rs.getObject("id", UUID.class),
@@ -29,8 +28,7 @@ public class CustomerRegistrationRepository {
             organizationId,
             name,
             billingEmail,
-            externalId,
-            BusinessEnvironmentContext.environmentId());
+            externalId);
     return !inserted.isEmpty();
   }
 }

@@ -7,6 +7,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.IdClass;
 import jakarta.persistence.PostLoad;
 import jakarta.persistence.PostPersist;
+import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -16,6 +17,7 @@ import org.hibernate.type.SqlTypes;
 import org.springframework.data.domain.Persistable;
 
 @Entity
+@Table(schema = "shared")
 @IdClass(OrganizationMemberId.class)
 public class OrganizationMember implements Persistable<OrganizationMemberId> {
 

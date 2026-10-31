@@ -2,7 +2,6 @@ package com.meterengine.event.repository;
 
 import com.meterengine.event.dto.EventIssueResponse;
 import com.meterengine.event.dto.EventIssuesResponse.Summary;
-import com.meterengine.global.security.BusinessEnvironmentContext;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
@@ -37,7 +36,6 @@ public class EventIssueRepository {
       String unpricedJson) {
     List<Object> parameters = new ArrayList<>();
     parameters.add(organizationId);
-    parameters.add(BusinessEnvironmentContext.scopeId());
     parameters.add(start);
     parameters.add(cutoff);
     StringBuilder filters = new StringBuilder();
@@ -55,7 +53,6 @@ public class EventIssueRepository {
       parameters.add(query);
     }
     parameters.add(organizationId);
-    parameters.add(BusinessEnvironmentContext.scopeId());
     parameters.add(month.toString());
     parameters.add(month.toString());
     parameters.add(month.toString());
@@ -69,17 +66,17 @@ public class EventIssueRepository {
         """
         WITH selected_events AS (
           SELECT e.*, c.name AS customer_name FROM event e
-          JOIN customer c ON c.organization_id = e.organization_id AND c.environment_scope_id = e.environment_scope_id AND c.id = e.customer_id
-          WHERE e.organization_id = ? AND e.environment_scope_id = ?
+          JOIN customer c ON c.organization_id = e.organization_id AND c.id = e.customer_id
+          WHERE e.organization_id = ?
             AND e.occurred_at >= ? AND e.occurred_at < ?
         """
             + filters
             + """
             ), active_metrics AS (
-              SELECT m.* FROM billable_metric m WHERE m.organization_id = ? AND m.environment_scope_id = ? AND (
+              SELECT m.* FROM billable_metric m WHERE m.organization_id = ? AND (
                 (m.archived_at IS NULL AND m.active_from <= ?)
                 OR EXISTS (SELECT 1 FROM billable_metric_period p
-                  WHERE p.organization_id = m.organization_id AND p.environment_scope_id = m.environment_scope_id AND p.billable_metric_code = m.code
+                  WHERE p.organization_id = m.organization_id AND p.billable_metric_code = m.code
                     AND p.active_from <= ? AND p.active_until > ?))
             ), unpriced_groups AS (
               SELECT * FROM jsonb_to_recordset(?::jsonb)
@@ -105,7 +102,7 @@ public class EventIssueRepository {
                   AND jsonb_typeof(e.properties -> m.target_property) = 'number'
                   THEN (e.properties ->> m.target_property)::numeric < 0 ELSE false END,
                 EXISTS (SELECT 1 FROM invoice i WHERE i.organization_id = e.organization_id
-                  AND i.environment_scope_id = e.environment_scope_id AND i.customer_id = e.customer_id
+                  AND i.customer_id = e.customer_id
                   AND i.period = to_char(e.occurred_at AT TIME ZONE 'Asia/Seoul', 'YYYY-MM'))
               FROM selected_events e JOIN active_metrics m ON m.event_type = e.type
               JOIN unpriced_groups g ON g.customer_id = e.customer_id AND g.billable_metric_code = m.code

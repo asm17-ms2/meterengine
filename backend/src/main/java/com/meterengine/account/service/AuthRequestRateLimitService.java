@@ -20,6 +20,9 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class AuthRequestRateLimitService {
+  @org.springframework.beans.factory.annotation.Autowired
+  private com.meterengine.global.database.CutoverPolicy cutover;
+
   public static final String CLIENT_IP_HEADER = "X-MeterEngine-Client-IP";
   private static final Logger logger = LoggerFactory.getLogger(AuthRequestRateLimitService.class);
   // 로그인 계정 한도는 계정과 IP 쌍으로 세고, 여러 IP에 나눈 시도는 이 배수의 계정 전체 상한으로 막는다.
@@ -38,6 +41,7 @@ public class AuthRequestRateLimitService {
   }
 
   public void login(String email, HttpServletRequest request) {
+    cutover.requireWritable();
     if (!authRateLimitProperties.enabled()) return;
     String address = clientAddress(request);
     String account = authRequestRateLimitRepository.normalizeAccount(email);
@@ -60,6 +64,7 @@ public class AuthRequestRateLimitService {
   }
 
   public void signup(String email, HttpServletRequest request) {
+    cutover.requireWritable();
     if (!authRateLimitProperties.enabled()) return;
     String address = clientAddress(request);
     String account = authRequestRateLimitRepository.normalizeAccount(email);

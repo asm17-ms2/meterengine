@@ -2,7 +2,7 @@ package com.meterengine.payment.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.meterengine.TestcontainersConfiguration;
+import com.meterengine.SideEffectTestSupport;
 import com.meterengine.invoice.entity.Invoice;
 import com.meterengine.invoice.repository.InvoiceRepository;
 import com.meterengine.payment.client.TossPaymentsClient;
@@ -16,14 +16,10 @@ import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-@Import(TestcontainersConfiguration.class)
-@SpringBootTest
-class PaymentMetricsTest {
+class PaymentMetricsTest extends SideEffectTestSupport {
 
   private static final String STALE_PENDING = "meterengine.payment.stale.pending";
   private static final String STALE_PENDING_OLDEST_REQUESTED =
@@ -52,7 +48,6 @@ class PaymentMetricsTest {
   @Autowired private PaymentAttemptService paymentAttemptService;
   @Autowired private PaymentProperties paymentProperties;
 
-  // 토스 클라이언트를 목으로 바꿔 이 테스트를 결제 통합 테스트와 같은 컨텍스트에서 돌린다.
   @MockitoBean private TossPaymentsClient tossPaymentsClient;
 
   @Test
@@ -123,84 +118,109 @@ class PaymentMetricsTest {
 
   @Test
   void 같은_시도를_두_번_done으로_바꾸면_두_번째는_false이고_지표는_한_번_오른다() {
-    PaymentAttempt attempt = pendingAttempt(payableInvoice());
-    double doneBefore = attemptCount("first", "done", "none");
+    in(
+        "test",
+        () -> {
+          PaymentAttempt attempt = pendingAttempt(payableInvoice());
+          double doneBefore = attemptCount("first", "done", "none");
 
-    assertThat(paymentAttemptService.markDone(attempt, "tgen_first")).isTrue();
-    assertThat(paymentAttemptService.markDone(attempt, "tgen_second")).isFalse();
-    assertThat(paymentAttemptService.markFailed(attempt, "REJECT_CARD_PAYMENT", "한도초과")).isFalse();
+          assertThat(paymentAttemptService.markDone(attempt, "tgen_first")).isTrue();
+          assertThat(paymentAttemptService.markDone(attempt, "tgen_second")).isFalse();
+          assertThat(paymentAttemptService.markFailed(attempt, "REJECT_CARD_PAYMENT", "한도초과"))
+              .isFalse();
 
-    assertThat(attemptCount("first", "done", "none")).isEqualTo(doneBefore + 1);
-    assertThat(
-            jdbcTemplate.queryForObject(
-                "SELECT payment_key FROM payment_attempt WHERE id = ?",
-                String.class,
-                attempt.getId()))
-        .isEqualTo("tgen_first");
+          assertThat(attemptCount("first", "done", "none")).isEqualTo(doneBefore + 1);
+          assertThat(
+                  jdbcTemplate.queryForObject(
+                      "SELECT payment_key FROM payment_attempt WHERE id = ?",
+                      String.class,
+                      attempt.getId()))
+              .isEqualTo("tgen_first");
+        });
   }
 
   @Test
   void 시도_수가_상한에_이르는_실패에서만_exhausted가_한_번_오른다() {
-    Invoice invoice = payableInvoice();
-    double exhaustedBefore = exhaustedCount("test");
-    int retryMaxAttempts = paymentProperties.retryMaxAttempts();
+    in(
+        "test",
+        () -> {
+          Invoice invoice = payableInvoice();
+          double exhaustedBefore = exhaustedCount("test");
+          double failedBefore = failedAttemptCount();
+          int retryMaxAttempts = paymentProperties.retryMaxAttempts();
 
-    for (int i = 1; i < retryMaxAttempts; i++) {
-      assertThat(
-              paymentAttemptService.markFailed(
-                  pendingAttempt(invoice), "REJECT_CARD_PAYMENT", "한도초과"))
-          .isTrue();
-    }
-    assertThat(exhaustedCount("test")).isEqualTo(exhaustedBefore);
+          for (int i = 1; i < retryMaxAttempts; i++) {
+            assertThat(
+                    paymentAttemptService.markFailed(
+                        pendingAttempt(invoice), "REJECT_CARD_PAYMENT", "한도초과"))
+                .isTrue();
+          }
+          assertThat(exhaustedCount("test")).isEqualTo(exhaustedBefore);
 
-    PaymentAttempt last = pendingAttempt(invoice);
-    assertThat(paymentAttemptService.markFailed(last, "REJECT_CARD_PAYMENT", "한도초과")).isTrue();
-    assertThat(paymentAttemptService.markFailed(last, "REJECT_CARD_PAYMENT", "한도초과")).isFalse();
+          PaymentAttempt last = pendingAttempt(invoice);
+          assertThat(paymentAttemptService.markFailed(last, "REJECT_CARD_PAYMENT", "한도초과"))
+              .isTrue();
+          assertThat(paymentAttemptService.markFailed(last, "REJECT_CARD_PAYMENT", "한도초과"))
+              .isFalse();
 
-    assertThat(retryMaxAttempts).isEqualTo(3);
-    assertThat(exhaustedCount("test")).isEqualTo(exhaustedBefore + 1);
+          assertThat(retryMaxAttempts).isEqualTo(3);
+          assertThat(exhaustedCount("test")).isEqualTo(exhaustedBefore + 1);
+          assertThat(failedAttemptCount()).isEqualTo(failedBefore + retryMaxAttempts);
+        });
   }
 
   @Test
   void 같은_인보이스의_첫_시도는_first로_이어진_시도는_retry로_실패_사유_묶음과_함께_센다() {
-    Invoice invoice = payableInvoice();
-    double firstBefore = attemptCount("first", "failed", "card_declined");
-    double retryBefore = attemptCount("retry", "failed", "card_declined");
+    in(
+        "test",
+        () -> {
+          Invoice invoice = payableInvoice();
+          double firstBefore = attemptCount("first", "failed", "card_declined");
+          double retryBefore = attemptCount("retry", "failed", "card_declined");
 
-    for (int i = 0; i < 3; i++) {
-      assertThat(
-              paymentAttemptService.markFailed(
-                  pendingAttempt(invoice), "REJECT_CARD_PAYMENT", "한도초과"))
-          .isTrue();
-    }
+          for (int i = 0; i < 3; i++) {
+            assertThat(
+                    paymentAttemptService.markFailed(
+                        pendingAttempt(invoice), "REJECT_CARD_PAYMENT", "한도초과"))
+                .isTrue();
+          }
 
-    assertThat(attemptCount("first", "failed", "card_declined")).isEqualTo(firstBefore + 1);
-    assertThat(attemptCount("retry", "failed", "card_declined")).isEqualTo(retryBefore + 2);
+          assertThat(attemptCount("first", "failed", "card_declined")).isEqualTo(firstBefore + 1);
+          assertThat(attemptCount("retry", "failed", "card_declined")).isEqualTo(retryBefore + 2);
+        });
   }
 
   @Test
   void 결과_모름_게이지는_mode마다_건수와_가장_오래된_요청_시각을_따로_둔다() {
-    SimpleMeterRegistry registry = new SimpleMeterRegistry();
-    PaymentMetrics paymentMetrics = new PaymentMetrics(registry);
+    in(
+        "test",
+        () -> {
+          SimpleMeterRegistry registry = new SimpleMeterRegistry();
+          PaymentMetrics paymentMetrics = new PaymentMetrics(registry);
 
-    paymentMetrics.setStalePending("live", 3);
-    paymentMetrics.setStalePendingOldestRequestedAt("live", OLDEST_REQUESTED_AT);
+          paymentMetrics.setStalePending("live", 3);
+          paymentMetrics.setStalePendingOldestRequestedAt("live", OLDEST_REQUESTED_AT);
 
-    assertThat(gauge(registry, STALE_PENDING, "live")).isEqualTo(3);
-    assertThat(gauge(registry, STALE_PENDING_OLDEST_REQUESTED, "live"))
-        .isEqualTo(OLDEST_REQUESTED_AT.toEpochSecond());
-    assertThat(gauge(registry, STALE_PENDING, "test")).isZero();
+          assertThat(gauge(registry, STALE_PENDING, "live")).isEqualTo(3);
+          assertThat(gauge(registry, STALE_PENDING_OLDEST_REQUESTED, "live"))
+              .isEqualTo(OLDEST_REQUESTED_AT.toEpochSecond());
+          assertThat(gauge(registry, STALE_PENDING, "test")).isZero();
+        });
   }
 
   @Test
   void 결과_모름이_모두_풀리면_가장_오래된_요청_시각을_0으로_되돌린다() {
-    SimpleMeterRegistry registry = new SimpleMeterRegistry();
-    PaymentMetrics paymentMetrics = new PaymentMetrics(registry);
-    paymentMetrics.setStalePendingOldestRequestedAt("live", OLDEST_REQUESTED_AT);
+    in(
+        "test",
+        () -> {
+          SimpleMeterRegistry registry = new SimpleMeterRegistry();
+          PaymentMetrics paymentMetrics = new PaymentMetrics(registry);
+          paymentMetrics.setStalePendingOldestRequestedAt("live", OLDEST_REQUESTED_AT);
 
-    paymentMetrics.clearStalePendingOldestRequestedAt("live");
+          paymentMetrics.clearStalePendingOldestRequestedAt("live");
 
-    assertThat(gauge(registry, STALE_PENDING_OLDEST_REQUESTED, "live")).isZero();
+          assertThat(gauge(registry, STALE_PENDING_OLDEST_REQUESTED, "live")).isZero();
+        });
   }
 
   private static double gauge(MeterRegistry registry, String name, String mode) {
@@ -230,6 +250,16 @@ class PaymentMetricsTest {
     return attemptCount(meterRegistry, "test", attempt, result, reason);
   }
 
+  private double failedAttemptCount() {
+    return meterRegistry
+        .get("meterengine.payment.attempt")
+        .tags("mode", "test", "result", "failed")
+        .counters()
+        .stream()
+        .mapToDouble(io.micrometer.core.instrument.Counter::count)
+        .sum();
+  }
+
   private double exhaustedCount(String mode) {
     return count(meterRegistry, "meterengine.payment.retry.exhausted", "mode", mode);
   }
@@ -247,9 +277,6 @@ class PaymentMetricsTest {
   }
 
   private Invoice payableInvoice() {
-    UUID organizationId =
-        jdbcTemplate.queryForObject(
-            "INSERT INTO organization (name) VALUES ('지표 도입사') RETURNING id", UUID.class);
     UUID customerId =
         jdbcTemplate.queryForObject(
             "INSERT INTO customer (organization_id, name) VALUES (?, '지표 고객') RETURNING id",

@@ -1,6 +1,7 @@
 package com.meterengine.invoice.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
@@ -10,6 +11,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import com.meterengine.global.database.DatabaseScope;
+import com.meterengine.global.database.DatabaseScopes;
 import com.meterengine.global.security.BusinessEnvironment;
 import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.global.security.OrganizationEnvironments;
@@ -48,7 +51,7 @@ class InvoiceFinalizationBacklogServiceTest {
   private static final UUID LIVE_ENVIRONMENT_ID = UUID.randomUUID();
   private static final YearMonth AUGUST = YearMonth.of(2026, 8);
   private static final YearMonth SEPTEMBER = YearMonth.of(2026, 9);
-  private static final int ENVIRONMENT_COUNT = 3;
+  private static final int ENVIRONMENT_COUNT = 2;
   private static final int MONTHS_PER_ENVIRONMENT = 12;
   private static final int ALL_MONTHS = ENVIRONMENT_COUNT * MONTHS_PER_ENVIRONMENT;
 
@@ -77,11 +80,11 @@ class InvoiceFinalizationBacklogServiceTest {
     draft("live", SEPTEMBER, customer(1000), customer(0), customer(250));
     draft("test", AUGUST, customer(500));
 
-    service(OCTOBER_30_KST_10).measure();
+    measureAll(service(OCTOBER_30_KST_10));
 
     assertThat(backlog("live")).isEqualTo(2);
     assertThat(backlog("test")).isEqualTo(1);
-    assertThat(backlog("legacy")).isZero();
+    assertThat(meterRegistry.find(BACKLOG).tag("environment", "legacy").gauge()).isNull();
   }
 
   @Test
@@ -89,7 +92,7 @@ class InvoiceFinalizationBacklogServiceTest {
     draft("live", AUGUST, customer(1000));
     draft("live", SEPTEMBER, customer(1000));
 
-    service(OCTOBER_30_KST_10).measure();
+    measureAll(service(OCTOBER_30_KST_10));
 
     long augustCutoff = OffsetDateTime.parse("2026-09-01T13:00:00+09:00").toEpochSecond();
     assertThat(oldestCutoff("live")).isEqualTo(augustCutoff);
@@ -97,14 +100,14 @@ class InvoiceFinalizationBacklogServiceTest {
 
   @Test
   void 대기가_없는_환경은_마감_시각을_0으로_둔다() {
-    service(OCTOBER_30_KST_10).measure();
+    measureAll(service(OCTOBER_30_KST_10));
 
     assertThat(oldestCutoff("test")).isZero();
   }
 
   @Test
   void 집계_마감_전인_지난달은_세지_않는다() {
-    service(Instant.parse("2026-10-01T03:00:00Z")).measure();
+    measureAll(service(Instant.parse("2026-10-01T03:00:00Z")));
 
     verify(draftInvoiceService, never()).preview(ORGANIZATION_ID, SEPTEMBER);
     verify(draftInvoiceService, atLeastOnce()).preview(ORGANIZATION_ID, AUGUST);
@@ -112,7 +115,7 @@ class InvoiceFinalizationBacklogServiceTest {
 
   @Test
   void 마지막으로_끝난_달부터_12개월만_본다() {
-    service(OCTOBER_30_KST_10).measure();
+    measureAll(service(OCTOBER_30_KST_10));
 
     verify(draftInvoiceService, atLeastOnce()).preview(ORGANIZATION_ID, YearMonth.of(2025, 10));
     verify(draftInvoiceService, never()).preview(ORGANIZATION_ID, YearMonth.of(2025, 9));
@@ -124,7 +127,7 @@ class InvoiceFinalizationBacklogServiceTest {
     activeOrganization(
         ORGANIZATION_ID, LIVE_ENVIRONMENT_ID, OffsetDateTime.parse("2026-08-01T00:30:00+09:00"));
 
-    service(OCTOBER_30_KST_10).measure();
+    measureAll(service(OCTOBER_30_KST_10));
 
     verify(draftInvoiceService, atLeastOnce()).preview(ORGANIZATION_ID, AUGUST);
     verify(draftInvoiceService, never()).preview(ORGANIZATION_ID, YearMonth.of(2026, 7));
@@ -135,12 +138,11 @@ class InvoiceFinalizationBacklogServiceTest {
     DraftInvoiceCustomer finalized = customer(1000);
     draft("live", SEPTEMBER, finalized, customer(250));
     InvoiceFinalizationBacklogService service = service(OCTOBER_30_KST_10);
-    service.measure();
-    when(invoiceRepository.findCustomerIdsScoped(
-            ORGANIZATION_ID, LIVE_ENVIRONMENT_ID, SEPTEMBER.toString()))
+    measureAll(service);
+    when(invoiceRepository.findCustomerIds(ORGANIZATION_ID, SEPTEMBER.toString()))
         .thenReturn(List.of(finalized.customerId()));
 
-    service.measure();
+    measureAll(service);
 
     assertThat(backlog("live")).isEqualTo(1);
     verify(draftInvoiceService, times(ENVIRONMENT_COUNT)).preview(ORGANIZATION_ID, SEPTEMBER);
@@ -150,12 +152,11 @@ class InvoiceFinalizationBacklogServiceTest {
   void 대기가_0인_달은_다음_계산에서_확정_조회도_하지_않는다() {
     draft("live", SEPTEMBER, customer(1000));
     InvoiceFinalizationBacklogService service = service(OCTOBER_30_KST_10);
-    service.measure();
+    measureAll(service);
 
-    service.measure();
+    measureAll(service);
 
-    verify(invoiceRepository)
-        .findCustomerIdsScoped(ORGANIZATION_ID, LIVE_ENVIRONMENT_ID, SEPTEMBER.toString());
+    verify(invoiceRepository).findCustomerIds(ORGANIZATION_ID, SEPTEMBER.toString());
     verifyNoMoreInteractions(invoiceRepository);
   }
 
@@ -163,8 +164,8 @@ class InvoiceFinalizationBacklogServiceTest {
   void 새로_집계한_달은_처리로_앞서_센_고객을_다시_쓴_달은_건너뜀으로_센다() {
     InvoiceFinalizationBacklogService service = service(OCTOBER_30_KST_10);
 
-    ScheduledJobResult first = service.measure();
-    ScheduledJobResult second = service.measure();
+    ScheduledJobResult first = measureAll(service);
+    ScheduledJobResult second = measureAll(service);
 
     assertThat(first).isEqualTo(new ScheduledJobResult(ALL_MONTHS, 0, 0));
     assertThat(second).isEqualTo(new ScheduledJobResult(0, ALL_MONTHS, 0));
@@ -176,10 +177,10 @@ class InvoiceFinalizationBacklogServiceTest {
 
     assertThat(meterRegistry.find(BACKLOG).gauges()).isEmpty();
 
-    service.measure();
+    measureAll(service);
 
-    assertThat(meterRegistry.find(BACKLOG).gauges()).hasSize(3);
-    assertThat(meterRegistry.find(OLDEST_CUTOFF).gauges()).hasSize(3);
+    assertThat(meterRegistry.find(BACKLOG).gauges()).hasSize(2);
+    assertThat(meterRegistry.find(OLDEST_CUTOFF).gauges()).hasSize(2);
   }
 
   @Test
@@ -187,7 +188,7 @@ class InvoiceFinalizationBacklogServiceTest {
     draft("live", SEPTEMBER, customer(1000));
     failingModes.add("test");
 
-    ScheduledJobResult result = service(OCTOBER_30_KST_10).measure();
+    ScheduledJobResult result = measureAll(service(OCTOBER_30_KST_10));
 
     assertThat(backlog("live")).isEqualTo(1);
     assertThat(result.failedCount()).isEqualTo(MONTHS_PER_ENVIRONMENT);
@@ -199,7 +200,7 @@ class InvoiceFinalizationBacklogServiceTest {
     activeOrganization(OTHER_ORGANIZATION_ID, UUID.randomUUID(), LONG_AGO);
     failingOrganizationIds.add(OTHER_ORGANIZATION_ID);
 
-    ScheduledJobResult result = service(OCTOBER_30_KST_10).measure();
+    ScheduledJobResult result = measureAll(service(OCTOBER_30_KST_10));
 
     assertThat(backlog("live")).isEqualTo(1);
     assertThat(result.failedCount()).isEqualTo(ALL_MONTHS);
@@ -212,10 +213,10 @@ class InvoiceFinalizationBacklogServiceTest {
     when(organizationEnvironments.list(OTHER_ORGANIZATION_ID))
         .thenThrow(new IllegalStateException("환경 조회 실패"));
 
-    ScheduledJobResult result = service(OCTOBER_30_KST_10).measure();
+    ScheduledJobResult result = measureAll(service(OCTOBER_30_KST_10));
 
     assertThat(backlog("live")).isEqualTo(1);
-    assertThat(result.failedCount()).isEqualTo(1);
+    assertThat(result.failedCount()).isEqualTo(ENVIRONMENT_COUNT);
   }
 
   @Test
@@ -223,12 +224,31 @@ class InvoiceFinalizationBacklogServiceTest {
     draft("live", SEPTEMBER, customer(1000));
     failingModes.add("live");
     InvoiceFinalizationBacklogService service = service(OCTOBER_30_KST_10);
-    service.measure();
+    measureAll(service);
     failingModes.clear();
 
-    service.measure();
+    measureAll(service);
 
     assertThat(backlog("live")).isEqualTo(1);
+  }
+
+  @Test
+  void 현재_TEST_scope만_한번_측정하고_LIVE_게이지를_만들지_않는다() {
+    draft("test", SEPTEMBER, customer(500));
+    draft("live", SEPTEMBER, customer(1000));
+    InvoiceFinalizationBacklogService service = service(OCTOBER_30_KST_10);
+    ScheduledJobResult result = DatabaseScopes.call(DatabaseScope.TEST, service::measure);
+    assertThat(result).isEqualTo(new ScheduledJobResult(12, 0, 0));
+    assertThat(backlog("test")).isEqualTo(1);
+    assertThat(meterRegistry.find(BACKLOG).tag("environment", "live").gauge()).isNull();
+    assertThat(DatabaseScopes.current()).isEqualTo(DatabaseScope.SHARED);
+  }
+
+  @Test
+  void SHARED에서는_legacy_환경을_만들어_청구_적체를_조회하지_않는다() {
+    assertThatThrownBy(() -> service(OCTOBER_30_KST_10).measure())
+        .isInstanceOf(IllegalStateException.class);
+    assertThat(meterRegistry.find(BACKLOG).gauges()).isEmpty();
   }
 
   private InvoiceFinalizationBacklogService service(Instant now) {
@@ -238,7 +258,27 @@ class InvoiceFinalizationBacklogServiceTest {
         draftInvoiceService,
         invoiceRepository,
         meterRegistry,
-        Clock.fixed(now, ZoneOffset.UTC));
+        Clock.fixed(now, ZoneOffset.UTC),
+        unitTransactions());
+  }
+
+  private static com.meterengine.global.database.ScopeTransactions unitTransactions() {
+    var manager = mock(org.springframework.transaction.PlatformTransactionManager.class);
+    when(manager.getTransaction(any()))
+        .thenAnswer(
+            invocation -> new org.springframework.transaction.support.SimpleTransactionStatus());
+    return new com.meterengine.global.database.ScopeTransactions(manager);
+  }
+
+  private static ScheduledJobResult measureAll(InvoiceFinalizationBacklogService service) {
+    int processed = 0, skipped = 0, failed = 0;
+    for (DatabaseScope scope : List.of(DatabaseScope.TEST, DatabaseScope.LIVE)) {
+      ScheduledJobResult result = DatabaseScopes.call(scope, service::measure);
+      processed += result.processedCount();
+      skipped += result.skippedCount();
+      failed += result.failedCount();
+    }
+    return new ScheduledJobResult(processed, skipped, failed);
   }
 
   private void activeOrganization(

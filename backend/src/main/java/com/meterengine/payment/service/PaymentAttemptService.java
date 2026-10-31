@@ -6,7 +6,6 @@ import com.meterengine.global.error.ConflictException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.InvalidRequestException;
 import com.meterengine.global.error.NotFoundException;
-import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.invoice.entity.Invoice;
 import com.meterengine.invoice.repository.InvoiceRepository;
 import com.meterengine.payment.client.TossPaymentsApproveBillingRequest;
@@ -43,6 +42,11 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class PaymentAttemptService {
+  @org.springframework.beans.factory.annotation.Autowired
+  private com.meterengine.global.database.EnvironmentSideEffectPolicy sideEffects;
+
+  @org.springframework.beans.factory.annotation.Autowired
+  private com.meterengine.global.database.CutoverPolicy cutover;
 
   private static final Logger logger = LoggerFactory.getLogger(PaymentAttemptService.class);
   private static final String ORDER_NAME_SUFFIX = " 사용료";
@@ -91,6 +95,8 @@ public class PaymentAttemptService {
 
   public PaymentAttemptResponse create(
       UUID organizationId, UUID invoiceId, String principalMode, String testCode) {
+    cutover.requireWritable();
+    sideEffects.requirePaymentMode(PaymentSettingService.selectedMode());
     return create(organizationId, invoiceId, principalMode, testCode, null, 0, null, () -> {});
   }
 
@@ -102,6 +108,7 @@ public class PaymentAttemptService {
       long attemptCount,
       AuditActor actor,
       Runnable authorizationCheck) {
+    cutover.requireWritable();
     return create(
         organizationId,
         invoiceId,
@@ -163,9 +170,9 @@ public class PaymentAttemptService {
   }
 
   PaymentAttemptResponse approve(PaymentAttempt pendingAttempt, String testCode) {
+    cutover.requireWritable();
     return PaymentEnvironments.call(
         pendingAttempt.getOrganizationId(),
-        pendingAttempt.getEnvironmentId(),
         pendingAttempt.getMode(),
         () -> approveScoped(pendingAttempt, testCode));
   }
@@ -178,10 +185,8 @@ public class PaymentAttemptService {
         pendingAttempt.getCredentialUpdatedAt() != null
             ? tossPaymentsCredentialService.chargeable(
                 organizationId, mode, pendingAttempt.getCredentialUpdatedAt())
-            : pendingAttempt.getEnvironmentId() == null
-                ? tossPaymentsCredentialService.active(organizationId, mode)
-                : tossPaymentsCredentialService.chargeable(
-                    organizationId, mode, pendingAttempt.getRequestedAt());
+            : tossPaymentsCredentialService.chargeable(
+                organizationId, mode, pendingAttempt.getRequestedAt());
     if (credential.isEmpty()) {
       return failWithoutToss(pendingAttempt, ErrorCode.TOSS_PAYMENTS_CREDENTIAL_MISSING);
     }
@@ -241,6 +246,7 @@ public class PaymentAttemptService {
 
   // 토스가 조회해 준 결제로 pending 시도를 끝내고, 이번에 바꿨으면 true다.
   boolean settle(PaymentAttempt attempt, TossPaymentsPayment payment) {
+    cutover.requireWritable();
     if (isDone(payment)) {
       return markApproved(attempt, payment.paymentKey());
     }
@@ -251,6 +257,7 @@ public class PaymentAttemptService {
   }
 
   boolean markDone(PaymentAttempt attempt, String paymentKey) {
+    cutover.requireWritable();
     UUID attemptId = attempt.getId();
     Optional<Long> attemptCount =
         transactionTemplate.execute(
@@ -269,6 +276,7 @@ public class PaymentAttemptService {
   }
 
   boolean markFailed(PaymentAttempt attempt, String failureCode, String failureMessage) {
+    cutover.requireWritable();
     UUID attemptId = attempt.getId();
     String mode = attempt.getMode();
     Optional<Long> attemptCount =
@@ -298,6 +306,7 @@ public class PaymentAttemptService {
       String mode,
       long amount,
       String orderName) {
+    cutover.requireWritable();
     return savePending(organizationId, customerId, invoiceId, mode, amount, orderName, null);
   }
 
@@ -309,6 +318,8 @@ public class PaymentAttemptService {
       long amount,
       String orderName,
       AuditActor actor) {
+    cutover.requireWritable();
+    sideEffects.requirePaymentMode(mode);
     PaymentAttempt attempt =
         PaymentAttempt.pending(
             UUID.randomUUID(), organizationId, customerId, invoiceId, mode, amount, orderName);
@@ -445,14 +456,12 @@ public class PaymentAttemptService {
   // 더 새 시도가 있는 실패는 그 시도를 만들 때 미청구로 확인했으므로 7일 창을 걸지 않고, 그 시도의 키로 물을 수 없으면 다시 묻지 않는다.
   private boolean isConfirmedUncharged(PaymentCreation creation, PaymentAttempt attempt) {
     Optional<TossPaymentsCredential> original =
-        attempt.getEnvironmentId() == null && attempt.getCredentialUpdatedAt() == null
-            ? Optional.of(creation.credential())
-            : tossPaymentsCredentialService.historical(
-                attempt.getOrganizationId(),
-                attempt.getMode(),
-                attempt.getCredentialUpdatedAt() == null
-                    ? attempt.getRequestedAt()
-                    : attempt.getCredentialUpdatedAt());
+        tossPaymentsCredentialService.historical(
+            attempt.getOrganizationId(),
+            attempt.getMode(),
+            attempt.getCredentialUpdatedAt() == null
+                ? attempt.getRequestedAt()
+                : attempt.getCredentialUpdatedAt());
     if (!attempt.getId().equals(creation.latestAttemptId())) {
       return original.isEmpty()
           || !original.get().getUpdatedAt().isBefore(attempt.getRequestedAt())
@@ -581,24 +590,18 @@ public class PaymentAttemptService {
   }
 
   private Invoice findInvoice(UUID organizationId, UUID invoiceId) {
-    return (BusinessEnvironmentContext.environmentId() == null
-            ? invoiceRepository.findByOrganizationIdAndId(organizationId, invoiceId)
-            : invoiceRepository.findScoped(
-                organizationId, BusinessEnvironmentContext.environmentId(), invoiceId))
+    return invoiceRepository
+        .findByOrganizationIdAndId(organizationId, invoiceId)
         .orElseThrow(() -> new NotFoundException(ErrorCode.INVOICE_NOT_FOUND));
   }
 
   private Optional<Invoice> lockInvoice(UUID organizationId, UUID invoiceId) {
-    return BusinessEnvironmentContext.environmentId() == null
-        ? invoiceRepository.findForUpdate(organizationId, invoiceId)
-        : invoiceRepository.lockScoped(
-            organizationId, BusinessEnvironmentContext.environmentId(), invoiceId);
+    return invoiceRepository.findForUpdate(organizationId, invoiceId);
   }
 
   private Optional<BillingKey> findBillingKey(UUID organizationId, UUID customerId, String mode) {
     return billingKeyRepository
         .findById(new BillingKeyId(organizationId, customerId, mode))
-        .filter(key -> BusinessEnvironmentContext.matches(key.getEnvironmentId()))
         .filter(key -> key.getArchivedAt() == null);
   }
 

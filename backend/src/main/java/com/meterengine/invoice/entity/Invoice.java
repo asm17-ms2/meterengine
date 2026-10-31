@@ -20,9 +20,6 @@ public class Invoice {
   @Column(name = "organization_id", nullable = false)
   private UUID organizationId;
 
-  @Column(name = "environment_id", updatable = false)
-  private UUID environmentId;
-
   @Column(name = "customer_id", nullable = false)
   private UUID customerId;
 
@@ -74,10 +71,6 @@ public class Invoice {
     return displayNumber;
   }
 
-  public UUID getEnvironmentId() {
-    return environmentId;
-  }
-
   public UUID getOrganizationId() {
     return organizationId;
   }
@@ -108,20 +101,5 @@ public class Invoice {
 
   public OffsetDateTime getFinalizedAt() {
     return finalizedAt;
-  }
-
-  public Invoice(
-      UUID id,
-      UUID organizationId,
-      UUID customerId,
-      String customerName,
-      String period,
-      long supplyAmount,
-      long taxAmount,
-      OffsetDateTime finalizedAt,
-      UUID environmentId) {
-    this(
-        id, organizationId, customerId, customerName, period, supplyAmount, taxAmount, finalizedAt);
-    this.environmentId = environmentId;
   }
 }

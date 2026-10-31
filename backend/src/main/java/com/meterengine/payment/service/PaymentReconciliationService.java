@@ -3,7 +3,6 @@ package com.meterengine.payment.service;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.ErrorResponse.FieldError;
 import com.meterengine.global.error.InvalidRequestException;
-import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.metric.service.BillableMetricUsageService;
 import com.meterengine.payment.client.TossPaymentsClient;
 import com.meterengine.payment.client.TossPaymentsError;
@@ -46,6 +45,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class PaymentReconciliationService {
+  @org.springframework.beans.factory.annotation.Autowired
+  private com.meterengine.global.database.PublicResourceLocator locator;
+
+  @org.springframework.beans.factory.annotation.Autowired
+  private com.meterengine.global.database.CutoverPolicy cutover;
 
   private static final int PAGE_SIZE = 1000;
   private static final int ATTEMPT_LOOKUP_CHUNK = 1000;
@@ -90,6 +94,10 @@ public class PaymentReconciliationService {
   }
 
   public PaymentJobResult reconcile(OffsetDateTime slot, OffsetDateTime fromSlot) {
+    if (cutover.readOnly()) return new PaymentJobResult(0, 0, 0);
+    if (com.meterengine.global.database.DatabaseScopes.current()
+        == com.meterengine.global.database.DatabaseScope.SHARED)
+      return PaymentEnvironments.all(() -> reconcile(slot, fromSlot));
     Duration lag = paymentProperties.reconciliationLag();
     Window window = new Window(fromSlot.minus(lag), slot.minus(lag), slot);
     PaymentJobTally tally = new PaymentJobTally();
@@ -97,7 +105,6 @@ public class PaymentReconciliationService {
       try {
         switch (PaymentEnvironments.call(
             credentialId.getOrganizationId(),
-            credentialId.getEnvironmentId(),
             credentialId.getMode(),
             () -> reconcileCredential(credentialId, window))) {
           case COMPARED -> tally.count(true);
@@ -224,8 +231,7 @@ public class PaymentReconciliationService {
     Optional<PaymentAttempt> original =
         parseAttemptId(transaction.orderId()).flatMap(paymentAttemptRepository::findById);
     if (original.isEmpty()) return current;
-    if (!credential.getOrganizationId().equals(original.get().getOrganizationId())
-        || !BusinessEnvironmentContext.matches(original.get().getEnvironmentId())) return false;
+    if (!credential.getOrganizationId().equals(original.get().getOrganizationId())) return false;
     if (usesCredential(original.get(), credential, current)) return true;
     // 창 안에 쓰이지 않아 이번에 부르지 않은 옛 키의 결제도 현재 키 목록에 보이면 현재 키가 맡는다.
     OffsetDateTime originalVersion = original.get().getCredentialUpdatedAt();
@@ -432,6 +438,16 @@ public class PaymentReconciliationService {
     }
 
     private void match(TossPaymentsTransaction transaction) {
+      if (!attemptsByPaymentKey.containsKey(transaction.paymentKey())
+          && !cancellationsByTransactionKey.containsKey(transaction.transactionKey())
+          && attemptId(transaction.orderId())
+              .filter(
+                  id ->
+                      locator.orderInOtherScope(
+                          organizationId,
+                          id,
+                          com.meterengine.global.database.DatabaseScopes.current()))
+              .isPresent()) return;
       PaymentCancellation cancellation =
           cancellationsByTransactionKey.get(transaction.transactionKey());
       if (cancellation != null) {

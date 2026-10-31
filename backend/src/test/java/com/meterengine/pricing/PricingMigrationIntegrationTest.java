@@ -29,7 +29,7 @@ class PricingMigrationIntegrationTest {
   void 기존_DB를_업그레이드해도_가격과_확정_금액을_보존하고_새_구간과_요금제를_추가한다() throws Exception {
     Path legacyMigrations = Files.createTempDirectory("meterengine-schema-upgrade-");
     try (PostgreSQLContainer postgres =
-        new PostgreSQLContainer(DockerImageName.parse("postgres:18"))) {
+        new PostgreSQLContainer(DockerImageName.parse("postgres:18.4-alpine"))) {
       copyLegacyMigrations(legacyMigrations);
       postgres.start();
       Flyway legacy =
@@ -111,7 +111,7 @@ class PricingMigrationIntegrationTest {
         Flyway latest =
             Flyway.configure()
                 .dataSource(postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword())
-                .locations("classpath:db/migration")
+                .locations("classpath:db/legacy53")
                 .load();
         assertThat(latest.migrate().migrationsExecuted).isPositive();
         assertThat(latest.validateWithResult().validationSuccessful).isTrue();
@@ -282,7 +282,7 @@ class PricingMigrationIntegrationTest {
 
   private static void copyLegacyMigrations(Path destination) throws Exception {
     List<Path> migrations;
-    try (Stream<Path> paths = Files.list(Path.of("src/main/resources/db/migration"))) {
+    try (Stream<Path> paths = Files.list(Path.of("src/test/resources/db/legacy53"))) {
       migrations = paths.toList();
     }
     for (Path path : migrations) {

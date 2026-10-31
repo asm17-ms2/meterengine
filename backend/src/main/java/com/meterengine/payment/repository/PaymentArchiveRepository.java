@@ -1,7 +1,6 @@
 package com.meterengine.payment.repository;
 
 import com.meterengine.global.crypto.EncryptedStringConverter;
-import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.payment.dto.PaymentMethodResponse;
 import com.meterengine.payment.dto.TossPaymentsCredentialResponse;
 import com.meterengine.payment.entity.TossPaymentsCredential;
@@ -36,65 +35,59 @@ public class PaymentArchiveRepository {
 
   public void lock(UUID organizationId) {
     jdbcTemplate.queryForObject(
-        "SELECT id FROM organization WHERE id = ? FOR NO KEY UPDATE", UUID.class, organizationId);
+        "SELECT id FROM shared.lock_organization_no_key_update(?)", UUID.class, organizationId);
   }
 
   public void credential(UUID organizationId, String mode) {
     jdbcTemplate.update(
         """
         INSERT INTO toss_payments_credential_history
-          (organization_id, environment_id, mode, client_key, secret_key, secret_key_last_four, verified_at, updated_at, archived_at)
-        SELECT organization_id, environment_id, mode, client_key, secret_key, secret_key_last_four, verified_at, updated_at,
+          (organization_id, mode, client_key, secret_key, secret_key_last_four, verified_at, updated_at, archived_at)
+        SELECT organization_id, mode, client_key, secret_key, secret_key_last_four, verified_at, updated_at,
           coalesce(archived_at, clock_timestamp()) FROM toss_payments_credential
-        WHERE organization_id = ? AND mode = ? AND environment_id IS NOT DISTINCT FROM ?
+        WHERE organization_id = ? AND mode = ?
         """,
         organizationId,
-        mode,
-        BusinessEnvironmentContext.environmentId());
+        mode);
   }
 
   public void method(UUID organizationId, UUID customerId, String mode) {
     jdbcTemplate.update(
         """
         INSERT INTO billing_key_history
-          (organization_id, environment_id, customer_id, mode, billing_key, card_issuer_code, card_number, authenticated_at,
+          (organization_id, customer_id, mode, billing_key, card_issuer_code, card_number, authenticated_at,
            consent_document_version, consented_at, credential_updated_at, archived_at)
-        SELECT organization_id, environment_id, customer_id, mode, billing_key, card_issuer_code, card_number, authenticated_at,
+        SELECT organization_id, customer_id, mode, billing_key, card_issuer_code, card_number, authenticated_at,
           consent_document_version, consented_at, credential_updated_at, coalesce(archived_at, clock_timestamp()) FROM billing_key
-        WHERE organization_id = ? AND customer_id = ? AND mode = ? AND environment_id IS NOT DISTINCT FROM ?
+        WHERE organization_id = ? AND customer_id = ? AND mode = ?
         """,
         organizationId,
         customerId,
-        mode,
-        BusinessEnvironmentContext.environmentId());
+        mode);
   }
 
   public List<PaymentMethodResponse> methods(UUID organizationId, String mode) {
     return jdbcTemplate.query(
-        "SELECT * FROM billing_key_history WHERE organization_id = ? AND mode = ? AND"
-            + " environment_id IS NOT DISTINCT FROM ? ORDER BY retired_at DESC, history_id",
+        "SELECT * FROM billing_key_history WHERE organization_id = ? AND mode = ? ORDER BY retired_at DESC, history_id",
         PAYMENT_METHOD_HISTORY,
         organizationId,
-        mode,
-        BusinessEnvironmentContext.environmentId());
+        mode);
   }
 
   public List<PaymentMethodResponse> methods(UUID organizationId, String mode, UUID customerId) {
     return jdbcTemplate.query(
         "SELECT * FROM billing_key_history WHERE organization_id = ? AND mode = ? AND"
-            + " customer_id = ? AND environment_id IS NOT DISTINCT FROM ?"
+            + " customer_id = ?"
             + " ORDER BY retired_at DESC, history_id",
         PAYMENT_METHOD_HISTORY,
         organizationId,
         mode,
-        customerId,
-        BusinessEnvironmentContext.environmentId());
+        customerId);
   }
 
   public List<TossPaymentsCredentialResponse> credentials(UUID organizationId) {
     return jdbcTemplate.query(
-        "SELECT * FROM toss_payments_credential_history WHERE organization_id = ? AND"
-            + " environment_id IS NOT DISTINCT FROM ? ORDER BY retired_at DESC, history_id",
+        "SELECT * FROM toss_payments_credential_history WHERE organization_id = ? ORDER BY retired_at DESC, history_id",
         (rs, n) ->
             TossPaymentsCredentialResponse.of(
                 rs.getString("mode"),
@@ -103,8 +96,7 @@ public class PaymentArchiveRepository {
                 rs.getObject("verified_at", OffsetDateTime.class),
                 rs.getObject("updated_at", OffsetDateTime.class),
                 rs.getObject("archived_at", OffsetDateTime.class)),
-        organizationId,
-        BusinessEnvironmentContext.environmentId());
+        organizationId);
   }
 
   // 교체로 물러난 키 가운데 since 뒤에 그 키로 고정한 결제나 취소가 있거나 진행 중인 버전만 고른다.
@@ -112,9 +104,9 @@ public class PaymentArchiveRepository {
       UUID organizationId, String mode, OffsetDateTime since) {
     return jdbcTemplate.query(
         "SELECT h.* FROM toss_payments_credential_history h WHERE h.organization_id = ? AND"
-            + " h.mode = ? AND h.environment_id IS NOT DISTINCT FROM ? AND EXISTS (SELECT 1 FROM"
+            + " h.mode = ? AND EXISTS (SELECT 1 FROM"
             + " payment_attempt a WHERE a.organization_id = h.organization_id AND a.mode = h.mode"
-            + " AND a.environment_id IS NOT DISTINCT FROM h.environment_id AND"
+            + " AND"
             + " a.credential_updated_at = h.updated_at AND (a.status = 'pending' OR a.requested_at"
             + " >= ? OR a.completed_at >= ? OR EXISTS (SELECT 1 FROM payment_cancellation c WHERE"
             + " c.payment_attempt_id = a.id AND (c.status = 'pending' OR c.completed_at >= ?))))"
@@ -129,7 +121,6 @@ public class PaymentArchiveRepository {
                 rs.getObject("updated_at", OffsetDateTime.class)),
         organizationId,
         mode,
-        BusinessEnvironmentContext.environmentId(),
         since,
         since,
         since);
@@ -140,7 +131,7 @@ public class PaymentArchiveRepository {
     return jdbcTemplate
         .query(
             """
-            SELECT * FROM toss_payments_credential_history WHERE organization_id = ? AND mode = ? AND environment_id IS NOT DISTINCT FROM ?
+            SELECT * FROM toss_payments_credential_history WHERE organization_id = ? AND mode = ?
               AND updated_at <= ? AND retired_at > ? ORDER BY retired_at ASC LIMIT 1
             """,
             (rs, n) ->
@@ -153,7 +144,6 @@ public class PaymentArchiveRepository {
                     rs.getObject("updated_at", OffsetDateTime.class)),
             organizationId,
             mode,
-            BusinessEnvironmentContext.environmentId(),
             requestedAt,
             requestedAt)
         .stream()
