@@ -33,8 +33,10 @@ jobs:
               - 'backend/**'
               - 'deploy/grafana/provisioning/alerting/alerting.yml'
               - '.github/workflows/ci.yml'
+            # frontend 시험이 읽는 바깥 파일도 넣는다
             frontend:
               - 'frontend/**'
+              - 'backend/src/main/java/**'
               - '.node-version'
               - '.github/workflows/ci.yml'
             demo:
