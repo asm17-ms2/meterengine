@@ -44,11 +44,18 @@ test("external and lookalike paths receive no tenant data", () => {
   }
 });
 
-test("legacy remains explicit and does not inherit another environment", () => {
+test("legacy links become test while retaining organization and filters", () => {
   const url = new URL(workspaceHref("/members?status=archived", new URLSearchParams({ organization_id: "original-organization", environment: "legacy" })), "https://console.example");
-  assert.equal(url.searchParams.get("environment"), "legacy");
+  assert.equal(url.searchParams.get("environment"), "test");
   assert.equal(url.searchParams.get("organization_id"), "original-organization");
   assert.equal(url.searchParams.get("status"), "archived");
+});
+
+test("missing and old destinations canonicalize while invalid environments survive for rejection", () => {
+  for (const input of ["", "environment=legacy", "environment="]) assert.equal(new URL(workspaceHref("/customers#details", input), "https://console.example").searchParams.get("environment"), "test");
+  for (const environment of ["live", "wrong", " test "]) assert.equal(new URL(workspaceHref(`/customers?environment=${encodeURIComponent(environment)}#details`, "environment=test"), "https://console.example").searchParams.get("environment"), environment);
+  assert.equal(workspaceHref("/customers?environment=legacy#details", "environment=live"), "/customers?environment=test#details");
+  assert.equal(workspaceHref("/customers", "environment=wrong"), "/customers?environment=wrong");
 });
 
 test("navigation preserves destination filters and derives the KST month from a direct range", () => {

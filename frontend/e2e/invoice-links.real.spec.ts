@@ -1,3 +1,4 @@
+import { sessionHeadersFor } from "./session-environment";
 import { expect, test, type APIRequestContext, type BrowserContext, type Page } from "@playwright/test";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
@@ -83,25 +84,25 @@ async function fixture(request: APIRequestContext, secrets: Set<string>): Promis
   const token = (await session.json()).token as string;
   secrets.add(token);
   const headers = { Authorization: `Bearer ${token}` };
-  const key = await request.post(`${API_URL}/v1/api-keys`, { headers, data: { label: "고객 인보이스 조회 검증", mode: "test", scopes: ["read", "ingest"] } });
+  const key = await request.post(`${API_URL}/v1/api-keys`, { headers: sessionHeadersFor(`${API_URL}/v1/api-keys`, headers), data: { label: "고객 인보이스 조회 검증", mode: "test", scopes: ["read", "ingest"] } });
   expect(key.status()).toBe(201);
   const readKey = (await key.json()).secret as string;
   secrets.add(readKey);
   const readHeaders = { Authorization: `Bearer ${readKey}` };
   const customerName = "링크를 전달받은 고객";
-  const customer = await request.post(`${API_URL}/v1/customers`, { headers, data: { name: customerName, external_id: `invoice-link-${suffix}`, billing_email: "private-recipient@fe-e2e.local" } });
+  const customer = await request.post(`${API_URL}/v1/customers`, { headers: sessionHeadersFor(`${API_URL}/v1/customers`, headers), data: { name: customerName, external_id: `invoice-link-${suffix}`, billing_email: "private-recipient@fe-e2e.local" } });
   expect(customer.status()).toBe(201);
   const customerId = uuid((await customer.json()).id);
-  const other = await request.post(`${API_URL}/v1/customers`, { headers, data: { name: "공개되면 안 되는 다른 고객", external_id: `invoice-link-other-${suffix}` } });
+  const other = await request.post(`${API_URL}/v1/customers`, { headers: sessionHeadersFor(`${API_URL}/v1/customers`, headers), data: { name: "공개되면 안 되는 다른 고객", external_id: `invoice-link-other-${suffix}` } });
   expect(other.status()).toBe(201);
   const otherId = uuid((await other.json()).id);
   const code = `invoice-link-${suffix}`;
-  expect((await request.post(`${API_URL}/v1/billable-metrics`, { headers, data: { code, name: "모델 요청", event_type: code, aggregation: "sum", target_property: "units", dimension_properties: [] } })).status()).toBe(201);
-  expect((await request.post(`${API_URL}/v1/billable-metrics/${code}/price-rates`, { headers, data: { dimension_values: {}, unit_price: 100, effective_from: month } })).status()).toBe(201);
+  expect((await request.post(`${API_URL}/v1/billable-metrics`, { headers: sessionHeadersFor(`${API_URL}/v1/billable-metrics`, headers), data: { code, name: "모델 요청", event_type: code, aggregation: "sum", target_property: "units", dimension_properties: [] } })).status()).toBe(201);
+  expect((await request.post(`${API_URL}/v1/billable-metrics/${code}/price-rates`, { headers: sessionHeadersFor(`${API_URL}/v1/billable-metrics/${code}/price-rates`, headers), data: { dimension_values: {}, unit_price: 100, effective_from: month } })).status()).toBe(201);
   expect((await request.post(`${API_URL}/v1/event-batches`, { headers: readHeaders, data: { events: [customerId, otherId].map((id, index) => ({ transaction_id: `invoice-link-${suffix}-${index}`, customer_id: id, type: code, timestamp: new Date(Date.now() - 60_000).toISOString(), properties: { units: (index + 1) * 10 } })) } })).status()).toBe(200);
-  const finalized = await request.post(`${API_URL}/v1/invoices?month=${month}`, { headers });
+  const finalized = await request.post(`${API_URL}/v1/invoices?month=${month}`, { headers: sessionHeadersFor(`${API_URL}/v1/invoices?month=${month}`, headers) });
   expect(finalized.status()).toBe(200);
-  const list = await request.get(`${API_URL}/v1/invoices?month=${month}`, { headers });
+  const list = await request.get(`${API_URL}/v1/invoices?month=${month}`, { headers: sessionHeadersFor(`${API_URL}/v1/invoices?month=${month}`, headers) });
   expect(list.status()).toBe(200);
   const invoices = (await list.json()).invoices as { id: string; invoice_number: string; customer_id: string; total_amount: number }[];
   const invoice = invoices.find(row => row.customer_id === customerId);
@@ -112,7 +113,7 @@ async function fixture(request: APIRequestContext, secrets: Set<string>): Promis
 }
 
 async function mint(request: APIRequestContext, data: Fixture, secrets: Set<string>, days?: number) {
-  const result = await request.post(`${API_URL}/v1/invoices/${data.invoiceId}/view-links`, { headers: data.headers, data: days === undefined ? {} : { expires_in_days: days } });
+  const result = await request.post(`${API_URL}/v1/invoices/${data.invoiceId}/view-links`, { headers: sessionHeadersFor(`${API_URL}/v1/invoices/${data.invoiceId}/view-links`, data.headers), data: days === undefined ? {} : { expires_in_days: days } });
   expect(result.status()).toBe(201);
   const link = await result.json() as { id: string; token: string; created_at: string; expires_at: string; mode: string };
   if (!link.token || typeof link.token !== "string") throw new Error("조회 링크의 일회 표시 토큰이 없습니다.");
@@ -139,13 +140,13 @@ test("발급 권한, 인보이스 경계와 공개 조회의 결제 및 취소 �
     expect(Date.parse(link.expires_at) - Date.parse(link.created_at)).toBe(30 * 86_400_000);
     const failed = await request.post(`${API_URL}/v1/invoices/${data.invoiceId}/view-links`, { headers: data.readHeaders, data: {} });
     expect(failed.status()).toBe(403);
-    expect((await request.post(`${API_URL}/v1/invoices/${data.invoiceId}/view-links`, { data: {} })).status()).toBe(401);
-    expect((await request.get(`${API_URL}/v1/invoices`, { headers: { Authorization: `Bearer ${link.token}` } })).status()).toBe(401);
-    for (const days of [0, 91]) expect((await request.post(`${API_URL}/v1/invoices/${data.invoiceId}/view-links`, { headers: data.headers, data: { expires_in_days: days } })).status()).toBe(400);
+    expect((await request.post(`${API_URL}/v1/invoices/${data.invoiceId}/view-links`, { headers: { "X-MeterEngine-Environment": "test" }, data: {} })).status()).toBe(401);
+    expect((await request.get(`${API_URL}/v1/invoices`, { headers: { Authorization: `Bearer ${link.token}`, "X-MeterEngine-Environment": "test" } })).status()).toBe(401);
+    for (const days of [0, 91]) expect((await request.post(`${API_URL}/v1/invoices/${data.invoiceId}/view-links`, { headers: sessionHeadersFor(`${API_URL}/v1/invoices/${data.invoiceId}/view-links`, data.headers), data: { expires_in_days: days } })).status()).toBe(400);
     const other = await fixture(request, secrets);
-    expect((await request.get(`${API_URL}/v1/invoices/${data.invoiceId}/view-links`, { headers: other.headers })).status()).toBe(404);
-    expect((await request.post(`${API_URL}/v1/invoices/${data.invoiceId}/view-links`, { headers: other.headers, data: {} })).status()).toBe(404);
-    expect((await request.post(`${API_URL}/v1/invoices/${data.invoiceId}/view-links/${link.id}/revoke`, { headers: other.headers })).status()).toBe(404);
+    expect((await request.get(`${API_URL}/v1/invoices/${data.invoiceId}/view-links`, { headers: sessionHeadersFor(`${API_URL}/v1/invoices/${data.invoiceId}/view-links`, other.headers)})).status()).toBe(404);
+    expect((await request.post(`${API_URL}/v1/invoices/${data.invoiceId}/view-links`, { headers: sessionHeadersFor(`${API_URL}/v1/invoices/${data.invoiceId}/view-links`, other.headers), data: {} })).status()).toBe(404);
+    expect((await request.post(`${API_URL}/v1/invoices/${data.invoiceId}/view-links/${link.id}/revoke`, { headers: sessionHeadersFor(`${API_URL}/v1/invoices/${data.invoiceId}/view-links/${link.id}/revoke`, other.headers)})).status()).toBe(404);
     const metadata = await request.get(`${API_URL}/v1/invoices/${data.invoiceId}/view-links`, { headers: data.readHeaders });
     expect(metadata.status()).toBe(200);
     expect((await metadata.json()).invoice_view_links).toHaveLength(1);
@@ -171,15 +172,15 @@ test("발급 권한, 인보이스 경계와 공개 조회의 결제 및 취소 �
     expect(partial).toMatchObject({ total_amount: 1100, payment: { status: "partially_canceled", paid_amount: 700, canceled_amount: 400, outstanding_amount: 0 } });
     cancel(700);
     expect((await (await lookup(request, link.token)).json()).payment).toMatchObject({ status: "canceled", paid_amount: 0, canceled_amount: 1100, outstanding_amount: 0 });
-    expect((await request.delete(`${API_URL}/v1/customers/${data.customerId}`, { headers: data.headers })).status()).toBe(204);
+    expect((await request.delete(`${API_URL}/v1/customers/${data.customerId}`, { headers: sessionHeadersFor(`${API_URL}/v1/customers/${data.customerId}`, data.headers)})).status()).toBe(204);
     expect((await (await lookup(request, link.token)).json())).toMatchObject({ invoice_number: data.invoiceNumber, customer_name: data.customerName, total_amount: 1100 });
     sql(`INSERT INTO payment_setting (organization_id, mode, updated_at) VALUES ('${data.organizationId}', 'live', clock_timestamp()) ON CONFLICT (organization_id) DO UPDATE SET mode = 'live', updated_at = clock_timestamp();`);
     expect((await (await lookup(request, link.token)).json()).payment).toMatchObject({ mode: "test", status: "canceled", canceled_amount: 1100, outstanding_amount: 0 });
     const digest = createHash("sha256").update(link.token).digest("hex");
     expect(sql(`SELECT encode(token_hash, 'hex') = '${digest}' FROM invoice_view_link WHERE id = '${uuid(link.id)}';`)).toBe("t");
-    expect((await request.post(`${API_URL}/v1/invoices/${data.otherInvoiceId}/view-links/${link.id}/revoke`, { headers: data.headers })).status()).toBe(404);
+    expect((await request.post(`${API_URL}/v1/invoices/${data.otherInvoiceId}/view-links/${link.id}/revoke`, { headers: sessionHeadersFor(`${API_URL}/v1/invoices/${data.otherInvoiceId}/view-links/${link.id}/revoke`, data.headers)})).status()).toBe(404);
     expect((await request.post(`${API_URL}/v1/invoices/${data.invoiceId}/view-links/${link.id}/revoke`, { headers: data.readHeaders })).status()).toBe(403);
-    const revoked = await request.post(`${API_URL}/v1/invoices/${data.invoiceId}/view-links/${link.id}/revoke`, { headers: data.headers });
+    const revoked = await request.post(`${API_URL}/v1/invoices/${data.invoiceId}/view-links/${link.id}/revoke`, { headers: sessionHeadersFor(`${API_URL}/v1/invoices/${data.invoiceId}/view-links/${link.id}/revoke`, data.headers)});
     expect(revoked.status()).toBe(200);
     const unknownToken = `me_invoice_${randomBytes(16).toString("hex")}`;
     const invalid = await lookup(request, unknownToken);
@@ -196,8 +197,8 @@ test("발급 권한, 인보이스 경계와 공개 조회의 결제 및 취소 �
     expect((await retired.json()).code).toBe("invoice_view_link_not_found");
     expect((await invalid.json()).code).toBe("invoice_view_link_not_found");
     expect((await expired.json()).code).toBe("invoice_view_link_not_found");
-    expect((await request.post(`${API_URL}/v1/invoices/${data.otherInvoiceId}/view-links/${pendingLink.id}/revoke`, { headers: data.headers })).status()).toBe(200);
-    const audit = await request.get(`${API_URL}/v1/audit-logs?size=100`, { headers: data.headers });
+    expect((await request.post(`${API_URL}/v1/invoices/${data.otherInvoiceId}/view-links/${pendingLink.id}/revoke`, { headers: sessionHeadersFor(`${API_URL}/v1/invoices/${data.otherInvoiceId}/view-links/${pendingLink.id}/revoke`, data.headers)})).status()).toBe(200);
+    const audit = await request.get(`${API_URL}/v1/audit-logs?size=100`, { headers: sessionHeadersFor(`${API_URL}/v1/audit-logs?size=100`, data.headers)});
     expect(audit.status()).toBe(200);
     for (const secret of secrets) expect((await audit.text()).includes(secret)).toBe(false);
     expect(Number(sql(`SELECT count(*) FROM audit_log WHERE organization_id = '${data.organizationId}' AND actor_type = 'invoice_view_link';`))).toBeGreaterThan(0);
@@ -301,7 +302,7 @@ test("콘솔에서 전달한 링크를 고객이 로그인 없이 열고 새로�
       for (const secret of secrets) expect(url.includes(secret)).toBe(false);
       if (url.startsWith("http")) expect(new URL(url).origin).toBe(FRONTEND_URL);
     }
-    const metadata = await request.get(`${API_URL}/v1/invoices/${data.invoiceId}/view-links`, { headers: data.headers });
+    const metadata = await request.get(`${API_URL}/v1/invoices/${data.invoiceId}/view-links`, { headers: sessionHeadersFor(`${API_URL}/v1/invoices/${data.invoiceId}/view-links`, data.headers)});
     const linkId = (await metadata.json()).invoice_view_links[0].id as string;
     await consolePage.reload();
     await expect(consolePage.getByRole("button", { name: "고객 조회 링크 복사", exact: true })).toHaveCount(0);
@@ -313,8 +314,8 @@ test("콘솔에서 전달한 링크를 고객이 로그인 없이 열고 새로�
     await page.reload();
     await expect(page.getByRole("heading", { name: "사용할 수 없는 조회 링크입니다", exact: true })).toBeVisible();
     await assertLayout(page, "public-revoked-mobile.png");
-    expect((await request.get(`${API_URL}/v1/invoices/${data.invoiceId}/view-links`, { headers: data.headers })).status()).toBe(200);
-    expect((await request.post(`${API_URL}/v1/invoices/${data.otherInvoiceId}/view-links/${secondLink.id}/revoke`, { headers: data.headers })).status()).toBe(200);
+    expect((await request.get(`${API_URL}/v1/invoices/${data.invoiceId}/view-links`, { headers: sessionHeadersFor(`${API_URL}/v1/invoices/${data.invoiceId}/view-links`, data.headers)})).status()).toBe(200);
+    expect((await request.post(`${API_URL}/v1/invoices/${data.otherInvoiceId}/view-links/${secondLink.id}/revoke`, { headers: sessionHeadersFor(`${API_URL}/v1/invoices/${data.otherInvoiceId}/view-links/${secondLink.id}/revoke`, data.headers)})).status()).toBe(200);
     writeFileSync(`${OUTPUT}/browser-result.json`, JSON.stringify({ passed: true, invoice_number: data.invoiceNumber, fragment_removed: true, reusable_on_reload: true, customer_session_required: false, network_token_leak: false, external_network_requests: 0, source_customer_id_in_html: false, desktop_width: 1280, mobile_width: 390, revoked_lookup_status: 404, link_id: linkId }, null, 2));
   } catch (error) { throw safeFailure(error, secrets); }
   finally { for (const context of contexts) await context.close(); }
@@ -363,7 +364,7 @@ test("조회 링크 누락과 일시 조회 실패를 안내하고 원래 링크
     await expect(page.getByText("결제 완료 시각 (KST)", { exact: true })).toHaveCount(0);
     expect((await (await lookup(request, link.token)).json()).payment).toMatchObject({ status: "failed", paid_amount: 0, canceled_amount: 0, outstanding_amount: 1100 });
     await assertLayout(page, "public-failed-mobile.png");
-    expect((await request.post(`${API_URL}/v1/invoices/${data.invoiceId}/view-links/${link.id}/revoke`, { headers: data.headers })).status()).toBe(200);
+    expect((await request.post(`${API_URL}/v1/invoices/${data.invoiceId}/view-links/${link.id}/revoke`, { headers: sessionHeadersFor(`${API_URL}/v1/invoices/${data.invoiceId}/view-links/${link.id}/revoke`, data.headers)})).status()).toBe(200);
     writeFileSync(`${OUTPUT}/failure-result.json`, JSON.stringify({ passed: true, missing_link_hint: true, cross_origin_status: cross.status(), malformed_lookup_status: missing.status(), injected_frontend_outage_recovered_against_real_backend: true, failed_payment_processing_timestamp_label: true, failed_amount_krw: 1100 }, null, 2));
   } catch (error) { throw safeFailure(error, secrets); }
 });

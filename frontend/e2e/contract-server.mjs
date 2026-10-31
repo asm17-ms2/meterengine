@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import { requiresWorkspaceEnvironment } from "../src/lib/api/environment-scope.ts";
 
 const organizations = [
   { id: "11111111-1111-4111-8111-111111111111", name: "계약 테스트 도입사", status: "active" },
@@ -46,8 +47,12 @@ const server = createServer(async (req, res) => {
     result = { status: 200, body: {} };
   } else if (path === "/__requests") result = { status: 200, body: requests };
   else {
-    requests.push({ path: req.url, method: req.method, hasAuthorization: Boolean(req.headers.authorization), hasOrganizationHeader: Boolean(req.headers["x-organization-id"]), consents: body.consents, description: body.description, clientIp: req.headers["x-meterengine-client-ip"] });
-    if (outage) result = failure(503, "service_unavailable", "서버를 잠시 사용할 수 없습니다.");
+    const environment = req.headers["x-meterengine-environment"] ?? null;
+    const organizationId = req.headers["x-meterengine-organization-id"] ?? null;
+    requests.push({ path: req.url, method: req.method, organizationId, environment, hasAuthorization: Boolean(req.headers.authorization), hasOrganizationHeader: Boolean(organizationId), consents: body.consents, description: body.description, clientIp: req.headers["x-meterengine-client-ip"] });
+    const requiresEnvironment = requiresWorkspaceEnvironment(req.url);
+    if ((requiresEnvironment && !["test", "live"].includes(environment)) || (!requiresEnvironment && environment !== null)) result = failure(400, "validation_error", "업무 환경을 확인하세요.");
+    else if (outage) result = failure(503, "service_unavailable", "서버를 잠시 사용할 수 없습니다.");
     else if (failures[path]) result = failure(failures[path], failures[path] === 403 ? "permission_denied" : "internal_error", failures[path] === 403 ? "접근 권한이 없습니다." : "서버에서 요청을 처리하지 못했습니다.");
     else if (path === "/v1/signups" && req.method === "POST") result = { status: 201, body: { organization: { ...organizations[0], status: "pending" }, user_account: { id: "member", email: body.email, name: body.name, role: "member" } } };
     else if (path === "/v1/sessions" && req.method === "POST") {
@@ -100,6 +105,9 @@ const server = createServer(async (req, res) => {
       else { Object.assign(customer, { name: body.name, billing_email: body.billing_email, version: customer.version + 1 }); result = { status: 200, body: customer }; }
     } else if (path === "/v1/dashboard") result = { status: 200, body: { month: url.searchParams.get("month") ?? "2026-10", calculated_at: new Date().toISOString(), customer_count: customers.length, billable_metric_count: 0, active_api_key_count: 0, event_count: 0, supplier_configured: false, payment_configured: false, payment_mode: "test", draft_supply_amount: 0, finalized_total_amount: 0, collected_amount: 0, canceled_amount: 0, outstanding_amount: 0, failed_payment_count: 0, unpriced_usage_count: 0, negative_usage_count: 0, invoice_payments: [], unresolved_invoice_payments: unresolvedInvoicePayments, draft_invoice: { customers: [] } } };
     else if (path === "/v1/billable-metrics") result = { status: 200, body: { billable_metrics: [] } };
+    else if (path === "/v1/organization/members" && req.method === "GET") result = { status: 200, body: { members: [] } };
+    else if (path === "/v1/organization/members" && req.method === "POST") result = session.organization_role === "owner" && session.scopes.includes("admin") ? { status: 201, body: { user_account_id: crypto.randomUUID(), email: body.email, name: body.name, scopes: body.scopes, organization_role: "member", status: "active", created_at: new Date().toISOString(), revoked_at: null } } : failure(403, "permission_denied", "접근 권한이 없습니다.");
+    else if (path === "/v1/organization/invitations" && req.method === "GET") result = { status: 200, body: { invitations: [] } };
     else if (path === "/v1/organization/invitations" && req.method === "POST") result = { status: 201, body: { id: crypto.randomUUID(), email: body.email, scopes: body.scopes, token: "me_invite_ContractIssued000000000000000001" } };
     else if (path === "/v1/api-keys" && req.method === "GET") result = { status: 200, body: { api_keys: apiKeys } };
     else if (path === "/v1/api-keys" && req.method === "POST") {

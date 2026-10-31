@@ -1,3 +1,4 @@
+import { sessionHeadersFor } from "./session-environment";
 import { expect, test, type Page, type APIRequestContext } from "@playwright/test";
 import { closeSync, fchmodSync, mkdirSync, openSync, writeFileSync } from "node:fs";
 
@@ -105,7 +106,7 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     await page.getByLabel(/^사업장 주소/).fill("서울 테스트 주소");
     await page.getByRole("button", { name: "공급자 정보 저장", exact: true }).click();
     await expect(page.getByText("처리했습니다.", { exact: true })).toBeVisible();
-    const supplier = await request.get(`${API_URL}/v1/organization/supplier`, { headers: memberHeaders });
+    const supplier = await request.get(`${API_URL}/v1/organization/supplier`, { headers: sessionHeadersFor(`${API_URL}/v1/organization/supplier`, memberHeaders)});
     expect(await supplier.json()).toMatchObject({ business_registration_number: "1234567890", representative_name: "MVP 대표", business_address: "서울 테스트 주소" });
     await page.reload();
     await expect(page.getByLabel(/^사업자등록번호/)).toHaveValue("1234567890");
@@ -118,7 +119,7 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
     const keyDialog = page.getByRole("dialog");
     await keyDialog.getByLabel(/^키 이름/).fill("MVP 수집과 고객 조회");
-    await keyDialog.getByLabel(/^기존 키 구분/).selectOption("test");
+    await expect(keyDialog.locator('input[name="mode"]')).toHaveValue("test");
     await keyDialog.getByRole("checkbox", { name: /^조회 \(read\)/ }).check();
     await keyDialog.getByRole("checkbox", { name: /^수집 \(ingest\)/ }).check();
     await expect(keyDialog.getByRole("checkbox", { name: /^전체 관리 \(admin\)/ })).not.toBeChecked();
@@ -215,7 +216,7 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     await page.getByRole("dialog").getByRole("button", { name: "등록 카드로 결제", exact: true }).click();
     await expect(page.getByRole("dialog")).toHaveCount(0);
     expect(await paymentState(request, apiKey, invoiceId)).toMatchObject({ status: "paid", amount: 3300, attempt_count: 1 });
-    const duplicate = await request.post(`${API_URL}/v1/invoices/${invoiceId}/payment-attempts`, { headers: memberHeaders });
+    const duplicate = await request.post(`${API_URL}/v1/invoices/${invoiceId}/payment-attempts`, { headers: sessionHeadersFor(`${API_URL}/v1/invoices/${invoiceId}/payment-attempts`, memberHeaders)});
     expect(duplicate.status()).toBe(409);
     expect((await duplicate.json()).code).toBe("invoice_already_paid");
     const provider = await (await request.get(`${PG_URL}/__state`)).json();
@@ -237,7 +238,7 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     }, { intervals: [100, 200, 300], timeout: 4000 }).toBe("pending");
     const replayHeaders = { ...memberHeaders, "Idempotency-Key": partialRequestId };
     const repeatedPending = await request.post(`${API_URL}/v1/payment-attempts/${attemptId}/cancellations`, {
-      headers: replayHeaders, data: { amount: 1000, reason: "로컬 E2E 부분 취소" },
+      headers: sessionHeadersFor(`${API_URL}/v1/payment-attempts/${attemptId}/cancellations`, replayHeaders), data: { amount: 1000, reason: "로컬 E2E 부분 취소" },
     });
     expect(repeatedPending.status()).toBe(201);
     expect((await repeatedPending.json()).status).toBe("pending");
@@ -250,7 +251,7 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     await expect(dialog).toHaveCount(0);
     expect(await paymentState(request, apiKey, invoiceId)).toMatchObject({ status: "partially_canceled", canceled_amount: 1000 });
     const repeatedDone = await request.post(`${API_URL}/v1/payment-attempts/${attemptId}/cancellations`, {
-      headers: replayHeaders, data: { amount: 1000, reason: "로컬 E2E 부분 취소" },
+      headers: sessionHeadersFor(`${API_URL}/v1/payment-attempts/${attemptId}/cancellations`, replayHeaders), data: { amount: 1000, reason: "로컬 E2E 부분 취소" },
     });
     expect(repeatedDone.status()).toBe(201);
     expect((await repeatedDone.json()).status).toBe("done");
@@ -265,7 +266,7 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     expect(await paymentState(request, apiKey, invoiceId)).toMatchObject({ status: "canceled", canceled_amount: 3300, attempt_count: 1 });
     const invoice = await request.get(`${API_URL}/v1/invoices/${invoiceId}`, { headers: apiHeaders });
     expect(await invoice.json()).toMatchObject({ supply_amount: 3000, tax_amount: 300, total_amount: 3300 });
-    const duplicate = await request.post(`${API_URL}/v1/invoices/${invoiceId}/payment-attempts`, { headers: memberHeaders });
+    const duplicate = await request.post(`${API_URL}/v1/invoices/${invoiceId}/payment-attempts`, { headers: sessionHeadersFor(`${API_URL}/v1/invoices/${invoiceId}/payment-attempts`, memberHeaders)});
     expect(duplicate.status()).toBe(409);
     await page.goto(`/customers/${customerId}?month=${month}`);
     await expect(page.getByRole("cell", { name: "전액 취소", exact: true })).toBeVisible();
@@ -302,10 +303,10 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     expect(provider.cancellation_calls - providerBefore.cancellation_calls).toBe(2);
   });
   await test.step("후속 시연 검증에 필요한 임시 인증 자료 보존", async () => {
-    const response = await request.post(`${API_URL}/v1/api-keys`, { headers: memberHeaders, data: { label: "MVP 후속 시연 검증", mode: "test", scopes: ["admin"] } });
+    const response = await request.post(`${API_URL}/v1/api-keys`, { headers: sessionHeadersFor(`${API_URL}/v1/api-keys`, memberHeaders), data: { label: "MVP 후속 시연 검증", mode: "test", scopes: ["admin"] } });
     expect(response.status()).toBe(201);
     const issued = await response.json();
-    const session = await (await request.get(`${API_URL}/v1/sessions/current`, { headers: memberHeaders })).json();
+    const session = await (await request.get(`${API_URL}/v1/sessions/current`, { headers: sessionHeadersFor(`${API_URL}/v1/sessions/current`, memberHeaders)})).json();
     const directory = process.env.MVP_EVIDENCE_DIR ?? "/private/tmp/meterengine-orchestration-0696";
     mkdirSync(directory, { recursive: true, mode: 0o700 });
     const fd = openSync(`${directory}/demo-credentials.json`, "w", 0o600);

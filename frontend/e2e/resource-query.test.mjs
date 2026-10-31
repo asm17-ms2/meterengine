@@ -81,7 +81,8 @@ test("explicit invoice time ranges replace month without dropping other draft co
   assert.equal(query.has("month"), false);
   assert.equal(query.get("from"), "2026-10-01T12:30:00");
   assert.equal(query.get("to"), "2026-10-31T18:00:00");
-  for (const key of ["q", "min_amount", "customer_id", "billable_metric_code", "payment_status", "mode"]) assert.equal(query.has(key), true, key);
+  for (const key of ["q", "min_amount", "customer_id", "billable_metric_code", "payment_status"]) assert.equal(query.has(key), true, key);
+  assert.equal(query.has("mode"), false);
 });
 
 test("selecting a pricing detail applies draft inputs and replaces only the selected metric", async () => {

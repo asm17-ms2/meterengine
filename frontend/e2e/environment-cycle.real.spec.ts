@@ -139,7 +139,8 @@ test("한 조직의 test와 live가 같은 고객 외부 ID와 미터 코드로 
       expect(new URL(page.url()).searchParams.get("environment")).toBe(other.environment);
       await expect(page.getByText("데이터를 불러오지 못했습니다", { exact: true })).toHaveCount(0);
     }
-    expect((await json<{ customers: unknown[] }>(await request.get(`${API_URL}/v1/customers`, { headers: memberHeaders }))).customers).toHaveLength(0);
+    expect((await request.get(`${API_URL}/v1/customers`, { headers: memberHeaders })).status()).toBe(400);
+    expect((await request.get(`${API_URL}/v1/sessions/current`, { headers: memberHeaders })).status()).toBe(200);
     for (const scope of scopes) {
       for (const screen of ["overview", "settings", "events", "payments"]) {
         await page.goto(href(`/${screen}`, scope.environment));

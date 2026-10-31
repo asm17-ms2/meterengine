@@ -6,7 +6,7 @@ const ORGANIZATION_ID = "11111111-1111-4111-8111-111111111111";
 const WEBHOOK_ENDPOINT_ID = "99999999-9999-4999-8999-999999999999";
 
 async function expectTenantUrl(page: Page, pathname: string) {
-  await expect(page).toHaveURL(url => url.origin === "http://localhost:33148" && url.pathname === pathname && url.searchParams.size === 1 && url.searchParams.get("organization_id") === ORGANIZATION_ID);
+  await expect(page).toHaveURL(url => url.origin === "http://localhost:33148" && url.pathname === pathname && url.searchParams.get("organization_id") === ORGANIZATION_ID && url.searchParams.get("environment") === "test");
 }
 
 async function login(page: Page, email = "member@contract.local", returnTo = "/customers") {
@@ -17,6 +17,23 @@ async function login(page: Page, email = "member@contract.local", returnTo = "/c
 }
 
 test.beforeEach(async ({ request }) => { await request.post(`${FIXTURE_URL}/__control`, { data: { reset: true } }); });
+
+test("shared member POST needs no environment while retaining the original organization", async ({ page, request }) => {
+  await login(page, "member@contract.local", "/members");
+  await page.getByRole("button", { name: "계정 직접 생성", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^사용자 이메일/).fill("shared@contract.local");
+  await dialog.getByLabel(/^이름/).fill("Shared member");
+  await dialog.getByLabel(/^초기 비밀번호/).fill("contract-password");
+  await dialog.locator('input[name="environment"]').evaluate(input => input.remove());
+  await dialog.getByRole("button", { name: "사용자 계정 생성", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
+  expect(calls.filter((call: { path: string; method: string }) => call.path === "/v1/organization/members" && call.method === "POST")).toEqual([
+    expect.objectContaining({ organizationId: ORGANIZATION_ID, environment: null }),
+  ]);
+  expect(calls.filter((call: { path: string }) => call.path === "/v1/sessions/current").every((call: { environment: string | null }) => call.environment === null)).toBe(true);
+});
 
 test("overview keeps the selected month and shows unresolved invoices from every month", async ({ page, request }) => {
   const invoiceId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -62,12 +79,13 @@ test("public health, gated routes, expired session and return URL", async ({ pag
   }
   await page.context().addCookies([{ name: "me_session", value: "expired-session", url: "http://localhost:33148" }]);
   await page.goto("/customers");
-  await expect(page).toHaveURL(/\/login\?reason=expired&returnTo=%2Fcustomers$/);
+  await expect(page).toHaveURL(/\/login\?reason=expired&returnTo=%2Fcustomers%3Fenvironment%3Dtest$/);
   await login(page, "member@contract.local", "/customers");
   await expectTenantUrl(page, "/customers");
   const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
   expect(calls.find((call: { path: string }) => call.path === "/v1/sessions").hasAuthorization).toBe(false);
-  expect(calls.some((call: { hasOrganizationHeader: boolean }) => call.hasOrganizationHeader)).toBe(false);
+  expect(calls.filter((call: { path: string }) => call.path.startsWith("/v1/sessions")).every((call: { hasOrganizationHeader: boolean; environment: string | null }) => !call.hasOrganizationHeader && call.environment === null)).toBe(true);
+  expect(calls.filter((call: { path: string }) => call.path.startsWith("/v1/customers")).every((call: { organizationId: string; environment: string }) => call.organizationId === ORGANIZATION_ID && call.environment === "test")).toBe(true);
 });
 
 test("signup sends displayed consent versions without stale Bearer or a password-bearing follow-up", async ({ page, request }) => {
@@ -88,7 +106,7 @@ test("signup sends displayed consent versions without stale Bearer or a password
   expect(await page.evaluate(() => localStorage.length + sessionStorage.length)).toBe(0);
   expect(await page.content()).not.toContain(LOGIN_PASSWORD);
   const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
-  expect(calls).toEqual([{ path: "/v1/signups", method: "POST", hasAuthorization: false, hasOrganizationHeader: false, consents: [{ document: "terms_of_service", document_version: "2026-10-26-preview" }, { document: "privacy_policy", document_version: "2026-10-26-preview" }] }]);
+  expect(calls).toEqual([{ path: "/v1/signups", method: "POST", hasAuthorization: false, hasOrganizationHeader: false, organizationId: null, environment: null, consents: [{ document: "terms_of_service", document_version: "2026-10-26-preview" }, { document: "privacy_policy", document_version: "2026-10-26-preview" }] }]);
 });
 
 test("safe relative return targets and member admin denial", async ({ page }) => {

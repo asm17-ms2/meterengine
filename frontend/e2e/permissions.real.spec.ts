@@ -1,3 +1,4 @@
+import { sessionHeadersFor } from "./session-environment";
 import { expect, test, type APIRequestContext, type Browser, type BrowserContext, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
@@ -64,7 +65,7 @@ function sql(statement: string) {
   return execFileSync("docker", ["exec", "-i", DB_CONTAINER, "psql", "-X", "-v", "ON_ERROR_STOP=1", "-U", "meterengine", "-d", "meterengine", "-At"], { input: statement, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }).trim();
 }
 async function current(request: APIRequestContext, headers: Headers) {
-  const response = await request.get(`${API_URL}/v1/sessions/current`, { headers });
+  const response = await request.get(`${API_URL}/v1/sessions/current`, { headers: sessionHeadersFor(`${API_URL}/v1/sessions/current`, headers) });
   expect(response.status()).toBe(200);
   return await response.json() as Session;
 }
@@ -74,7 +75,7 @@ async function login(request: APIRequestContext, email: string, secrets: Set<str
   const session = await response.json() as Session;
   secrets.add(session.token);
   if (session.consent_required) {
-    const accepted = await request.post(`${API_URL}/v1/sessions/current/consents`, { headers: authorization(session.token), data: { consents: CONSENTS, new_password: CHANGED_PASSWORD } });
+    const accepted = await request.post(`${API_URL}/v1/sessions/current/consents`, { headers: sessionHeadersFor(`${API_URL}/v1/sessions/current/consents`, authorization(session.token)), data: { consents: CONSENTS, new_password: CHANGED_PASSWORD } });
     expect(accepted.status()).toBe(200);
     CONSENTED.add(email);
     return { ...await accepted.json(), token: session.token } as Session;
@@ -95,23 +96,23 @@ async function fixture(request: APIRequestContext, secrets: Set<string>): Promis
   expect(owner.organization_role).toBe("owner"); expect(owner.scopes).toContain("admin");
   const headers = authorization(owner.token);
   const customerName = "권한별 업무 확인 고객";
-  const customer = await request.post(`${API_URL}/v1/customers`, { headers, data: { name: customerName, external_id: `permissions-${suffix}` } });
+  const customer = await request.post(`${API_URL}/v1/customers`, { headers: sessionHeadersFor(`${API_URL}/v1/customers`, headers), data: { name: customerName, external_id: `permissions-${suffix}` } });
   expect(customer.status()).toBe(201);
   const customerId = uuid((await customer.json()).id);
   const metricCode = `permissions-${suffix}`;
   const month = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit" }).format(new Date());
-  expect((await request.post(`${API_URL}/v1/billable-metrics`, { headers, data: { code: metricCode, name: "권한 확인 사용량", event_type: metricCode, aggregation: "sum", target_property: "units", dimension_properties: [] } })).status()).toBe(201);
-  expect((await request.post(`${API_URL}/v1/billable-metrics/${metricCode}/price-rates`, { headers, data: { effective_from: month, dimension_values: {}, model: "per_unit", unit_price: "100" } })).status()).toBe(201);
-  expect((await request.post(`${API_URL}/v1/events`, { headers, data: { transaction_id: randomUUID(), customer_id: customerId, type: metricCode, timestamp: new Date(Date.now() - 60_000).toISOString(), properties: { units: 10 } } })).status()).toBe(200);
-  expect((await request.post(`${API_URL}/v1/invoices?month=${month}`, { headers })).status()).toBe(200);
-  const invoices = await request.get(`${API_URL}/v1/invoices?month=${month}`, { headers });
+  expect((await request.post(`${API_URL}/v1/billable-metrics`, { headers: sessionHeadersFor(`${API_URL}/v1/billable-metrics`, headers), data: { code: metricCode, name: "권한 확인 사용량", event_type: metricCode, aggregation: "sum", target_property: "units", dimension_properties: [] } })).status()).toBe(201);
+  expect((await request.post(`${API_URL}/v1/billable-metrics/${metricCode}/price-rates`, { headers: sessionHeadersFor(`${API_URL}/v1/billable-metrics/${metricCode}/price-rates`, headers), data: { effective_from: month, dimension_values: {}, model: "per_unit", unit_price: "100" } })).status()).toBe(201);
+  expect((await request.post(`${API_URL}/v1/events`, { headers: sessionHeadersFor(`${API_URL}/v1/events`, headers), data: { transaction_id: randomUUID(), customer_id: customerId, type: metricCode, timestamp: new Date(Date.now() - 60_000).toISOString(), properties: { units: 10 } } })).status()).toBe(200);
+  expect((await request.post(`${API_URL}/v1/invoices?month=${month}`, { headers: sessionHeadersFor(`${API_URL}/v1/invoices?month=${month}`, headers) })).status()).toBe(200);
+  const invoices = await request.get(`${API_URL}/v1/invoices?month=${month}`, { headers: sessionHeadersFor(`${API_URL}/v1/invoices?month=${month}`, headers) });
   expect(invoices.status()).toBe(200);
   const invoiceId = uuid((await invoices.json()).invoices[0].id);
   return { organizationId, organizationName, owner, headers, operator, operatorHeaders, customerId, customerName, metricCode, month, invoiceId };
 }
 async function member(request: APIRequestContext, data: Fixture, secrets: Set<string>, name: string, scopes?: string[]): Promise<User> {
   const email = `permissions-${name}-${randomUUID()}@fe-e2e.local`;
-  const response = await request.post(`${API_URL}/v1/organization/members`, { headers: data.headers, data: { email, name: `권한 사용자 ${name}`, password: PASSWORD, ...(scopes === undefined ? {} : { scopes }) } });
+  const response = await request.post(`${API_URL}/v1/organization/members`, { headers: sessionHeadersFor(`${API_URL}/v1/organization/members`, data.headers), data: { email, name: `권한 사용자 ${name}`, password: PASSWORD, ...(scopes === undefined ? {} : { scopes }) } });
   expect(response.status()).toBe(201);
   const created = await response.json() as Member;
   const session = await login(request, email, secrets);
@@ -119,12 +120,12 @@ async function member(request: APIRequestContext, data: Fixture, secrets: Set<st
   return { ...created, session, headers: authorization(session.token) };
 }
 async function updateScopes(request: APIRequestContext, data: Fixture, id: string, scopes: string[]) {
-  const response = await request.put(`${API_URL}/v1/organization/members/${id}/scopes`, { headers: data.headers, data: { scopes } });
+  const response = await request.put(`${API_URL}/v1/organization/members/${id}/scopes`, { headers: sessionHeadersFor(`${API_URL}/v1/organization/members/${id}/scopes`, data.headers), data: { scopes } });
   expect(response.status()).toBe(200);
   return await response.json() as Member;
 }
 async function key(request: APIRequestContext, data: Fixture, secrets: Set<string>, scopes: string[], label = "권한 검증 서버 키"): Promise<Key> {
-  const response = await request.post(`${API_URL}/v1/api-keys`, { headers: data.headers, data: { label, mode: "test", scopes, rate_limit_per_minute: 1000 } });
+  const response = await request.post(`${API_URL}/v1/api-keys`, { headers: sessionHeadersFor(`${API_URL}/v1/api-keys`, data.headers), data: { label, mode: "test", scopes, rate_limit_per_minute: 1000 } });
   expect(response.status()).toBe(201);
   const created = await response.json() as Key;
   secrets.add(created.secret); return created;
@@ -150,38 +151,38 @@ test("사용자별 조회와 수집, 관리 권한을 같은 세션에서 즉시
     const data = await fixture(request, secrets);
     const reader = await member(request, data, secrets, "reader");
     expect(reader.organization_role).toBe("member");
-    for (const path of ["/v1/customers", "/v1/usage", "/v1/invoices", "/v1/invoice-payments", "/v1/billable-metrics", "/v1/organization/members", "/v1/api-keys"]) expect((await request.get(`${API_URL}${path}`, { headers: reader.headers })).status()).toBe(200);
-    for (const status of ["active", "archived", "all"]) expect((await request.get(`${API_URL}/v1/customers?status=${status}`, { headers: reader.headers })).status()).toBe(200);
-    expect((await request.post(`${API_URL}/v1/customers`, { headers: reader.headers, data: { name: "차단 고객" } })).status()).toBe(403);
-    expect((await request.put(`${API_URL}/v1/customers/${data.customerId}`, { headers: reader.headers, data: { name: "차단 수정" } })).status()).toBe(403);
-    expect((await request.delete(`${API_URL}/v1/customers/${data.customerId}`, { headers: reader.headers })).status()).toBe(403);
-    expect((await request.post(`${API_URL}/v1/invoices/${data.invoiceId}/payment-attempts`, { headers: reader.headers })).status()).toBe(403);
-    expect((await request.put(`${API_URL}/v1/organization/members/${reader.user_account_id}/scopes`, { headers: reader.headers, data: { scopes: ["admin"] } })).status()).toBe(403);
-    expect((await request.put(`${API_URL}/v1/user-accounts/${reader.user_account_id}/role`, { headers: reader.headers, data: { role: "operator" } })).status()).toBe(403);
-    for (const scopes of [[], ["operator"], ["read", null]]) expect((await request.put(`${API_URL}/v1/organization/members/${reader.user_account_id}/scopes`, { headers: data.headers, data: { scopes } })).status()).toBe(400);
-    expect((await request.put(`${API_URL}/v1/organization/members/${data.owner.user_account.id}/scopes`, { headers: data.headers, data: { scopes: ["read"] } })).status()).toBe(409);
-    expect((await request.put(`${API_URL}/v1/organization/members/${data.owner.user_account.id}/role`, { headers: data.headers, data: { organization_role: "admin" } })).status()).toBe(409);
-    expect((await request.delete(`${API_URL}/v1/organization/members/${data.owner.user_account.id}`, { headers: data.headers })).status()).toBe(409);
+    for (const path of ["/v1/customers", "/v1/usage", "/v1/invoices", "/v1/invoice-payments", "/v1/billable-metrics", "/v1/organization/members", "/v1/api-keys"]) expect((await request.get(`${API_URL}${path}`, { headers: sessionHeadersFor(`${API_URL}${path}`, reader.headers)})).status()).toBe(200);
+    for (const status of ["active", "archived", "all"]) expect((await request.get(`${API_URL}/v1/customers?status=${status}`, { headers: sessionHeadersFor(`${API_URL}/v1/customers?status=${status}`, reader.headers)})).status()).toBe(200);
+    expect((await request.post(`${API_URL}/v1/customers`, { headers: sessionHeadersFor(`${API_URL}/v1/customers`, reader.headers), data: { name: "차단 고객" } })).status()).toBe(403);
+    expect((await request.put(`${API_URL}/v1/customers/${data.customerId}`, { headers: sessionHeadersFor(`${API_URL}/v1/customers/${data.customerId}`, reader.headers), data: { name: "차단 수정" } })).status()).toBe(403);
+    expect((await request.delete(`${API_URL}/v1/customers/${data.customerId}`, { headers: sessionHeadersFor(`${API_URL}/v1/customers/${data.customerId}`, reader.headers)})).status()).toBe(403);
+    expect((await request.post(`${API_URL}/v1/invoices/${data.invoiceId}/payment-attempts`, { headers: sessionHeadersFor(`${API_URL}/v1/invoices/${data.invoiceId}/payment-attempts`, reader.headers)})).status()).toBe(403);
+    expect((await request.put(`${API_URL}/v1/organization/members/${reader.user_account_id}/scopes`, { headers: sessionHeadersFor(`${API_URL}/v1/organization/members/${reader.user_account_id}/scopes`, reader.headers), data: { scopes: ["admin"] } })).status()).toBe(403);
+    expect((await request.put(`${API_URL}/v1/user-accounts/${reader.user_account_id}/role`, { headers: sessionHeadersFor(`${API_URL}/v1/user-accounts/${reader.user_account_id}/role`, reader.headers), data: { role: "operator" } })).status()).toBe(403);
+    for (const scopes of [[], ["operator"], ["read", null]]) expect((await request.put(`${API_URL}/v1/organization/members/${reader.user_account_id}/scopes`, { headers: sessionHeadersFor(`${API_URL}/v1/organization/members/${reader.user_account_id}/scopes`, data.headers), data: { scopes } })).status()).toBe(400);
+    expect((await request.put(`${API_URL}/v1/organization/members/${data.owner.user_account.id}/scopes`, { headers: sessionHeadersFor(`${API_URL}/v1/organization/members/${data.owner.user_account.id}/scopes`, data.headers), data: { scopes: ["read"] } })).status()).toBe(409);
+    expect((await request.put(`${API_URL}/v1/organization/members/${data.owner.user_account.id}/role`, { headers: sessionHeadersFor(`${API_URL}/v1/organization/members/${data.owner.user_account.id}/role`, data.headers), data: { organization_role: "admin" } })).status()).toBe(409);
+    expect((await request.delete(`${API_URL}/v1/organization/members/${data.owner.user_account.id}`, { headers: sessionHeadersFor(`${API_URL}/v1/organization/members/${data.owner.user_account.id}`, data.headers)})).status()).toBe(409);
     const writer = await member(request, data, secrets, "ingest", ["ingest"]);
-    expect((await request.get(`${API_URL}/v1/customers`, { headers: writer.headers })).status()).toBe(403);
-    const created = await request.post(`${API_URL}/v1/customers`, { headers: writer.headers, data: { name: "수집 권한 등록", external_id: randomUUID() } });
+    expect((await request.get(`${API_URL}/v1/customers`, { headers: sessionHeadersFor(`${API_URL}/v1/customers`, writer.headers)})).status()).toBe(403);
+    const created = await request.post(`${API_URL}/v1/customers`, { headers: sessionHeadersFor(`${API_URL}/v1/customers`, writer.headers), data: { name: "수집 권한 등록", external_id: randomUUID() } });
     expect(created.status()).toBe(201);
     const customerId = uuid((await created.json()).id);
     const event = { transaction_id: randomUUID(), customer_id: customerId, type: data.metricCode, timestamp: new Date().toISOString(), properties: { units: 1 } };
-    expect((await request.post(`${API_URL}/v1/events`, { headers: writer.headers, data: event })).status()).toBe(200);
-    expect((await request.post(`${API_URL}/v1/event-batches`, { headers: writer.headers, data: { events: [{ ...event, transaction_id: randomUUID() }] } })).status()).toBe(200);
-    expect((await request.put(`${API_URL}/v1/customers/${customerId}`, { headers: writer.headers, data: { name: "수집 권한 변경 시도" } })).status()).toBe(403);
-    expect((await request.get(`${API_URL}/v1/organization/members`, { headers: writer.headers })).status()).toBe(403);
+    expect((await request.post(`${API_URL}/v1/events`, { headers: sessionHeadersFor(`${API_URL}/v1/events`, writer.headers), data: event })).status()).toBe(200);
+    expect((await request.post(`${API_URL}/v1/event-batches`, { headers: sessionHeadersFor(`${API_URL}/v1/event-batches`, writer.headers), data: { events: [{ ...event, transaction_id: randomUUID() }] } })).status()).toBe(200);
+    expect((await request.put(`${API_URL}/v1/customers/${customerId}`, { headers: sessionHeadersFor(`${API_URL}/v1/customers/${customerId}`, writer.headers), data: { name: "수집 권한 변경 시도" } })).status()).toBe(403);
+    expect((await request.get(`${API_URL}/v1/organization/members`, { headers: sessionHeadersFor(`${API_URL}/v1/organization/members`, writer.headers)})).status()).toBe(403);
     await updateScopes(request, data, reader.user_account_id, ["read", "ingest"]);
     expect((await current(request, reader.headers)).scopes).toEqual(["read", "ingest"]);
-    expect((await request.post(`${API_URL}/v1/customers`, { headers: reader.headers, data: { name: "조합 권한 등록", external_id: randomUUID() } })).status()).toBe(201);
+    expect((await request.post(`${API_URL}/v1/customers`, { headers: sessionHeadersFor(`${API_URL}/v1/customers`, reader.headers), data: { name: "조합 권한 등록", external_id: randomUUID() } })).status()).toBe(201);
     await updateScopes(request, data, reader.user_account_id, ["admin"]);
     expect((await current(request, reader.headers)).organization_role).toBe("admin");
-    expect((await request.put(`${API_URL}/v1/customers/${customerId}`, { headers: reader.headers, data: { name: "관리 권한 수정" } })).status()).toBe(200);
-    expect((await request.post(`${API_URL}/v1/organization/members`, { headers: reader.headers, data: { email: `blocked-${randomUUID()}@fe-e2e.local`, name: "차단 계정", password: PASSWORD } })).status()).toBe(403);
+    expect((await request.put(`${API_URL}/v1/customers/${customerId}`, { headers: sessionHeadersFor(`${API_URL}/v1/customers/${customerId}`, reader.headers), data: { name: "관리 권한 수정" } })).status()).toBe(200);
+    expect((await request.post(`${API_URL}/v1/organization/members`, { headers: sessionHeadersFor(`${API_URL}/v1/organization/members`, reader.headers), data: { email: `blocked-${randomUUID()}@fe-e2e.local`, name: "차단 계정", password: PASSWORD } })).status()).toBe(403);
     await updateScopes(request, data, reader.user_account_id, ["read"]);
     expect((await current(request, reader.headers)).scopes).toEqual(["read"]);
-    expect((await request.put(`${API_URL}/v1/customers/${customerId}`, { headers: reader.headers, data: { name: "옛 세션 관리 재사용" } })).status()).toBe(403);
+    expect((await request.put(`${API_URL}/v1/customers/${customerId}`, { headers: sessionHeadersFor(`${API_URL}/v1/customers/${customerId}`, reader.headers), data: { name: "옛 세션 관리 재사용" } })).status()).toBe(403);
     result("user-api-result", { passed: true, new_user_default: ["read"], read_write_status: 403, ingest_customer_and_events: true, ingest_read_status: 403, same_session_permission_refresh: true, owner_protected: true, self_elevation_status: 403 });
   } catch (error) { throw safeFailure(error, secrets); }
 });
@@ -191,15 +192,15 @@ test("초대 권한과 소속별 권한을 보존하고 보관 복원과 플랫�
   try {
     const first = await fixture(request, secrets); const second = await fixture(request, secrets);
     const reader = await member(request, first, secrets, "multi");
-    expect((await request.put(`${API_URL}/v1/organization/members/${reader.user_account_id}/scopes`, { headers: second.headers, data: { scopes: ["admin"] } })).status()).toBe(404);
-    expect((await request.post(`${API_URL}/v1/organizations/${second.organizationId}/members`, { headers: first.operatorHeaders, data: { user_account_id: reader.user_account_id, scopes: ["admin"] } })).status()).toBe(201);
-    expect((await request.put(`${API_URL}/v1/sessions/current/organization`, { headers: reader.headers, data: { organization_id: second.organizationId } })).status()).toBe(200);
+    expect((await request.put(`${API_URL}/v1/organization/members/${reader.user_account_id}/scopes`, { headers: sessionHeadersFor(`${API_URL}/v1/organization/members/${reader.user_account_id}/scopes`, second.headers), data: { scopes: ["admin"] } })).status()).toBe(404);
+    expect((await request.post(`${API_URL}/v1/organizations/${second.organizationId}/members`, { headers: sessionHeadersFor(`${API_URL}/v1/organizations/${second.organizationId}/members`, first.operatorHeaders), data: { user_account_id: reader.user_account_id, scopes: ["admin"] } })).status()).toBe(201);
+    expect((await request.put(`${API_URL}/v1/sessions/current/organization`, { headers: sessionHeadersFor(`${API_URL}/v1/sessions/current/organization`, reader.headers), data: { organization_id: second.organizationId } })).status()).toBe(200);
     expect((await current(request, reader.headers)).scopes).toContain("admin");
-    expect((await request.post(`${API_URL}/v1/customers`, { headers: reader.headers, data: { name: "다른 도입사 관리", external_id: randomUUID() } })).status()).toBe(201);
-    expect((await request.put(`${API_URL}/v1/sessions/current/organization`, { headers: reader.headers, data: { organization_id: first.organizationId } })).status()).toBe(200);
+    expect((await request.post(`${API_URL}/v1/customers`, { headers: sessionHeadersFor(`${API_URL}/v1/customers`, reader.headers), data: { name: "다른 도입사 관리", external_id: randomUUID() } })).status()).toBe(201);
+    expect((await request.put(`${API_URL}/v1/sessions/current/organization`, { headers: sessionHeadersFor(`${API_URL}/v1/sessions/current/organization`, reader.headers), data: { organization_id: first.organizationId } })).status()).toBe(200);
     expect((await current(request, reader.headers)).scopes).toEqual(["read"]);
     const invitedEmail = `permissions-invite-${randomUUID()}@fe-e2e.local`;
-    const invitation = await request.post(`${API_URL}/v1/organization/invitations`, { headers: first.headers, data: { email: invitedEmail } });
+    const invitation = await request.post(`${API_URL}/v1/organization/invitations`, { headers: sessionHeadersFor(`${API_URL}/v1/organization/invitations`, first.headers), data: { email: invitedEmail } });
     expect(invitation.status()).toBe(201);
     const issued = await invitation.json(); secrets.add(issued.token);
     const preview = await request.get(`${API_URL}/v1/organization-invitations/${issued.token}`);
@@ -208,13 +209,13 @@ test("초대 권한과 소속별 권한을 보존하고 보관 복원과 플랫�
     expect(accepted.status()).toBe(201);
     const invited = await login(request, invitedEmail, secrets);
     expect(invited.scopes).toEqual(["read"]); expect(invited.organization_role).toBe("member");
-    expect((await request.delete(`${API_URL}/v1/organization/members/${reader.user_account_id}`, { headers: first.headers })).status()).toBe(204);
-    const restoreInvitation = await request.post(`${API_URL}/v1/organization/invitations`, { headers: first.headers, data: { email: reader.email, scopes: ["read"] } });
+    expect((await request.delete(`${API_URL}/v1/organization/members/${reader.user_account_id}`, { headers: sessionHeadersFor(`${API_URL}/v1/organization/members/${reader.user_account_id}`, first.headers)})).status()).toBe(204);
+    const restoreInvitation = await request.post(`${API_URL}/v1/organization/invitations`, { headers: sessionHeadersFor(`${API_URL}/v1/organization/invitations`, first.headers), data: { email: reader.email, scopes: ["read"] } });
     expect(restoreInvitation.status()).toBe(201);
     const restore = await restoreInvitation.json(); secrets.add(restore.token);
     const restoreSession = await login(request, reader.email, secrets);
-    expect((await request.post(`${API_URL}/v1/organization-invitations/${restore.token}/accept`, { headers: authorization(restoreSession.token), data: {} })).status()).toBe(201);
-    expect((await request.put(`${API_URL}/v1/sessions/current/organization`, { headers: authorization(restoreSession.token), data: { organization_id: first.organizationId } })).status()).toBe(200);
+    expect((await request.post(`${API_URL}/v1/organization-invitations/${restore.token}/accept`, { headers: sessionHeadersFor(`${API_URL}/v1/organization-invitations/${restore.token}/accept`, authorization(restoreSession.token)), data: {} })).status()).toBe(201);
+    expect((await request.put(`${API_URL}/v1/sessions/current/organization`, { headers: sessionHeadersFor(`${API_URL}/v1/sessions/current/organization`, authorization(restoreSession.token)), data: { organization_id: first.organizationId } })).status()).toBe(200);
     expect((await current(request, authorization(restoreSession.token))).scopes).toEqual(["read"]);
     result("invitation-membership-result", { passed: true, multi_organization_permissions_differ: true, invitation_body_did_not_elevate: true, archived_membership_restored_read_only: true, cross_organization_status: 404 });
   } catch (error) { throw safeFailure(error, secrets); }
@@ -231,29 +232,29 @@ test("같은 API 키의 권한만 바꾸고 읽기와 수집, 키 관리 금지�
     const before = fingerprint();
     expect((await request.get(`${API_URL}/v1/api-keys`, { headers })).status()).toBe(403);
     expect((await request.put(`${API_URL}/v1/api-keys/${issued.id}/scopes`, { headers, data: { scopes: ["read"] } })).status()).toBe(403);
-    expect((await request.put(`${API_URL}/v1/api-keys/${issued.id}/scopes`, { headers: reader.headers, data: { scopes: ["admin"] } })).status()).toBe(403);
-    expect((await request.put(`${API_URL}/v1/api-keys/${issued.id}/scopes`, { headers: other.headers, data: { scopes: ["read"] } })).status()).toBe(404);
-    const updated = await request.put(`${API_URL}/v1/api-keys/${issued.id}/scopes`, { headers: data.headers, data: { scopes: ["read", "read"] } });
+    expect((await request.put(`${API_URL}/v1/api-keys/${issued.id}/scopes`, { headers: sessionHeadersFor(`${API_URL}/v1/api-keys/${issued.id}/scopes`, reader.headers), data: { scopes: ["admin"] } })).status()).toBe(403);
+    expect((await request.put(`${API_URL}/v1/api-keys/${issued.id}/scopes`, { headers: sessionHeadersFor(`${API_URL}/v1/api-keys/${issued.id}/scopes`, other.headers), data: { scopes: ["read"] } })).status()).toBe(404);
+    const updated = await request.put(`${API_URL}/v1/api-keys/${issued.id}/scopes`, { headers: sessionHeadersFor(`${API_URL}/v1/api-keys/${issued.id}/scopes`, data.headers), data: { scopes: ["read", "read"] } });
     expect(updated.status()).toBe(200); expect((await updated.json()).scopes).toEqual(["read"]);
     expect((await updated.text()).includes(issued.secret)).toBe(false); expect(fingerprint()).toBe(before);
     expect((await request.get(`${API_URL}/v1/customers`, { headers })).status()).toBe(200);
     expect((await request.post(`${API_URL}/v1/customers`, { headers, data: { name: "읽기 키 등록 시도" } })).status()).toBe(403);
-    expect((await request.put(`${API_URL}/v1/api-keys/${issued.id}/scopes`, { headers: data.headers, data: { scopes: ["ingest"] } })).status()).toBe(200);
+    expect((await request.put(`${API_URL}/v1/api-keys/${issued.id}/scopes`, { headers: sessionHeadersFor(`${API_URL}/v1/api-keys/${issued.id}/scopes`, data.headers), data: { scopes: ["ingest"] } })).status()).toBe(200);
     const created = await request.post(`${API_URL}/v1/customers`, { headers, data: { name: "수집 키 고객", external_id: randomUUID() } });
     expect(created.status()).toBe(201);
     const customerId = uuid((await created.json()).id);
     expect((await request.post(`${API_URL}/v1/event-batches`, { headers, data: { events: [{ transaction_id: randomUUID(), customer_id: customerId, type: data.metricCode, timestamp: new Date().toISOString(), properties: { units: 1 } }] } })).status()).toBe(200);
     expect((await request.get(`${API_URL}/v1/customers`, { headers })).status()).toBe(403);
-    expect((await request.put(`${API_URL}/v1/api-keys/${issued.id}/scopes`, { headers: data.headers, data: { scopes: ["read", "ingest"] } })).status()).toBe(200);
+    expect((await request.put(`${API_URL}/v1/api-keys/${issued.id}/scopes`, { headers: sessionHeadersFor(`${API_URL}/v1/api-keys/${issued.id}/scopes`, data.headers), data: { scopes: ["read", "ingest"] } })).status()).toBe(200);
     expect((await request.get(`${API_URL}/v1/customers`, { headers })).status()).toBe(200);
     expect((await request.delete(`${API_URL}/v1/customers/${customerId}`, { headers })).status()).toBe(403);
-    for (const scopes of [[], ["owner"], ["read", null]]) expect((await request.put(`${API_URL}/v1/api-keys/${issued.id}/scopes`, { headers: data.headers, data: { scopes } })).status()).toBe(400);
-    expect((await request.delete(`${API_URL}/v1/api-keys/${issued.id}`, { headers: data.headers })).status()).toBe(204);
-    expect((await request.put(`${API_URL}/v1/api-keys/${issued.id}/scopes`, { headers: data.headers, data: { scopes: ["admin"] } })).status()).toBe(409);
+    for (const scopes of [[], ["owner"], ["read", null]]) expect((await request.put(`${API_URL}/v1/api-keys/${issued.id}/scopes`, { headers: sessionHeadersFor(`${API_URL}/v1/api-keys/${issued.id}/scopes`, data.headers), data: { scopes } })).status()).toBe(400);
+    expect((await request.delete(`${API_URL}/v1/api-keys/${issued.id}`, { headers: sessionHeadersFor(`${API_URL}/v1/api-keys/${issued.id}`, data.headers)})).status()).toBe(204);
+    expect((await request.put(`${API_URL}/v1/api-keys/${issued.id}/scopes`, { headers: sessionHeadersFor(`${API_URL}/v1/api-keys/${issued.id}/scopes`, data.headers), data: { scopes: ["admin"] } })).status()).toBe(409);
     const expired = await key(request, data, secrets, ["read"], "만료 권한 검증");
     sql(`UPDATE api_key SET created_at=clock_timestamp()-interval '2 days',expires_at=clock_timestamp()-interval '1 day' WHERE id='${uuid(expired.id)}';`);
-    expect((await request.put(`${API_URL}/v1/api-keys/${expired.id}/scopes`, { headers: data.headers, data: { scopes: ["admin"] } })).status()).toBe(409);
-    const audit = await request.get(`${API_URL}/v1/audit-logs?size=100&action=api_key_scopes_updated`, { headers: data.headers });
+    expect((await request.put(`${API_URL}/v1/api-keys/${expired.id}/scopes`, { headers: sessionHeadersFor(`${API_URL}/v1/api-keys/${expired.id}/scopes`, data.headers), data: { scopes: ["admin"] } })).status()).toBe(409);
+    const audit = await request.get(`${API_URL}/v1/audit-logs?size=100&action=api_key_scopes_updated`, { headers: sessionHeadersFor(`${API_URL}/v1/audit-logs?size=100&action=api_key_scopes_updated`, data.headers)});
     expect(audit.status()).toBe(200); const auditText = await audit.text();
     for (const secret of secrets) expect(auditText.includes(secret)).toBe(false);
     expect(Number(sql(`SELECT count(*) FROM audit_log WHERE organization_id='${data.organizationId}' AND action='api_key_scopes_updated' AND actor_type='user_account';`))).toBeGreaterThanOrEqual(3);
@@ -280,7 +281,7 @@ test("대표관리자가 화면에서 사용자와 키 권한을 정하고 조�
     await dialog.getByLabel(/^사용자 이메일/).fill(email); await dialog.getByLabel(/^이름/).fill("화면 조회 사용자"); await dialog.getByLabel(/^초기 비밀번호/).fill(PASSWORD);
     await dialog.getByRole("button", { name: "사용자 계정 생성", exact: true }).click();
     await expect(dialog).toHaveCount(0);
-    const list = await request.get(`${API_URL}/v1/organization/members`, { headers: data.headers });
+    const list = await request.get(`${API_URL}/v1/organization/members`, { headers: sessionHeadersFor(`${API_URL}/v1/organization/members`, data.headers)});
     const user = (await list.json()).members.find((value: Member) => value.email === email) as Member;
     expect(user.scopes).toEqual(["read"]);
     const session = await login(request, email, secrets);
@@ -343,7 +344,7 @@ test("열린 관리 폼도 같은 세션의 권한 축소와 조작된 Server Ac
     await updateScopes(request, data, admin.user_account_id, ["read"]);
     await dialog.getByRole("button", { name: "고객 저장", exact: true }).click();
     await expect(dialog.getByText("이 작업을 수행할 권한이 없습니다. 대표관리자에게 권한을 요청하세요.", { exact: true })).toBeVisible();
-    const customer = await request.get(`${API_URL}/v1/customers/${data.customerId}`, { headers: data.headers });
+    const customer = await request.get(`${API_URL}/v1/customers/${data.customerId}`, { headers: sessionHeadersFor(`${API_URL}/v1/customers/${data.customerId}`, data.headers)});
     expect(customer.status()).toBe(200); expect((await customer.json()).name).toBe(data.customerName);
     await capture(view.page, "stale-form-permission-denied-desktop");
     await view.page.reload(); await expect(view.page.getByRole("button", { name: "고객 등록", exact: true })).toHaveCount(0);
@@ -382,15 +383,15 @@ test("수집 전용과 플랫폼 운영자의 조회 소속이 화면과 실제 
     await dialog.getByRole("combobox").selectOption(data.organizationId);
     await capture(platform.page, "platform-attach-read-default-desktop");
     await dialog.getByRole("button", { name: "소속 연결", exact: true }).click();
-    await expect.poll(async () => (await (await request.get(`${API_URL}/v1/organization/members`, { headers: data.headers })).json()).members.some((item: Member) => item.user_account_id === operatorId)).toBe(true);
-    const switched = await request.put(`${API_URL}/v1/sessions/current/organization`, { headers: authorization(operator.token), data: { organization_id: data.organizationId } });
+    await expect.poll(async () => (await (await request.get(`${API_URL}/v1/organization/members`, { headers: sessionHeadersFor(`${API_URL}/v1/organization/members`, data.headers)})).json()).members.some((item: Member) => item.user_account_id === operatorId)).toBe(true);
+    const switched = await request.put(`${API_URL}/v1/sessions/current/organization`, { headers: sessionHeadersFor(`${API_URL}/v1/sessions/current/organization`, authorization(operator.token)), data: { organization_id: data.organizationId } });
     expect(switched.status()).toBe(200); expect((await switched.json()).scopes).toEqual(["read"]);
     await platform.page.goto("/customers"); await expect(platform.page.getByRole("button", { name: "고객 등록", exact: true })).toHaveCount(0);
     await expect(platform.page.locator(".workspace-scope")).toHaveText("조회 전용");
     await expect(platform.page.getByRole("button", { name: "권한 새로 조회", exact: true })).toBeVisible();
     await platform.page.goto("/admin/users"); await expect(platform.page.getByRole("heading", { name: "사용자와 플랫폼 권한", exact: true })).toBeVisible();
-    expect((await request.get(`${API_URL}/v1/organizations`, { headers: authorization(operator.token) })).status()).toBe(200);
-    expect((await request.post(`${API_URL}/v1/customers`, { headers: authorization(operator.token), data: { name: "플랫폼 역할 우회 시도" } })).status()).toBe(403);
+    expect((await request.get(`${API_URL}/v1/organizations`, { headers: sessionHeadersFor(`${API_URL}/v1/organizations`, authorization(operator.token))})).status()).toBe(200);
+    expect((await request.post(`${API_URL}/v1/customers`, { headers: sessionHeadersFor(`${API_URL}/v1/customers`, authorization(operator.token)), data: { name: "플랫폼 역할 우회 시도" } })).status()).toBe(403);
     result("ingest-operator-result", { passed: true, ingest_session_and_logout_available: true, ingest_no_login_redirect_loop: true, platform_attach_defaults_read: true, operator_platform_read_allowed: true, operator_tenant_write_denied: true, mobile_width: 390 });
   } catch (error) { throw safeFailure(error, secrets); }
   finally { await Promise.all(contexts.map(context => context.close())); }

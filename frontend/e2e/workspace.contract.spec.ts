@@ -4,6 +4,7 @@ const FIXTURE_URL = "http://127.0.0.1:38150";
 const INVOICE_ID = "11111111-1111-4111-8111-111111111111";
 const ENDPOINT_ID = "33333333-3333-4333-8333-333333333333";
 type FixtureState = {
+  requests: { path: string; method: string; organizationId: string | null; environment: string | null }[];
   kind: string;
   customerOptionQueries: string[];
   cancellationCalls: { idempotencyKey: string; amount: number; reason: string }[];
@@ -45,6 +46,195 @@ async function closeDialog(dialog: Locator) {
 test.beforeEach(async ({ context, request }) => {
   expect((await request.post(`${FIXTURE_URL}/__control`, { data: { reset: true } })).ok()).toBe(true);
   await context.addCookies([{ name: "me_session", value: "workspace-contract-session", url: "http://localhost:33150" }]);
+});
+
+test.afterEach(async ({ request }, testInfo) => {
+  await testInfo.attach("backend-state", { body: JSON.stringify(await readState(request), null, 2), contentType: "application/json" });
+});
+
+test("environment GET canonicalization preserves scope, filters and browser fragment", async ({ page }) => {
+  for (const suffix of ["", "&environment=", "&environment=legacy"]) {
+    await page.goto(`/customers?month=2026-10&q=retained${suffix}#details`);
+    await expect(page).toHaveURL(url => url.searchParams.get("environment") === "test" && url.searchParams.get("month") === "2026-10" && url.searchParams.get("q") === "retained" && url.hash === "#details");
+  }
+});
+
+test("whitespace live form environment never reaches the backend mutation", async ({ page, request }) => {
+  await page.goto("/integrations?environment=live");
+  await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^키 이름/).fill("strict environment");
+  await dialog.locator('input[name="environment"]').evaluate(input => { (input as HTMLInputElement).value = " live "; });
+  await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  await expect(dialog.getByRole("alert")).toContainText("열어 둔 화면의 업무 환경이 바뀌었습니다.");
+  expect((await readState(request)).keyCalls).toHaveLength(0);
+});
+
+test("every missing, duplicate, old or mismatching business form scope has mutation zero", async ({ page, request }) => {
+  for (const value of [null, "", "legacy", "live", " test ", " live ", "duplicate"]) {
+    await page.goto("/integrations?environment=test");
+    await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel(/^키 이름/).fill("blocked scope");
+    await dialog.locator('input[name="environment"]').evaluate((input, value) => {
+      if (value === null) input.remove();
+      else if (value === "duplicate") { const clone = input.cloneNode() as HTMLInputElement; clone.value = "live"; input.parentElement!.append(clone); }
+      else (input as HTMLInputElement).value = value;
+    }, value);
+    await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
+    await expect(dialog.getByRole("alert")).toContainText("열어 둔 화면의 업무 환경이 바뀌었습니다.");
+    expect((await readState(request)).keyCalls).toHaveLength(0);
+  }
+});
+
+test("replayed URL scopes, public paths, forged headers and removed operations have mutation zero", async ({ page, request }) => {
+  await page.goto("/integrations?environment=test");
+  await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  await page.getByRole("dialog").getByLabel(/^키 이름/).fill("captured form");
+  let captured: { headers: Record<string, string>; body: Buffer } | undefined;
+  await page.route("**/integrations?**", async route => {
+    if (route.request().method() !== "POST") return route.continue();
+    captured = { headers: await route.request().allHeaders(), body: route.request().postDataBuffer()! };
+    await route.fulfill({ status: 400, body: "captured without mutation" });
+  });
+  await page.getByRole("dialog").getByRole("button", { name: "API 키 발급", exact: true }).click();
+  await expect.poll(() => Boolean(captured)).toBe(true);
+  for (const path of ["/integrations", "/integrations?environment=", "/integrations?environment=legacy", "/integrations?environment=live", "/integrations?environment=test&organization_id=other-org", "/invoice-links", "/login"]) {
+    const response = await page.request.post(path, { headers: { ...captured!.headers, "x-meterengine-environment": "test", "x-meterengine-organization-id": "55555555-5555-4555-8555-555555555555", "x-meterengine-current-path": "/integrations?environment=test" }, data: captured!.body, maxRedirects: 0 });
+    expect([301, 302, 307, 308]).not.toContain(response.status());
+    expect((await readState(request)).keyCalls).toHaveLength(0);
+  }
+  const removedOperation = Buffer.from(captured!.body.toString().replace('createApiKey', 'updatePaymentSetting'));
+  await page.request.post("/integrations?environment=test", { headers: captured!.headers, data: removedOperation });
+  const state = await readState(request);
+  expect(state.keyCalls).toHaveLength(0);
+  expect(state.requests.filter(call => call.method !== "GET" && call.path.startsWith("/v1/"))).toHaveLength(0);
+});
+
+test("two tabs keep exact independent test/live mutations and stale organization is rejected", async ({ page, context, request }) => {
+  const other = await context.newPage();
+  await page.goto("/integrations?environment=test");
+  await other.goto("/integrations?environment=live");
+  for (const [tab, environment] of [[page, "test"], [other, "live"]] as const) {
+    await tab.getByRole("button", { name: "API 키 발급", exact: true }).click();
+    const dialog = tab.getByRole("dialog");
+    await dialog.getByLabel(/^키 이름/).fill(`${environment} isolated`);
+  }
+  await other.getByRole("dialog").getByRole("button", { name: "API 키 발급", exact: true }).click();
+  await expect(other.getByRole("dialog").locator(".secret-result code")).toBeVisible();
+  await other.goto("/integrations?environment=test");
+  await page.getByRole("dialog").getByRole("button", { name: "API 키 발급", exact: true }).click();
+  await expect(page.getByRole("dialog").locator(".secret-result code")).toBeVisible();
+  const sent = (await readState(request)).requests.filter(call => call.path === "/v1/api-keys" && call.method === "POST");
+  expect(sent).toEqual([
+    { path: "/v1/api-keys", method: "POST", organizationId: "55555555-5555-4555-8555-555555555555", environment: "live" },
+    { path: "/v1/api-keys", method: "POST", organizationId: "55555555-5555-4555-8555-555555555555", environment: "test" },
+  ]);
+  await other.goto("/integrations?environment=test");
+  await other.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  await other.getByRole("dialog").getByLabel(/^키 이름/).fill("stale org");
+  await control(request, "organization-switch-after-session");
+  await request.get(`${FIXTURE_URL}/v1/sessions/current`, { headers: { Authorization: "Bearer workspace-contract-session" } });
+  await other.getByRole("dialog").getByRole("button", { name: "API 키 발급", exact: true }).click();
+  await expect(other.getByRole("dialog").getByRole("alert")).toContainText("열어 둔 화면의 도입사가 바뀌었습니다.");
+  expect((await readState(request)).keyCalls).toHaveLength(2);
+  await other.close();
+});
+
+for (const width of [1280, 390]) test(`test/live selector and detail navigation at ${width}px`, async ({ page, request }, testInfo) => {
+  await page.setViewportSize({ width, height: 900 });
+  for (const initial of ["test", "live"]) {
+    await page.goto(`/payments/${INVOICE_ID}?environment=${initial}&month=2026-10&q=old&customer_id=old&sort=amount&page=2`);
+    const selector = page.getByRole("combobox", { name: "업무 환경", exact: true });
+    await selector.focus(); await page.keyboard.press("ArrowDown"); await page.keyboard.press("Escape");
+    expect(new URL(page.url()).searchParams.get("environment")).toBe(initial);
+    await selector.click();
+    await expect(page.locator(".ant-select-item-option")).toHaveCount(2);
+    const label = initial === "test" ? "실제 환경" : "테스트 환경";
+    await page.locator(".ant-select-item-option", { hasText: label }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "취소", exact: true }).click();
+    expect(new URL(page.url()).pathname).toBe(`/payments/${INVOICE_ID}`);
+    await selector.click(); await page.locator(".ant-select-item-option", { hasText: label }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "전환", exact: true }).click();
+    await expect(page).toHaveURL(url => url.pathname === "/payments" && url.searchParams.get("environment") === (initial === "test" ? "live" : "test"));
+    const url = new URL(page.url());
+    expect(url.searchParams.get("month")).toBe("2026-10");
+    expect(url.searchParams.get("organization_id")).toBe("55555555-5555-4555-8555-555555555555");
+    for (const key of ["q", "customer_id", "sort", "page"]) expect(url.searchParams.has(key)).toBe(false);
+    await expect(page.getByText("기존 데이터", { exact: false })).toHaveCount(0);
+  }
+  await page.goto("/integrations?environment=test");
+  await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  await expect(page.getByRole("dialog").getByLabel(/^기존 키 구분/)).toHaveCount(0);
+  await expect(page.getByRole("dialog").locator('input[name="mode"]')).toHaveValue("test");
+  await page.screenshot({ path: testInfo.outputPath(`integrations-${width}.png`), fullPage: true });
+  await page.goto("/settings?environment=live");
+  await expect(page.getByRole("button", { name: "결제 모드 변경", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "토스 키 저장", exact: true }).click();
+  await expect(page.getByRole("dialog").getByLabel("결제 모드", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("dialog").locator('input[name="mode"]')).toHaveValue("live");
+  await page.screenshot({ path: testInfo.outputPath(`settings-${width}.png`), fullPage: true });
+  expect((await readState(request)).requests.filter(call => call.method !== "GET")).toHaveLength(0);
+});
+
+test("query options, month, filters and CSV retain organization and environment without old mode", async ({ page, request }, testInfo) => {
+  await control(request, "environment-scope");
+  for (const environment of ["test", "live"]) {
+    await page.goto(`/invoices?environment=${environment}&month=2026-10&mode=live`);
+    const customer = page.getByRole("combobox", { name: "고객", exact: true });
+    await customer.click(); await customer.pressSequentially("find customer");
+    await expect(page.locator(".ant-select-item-option").filter({ hasText: `${environment} customer` })).toBeVisible();
+    await page.keyboard.press("Escape");
+    const metric = page.getByRole("combobox", { name: "과금 미터", exact: true });
+    await metric.click(); await metric.pressSequentially("find metric");
+    await expect(page.locator(".ant-select-item-option").filter({ hasText: `${environment} metric` })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await page.goto(`/customers?environment=${environment}&month=2026-09&q=retained&mode=live`);
+    const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "조건 전체 CSV 내보내기", exact: true }).click()]);
+    await download.saveAs(testInfo.outputPath(`customers-${environment}.csv`));
+  }
+  const state = await readState(request);
+  const scoped = state.requests.filter(call => !call.path.startsWith("/v1/sessions"));
+  expect(scoped.length).toBeGreaterThan(0);
+  for (const call of scoped) {
+    expect(call.organizationId).toBe("55555555-5555-4555-8555-555555555555");
+    expect(["test", "live"]).toContain(call.environment);
+    expect(new URL(call.path, FIXTURE_URL).searchParams.has("mode")).toBe(false);
+  }
+  for (const environment of ["test", "live"]) {
+    for (const path of ["/v1/customers/options", "/v1/billable-metrics/options", "/v1/customers/export"]) expect(scoped.some(call => call.path.startsWith(path) && call.environment === environment)).toBe(true);
+    const exported = scoped.find(call => call.path.startsWith("/v1/customers/export") && call.environment === environment)!;
+    expect(new URL(exported.path, FIXTURE_URL).searchParams.get("q")).toBe("retained");
+  }
+});
+
+test("public invoice tokens retain their fragment-only URL and never acquire console scope", async ({ page, request }, testInfo) => {
+  await page.context().clearCookies();
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const kind of ["test", "live", "migrated"]) {
+      await page.goto(`/invoice-links#me_invoice_${kind.padEnd(32, "0")}`);
+      await expect(page.getByText(`PUBLIC-${kind}`, { exact: true })).toBeVisible();
+      await expect(page).toHaveURL(url => url.pathname === "/invoice-links" && url.search === "" && url.hash === "");
+      await page.getByRole("link", { name: "본문으로 이동", exact: true }).focus();
+      await page.keyboard.press("Enter");
+      await expect(page).toHaveURL(url => url.pathname === "/invoice-links" && url.search === "" && url.hash === "#main-content");
+      await expect(page.getByRole("combobox", { name: "업무 환경", exact: true })).toHaveCount(0);
+      await page.screenshot({ path: testInfo.outputPath(`public-${kind}-${width}.png`), fullPage: true });
+    }
+  }
+  const calls = (await readState(request)).requests;
+  expect(calls).toHaveLength(6);
+  for (const call of calls) expect(call).toEqual({ path: "/v1/public/invoice-links/lookup", method: "POST", organizationId: null, environment: null });
+});
+
+test("invalid or duplicate GET scopes fail before backend reads while live GET stays live", async ({ page, request }) => {
+  for (const query of ["environment=unknown", "environment=%20test%20", "environment=test&environment=live", "environment=test&organization_id=first&organization_id=second"]) {
+    expect((await page.goto(`/customers?${query}`))?.status()).toBe(400);
+    expect((await readState(request)).requests).toHaveLength(0);
+  }
+  await page.goto("/customers?environment=live&month=2026-10#details");
+  await expect(page).toHaveURL(url => url.searchParams.get("environment") === "live" && url.searchParams.get("month") === "2026-10" && url.hash === "#details");
 });
 
 test("격리 계약: 6초 걸린 부분 취소가 성공하고 한 번만 전송된다", async ({ page, request }) => {
@@ -163,7 +353,7 @@ test("격리 계약: 업무 환경이 바뀐 API 키 발급은 공용 문구로 
   await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel(/^키 이름/).fill("바뀐 환경");
-  await dialog.locator('input[name="environment"]').evaluate(input => { (input as HTMLInputElement).value = "test"; });
+  await dialog.locator('input[name="environment"]').evaluate(input => { (input as HTMLInputElement).value = "live"; });
   await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
   await expect(dialog.getByRole("alert")).toContainText("열어 둔 화면의 업무 환경이 바뀌었습니다.");
   expect((await readState(request)).keyCalls).toHaveLength(0);
@@ -177,13 +367,13 @@ test("격리 계약: 업무 환경 전환은 목적지를 밝힌 확인 창을 �
   await environment.focus();
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Escape");
-  expect(new URL(page.url()).searchParams.get("environment")).toBeNull();
+  expect(new URL(page.url()).searchParams.get("environment")).toBe("test");
   await environment.click();
   await page.locator(".ant-select-item-option", { hasText: "실제 환경" }).click();
   const confirm = page.getByRole("dialog");
   await expect(confirm).toContainText("실제 환경으로 전환할까요?");
   await confirm.getByRole("button", { name: "취소", exact: true }).click();
-  expect(new URL(page.url()).searchParams.get("environment")).toBeNull();
+  expect(new URL(page.url()).searchParams.get("environment")).toBe("test");
   await environment.click();
   await page.locator(".ant-select-item-option", { hasText: "실제 환경" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "전환", exact: true }).click();
@@ -304,7 +494,7 @@ test("격리 계약: 확정된 월의 0원 고객을 구분하고 검색 페이�
   const monthDestination = new URL(monthHref!, "http://localhost:33150");
   expect(monthDestination.searchParams.has("customer_id")).toBe(false);
   expect(monthDestination.searchParams.get("organization_id")).toBe("55555555-5555-4555-8555-555555555555");
-  expect(monthDestination.searchParams.get("environment") ?? "legacy").toBe("legacy");
+  expect(monthDestination.searchParams.get("environment")).toBe("test");
   await expect(page.getByText(/^다른 고객의 확정 청구/)).toHaveCount(0);
   const destinationHref = await page.getByRole("link", { name: "인보이스 보기", exact: true }).getAttribute("href");
   expect(destinationHref).not.toBeNull();
@@ -350,7 +540,9 @@ test("the payments list can show only the month's failed payments and go back to
 test("changing the month on the payments list keeps the customer carried in from other screens", async ({ page, request }) => {
   await control(request, "failed-payments");
   await page.goto("/payments?month=2026-10&customer_id=77777777-7777-4777-8777-777777777777");
+  await expect(page).toHaveURL(url => url.searchParams.get("organization_id") === "55555555-5555-4555-8555-555555555555" && url.searchParams.get("environment") === "test");
   await page.getByLabel("청구 월", { exact: true }).fill("2026-09");
+  await expect(page.getByLabel("청구 월", { exact: true })).toHaveValue("2026-09");
   await page.getByRole("button", { name: "조회", exact: true }).click();
   await expect(page).toHaveURL(url => url.searchParams.get("month") === "2026-09" && url.searchParams.get("customer_id") === "77777777-7777-4777-8777-777777777777");
 });

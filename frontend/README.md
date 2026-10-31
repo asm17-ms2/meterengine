@@ -69,7 +69,7 @@ pnpm build
 
 도입사와 표시 이름은 로그인 세션에서 읽는다. 기존 `METERENGINE_ORGANIZATION_ID`, `METERENGINE_ORGANIZATION_NAME`은 사용하지 않는다.
 
-상단 업무 환경은 URL의 `environment=test|live`와 API 환경 헤더로 유지한다. 767px 이하에서는 헤더에 업무 환경만 두고 시연 안내, 권한 범위와 새로 조회, 로그아웃은 메뉴 서랍에 둔다. 기존 데이터는 별도 메뉴 범위에 보존하며 새 환경에 복사하지 않는다. 시연 안내는 화면 설명만 바꾼다.
+상단 업무 환경은 URL의 `environment=test|live`와 API 환경 헤더로 유지한다. 767px 이하에서는 헤더에 업무 환경만 두고 시연 안내, 권한 범위와 새로 조회, 로그아웃은 메뉴 서랍에 둔다. 환경이 없거나 `legacy`인 업무 GET 주소는 `test`로 이동한다. 업무 변경은 원래 URL과 폼의 환경이 일치해야 한다. 시연 안내는 화면 설명만 바꾼다.
 
 ## 컨테이너 이미지
 
@@ -176,7 +176,7 @@ docker run -p 3000:3000 \
 | `/integrations`, `/integrations/{id}` | API 키 발급과 교체, 권한 변경, 폐기, 웹훅 등록과 발송 이력, 마지막 시도가 실패한 수신 주소 표시, 시험 통보와 실패 재전송 |
 | `/members` | 사용자 관리 (계정 직접 생성, 초대 링크, 업무 권한과 역할 변경, 소속 보관, 초대 이력) |
 | `/audit` | 감사 기록 (도입사의 변경 기록과 API 요청 기록 조회) |
-| `/settings` | 환경별 공급자와 토스 키, 기존 데이터의 결제 모드 설정 |
+| `/settings` | 환경별 공급자와 토스 키, 현재 환경의 결제 모드 조회 |
 | `/admin`, `/admin/organizations`, `/admin/users` | 전체 운영 현황, 가입 승인, 사용자 권한과 소속 연결 관리 |
 | `/admin/audit` | 운영자의 플랫폼 감사 기록 조회 |
 | `/payment-method-registrations/{token}` | 일회용 링크 확인과 동의, 토스 카드 인증, 등록 결과 확인 |

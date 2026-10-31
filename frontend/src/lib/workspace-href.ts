@@ -8,8 +8,11 @@ export function workspaceHref(path: string, source: string | URLSearchParams, op
   if (!WORKSPACE_PATHS.some(prefix => url.pathname === prefix || url.pathname.startsWith(`${prefix}/`))) return path;
   const organizationId = current.get("organization_id");
   if (organizationId && !url.searchParams.has("organization_id")) url.searchParams.set("organization_id", organizationId);
-  const environment = current.get("environment");
-  if (environment && ["legacy", "test", "live"].includes(environment) && !url.searchParams.has("environment")) url.searchParams.set("environment", environment);
+  const environment = url.searchParams.has("environment") ? url.searchParams.get("environment") : current.get("environment");
+  if (!url.searchParams.has("environment")) {
+    for (const value of current.getAll("environment")) url.searchParams.append("environment", value);
+  }
+  if (url.searchParams.getAll("environment").length <= 1) url.searchParams.set("environment", !environment || environment === "legacy" ? "test" : environment);
   if (options.inheritFilters === false) return `${url.pathname}${url.search}${url.hash}`;
   if (!MONTHLY_PATHS.some(prefix => url.pathname === prefix || url.pathname.startsWith(`${prefix}/`))) return `${url.pathname}${url.search}${url.hash}`;
   if (!current.has("month") && current.get("from")) {

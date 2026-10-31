@@ -3,6 +3,7 @@ import test from "node:test";
 import { canPerformWorkspaceOperation, hasScope, isAccessScope, scopeSummary, tenantRequestScope } from "../src/lib/auth/permissions.ts";
 
 test("missing permissions and unrecognized operations fail closed", () => {
+  assert.equal(canPerformWorkspaceOperation(["admin"], "owner", "updatePaymentSetting"), false);
   for (const scopes of [null, undefined, [], ["operator"], ["owner"]]) {
     for (const scope of ["read", "ingest", "admin"]) assert.equal(hasScope(scopes, scope), false);
     assert.equal(canPerformWorkspaceOperation(scopes, "owner", "createMember"), false);

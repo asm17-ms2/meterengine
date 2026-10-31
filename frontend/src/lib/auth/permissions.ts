@@ -27,7 +27,7 @@ const ADMIN_OPERATION_NAMES = [
   "restoreWebhookEndpoint", "createApiKey", "updateApiKeyScopes", "deleteApiKey", "createWebhookEndpoint",
   "deleteWebhookEndpoint", "updateWebhookEndpoint", "testWebhookEndpoint", "retryWebhookDelivery",
   "createPricePlan", "deletePricePlan", "createPriceRate", "deletePriceRate", "updateSupplier",
-  "updatePaymentSetting", "updateTossPaymentsCredential", "createPaymentMethodRegistration",
+  "updateTossPaymentsCredential", "createPaymentMethodRegistration",
   "createPaymentAttempt", "createPaymentCancellation", "finalizeInvoices",
 ] as const;
 export const WORKSPACE_OPERATIONS: readonly string[] = [...OWNER_OPERATION_NAMES, ...ADMIN_OPERATION_NAMES, "createCustomer"];

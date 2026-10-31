@@ -1,3 +1,4 @@
+import { sessionHeadersFor } from "./session-environment";
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { CONSENT_DOCUMENTS, CONSENT_VERSION } from "../src/lib/auth/consents";
@@ -76,13 +77,13 @@ test("자유 기간과 초 단위 경계, 실제 유형과 검색, 페이지와 
       secrets.add(token);
       const headers = { Authorization: `Bearer ${token}` };
       for (let index = 0; index < 25; index++) {
-        const filler = await request.post(`${API_URL}/v1/customers`, { headers, data: { name: `가 원격 조회 고객 ${String(index).padStart(2, "0")}`, external_id: `events-filler-${suffix}-${index}` } });
+        const filler = await request.post(`${API_URL}/v1/customers`, { headers: sessionHeadersFor(`${API_URL}/v1/customers`, headers), data: { name: `가 원격 조회 고객 ${String(index).padStart(2, "0")}`, external_id: `events-filler-${suffix}-${index}` } });
         expect(filler.status()).toBe(201);
       }
-      const customer = await request.post(`${API_URL}/v1/customers`, { headers, data: { name: "자유 기간 검증 고객", external_id: `events-customer-${suffix}` } });
+      const customer = await request.post(`${API_URL}/v1/customers`, { headers: sessionHeadersFor(`${API_URL}/v1/customers`, headers), data: { name: "자유 기간 검증 고객", external_id: `events-customer-${suffix}` } });
       expect(customer.status()).toBe(201);
       customerId = (await customer.json()).id;
-      const other = await request.post(`${API_URL}/v1/customers`, { headers, data: { name: "자유 기간 검증 고객", external_id: `other-customer-${suffix}` } });
+      const other = await request.post(`${API_URL}/v1/customers`, { headers: sessionHeadersFor(`${API_URL}/v1/customers`, headers), data: { name: "자유 기간 검증 고객", external_id: `other-customer-${suffix}` } });
       expect(other.status()).toBe(201);
       const otherCustomerId = (await other.json()).id;
       const event = (transactionId: string, timestamp: string, overrides: Record<string, unknown> = {}) => ({ transaction_id: transactionId, customer_id: customerId, type: eventType, properties: { segment: "target", enabled: true }, timestamp, ...overrides });
@@ -97,7 +98,7 @@ test("자유 기간과 초 단위 경계, 실제 유형과 검색, 페이지와 
         event(`${queryText}/거래/72/다른고객`, new Date(baseTime).toISOString(), { customer_id: otherCustomerId }),
         event(`outside-query-${suffix}`, new Date(baseTime).toISOString()),
       ];
-      const batch = await request.post(`${API_URL}/v1/event-batches`, { headers, data: { events } });
+      const batch = await request.post(`${API_URL}/v1/event-batches`, { headers: sessionHeadersFor(`${API_URL}/v1/event-batches`, headers), data: { events } });
       expect(batch.status()).toBe(200);
       expect((await batch.json()).results.map((result: { result: string }) => result.result)).toEqual(events.map(() => "stored"));
     });

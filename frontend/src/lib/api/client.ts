@@ -2,7 +2,8 @@ import "server-only";
 
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import { readEnvironment, type WorkspaceEnvironment } from "@/lib/environment";
+import { isWorkspaceEnvironment, type WorkspaceEnvironment } from "@/lib/environment";
+import { requiresWorkspaceEnvironment } from "@/lib/api/environment-scope";
 import { requestApi, type Result } from "@/lib/api/transport";
 import { readSessionToken, requireTenantSession } from "@/lib/auth/session";
 import { hasScope, tenantRequestScope } from "@/lib/auth/permissions";
@@ -15,8 +16,12 @@ async function tenantRequest<T>(path: string, options: { method?: "GET" | "POST"
   const session = await requireTenantSession();
   const scope = tenantRequestScope(path, options.method);
   if (!hasScope(session.scopes, scope)) return { ok: false, error: { status: 403, code: "permission_denied", message: scope === "read" ? "현재 도입사의 조회 권한이 없습니다. 대표관리자에게 권한을 요청하세요." : "이 작업을 수행할 권한이 없습니다. 대표관리자에게 권한을 요청하세요." } };
-  const environment = options.environment ?? readEnvironment((await headers()).get("x-meterengine-environment"));
-  const result = await requestApi<T>(path, { ...options, organizationId: (await headers()).get("x-meterengine-organization-id") || session.organization!.id, environment: environment === "legacy" ? undefined : environment, token: await readSessionToken() });
+  const requestHeaders = await headers();
+  const requestOrganization = requestHeaders.get("x-meterengine-organization-id");
+  const requestEnvironment = requestHeaders.get("x-meterengine-environment");
+  const isEnvironmentRequired = requiresWorkspaceEnvironment(path);
+  if (isEnvironmentRequired && (!isWorkspaceEnvironment(requestEnvironment) || (options.environment !== undefined && (!isWorkspaceEnvironment(options.environment) || options.environment !== requestEnvironment)))) return { ok: false, error: { status: 400, code: "validation_error", message: "업무 환경을 확인하세요." } };
+  const result = await requestApi<T>(path, { ...options, organizationId: requestOrganization || session.organization!.id, environment: isEnvironmentRequired && isWorkspaceEnvironment(requestEnvironment) ? requestEnvironment : undefined, token: await readSessionToken() });
   if (!result.ok && result.error.status === 401) redirect(expiredLoginHref((await headers()).get("x-meterengine-current-path")));
   if (!result.ok && result.error.code === "organization_not_active") redirect("/organizations");
   return result;

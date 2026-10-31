@@ -27,7 +27,7 @@ export function EnvironmentSwitch() {
         const query = new URLSearchParams();
         if (access?.organizationId) query.set("organization_id", access.organizationId);
         if (params.get("month")) query.set("month", params.get("month")!);
-        if (next !== "legacy") query.set("environment", next);
+        query.set("environment", next);
         const destination = environmentSwitchPath(pathname);
         router.push(`${destination}${query.size ? `?${query}` : ""}`);
       },

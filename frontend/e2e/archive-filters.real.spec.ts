@@ -1,3 +1,4 @@
+import { sessionHeadersFor } from "./session-environment";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { CONSENT_DOCUMENTS, CONSENT_VERSION } from "../src/lib/auth/consents";
@@ -118,11 +119,11 @@ test("보관을 지원하는 모든 도입사 목록에서 상태별 조회와 �
     secrets.add(token);
     const headers = { Authorization: `Bearer ${token}` };
     const post = async <T = { id: string }>(path: string, data: Record<string, unknown>): Promise<T> => {
-      const result = await request.post(`${API_URL}${path}`, { headers, data });
+      const result = await request.post(`${API_URL}${path}`, { headers: sessionHeadersFor(`${API_URL}${path}`, headers), data });
       expect(result.status()).toBe(201);
       return result.json();
     };
-    const remove = async (path: string) => expect((await request.delete(`${API_URL}${path}`, { headers })).status()).toBe(204);
+    const remove = async (path: string) => expect((await request.delete(`${API_URL}${path}`, { headers: sessionHeadersFor(`${API_URL}${path}`, headers) })).status()).toBe(204);
     let activeCustomerId = "";
 
     await test.step("각 관리 대상의 사용 중 항목과 보관 이력 준비", async () => {
@@ -131,7 +132,7 @@ test("보관을 지원하는 모든 도입사 목록에서 상태별 조회와 �
       await remove(`/v1/customers/${oldCustomer.id}`);
       for (const [code, name] of [[activeMetricCode, activeMetricName], [archivedMetricCode, archivedMetricName]]) {
         await post("/v1/billable-metrics", { code, name, event_type: code, aggregation: "sum", target_property: "units", dimension_properties: [] });
-        const event = await request.post(`${API_URL}/v1/events`, { headers, data: { transaction_id: randomUUID(), customer_id: activeCustomerId, type: code, properties: { units: 1 }, timestamp: new Date().toISOString() } });
+        const event = await request.post(`${API_URL}/v1/events`, { headers: sessionHeadersFor(`${API_URL}/v1/events`, headers), data: { transaction_id: randomUUID(), customer_id: activeCustomerId, type: code, properties: { units: 1 }, timestamp: new Date().toISOString() } });
         expect(event.status()).toBe(200);
       }
       await remove(`/v1/billable-metrics/${archivedMetricCode}`);
@@ -157,10 +158,12 @@ test("보관을 지원하는 모든 도입사 목록에서 상태별 조회와 �
         const credential = { client_key: `test_ck_archive_${suffix}`, secret_key: `test_sk_archive_${suffix}_${ending}` };
         secrets.add(credential.client_key);
         secrets.add(credential.secret_key);
-        expect((await request.put(`${API_URL}/v1/toss-payments-credentials/test`, { headers, data: credential })).status()).toBe(200);
+        expect((await request.put(`${API_URL}/v1/toss-payments-credentials/test`, { headers: sessionHeadersFor(`${API_URL}/v1/toss-payments-credentials/test`, headers), data: credential })).status()).toBe(200);
         if (ending === "old1") await remove("/v1/toss-payments-credentials/test");
       }
-      expect((await request.put(`${API_URL}/v1/payment-setting`, { headers, data: { mode: "test" } })).status()).toBe(200);
+      const paymentSetting = await request.get(`${API_URL}/v1/payment-setting`, { headers: sessionHeadersFor("/v1/payment-setting", headers) });
+      expect(paymentSetting.status()).toBe(200);
+      expect((await paymentSetting.json()).mode).toBe("test");
       for (let index = 0; index < 2; index++) {
         const registration = await post<{ token: string; customer_key: string }>(`/v1/customers/${activeCustomerId}/payment-method-registrations`, {});
         secrets.add(registration.token);

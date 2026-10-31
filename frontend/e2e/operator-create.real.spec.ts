@@ -1,3 +1,4 @@
+import { sessionHeadersFor } from "./session-environment";
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { CONSENT_DOCUMENTS, CONSENT_VERSION } from "../src/lib/auth/consents";
@@ -118,12 +119,12 @@ test("운영자 신규 생성과 첫 동의, 중복 보호와 생성자 감사�
       if (!createdToken) throw new Error("새 운영자 검증 세션을 받지 못했습니다.");
       secrets.add(createdToken);
       const headers = { Authorization: `Bearer ${createdToken}` };
-      const session = await request.get(`${API_URL}/v1/sessions/current`, { headers });
+      const session = await request.get(`${API_URL}/v1/sessions/current`, { headers: sessionHeadersFor(`${API_URL}/v1/sessions/current`, headers) });
       expect(session.status()).toBe(200);
       const account = await session.json();
       createdId = account.user_account.id;
       expect(account).toMatchObject({ consent_required: true, organization: null, organizations: [], user_account: { name: createdName, role: "operator" } });
-      const blocked = await request.get(`${API_URL}/v1/operations`, { headers });
+      const blocked = await request.get(`${API_URL}/v1/operations`, { headers: sessionHeadersFor(`${API_URL}/v1/operations`, headers) });
       expect(blocked.status()).toBe(403);
       expect((await blocked.json()).code).toBe("consent_required");
       await created.goto("/admin/users");
@@ -137,7 +138,7 @@ test("운영자 신규 생성과 첫 동의, 중복 보호와 생성자 감사�
       expect((await request.post(`${API_URL}/v1/sessions`, { data: { email: createdEmail, password: CREATED_PASSWORD } })).status()).toBe(401);
       await created.goto("/admin/users");
       await expect(created.getByRole("heading", { name: "사용자와 플랫폼 권한", exact: true })).toBeVisible();
-      const allowed = await request.get(`${API_URL}/v1/operations`, { headers });
+      const allowed = await request.get(`${API_URL}/v1/operations`, { headers: sessionHeadersFor(`${API_URL}/v1/operations`, headers) });
       expect(allowed.status()).toBe(200);
     });
 
@@ -168,8 +169,8 @@ test("운영자 신규 생성과 첫 동의, 중복 보호와 생성자 감사�
       expect(retainedSession.user_account.name).toBe("도입사 대표관리자");
       expect(retainedSession.organization_role).toBe("owner");
       const body = { name: "생성되면 안 되는 운영자", email: deniedEmail, password: CREATED_PASSWORD };
-      expect((await request.post(`${API_URL}/v1/user-accounts`, { headers: tenantHeaders, data: body })).status()).toBe(403);
-      const key = await request.post(`${API_URL}/v1/api-keys`, { headers: tenantHeaders, data: { label: "운영자 생성 거절 검증", mode: "test", scopes: ["admin"] } });
+      expect((await request.post(`${API_URL}/v1/user-accounts`, { headers: sessionHeadersFor(`${API_URL}/v1/user-accounts`, tenantHeaders), data: body })).status()).toBe(403);
+      const key = await request.post(`${API_URL}/v1/api-keys`, { headers: sessionHeadersFor(`${API_URL}/v1/api-keys`, tenantHeaders), data: { label: "운영자 생성 거절 검증", mode: "test", scopes: ["admin"] } });
       expect(key.status()).toBe(201);
       const issued = await key.json();
       tenantApiKeyId = issued.id;
@@ -199,7 +200,7 @@ test("운영자 신규 생성과 첫 동의, 중복 보호와 생성자 감사�
   } catch (error) {
     failure = safeFailure(error, secrets);
   } finally {
-    if (tenantApiKeyId && tenantToken) await request.delete(`${API_URL}/v1/api-keys/${tenantApiKeyId}`, { headers: { Authorization: `Bearer ${tenantToken}` } }).catch(() => undefined);
+    if (tenantApiKeyId && tenantToken) await request.delete(`${API_URL}/v1/api-keys/${tenantApiKeyId}`, { headers: sessionHeadersFor("/v1/api-keys", { Authorization: `Bearer ${tenantToken}` }) }).catch(() => undefined);
     await Promise.allSettled(contexts.map(context => context.close()));
   }
   if (failure) throw failure;

@@ -22,7 +22,7 @@ export function csvDownloadParameters(resource: string, search: URLSearchParams,
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(parameters)) {
     const first = Array.isArray(value) ? value[0] : value;
-    if (key !== "page" && key !== "size" && typeof first === "string") query.set(key, first);
+    if (key !== "page" && key !== "size" && key !== "mode" && typeof first === "string") query.set(key, first);
   }
   query.set("organization_id", organizationId);
   return query;
@@ -31,7 +31,7 @@ export function csvDownloadParameters(resource: string, search: URLSearchParams,
 export function submittedResourceParameters(fields: Iterable<readonly [string, FormDataEntryValue]>, submitter?: { name: string; value: string }): URLSearchParams {
   const query = new URLSearchParams();
   for (const [name, value] of fields) {
-    if (name === "page" || typeof value !== "string" || value.trim() === "") continue;
+    if (name === "page" || name === "mode" || typeof value !== "string" || value.trim() === "") continue;
     query.set(name, name === "q" ? value.trim() : value);
   }
   if (submitter?.name) query.set(submitter.name, submitter.value);

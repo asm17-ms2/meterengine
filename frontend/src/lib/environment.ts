@@ -1,15 +1,19 @@
-export type WorkspaceEnvironment = "legacy" | "test" | "live";
+export type WorkspaceEnvironment = "test" | "live";
+
+export function isWorkspaceEnvironment(value: unknown): value is WorkspaceEnvironment {
+  return value === "test" || value === "live";
+}
 
 export function readEnvironment(value: string | null | undefined): WorkspaceEnvironment {
-  return value === "test" || value === "live" ? value : "legacy";
+  return value === "live" ? "live" : "test";
 }
 
 export const ENVIRONMENT_LABELS: Record<WorkspaceEnvironment, string> = {
-  legacy: "기존 데이터", test: "테스트 환경", live: "실제 환경",
+  test: "테스트 환경", live: "실제 환경",
 };
 
 export const ENVIRONMENT_SWITCH_TITLES: Record<WorkspaceEnvironment, string> = {
-  legacy: "기존 데이터로 전환할까요?", test: "테스트 환경으로 전환할까요?", live: "실제 환경으로 전환할까요?",
+  test: "테스트 환경으로 전환할까요?", live: "실제 환경으로 전환할까요?",
 };
 
 export function environmentNoticeClass(environment: WorkspaceEnvironment): string {

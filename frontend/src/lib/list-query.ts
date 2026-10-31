@@ -32,14 +32,13 @@ export type ListQuery = {
   paymentStatus?: string;
   minAmount?: string;
   maxAmount?: string;
-  mode?: "test" | "live";
   devState: DevState;
 };
 
 export type MonthlyListQuery = ListQuery & { month: string };
 
 export type ListQueryOverrides = Partial<
-  Pick<ListQuery, "month" | "from" | "to" | "rangeMode" | "properties" | "status" | "page" | "size" | "sort" | "order" | "q" | "customerId" | "type" | "metricCode" | "paymentStatus" | "minAmount" | "maxAmount" | "mode">
+  Pick<ListQuery, "month" | "from" | "to" | "rangeMode" | "properties" | "status" | "page" | "size" | "sort" | "order" | "q" | "customerId" | "type" | "metricCode" | "paymentStatus" | "minAmount" | "maxAmount">
 >;
 
 export type ListQueryOptions = {
@@ -118,7 +117,6 @@ export function readListQuery(
     paymentStatus: capabilities.paymentStatus ? readFirst(searchParams.payment_status) : undefined,
     minAmount: capabilities.amount ? readFirst(searchParams.min_amount) : undefined,
     maxAmount: capabilities.amount ? readFirst(searchParams.max_amount) : undefined,
-    mode: capabilities.mode && readFirst(searchParams.mode) === "live" ? "live" : capabilities.mode && readFirst(searchParams.mode) === "test" ? "test" : undefined,
     devState: readDevState(searchParams.state),
   };
 }
@@ -147,7 +145,6 @@ export function toServerParams(
   if (capabilities.paymentStatus && query.paymentStatus) params.status = query.paymentStatus;
   if (capabilities.amount && query.minAmount) params.min_amount = query.minAmount;
   if (capabilities.amount && query.maxAmount) params.max_amount = query.maxAmount;
-  if (capabilities.mode && query.mode) params.mode = query.mode;
   return params;
 }
 
@@ -185,7 +182,6 @@ export function buildListHref(
   if (next.paymentStatus) params.set("payment_status", next.paymentStatus);
   if (next.minAmount) params.set("min_amount", next.minAmount);
   if (next.maxAmount) params.set("max_amount", next.maxAmount);
-  if (next.mode) params.set("mode", next.mode);
   const searchText = next.q.trim();
   if (searchText) params.set("q", searchText);
   if (next.sort) {

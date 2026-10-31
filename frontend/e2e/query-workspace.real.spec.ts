@@ -1,3 +1,4 @@
+import { sessionHeadersFor } from "./session-environment";
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
@@ -65,24 +66,24 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
     const tenantB = await createTenant(request, operatorToken, `b-${suffix}`);
     secrets.add(tenantA.token); secrets.add(tenantB.token);
     for (const tenant of [tenantA, tenantB]) {
-      const created = await request.post(`${API_URL}/v1/billable-metrics`, { headers: tenant.headers, data: { code: activeCode, name: `현재 미터 ${suffix}`, event_type: activeCode, aggregation: "sum", target_property: "units", dimension_properties: [] } });
+      const created = await request.post(`${API_URL}/v1/billable-metrics`, { headers: sessionHeadersFor(`${API_URL}/v1/billable-metrics`, tenant.headers), data: { code: activeCode, name: `현재 미터 ${suffix}`, event_type: activeCode, aggregation: "sum", target_property: "units", dimension_properties: [] } });
       expect(created.status(), "조직별 동일 코드 미터 준비").toBe(201);
     }
     const customerName = `전용 가격 고객 ${suffix}`;
-    const customer = await request.post(`${API_URL}/v1/customers`, { headers: tenantA.headers, data: { name: customerName } });
+    const customer = await request.post(`${API_URL}/v1/customers`, { headers: sessionHeadersFor(`${API_URL}/v1/customers`, tenantA.headers), data: { name: customerName } });
     expect(customer.status(), "가격 조회 고객 준비").toBe(201);
     const customerId = (await customer.json()).id as string;
     for (const scope of [{ unit_price: 10 }, { customer_id: customerId, unit_price: 20 }]) {
-      const rate = await request.post(`${API_URL}/v1/billable-metrics/${activeCode}/price-rates`, { headers: tenantA.headers, data: { dimension_values: {}, effective_from: currentMonth, ...scope } });
+      const rate = await request.post(`${API_URL}/v1/billable-metrics/${activeCode}/price-rates`, { headers: sessionHeadersFor(`${API_URL}/v1/billable-metrics/${activeCode}/price-rates`, tenantA.headers), data: { dimension_values: {}, effective_from: currentMonth, ...scope } });
       expect(rate.status(), "공통과 고객 전용 가격 준비").toBe(201);
     }
     for (const code of oldCodes) {
-      const created = await request.post(`${API_URL}/v1/billable-metrics`, { headers: tenantA.headers, data: { code, name: `보관 미터 ${code}`, event_type: code, aggregation: "sum", target_property: "units", dimension_properties: [] } });
+      const created = await request.post(`${API_URL}/v1/billable-metrics`, { headers: sessionHeadersFor(`${API_URL}/v1/billable-metrics`, tenantA.headers), data: { code, name: `보관 미터 ${code}`, event_type: code, aggregation: "sum", target_property: "units", dimension_properties: [] } });
       expect(created.status(), "보관 미터 준비").toBe(201);
-      expect((await request.delete(`${API_URL}/v1/billable-metrics/${code}`, { headers: tenantA.headers })).status(), "미터 보관").toBe(204);
+      expect((await request.delete(`${API_URL}/v1/billable-metrics/${code}`, { headers: sessionHeadersFor(`${API_URL}/v1/billable-metrics/${code}`, tenantA.headers)})).status(), "미터 보관").toBe(204);
     }
     await context.addCookies([{ name: "me_session", value: tenantA.token, url: FRONTEND_URL, httpOnly: true, sameSite: "Lax" }]);
-    const preserved = { environment: "legacy", organization_id: tenantA.organizationId, month: currentMonth, metric_status: "archived", plan_status: "all", rate_status: "archived", metric: oldCodes[0], q: suffix, sort: "code", order: "asc" };
+    const preserved = { environment: "test", organization_id: tenantA.organizationId, month: currentMonth, metric_status: "archived", plan_status: "all", rate_status: "archived", metric: oldCodes[0], q: suffix, sort: "code", order: "asc" };
     await page.goto(`/pricing?${new URLSearchParams(preserved)}`);
     const rail = page.getByRole("region", { name: "과금 미터 선택", exact: true });
     await expect(rail.getByRole("button", { name: /보관 미터/ })).toHaveCount(20);
@@ -117,7 +118,7 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
 
     await test.step("작성 중인 검색, 고객, 미터, 금액과 기간을 한 번에 적용", async () => {
       for (const route of ["usage", "billing", "invoices"]) {
-        await page.goto(`/${route}?${new URLSearchParams({ environment: "legacy", organization_id: tenantA.organizationId, month: currentMonth })}`);
+        await page.goto(`/${route}?${new URLSearchParams({ environment: "test", organization_id: tenantA.organizationId, month: currentMonth })}`);
         const originalUrl = page.url();
         const advanced = await expandAdvanced(page);
         const form = page.getByRole("form", { name: "조회 조건", exact: true });
@@ -155,16 +156,16 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
         await expect(form.getByRole("searchbox", { name: "검색", exact: true })).toHaveValue(suffix);
         if (route !== "usage") await expect(form.getByLabel("최대 금액 (원)", { exact: true })).toHaveValue("10000");
         await form.getByRole("button", { name: "조건 적용", exact: true }).click();
-        await expectScope(page, { environment: "legacy", organization_id: tenantA.organizationId, customer_id: customerId, billable_metric_code: activeCode, q: suffix, size: "50", ...(route === "usage" ? {} : { min_amount: "0", max_amount: "10000" }), ...(route === "invoices" ? { from: "2026-01-01T00:00", to: "2027-01-01T00:00" } : { month: currentMonth }) });
+        await expectScope(page, { environment: "test", organization_id: tenantA.organizationId, customer_id: customerId, billable_metric_code: activeCode, q: suffix, size: "50", ...(route === "usage" ? {} : { min_amount: "0", max_amount: "10000" }), ...(route === "invoices" ? { from: "2026-01-01T00:00", to: "2027-01-01T00:00" } : { month: currentMonth }) });
       }
     });
     await test.step("서버의 50건 페이지를 PC와 모바일에서 다시 자르지 않음", async () => {
       const needle = `페이지 고객 ${suffix}`;
       for (let index = 0; index < 25; index++) {
-        const created = await request.post(`${API_URL}/v1/customers`, { headers: tenantA.headers, data: { name: `${needle} ${index}` } });
+        const created = await request.post(`${API_URL}/v1/customers`, { headers: sessionHeadersFor(`${API_URL}/v1/customers`, tenantA.headers), data: { name: `${needle} ${index}` } });
         expect(created.status()).toBe(201);
       }
-      await page.goto(`/customers?${new URLSearchParams({ environment: "legacy", organization_id: tenantA.organizationId })}`);
+      await page.goto(`/customers?${new URLSearchParams({ environment: "test", organization_id: tenantA.organizationId })}`);
       const form = page.getByRole("form", { name: "조회 조건", exact: true });
       const advanced = await expandAdvanced(page);
       await form.getByRole("searchbox", { name: "이름, 외부 ID, 청구 이메일로 찾기", exact: true }).fill(needle);
@@ -180,7 +181,7 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
       await expect(page.locator(".workspace-mobile-records .workspace-mobile-record")).toHaveCount(25);
       await page.setViewportSize({ width: 1280, height: 900 });
     });
-    await page.goto(`/pricing?${new URLSearchParams({ environment: "legacy", organization_id: tenantA.organizationId, month: currentMonth, metric: activeCode })}`);
+    await page.goto(`/pricing?${new URLSearchParams({ environment: "test", organization_id: tenantA.organizationId, month: currentMonth, metric: activeCode })}`);
     await page.getByRole("searchbox", { name: "검색", exact: true }).fill(suffix);
     await chooseCustomer(page, "적용 대상", customerName);
     expect(new URL(page.url()).searchParams.has("customer_id"), "고객 선택은 제출 전 이동하지 않음").toBe(false);
@@ -188,7 +189,7 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
     await page.getByRole("button", { name: "조건 적용", exact: true }).click();
     await expectScope(page, { organization_id: tenantA.organizationId, customer_id: customerId, metric: activeCode, month: currentMonth });
     await expect(page.locator('section[aria-labelledby="current-prices-title"]')).toContainText("20원");
-    await page.goto(`/pricing?${new URLSearchParams({ environment: "legacy", organization_id: tenantA.organizationId, month: currentMonth, metric: activeCode })}`);
+    await page.goto(`/pricing?${new URLSearchParams({ environment: "test", organization_id: tenantA.organizationId, month: currentMonth, metric: activeCode })}`);
     await page.getByRole("button", { name: "단가 버전 등록", exact: true }).click();
     const dialog = page.getByRole("dialog");
     await dialog.getByLabel("계산 방식", { exact: true }).selectOption("graduated");
@@ -210,7 +211,7 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
     await dialog.getByRole("button", { name: "이 단가 버전 저장", exact: true }).click();
     await expect(dialog.getByRole("alert")).toContainText("도입사가 바뀌었습니다");
     for (const tenant of [tenantA, tenantB]) {
-      const rates = await request.get(`${API_URL}/v1/billable-metrics/${activeCode}/price-rates?status=all`, { headers: tenant.headers });
+      const rates = await request.get(`${API_URL}/v1/billable-metrics/${activeCode}/price-rates?status=all`, { headers: sessionHeadersFor(`${API_URL}/v1/billable-metrics/${activeCode}/price-rates?status=all`, tenant.headers)});
       expect(rates.status(), "조직별 단가 경계 조회").toBe(200);
       expect((await rates.json()).price_rates.length, "오래된 폼은 어느 조직에도 쓰지 않음").toBe(tenant === tenantA ? 1 : 0);
     }

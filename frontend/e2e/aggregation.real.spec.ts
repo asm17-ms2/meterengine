@@ -1,3 +1,4 @@
+import { sessionHeadersFor } from "./session-environment";
 import { expect, test, type BrowserContext, type Locator, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { CONSENT_DOCUMENTS, CONSENT_VERSION } from "../src/lib/auth/consents";
@@ -142,7 +143,7 @@ test("집계 10종과 단위 변환을 수집부터 사용량, 청구 예정액,
         await expect(page.getByRole("row").filter({ hasText: metricCode(metric) })).toHaveCount(1);
       }
       for (const metric of METRICS.filter(metric => !metric.ui)) {
-        const created = await request.post(`${API_URL}/v1/billable-metrics`, { headers, data: { code: metricCode(metric), ...calculation(metric) } });
+        const created = await request.post(`${API_URL}/v1/billable-metrics`, { headers: sessionHeadersFor(`${API_URL}/v1/billable-metrics`, headers), data: { code: metricCode(metric), ...calculation(metric) } });
         expect(created.status()).toBe(201);
       }
       await page.reload();
@@ -153,10 +154,10 @@ test("집계 10종과 단위 변환을 수집부터 사용량, 청구 예정액,
     let customerId = "";
     let readHeaders: Record<string, string> = {};
     await test.step("서버 간 API 키로 중복과 월 경계를 포함한 원본 이벤트 수집", async () => {
-      const customer = await request.post(`${API_URL}/v1/customers`, { headers, data: { name: "집계 검증 고객", external_id: `aggregation-customer-${suffix}` } });
+      const customer = await request.post(`${API_URL}/v1/customers`, { headers: sessionHeadersFor(`${API_URL}/v1/customers`, headers), data: { name: "집계 검증 고객", external_id: `aggregation-customer-${suffix}` } });
       expect(customer.status()).toBe(201);
       customerId = (await customer.json()).id;
-      const key = await request.post(`${API_URL}/v1/api-keys`, { headers, data: { label: "집계 E2E 수집과 조회", mode: "test", scopes: ["read", "ingest"] } });
+      const key = await request.post(`${API_URL}/v1/api-keys`, { headers: sessionHeadersFor(`${API_URL}/v1/api-keys`, headers), data: { label: "집계 E2E 수집과 조회", mode: "test", scopes: ["read", "ingest"] } });
       expect(key.status()).toBe(201);
       const secret = (await key.json()).secret;
       if (typeof secret !== "string" || !secret) throw new Error("수집 검증 키가 없습니다.");
@@ -172,7 +173,7 @@ test("집계 10종과 단위 변환을 수집부터 사용량, 청구 예정액,
       expect(batch.status()).toBe(200);
       expect((await batch.json()).results.map((result: { result: string }) => result.result)).toEqual([...events.map(() => "stored"), "stored", "duplicate"]);
       for (const metric of METRICS) {
-        expect((await request.post(`${API_URL}/v1/billable-metrics/${metricCode(metric)}/price-rates`, { headers, data: { dimension_values: {}, unit_price: 100, effective_from: month } })).status()).toBe(201);
+        expect((await request.post(`${API_URL}/v1/billable-metrics/${metricCode(metric)}/price-rates`, { headers: sessionHeadersFor(`${API_URL}/v1/billable-metrics/${metricCode(metric)}/price-rates`, headers), data: { dimension_values: {}, unit_price: 100, effective_from: month } })).status()).toBe(201);
       }
     });
 
@@ -209,7 +210,7 @@ test("집계 10종과 단위 변환을 수집부터 사용량, 청구 예정액,
 
     await test.step("수집 뒤 계산식 변경은 막고 이름 변경은 허용", async () => {
       const average = METRICS.find(metric => metric.aggregation === "avg")!;
-      const blocked = await request.put(`${API_URL}/v1/billable-metrics/${metricCode(average)}`, { headers, data: { ...calculation(average), unit_size: 20 } });
+      const blocked = await request.put(`${API_URL}/v1/billable-metrics/${metricCode(average)}`, { headers: sessionHeadersFor(`${API_URL}/v1/billable-metrics/${metricCode(average)}`, headers), data: { ...calculation(average), unit_size: 20 } });
       expect(blocked.status()).toBe(409);
       expect((await blocked.json()).code).toBe("billable_metric_has_events");
       await page.goto("/billable-metrics");
@@ -276,13 +277,13 @@ test("집계 10종과 단위 변환을 수집부터 사용량, 청구 예정액,
     await test.step("분수 사용량에 단가를 곱할 때 중간 소수 근사로 과소 청구하지 않는다", async () => {
       const fractionType = `fraction-event-${suffix}`;
       for (const aggregation of ["sum", "avg"]) {
-        const metric = await request.post(`${API_URL}/v1/billable-metrics`, { headers, data: {
+        const metric = await request.post(`${API_URL}/v1/billable-metrics`, { headers: sessionHeadersFor(`${API_URL}/v1/billable-metrics`, headers), data: {
           code: fractionCode(aggregation), name: `분수 검증 ${aggregation}`, event_type: fractionType,
           aggregation, target_property: "units", dimension_properties: [], unit_size: aggregation === "sum" ? 3 : 1,
           rounding_mode: "none", rounding_precision: 0,
         } });
         expect(metric.status()).toBe(201);
-        expect((await request.post(`${API_URL}/v1/billable-metrics/${fractionCode(aggregation)}/price-rates`, { headers, data: { dimension_values: {}, unit_price: 300, effective_from: month } })).status()).toBe(201);
+        expect((await request.post(`${API_URL}/v1/billable-metrics/${fractionCode(aggregation)}/price-rates`, { headers: sessionHeadersFor(`${API_URL}/v1/billable-metrics/${fractionCode(aggregation)}/price-rates`, headers), data: { dimension_values: {}, unit_price: 300, effective_from: month } })).status()).toBe(201);
       }
       const events = [1, 0, 0].map((units, index) => ({
         transaction_id: `fraction-${suffix}-${index}`, customer_id: customerId, type: fractionType,
@@ -342,7 +343,7 @@ test("집계 10종과 단위 변환을 수집부터 사용량, 청구 예정액,
       expect(invoice.lines).toHaveLength(METRICS.length + 2);
       for (const metric of METRICS) expect(invoice.lines.find((line: { billable_metric_code: string }) => line.billable_metric_code === metricCode(metric))).toMatchObject({ quantity: metric.quantity, amount: Math.trunc(metric.quantity * 100 / 10) * 10 });
       for (const aggregation of ["sum", "avg"]) expect(invoice.lines.find((line: { billable_metric_code: string }) => line.billable_metric_code === fractionCode(aggregation))).toMatchObject({ quantity_numerator: 1, quantity_denominator: 3, unit_price: 300, amount: 100 });
-      const repeated = await request.post(`${API_URL}/v1/invoices?month=${month}`, { headers });
+      const repeated = await request.post(`${API_URL}/v1/invoices?month=${month}`, { headers: sessionHeadersFor(`${API_URL}/v1/invoices?month=${month}`, headers) });
       expect(repeated.status()).toBe(200);
       expect((await repeated.json()).finalized_count).toBe(0);
     });

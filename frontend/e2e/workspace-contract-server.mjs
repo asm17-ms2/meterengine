@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { createServer } from "node:http";
+import { requiresWorkspaceEnvironment } from "../src/lib/api/environment-scope.ts";
 
 const INVOICE_ID = "11111111-1111-4111-8111-111111111111";
 const ATTEMPT_ID = "22222222-2222-4222-8222-222222222222";
@@ -22,7 +23,7 @@ const attempt = { id: ATTEMPT_ID, invoice_id: INVOICE_ID, status: "done", amount
 const delay = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
 const FAR_CUSTOMER_ID = "77777777-7777-4777-8777-777777777777";
 const initialState = () => ({
-  scenario: "normal", cancellationCalls: [], cancellations: [], cancellationEffects: 0,
+  scenario: "normal", requests: [], cancellationCalls: [], cancellations: [], cancellationEffects: 0,
   cancellationCompletedAfterMs: null, idempotentResults: new Map(), lostResponseSent: false, rejectionSent: false,
   retryCalls: 0, deliveryStatus: "failed", keyCalls: [], apiKeys: [],
   activeOrganization: organization, initialSessionReturned: false, customerSearchReturned: false, customerQueries: [], invoiceListCalls: [], invoiceSearchCalls: 0, customerOptionQueries: [],
@@ -51,6 +52,7 @@ const server = createServer(async (request, response) => {
     }
     if (path === "/__state") return send(response, 200, {
       kind: "isolated-workspace-contract",
+      requests: current.requests,
       cancellationCalls: current.cancellationCalls,
       cancellationEffects: current.cancellationEffects,
       cancellationCompletedAfterMs: current.cancellationCompletedAfterMs,
@@ -66,6 +68,17 @@ const server = createServer(async (request, response) => {
       invoiceSearchCalls: current.invoiceSearchCalls,
       customerOptionQueries: current.customerOptionQueries,
     });
+    const environment = request.headers["x-meterengine-environment"] ?? null;
+    const organizationId = request.headers["x-meterengine-organization-id"] ?? null;
+    current.requests.push({ path: request.url, method: request.method, organizationId, environment });
+    const requiresEnvironment = requiresWorkspaceEnvironment(request.url);
+    if (requiresEnvironment && !["test", "live"].includes(environment)) return error(response, 400, "validation_error", "업무 환경을 확인하세요.");
+    if (!requiresEnvironment && environment !== null) return error(response, 400, "validation_error", "공유 요청에는 환경을 지정하지 마세요.");
+    if (path === "/v1/public/invoice-links/lookup" && request.method === "POST") {
+      const kind = ["test", "live", "migrated"].find(kind => body.token === `me_invoice_${kind.padEnd(32, "0")}`);
+      if (!kind) return error(response, 404, "not_found", "사용할 수 없는 조회 링크입니다.");
+      return send(response, 200, { invoice_number: `PUBLIC-${kind}`, organization_name: "Contract organization", customer_name: `${kind} public customer`, month: "2026-10", finalized_at: NOW, supply_amount: 10000, tax_amount: 1000, total_amount: 11000, lines: [], payment: { status: "paid", mode: kind === "live" ? "live" : "test", amount: 11000, paid_amount: 11000, canceled_amount: 0, outstanding_amount: 0, completed_at: NOW }, payment_retry: { allowed: false, reason: "already_paid", version: null }, expires_at: "2099-01-01T00:00:00Z" });
+    }
     if (request.headers.authorization !== "Bearer workspace-contract-session") return error(response, 401, "invalid_credentials", "로그인이 필요합니다.");
     if (path === "/v1/sessions/current") {
       if (!["organization-switch-after-session", "organization-switch-after-search"].includes(current.scenario)) return send(response, 200, session);
@@ -89,6 +102,11 @@ const server = createServer(async (request, response) => {
       const items = ["organization-switch-after-session", "organization-switch-after-search"].includes(current.scenario) ? [{ id: "99999999-9999-4999-8999-999999999999", name: "다른 도입사 B의 비공개 고객", external_id: "organization-b-private", billing_email: null, archived_at: null, created_at: NOW, version: 0 }] : [];
       return send(response, 200, { items, total: items.length, total_unfiltered: items.length, page: 1, size: 20, summary: {} });
     }
+    if (current.scenario === "environment-scope" && path.endsWith("/export")) {
+      response.writeHead(200, { "Content-Type": "text/csv", "Content-Disposition": 'attachment; filename="scope.csv"' });
+      return response.end(`environment,name\n${environment},${environment} customer\n`);
+    }
+    if (current.scenario === "environment-scope" && ["/v1/customers/options", "/v1/billable-metrics/options"].includes(path)) return send(response, 200, { items: [{ value: environment === "test" ? "77777777-7777-4777-8777-777777777777" : "99999999-9999-4999-8999-999999999999", label: `${environment} ${path.includes("customers") ? "customer" : "metric"}`, archived: false }], total: 1, total_unfiltered: 1, page: 1, size: 20, summary: {} });
     if (path === "/v1/customers/export") return send(response, 400, { code: "validation_error", message: "요청 값이 올바르지 않습니다", errors: [{ field: "export", message: "10000행 이하가 되도록 검색 범위를 좁혀 주세요" }] });
     if (current.scenario === "customer-options-retry" && path === "/v1/customers/options") {
       current.customerOptionQueries.push(new URL(request.url, "http://127.0.0.1").searchParams.get("q") ?? "");
@@ -192,6 +210,9 @@ const server = createServer(async (request, response) => {
       current.apiKeys.push(key);
       return send(response, 201, { ...key, secret: "me_test_disposable_contract_value" });
     }
+    if (path === "/v1/organization/supplier" && request.method === "GET") return send(response, 200, { business_registration_number: null, representative_name: null, business_address: null });
+    if (path === "/v1/payment-setting" && request.method === "GET") return send(response, 200, { mode: environment });
+    if (path === "/v1/toss-payments-credentials" && request.method === "GET") return send(response, 200, { toss_payments_credentials: [] });
     if (path === "/v1/webhook-endpoints") return send(response, 200, { endpoints: [] });
     if (path === `/v1/webhook-endpoints/${ENDPOINT_ID}`) return send(response, 200, { id: ENDPOINT_ID, url: "https://receiver.contract.local/webhook", enabled: true, event_types: ["payment_succeeded"], description: null, archived_at: null });
     if (path === `/v1/webhook-endpoints/${ENDPOINT_ID}/deliveries`) return send(response, 200, {

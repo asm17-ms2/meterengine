@@ -5,6 +5,7 @@ import { readEnvironment } from "@/lib/environment";
 import { readMonth } from "@/lib/month";
 import { workspaceHref } from "@/lib/workspace-href";
 import { serverSend, toDisplayMessage } from "@/lib/api/client";
+import { requiresWorkspaceEnvironment } from "@/lib/api/environment-scope";
 import { mutationScopeError } from "@/lib/auth/mutation-scope";
 import { credentialFieldErrors } from "@/lib/auth/credentials";
 import { requireTenantSession } from "@/lib/auth/session";
@@ -30,15 +31,11 @@ function amount(data: FormData, key: string, { min = 0, max = Number.MAX_SAFE_IN
 
 export async function workspaceAction(_previous: WorkspaceActionState, data: FormData): Promise<WorkspaceActionState> {
   const session = await requireTenantSession();
-  const scopeError = await mutationScopeError(data, session.organization?.id);
-  if (scopeError) return { message: scopeError };
-  const environment = readEnvironment(text(data, "environment"));
 
   let path: string;
   let method: "POST" | "PUT" | "PATCH" | "DELETE" = "POST";
   let body: unknown;
   const operation = text(data, "operation");
-  if (environment !== "legacy" && ["updatePaymentSetting", "updateTossPaymentsCredential", "archiveTossPaymentsCredential", "createApiKey"].includes(operation) && text(data, "mode") !== environment) return { message: "현재 업무 환경과 다른 환경의 키나 결제 설정을 변경할 수 없습니다. 업무 환경을 확인한 뒤 다시 시도하세요." };
   if (!canPerformWorkspaceOperation(session.scopes, session.organization_role, operation)) return { message: "이 작업을 수행할 권한이 없습니다. 대표관리자에게 권한을 요청하세요." };
   try {
     switch (operation) {
@@ -88,7 +85,6 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
         break;
       case "deletePriceRate": path = `/v1/billable-metrics/${identifier(data, "code")}/price-rates/${identifier(data)}`; method = "DELETE"; break;
       case "updateSupplier": path = "/v1/organization/supplier"; method = "PUT"; body = { business_registration_number: readBusinessRegistrationNumber(text(data, "business_registration_number"), "business_registration_number"), representative_name: text(data, "representative_name"), business_address: text(data, "business_address") }; break;
-      case "updatePaymentSetting": path = "/v1/payment-setting"; method = "PUT"; body = { mode: text(data, "mode") }; break;
       case "updateTossPaymentsCredential": path = `/v1/toss-payments-credentials/${identifier(data, "mode")}`; method = "PUT"; body = { client_key: text(data, "client_key"), secret_key: text(data, "secret_key") }; break;
       case "createPaymentMethodRegistration": path = `/v1/customers/${identifier(data)}/payment-method-registrations`; break;
       case "createPaymentAttempt": path = `/v1/invoices/${identifier(data)}/payment-attempts`; break;
@@ -100,6 +96,10 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
     if (error instanceof InputFieldError) return { message: "입력한 내용을 확인하세요.", fieldErrors: { [error.field]: error.message } };
     return { message: "입력한 값을 처리하지 못했습니다. 입력값을 확인한 뒤 다시 시도하세요." };
   }
+  const scopeError = await mutationScopeError(data, session.organization?.id, { requiresEnvironment: requiresWorkspaceEnvironment(path) });
+  if (scopeError) return { message: scopeError };
+  const environment = readEnvironment(typeof data.get("environment") === "string" ? String(data.get("environment")) : undefined);
+  if (["updateTossPaymentsCredential", "archiveTossPaymentsCredential", "createApiKey"].includes(operation) && (data.getAll("mode").length !== 1 || data.get("mode") !== environment)) return { message: "현재 업무 환경과 다른 환경의 키나 결제 설정을 변경할 수 없습니다. 업무 환경을 확인한 뒤 다시 시도하세요." };
   if (operation === "updateCustomer" && !/^\d+$/.test(text(data, "version"))) return { message: "고객의 최신 정보를 다시 조회한 뒤 수정하세요." };
   const isPaymentRequest = ["createPaymentAttempt", "createPaymentCancellation", "updateTossPaymentsCredential"].includes(operation);
   const result = await serverSend<Record<string, unknown> | undefined>(config.apiBaseUrl, path, {

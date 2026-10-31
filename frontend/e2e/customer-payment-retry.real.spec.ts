@@ -1,3 +1,4 @@
+import { sessionHeadersFor } from "./session-environment";
 import { expect, test, type APIRequestContext, type BrowserContext, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
@@ -70,7 +71,7 @@ async function nextApproval(request: APIRequestContext, outcome: "done" | "rejec
 }
 
 async function registerCard(request: APIRequestContext, data: Fixture, name: string, secrets: Set<string>) {
-  const registration = await request.post(`${API_URL}/v1/customers/${data.customers[name]}/payment-method-registrations`, { headers: data.headers });
+  const registration = await request.post(`${API_URL}/v1/customers/${data.customers[name]}/payment-method-registrations`, { headers: sessionHeadersFor(`${API_URL}/v1/customers/${data.customers[name]}/payment-method-registrations`, data.headers)});
   expect(registration.status()).toBe(201);
   const issued = await registration.json();
   secrets.add(issued.token);
@@ -96,20 +97,20 @@ async function fixture(request: APIRequestContext, names: string[], secrets: Set
   const session = (await sessionResponse.json()).token as string;
   secrets.add(session);
   const headers = { Authorization: `Bearer ${session}` };
-  const readKeyResponse = await request.post(`${API_URL}/v1/api-keys`, { headers, data: { label: "고객 재시도 조회", mode: "test", scopes: ["read", "ingest"] } });
+  const readKeyResponse = await request.post(`${API_URL}/v1/api-keys`, { headers: sessionHeadersFor(`${API_URL}/v1/api-keys`, headers), data: { label: "고객 재시도 조회", mode: "test", scopes: ["read", "ingest"] } });
   expect(readKeyResponse.status()).toBe(201);
   const readKey = (await readKeyResponse.json()).secret as string;
   secrets.add(readKey);
   const readHeaders = { Authorization: `Bearer ${readKey}` };
   const secretKey = `test_sk_customer_retry_${suffix}`;
   secrets.add(secretKey);
-  expect((await request.put(`${API_URL}/v1/toss-payments-credentials/test`, { headers, data: { client_key: `test_ck_customer_retry_${suffix}`, secret_key: secretKey } })).status()).toBe(200);
+  expect((await request.put(`${API_URL}/v1/toss-payments-credentials/test`, { headers: sessionHeadersFor(`${API_URL}/v1/toss-payments-credentials/test`, headers), data: { client_key: `test_ck_customer_retry_${suffix}`, secret_key: secretKey } })).status()).toBe(200);
   const code = `customer-retry-${suffix}`;
-  expect((await request.post(`${API_URL}/v1/billable-metrics`, { headers, data: { code, name: "모델 요청", event_type: code, aggregation: "sum", target_property: "units", dimension_properties: [] } })).status()).toBe(201);
-  expect((await request.post(`${API_URL}/v1/billable-metrics/${code}/price-rates`, { headers, data: { dimension_values: {}, unit_price: 100, effective_from: month } })).status()).toBe(201);
+  expect((await request.post(`${API_URL}/v1/billable-metrics`, { headers: sessionHeadersFor(`${API_URL}/v1/billable-metrics`, headers), data: { code, name: "모델 요청", event_type: code, aggregation: "sum", target_property: "units", dimension_properties: [] } })).status()).toBe(201);
+  expect((await request.post(`${API_URL}/v1/billable-metrics/${code}/price-rates`, { headers: sessionHeadersFor(`${API_URL}/v1/billable-metrics/${code}/price-rates`, headers), data: { dimension_values: {}, unit_price: 100, effective_from: month } })).status()).toBe(201);
   const data: Fixture = { organizationId, headers, operatorHeaders, readHeaders, session, customers: {}, invoices: {}, invoiceNumbers: {}, month };
   for (const name of names) {
-    const response = await request.post(`${API_URL}/v1/customers`, { headers, data: { name: `재시도 고객 ${name}`, external_id: `customer-retry-${suffix}-${name}`, billing_email: "retry-private@fe-e2e.local" } });
+    const response = await request.post(`${API_URL}/v1/customers`, { headers: sessionHeadersFor(`${API_URL}/v1/customers`, headers), data: { name: `재시도 고객 ${name}`, external_id: `customer-retry-${suffix}-${name}`, billing_email: "retry-private@fe-e2e.local" } });
     expect(response.status()).toBe(201);
     data.customers[name] = uuid((await response.json()).id);
     await registerCard(request, data, name, secrets);
@@ -117,8 +118,8 @@ async function fixture(request: APIRequestContext, names: string[], secrets: Set
   for (const name of names) {
     expect((await request.post(`${API_URL}/v1/events`, { headers: readHeaders, data: { transaction_id: `customer-retry-${suffix}-${name}`, customer_id: data.customers[name], type: code, timestamp: new Date(Date.now() - 60_000).toISOString(), properties: { units: 10 } } })).status()).toBe(200);
   }
-  expect((await request.post(`${API_URL}/v1/invoices?month=${month}`, { headers })).status()).toBe(200);
-  const response = await request.get(`${API_URL}/v1/invoices?month=${month}`, { headers });
+  expect((await request.post(`${API_URL}/v1/invoices?month=${month}`, { headers: sessionHeadersFor(`${API_URL}/v1/invoices?month=${month}`, headers) })).status()).toBe(200);
+  const response = await request.get(`${API_URL}/v1/invoices?month=${month}`, { headers: sessionHeadersFor(`${API_URL}/v1/invoices?month=${month}`, headers) });
   expect(response.status()).toBe(200);
   const rows = (await response.json()).invoices as { id: string; customer_id: string; invoice_number: string; total_amount: number }[];
   for (const name of names) {
@@ -131,7 +132,7 @@ async function fixture(request: APIRequestContext, names: string[], secrets: Set
 
 async function adminAttempt(request: APIRequestContext, data: Fixture, name: string, outcome: "done" | "rejected" | "response-lost", secrets: Set<string>) {
   await nextApproval(request, outcome);
-  const response = await request.post(`${API_URL}/v1/invoices/${data.invoices[name]}/payment-attempts`, { headers: data.headers });
+  const response = await request.post(`${API_URL}/v1/invoices/${data.invoices[name]}/payment-attempts`, { headers: sessionHeadersFor(`${API_URL}/v1/invoices/${data.invoices[name]}/payment-attempts`, data.headers)});
   expect(response.status()).toBe(201);
   const body = await response.json();
   if (body.payment_key) secrets.add(body.payment_key);
@@ -142,7 +143,7 @@ function seedFailure(data: Fixture, name: string, code = "REJECT_CARD_PAYMENT", 
   for (let i = 0; i < count; i++) sql(`INSERT INTO payment_attempt(id,organization_id,customer_id,invoice_id,mode,amount,order_name,status,failure_code,failure_message,requested_at,completed_at) VALUES('${randomUUID()}','${data.organizationId}','${data.customers[name]}','${data.invoices[name]}','test',1100,'로컬 재시도 검증','failed','${code}','로컬 PG 검증 실패',clock_timestamp()-interval '${count - i + 1} seconds',clock_timestamp());`);
 }
 async function mint(request: APIRequestContext, data: Fixture, name: string, secrets: Set<string>, allow?: boolean): Promise<ViewLink> {
-  const response = await request.post(`${API_URL}/v1/invoices/${data.invoices[name]}/view-links`, { headers: data.headers, data: allow === undefined ? {} : { allow_payment_retry: allow } });
+  const response = await request.post(`${API_URL}/v1/invoices/${data.invoices[name]}/view-links`, { headers: sessionHeadersFor(`${API_URL}/v1/invoices/${data.invoices[name]}/view-links`, data.headers), data: allow === undefined ? {} : { allow_payment_retry: allow } });
   expect(response.status()).toBe(201);
   const link = await response.json() as ViewLink;
   secrets.add(link.token);
@@ -160,7 +161,7 @@ async function retry(request: APIRequestContext, link: ViewLink, version: string
   return request.post(`${API_URL}/v1/public/invoice-links/payment-retries`, { data: { token: link.token, retry_version: version, ...extra } });
 }
 function attempts(data: Fixture, name: string) { return Number(sql(`SELECT count(*) FROM payment_attempt WHERE organization_id='${data.organizationId}' AND invoice_id='${data.invoices[name]}' AND mode='test';`)); }
-async function revoke(request: APIRequestContext, data: Fixture, name: string, link: ViewLink) { expect((await request.post(`${API_URL}/v1/invoices/${data.invoices[name]}/view-links/${link.id}/revoke`, { headers: data.headers })).status()).toBe(200); }
+async function revoke(request: APIRequestContext, data: Fixture, name: string, link: ViewLink) { expect((await request.post(`${API_URL}/v1/invoices/${data.invoices[name]}/view-links/${link.id}/revoke`, { headers: sessionHeadersFor(`${API_URL}/v1/invoices/${data.invoices[name]}/view-links/${link.id}/revoke`, data.headers)})).status()).toBe(200); }
 async function capture(page: Page, name: string) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.evaluate(() => window.scrollTo(0, 0));
@@ -247,7 +248,7 @@ test("조회 전용 권한을 보존하고 같은 실패의 중복 요청과 관
     const before = await approvalCalls(request);
     expect((await retry(request, readonly, "0".repeat(64))).status()).toBe(409);
     expect((await request.post(`${API_URL}/v1/invoices/${data.invoices.retry}/view-links`, { headers: data.readHeaders, data: { allow_payment_retry: true } })).status()).toBe(403);
-    expect((await request.post(`${API_URL}/v1/invoices/${data.invoices.retry}/view-links`, { data: { allow_payment_retry: true } })).status()).toBe(401);
+    expect((await request.post(`${API_URL}/v1/invoices/${data.invoices.retry}/view-links`, { headers: { "X-MeterEngine-Environment": "test" }, data: { allow_payment_retry: true } })).status()).toBe(401);
     const invoice = await lookup(request, allowed.token);
     expect(invoice.payment_retry.allowed).toBe(true);
     expect(invoice.payment_retry.version).toMatch(/^[a-f\d]{64}$/);
@@ -263,12 +264,12 @@ test("조회 전용 권한을 보존하고 같은 실패의 중복 요청과 관
     const race = await mint(request, data, "race", secrets, true);
     const raceInvoice = await lookup(request, race.token);
     const raceBefore = await approvalCalls(request);
-    const contested = await Promise.all([retry(request, race, raceInvoice.payment_retry.version), request.post(`${API_URL}/v1/invoices/${data.invoices.race}/payment-attempts`, { headers: data.headers })]);
+    const contested = await Promise.all([retry(request, race, raceInvoice.payment_retry.version), request.post(`${API_URL}/v1/invoices/${data.invoices.race}/payment-attempts`, { headers: sessionHeadersFor(`${API_URL}/v1/invoices/${data.invoices.race}/payment-attempts`, data.headers)})]);
     expect(contested.filter(response => [200, 201].includes(response.status()))).toHaveLength(1);
     expect(contested.filter(response => response.status() === 409)).toHaveLength(1);
     expect(await approvalCalls(request) - raceBefore).toBe(1);
     expect(attempts(data, "race")).toBe(2);
-    const audit = await request.get(`${API_URL}/v1/audit-logs?size=100`, { headers: data.headers });
+    const audit = await request.get(`${API_URL}/v1/audit-logs?size=100`, { headers: sessionHeadersFor(`${API_URL}/v1/audit-logs?size=100`, data.headers)});
     expect(audit.status()).toBe(200);
     const auditText = await audit.text();
     for (const secret of secrets) expect(auditText.includes(secret)).toBe(false);
@@ -287,12 +288,12 @@ test("결제 상태와 카드, 모드, 만료 및 폐기 경계가 새 결제 �
     sql(`INSERT INTO payment_attempt(id,organization_id,customer_id,invoice_id,mode,amount,order_name,status,requested_at) VALUES('${randomUUID()}','${data.organizationId}','${data.customers.pending}','${data.invoices.pending}','test',1100,'로컬 결과 확인 중','pending',clock_timestamp());`);
     await adminAttempt(request, data, "paid", "done", secrets);
     const canceledAttempt = await adminAttempt(request, data, "cancel", "done", secrets);
-    const cancellation = await request.post(`${API_URL}/v1/payment-attempts/${canceledAttempt.id}/cancellations`, { headers: data.headers, data: { request_id: randomUUID(), reason: "고객 재시도 차단 검증" } });
+    const cancellation = await request.post(`${API_URL}/v1/payment-attempts/${canceledAttempt.id}/cancellations`, { headers: sessionHeadersFor(`${API_URL}/v1/payment-attempts/${canceledAttempt.id}/cancellations`, data.headers), data: { request_id: randomUUID(), reason: "고객 재시도 차단 검증" } });
     expect(cancellation.status()).toBe(201);
     for (const name of ["missing", "expired", "revoked", "mode"]) seedFailure(data, name);
     seedFailure(data, "stopped", "INVALID_STOPPED_CARD");
     seedFailure(data, "limit", "REJECT_CARD_PAYMENT", 3);
-    expect((await request.delete(`${API_URL}/v1/customers/${data.customers.missing}/payment-method`, { headers: data.headers })).ok()).toBe(true);
+    expect((await request.delete(`${API_URL}/v1/customers/${data.customers.missing}/payment-method`, { headers: sessionHeadersFor(`${API_URL}/v1/customers/${data.customers.missing}/payment-method`, data.headers)})).ok()).toBe(true);
     const links: Record<string, ViewLink> = {};
     for (const name of names) links[name] = await mint(request, data, name, secrets, true);
     const before = await approvalCalls(request);
@@ -422,7 +423,7 @@ test("고객은 금액과 모드를 확인한 뒤에만 결제를 다시 시도�
     expect(urls.filter(url => new URL(url).origin !== FRONTEND_URL)).toHaveLength(0);
     await capture(page, "customer-paid-mobile");
     await page.setViewportSize({ width: 1280, height: 900 }); await capture(page, "customer-paid-desktop");
-    const links = await request.get(`${API_URL}/v1/invoices/${data.invoices.interactive}/view-links`, { headers: data.headers });
+    const links = await request.get(`${API_URL}/v1/invoices/${data.invoices.interactive}/view-links`, { headers: sessionHeadersFor(`${API_URL}/v1/invoices/${data.invoices.interactive}/view-links`, data.headers)});
     const rows = (await links.json()).invoice_view_links as ViewLink[];
     for (const link of rows) await revoke(request, data, "interactive", link);
     result("browser-confirm-result", { passed: true, invoice_number: data.invoiceNumbers.interactive, default_checkbox_unchecked: true, read_only_no_retry_action: true, confirmation_before_provider_call: true, confirmation_cancel_calls: 0, keyboard_confirm_provider_calls: 1, confirmed_amount_krw: 1100, mode: "test", customer_session_required: false, token_in_url_or_html: false, document_horizontal_overflow: false });

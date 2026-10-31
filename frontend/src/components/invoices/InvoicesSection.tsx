@@ -63,7 +63,7 @@ export async function InvoicesSection({
 
   if (result.data.invoices.length === 0 && (result.data.total ?? 0) > 0) return <><EmptyState title="이 페이지에 인보이스가 없습니다" body={`현재 조건에 맞는 인보이스는 ${result.data.total}건입니다. 첫 페이지에서 다시 확인하세요.`} resetHref={buildListHref("/invoices", query, { page: 0 })} resetLabel="첫 페이지 보기" /><ListPagination query={query} capabilities={capabilities} total={result.data.total} /></>;
 
-  if (result.data.invoices.length === 0 && (query.q || query.customerId || query.metricCode || query.paymentStatus || query.minAmount || query.maxAmount || query.from || query.to || query.mode)) return <EmptyState title="조건에 맞는 인보이스가 없습니다" body="검색, 수납 상태, 금액과 기간 조건을 바꿔 다시 조회하세요." resetHref={buildListHref("/invoices", query, { page: 0, q: "", customerId: undefined, metricCode: undefined, paymentStatus: undefined, minAmount: undefined, maxAmount: undefined, from: undefined, to: undefined, mode: undefined })} />;
+  if (result.data.invoices.length === 0 && (query.q || query.customerId || query.metricCode || query.paymentStatus || query.minAmount || query.maxAmount || query.from || query.to)) return <EmptyState title="조건에 맞는 인보이스가 없습니다" body="검색, 수납 상태, 금액과 기간 조건을 바꿔 다시 조회하세요." resetHref={buildListHref("/invoices", query, { page: 0, q: "", customerId: undefined, metricCode: undefined, paymentStatus: undefined, minAmount: undefined, maxAmount: undefined, from: undefined, to: undefined })} />;
 
   if (result.data.invoices.length === 0) {
     return (
