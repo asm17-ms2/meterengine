@@ -63,8 +63,8 @@ class InvoiceLineRoundTripTest {
         """
         INSERT INTO invoice
           (organization_id, customer_id, customer_name, period, supply_amount, tax_amount,
-           total_amount, finalized_at)
-        VALUES (?, ?, 'acme', '2026-08', 12000, 1200, 13200, now())
+           total_amount, cutoff_at, finalized_at)
+        VALUES (?, ?, 'acme', '2026-08', 12000, 1200, 13200, now(), now())
         RETURNING id
         """,
         UUID.class,

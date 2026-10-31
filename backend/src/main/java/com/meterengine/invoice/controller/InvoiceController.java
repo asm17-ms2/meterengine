@@ -7,6 +7,7 @@ import com.meterengine.global.security.EnvironmentReady;
 import com.meterengine.global.security.ReadAccess;
 import com.meterengine.global.validation.FourDigitYear;
 import com.meterengine.invoice.dto.FinalizeInvoicesResponse;
+import com.meterengine.invoice.dto.InvoiceFinalizationResult;
 import com.meterengine.invoice.dto.InvoiceResponse;
 import com.meterengine.invoice.dto.ListInvoicesResponse;
 import com.meterengine.invoice.service.InvoiceFinalizationService;
@@ -52,7 +53,8 @@ public class InvoiceController {
           달 내림차순이고, 같은 달은 고객 이름 오름차순, 이름이 같으면 고객 id 순이다.
           supply_amount, tax_amount, total_amount는 확정할 때 저장한 공급가액, 세액, 합계(공급가액 + 세액)이고 원 단위 정수다.
           lines는 확정할 때 저장한 조합별 수량, 단가, 금액이고 미터 code 오름차순, 같은 미터 안에서는 dimension_values 오름차순이다. 조회할 때 다시 계산하지 않아 뒤에 단가를 고쳐도 바뀌지 않는다. 라인 금액의 합이 supply_amount다.
-          finalized_at은 KST(+09:00)로 나온다. customer_name은 확정할 때 저장한 고객 이름이라 뒤에 이름을 고쳐도 바뀌지 않는다. 페이지를 나누지 않는다.
+          cutoff_at은 확정이 읽은 이벤트의 받은 시각 상한이다. 그 달에 발생했고 이 시각 전에 받은 이벤트만 금액에 들었다.
+          cutoff_at과 finalized_at은 KST(+09:00)로 나온다. customer_name은 확정할 때 저장한 고객 이름이라 뒤에 이름을 고쳐도 바뀌지 않는다. 페이지를 나누지 않는다.
           """)
   @ApiResponses({
     @ApiResponse(responseCode = "200", description = "인보이스 목록. 조건에 맞는 것이 없으면 invoices가 빈 배열이다"),
@@ -93,7 +95,7 @@ public class InvoiceController {
       description =
           """
           확정된 인보이스 하나를 돌려준다. 응답은 인보이스 목록 조회의 같은 인보이스 원소와 같다.
-          finalized_at은 KST(+09:00)로 나온다.
+          cutoff_at과 finalized_at은 KST(+09:00)로 나온다.
           """)
   @ApiResponses({
     @ApiResponse(responseCode = "200", description = "인보이스"),
@@ -124,15 +126,20 @@ public class InvoiceController {
       summary = "인보이스 일괄 확정",
       description =
           """
-          그 달 청구 예정액이 0원이 아닌 고객을 한 번에 확정한다. 확정 금액과 라인은 그 시점의 청구 예정액과 같고, 세액은 공급가액의 10%다.
+          그 달 청구 예정액이 0원이 아닌 고객을 한 번에 확정한다. 세액은 공급가액의 10%다.
+          그 달에 발생했고 집계 마감 시각(다음 달 1일 13:00 KST) 전에 받은 이벤트로 확정해서, 마감이 지난 달의 확정 금액과 라인은 그 시점의 청구 예정액과 같다.
+          마감 시각 전에 확정하면 확정 시각까지 받은 이벤트로 확정하고 그 시각을 인보이스의 cutoff_at에 남긴다.
           수량이 0인 라인은 인보이스에 싣지 않는다. 확정한 고객은 그 달 청구 예정액에서 빠진다.
           확정한 고객마다 같은 트랜잭션에서 보낼 청구 메일을 남긴다. 고객에 청구 이메일이 없으면 받는 주소 없이 남긴다.
-          그 달이 이미 확정된 고객은 건너뛴다. 그래서 같은 달로 다시 불러도 인보이스가 겹치지 않는다.
+          그 달이 이미 확정된 고객은 건너뛴다. 그래서 같은 달로 다시 부르거나 동시에 불러도 인보이스가 겹치지 않는다.
+          고객마다 따로 커밋한다. 한 고객의 확정이 실패해도 다른 고객의 확정은 남고, 실패한 고객은 failed_count에 세며 다시 부르면 다시 시도한다.
           확정은 되돌릴 수 없고, 확정한 뒤 그 달에 들어온 그 고객의 이벤트는 청구되지 않는다.
           finalized_count는 이번 호출로 새로 확정한 인보이스 수다. 확정된 내용은 인보이스 목록 조회로 본다.
           """)
   @ApiResponses({
-    @ApiResponse(responseCode = "200", description = "확정한 달과 새로 확정한 인보이스 수. 확정할 고객이 없으면 0이다"),
+    @ApiResponse(
+        responseCode = "200",
+        description = "확정한 달, 새로 확정한 인보이스 수, 확정하지 못한 고객 수. 확정할 고객이 없으면 둘 다 0이다"),
     @ApiResponse(
         responseCode = "400",
         content =
@@ -148,11 +155,12 @@ public class InvoiceController {
           @DateTimeFormat(pattern = "yyyy-MM")
           @FourDigitYear
           YearMonth month) {
-    var finalized = invoiceFinalizationService.finalize(organizationId, month);
+    InvoiceFinalizationResult result = invoiceFinalizationService.finalize(organizationId, month);
     return FinalizeInvoicesResponse.from(
         month.toString(),
-        finalized.stream()
+        result.invoices().stream()
             .map(invoice -> invoiceService.get(organizationId, invoice.getId()))
-            .toList());
+            .toList(),
+        result.failedCount());
   }
 }

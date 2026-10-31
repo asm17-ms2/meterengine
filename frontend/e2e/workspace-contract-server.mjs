@@ -117,7 +117,7 @@ const server = createServer(async (request, response) => {
         items: customers, total: 7, total_unfiltered: 7, page: 1, size: 20,
         summary: { month: "2026-09", calculated_at: NOW, amount: 70_000, customer_count: 7, billable_customer_count: 7, line_count: 0, unpriced_count: 0, negative_count: 0, month_amount: 70_000, month_customer_count: 7, month_billable_customer_count: 7, month_unpriced_count: 0, month_negative_count: 0, month_line_count: 0, finalization_scope: "month" },
       });
-      if (path === "/v1/invoices" && request.method === "POST") return send(response, 201, { finalized_count: 7, supply_amount: 70_000, tax_amount: 7_000, total_amount: 77_000, invoices: customers.map((customer, index) => ({ ...invoice, id: `15151515-1515-4515-8515-${String(index).padStart(12, "0")}`, invoice_number: `INV-2026-09-${index}`, customer_id: customer.customer_id, customer_name: customer.customer_name, month: "2026-09" })) });
+      if (path === "/v1/invoices" && request.method === "POST") return send(response, 201, { finalized_count: 7, failed_count: 0, supply_amount: 70_000, tax_amount: 7_000, total_amount: 77_000, invoices: customers.map((customer, index) => ({ ...invoice, id: `15151515-1515-4515-8515-${String(index).padStart(12, "0")}`, invoice_number: `INV-2026-09-${index}`, customer_id: customer.customer_id, customer_name: customer.customer_name, month: "2026-09" })) });
       if (path === "/v1/invoices") return send(response, 200, { invoices: [] });
     }
     if (current.scenario === "finalized-month-zero-customer") {

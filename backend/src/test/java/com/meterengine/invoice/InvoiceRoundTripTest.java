@@ -29,6 +29,7 @@ class InvoiceRoundTripTest {
   void 저장한_인보이스는_고객_이름과_기간과_금액과_합계와_확정_시각이_그대로_되읽힌다() {
     UUID organizationId = insertOrganization();
     OffsetDateTime finalizedAt = OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS);
+    OffsetDateTime cutoffAt = finalizedAt.minusHours(1);
     UUID invoiceId = UUID.randomUUID();
     invoiceRepository.save(
         new Invoice(
@@ -39,6 +40,7 @@ class InvoiceRoundTripTest {
             "2026-08",
             12000L,
             1200L,
+            cutoffAt,
             finalizedAt));
     entityManager.flush();
     entityManager.clear();

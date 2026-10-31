@@ -30,5 +30,5 @@ export async function finalizeInvoicesAction(
 
   revalidatePath("/billing");
   revalidatePath("/invoices");
-  return { status: "succeeded", finalizedCount: result.data.finalized_count, supplyAmount: result.data.supply_amount, taxAmount: result.data.tax_amount, totalAmount: result.data.total_amount, invoices: result.data.invoices };
+  return { status: "succeeded", finalizedCount: result.data.finalized_count, failedCount: result.data.failed_count, supplyAmount: result.data.supply_amount, taxAmount: result.data.tax_amount, totalAmount: result.data.total_amount, invoices: result.data.invoices };
 }

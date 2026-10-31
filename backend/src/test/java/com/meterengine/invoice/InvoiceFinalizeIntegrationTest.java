@@ -84,7 +84,8 @@ class InvoiceFinalizeIntegrationTest {
     insertEvent(organizationId, "tx-1", acme, "token", 3299, "2026-08-10T12:00:00+09:00");
     testClock.fix(OffsetDateTime.parse("2026-09-01T05:00:00Z"));
 
-    Invoice invoice = invoiceFinalizationService.finalize(organizationId, AUGUST).getFirst();
+    Invoice invoice =
+        invoiceFinalizationService.finalize(organizationId, AUGUST).invoices().getFirst();
 
     assertThat(invoice.getFinalizedAt())
         .isEqualTo(OffsetDateTime.parse("2026-09-01T14:00:00+09:00"));
@@ -98,7 +99,8 @@ class InvoiceFinalizeIntegrationTest {
     insertEvent(organizationId, "tx-2", acme, "token", 2799, "2026-08-31T23:59:59+09:00");
     insertEvent(organizationId, "tx-3", acme, "token", 1000, "2026-09-01T00:00:00+09:00");
 
-    Invoice invoice = invoiceFinalizationService.finalize(organizationId, AUGUST).getFirst();
+    Invoice invoice =
+        invoiceFinalizationService.finalize(organizationId, AUGUST).invoices().getFirst();
     flushAndClear();
 
     Invoice reloadedInvoice = invoiceRepository.findById(invoice.getId()).orElseThrow();
@@ -127,7 +129,8 @@ class InvoiceFinalizeIntegrationTest {
     UUID acme = insertCustomer(organizationId, "아크메");
     insertEvent(organizationId, "tx-1", acme, "token", 3299, "2026-08-10T12:00:00+09:00");
 
-    Invoice invoice = invoiceFinalizationService.finalize(organizationId, AUGUST).getFirst();
+    Invoice invoice =
+        invoiceFinalizationService.finalize(organizationId, AUGUST).invoices().getFirst();
 
     assertThat(invoice.getSupplyAmount()).isEqualTo(1640);
     assertThat(invoice.getTaxAmount()).isEqualTo(164);
@@ -141,7 +144,8 @@ class InvoiceFinalizeIntegrationTest {
     insertEvent(organizationId, "tx-1", acme, "token", 3299, "2026-08-10T12:00:00+09:00");
     long draftAmount = draft(organizationId).totalAmount();
 
-    Invoice invoice = invoiceFinalizationService.finalize(organizationId, AUGUST).getFirst();
+    Invoice invoice =
+        invoiceFinalizationService.finalize(organizationId, AUGUST).invoices().getFirst();
 
     assertThat(invoice.getSupplyAmount()).isEqualTo(draftAmount).isEqualTo(1640);
   }
@@ -188,7 +192,8 @@ class InvoiceFinalizeIntegrationTest {
     UUID organizationId = organizationWithTokenBillableMetric();
     UUID acme = insertCustomer(organizationId, "아크메");
     insertEvent(organizationId, "tx-1", acme, "token", 3280, "2026-08-10T12:00:00+09:00");
-    Invoice invoice = invoiceFinalizationService.finalize(organizationId, AUGUST).getFirst();
+    Invoice invoice =
+        invoiceFinalizationService.finalize(organizationId, AUGUST).invoices().getFirst();
     flushAndClear();
 
     insertEvent(organizationId, "tx-2", acme, "token", 1000, "2026-08-20T12:00:00+09:00");
@@ -214,7 +219,8 @@ class InvoiceFinalizeIntegrationTest {
     UUID organizationId = organizationWithTokenBillableMetric();
     UUID acme = insertCustomer(organizationId, "아크메");
     insertEvent(organizationId, "tx-1", acme, "token", 3280, "2026-08-10T12:00:00+09:00");
-    Invoice invoice = invoiceFinalizationService.finalize(organizationId, AUGUST).getFirst();
+    Invoice invoice =
+        invoiceFinalizationService.finalize(organizationId, AUGUST).invoices().getFirst();
     flushAndClear();
     jdbcTemplate.update(
         "UPDATE billable_metric SET name = '바꾼 이름' WHERE organization_id = ?", organizationId);
@@ -240,7 +246,7 @@ class InvoiceFinalizeIntegrationTest {
     insertEvent(organizationId, "tx-2", beta, "token", 500, "2026-07-31T23:59:59+09:00");
     insertEvent(organizationId, "tx-3", beta, "token", 500, "2026-09-01T00:00:00+09:00");
 
-    assertThat(invoiceFinalizationService.finalize(organizationId, AUGUST))
+    assertThat(invoiceFinalizationService.finalize(organizationId, AUGUST).invoices())
         .extracting(Invoice::getCustomerId)
         .containsExactly(acme);
   }
@@ -249,11 +255,11 @@ class InvoiceFinalizeIntegrationTest {
   void 사용량이_없어_건너뛴_고객은_나중에_사용량이_생기면_다시_불러_확정된다() {
     UUID organizationId = organizationWithTokenBillableMetric();
     UUID acme = insertCustomer(organizationId, "아크메");
-    assertThat(invoiceFinalizationService.finalize(organizationId, AUGUST)).isEmpty();
+    assertThat(invoiceFinalizationService.finalize(organizationId, AUGUST).invoices()).isEmpty();
 
     insertEvent(organizationId, "tx-1", acme, "token", 1000, "2026-08-10T12:00:00+09:00");
 
-    assertThat(invoiceFinalizationService.finalize(organizationId, AUGUST))
+    assertThat(invoiceFinalizationService.finalize(organizationId, AUGUST).invoices())
         .extracting(Invoice::getSupplyAmount)
         .containsExactly(500L);
   }
@@ -266,7 +272,8 @@ class InvoiceFinalizeIntegrationTest {
     insertEvent(organizationId, "tx-1", acme, "token", 3280, "2026-08-10T12:00:00+09:00");
     insertEvent(organizationId, "tx-2", acme, "count", 3, "2026-08-11T12:00:00+09:00");
 
-    Invoice invoice = invoiceFinalizationService.finalize(organizationId, AUGUST).getFirst();
+    Invoice invoice =
+        invoiceFinalizationService.finalize(organizationId, AUGUST).invoices().getFirst();
     flushAndClear();
 
     assertThat(invoice.getSupplyAmount()).isEqualTo(1640);
@@ -281,11 +288,11 @@ class InvoiceFinalizeIntegrationTest {
     insertBillableMetric(organizationId, "api-calls", "count");
     UUID acme = insertCustomer(organizationId, "아크메");
     insertEvent(organizationId, "tx-1", acme, "count", 3, "2026-08-11T12:00:00+09:00");
-    assertThat(invoiceFinalizationService.finalize(organizationId, AUGUST)).isEmpty();
+    assertThat(invoiceFinalizationService.finalize(organizationId, AUGUST).invoices()).isEmpty();
 
     insertPrice(organizationId, "api-calls", "100");
 
-    assertThat(invoiceFinalizationService.finalize(organizationId, AUGUST))
+    assertThat(invoiceFinalizationService.finalize(organizationId, AUGUST).invoices())
         .extracting(Invoice::getSupplyAmount)
         .containsExactly(300L);
   }
@@ -301,7 +308,8 @@ class InvoiceFinalizeIntegrationTest {
     insertEvent(organizationId, "tx-1", acme, "token", 3280, "2026-08-10T12:00:00+09:00");
     insertEvent(organizationId, "tx-2", acme, "cache", 19, "2026-08-10T12:00:00+09:00");
 
-    Invoice invoice = invoiceFinalizationService.finalize(organizationId, AUGUST).getFirst();
+    Invoice invoice =
+        invoiceFinalizationService.finalize(organizationId, AUGUST).invoices().getFirst();
     flushAndClear();
 
     assertThat(invoice.getSupplyAmount()).isEqualTo(1640);
@@ -316,7 +324,7 @@ class InvoiceFinalizeIntegrationTest {
     UUID acme = insertCustomer(organizationId, "아크메");
     insertEvent(organizationId, "tx-1", acme, "token", 19, "2026-08-10T12:00:00+09:00");
 
-    assertThat(invoiceFinalizationService.finalize(organizationId, AUGUST)).isEmpty();
+    assertThat(invoiceFinalizationService.finalize(organizationId, AUGUST).invoices()).isEmpty();
   }
 
   @Test
@@ -356,7 +364,10 @@ class InvoiceFinalizeIntegrationTest {
 
     invoiceFinalizationService.finalize(organizationId, AUGUST);
     Invoice september =
-        invoiceFinalizationService.finalize(organizationId, AUGUST.plusMonths(1)).getFirst();
+        invoiceFinalizationService
+            .finalize(organizationId, AUGUST.plusMonths(1))
+            .invoices()
+            .getFirst();
 
     assertThat(september.getPeriod()).isEqualTo("2026-09");
     assertThat(september.getSupplyAmount()).isEqualTo(500);
@@ -374,7 +385,7 @@ class InvoiceFinalizeIntegrationTest {
     insertEvent(
         otherOrganizationId, "tx-1", otherCustomer, "token", 9000, "2026-08-10T12:00:00+09:00");
 
-    assertThat(invoiceFinalizationService.finalize(organizationId, AUGUST))
+    assertThat(invoiceFinalizationService.finalize(organizationId, AUGUST).invoices())
         .extracting(Invoice::getCustomerId, Invoice::getSupplyAmount)
         .containsExactlyInAnyOrder(tuple(acme, 1640L), tuple(beta, 500L));
     assertThat(invoiceRepository.findNewestFirst(otherOrganizationId, null, null)).isEmpty();
@@ -410,7 +421,7 @@ class InvoiceFinalizeIntegrationTest {
     insertEvent(organizationId, "tx-3", zeta, "token", 19, "2026-08-10T12:00:00+09:00");
 
     Map<UUID, UUID> invoiceIdByCustomerId =
-        invoiceFinalizationService.finalize(organizationId, AUGUST).stream()
+        invoiceFinalizationService.finalize(organizationId, AUGUST).invoices().stream()
             .collect(Collectors.toMap(Invoice::getCustomerId, Invoice::getId));
     flushAndClear();
 
@@ -443,7 +454,8 @@ class InvoiceFinalizeIntegrationTest {
     insertEvent(organizationId, "tx-1", acme, "a", 1235);
     insertEvent(organizationId, "tx-2", acme, "b", 3);
 
-    UUID invoiceId = invoiceFinalizationService.finalize(organizationId, AUGUST).getFirst().getId();
+    UUID invoiceId =
+        invoiceFinalizationService.finalize(organizationId, AUGUST).invoices().getFirst().getId();
     flushAndClear();
 
     Invoice invoice = invoiceRepository.findById(invoiceId).orElseThrow();

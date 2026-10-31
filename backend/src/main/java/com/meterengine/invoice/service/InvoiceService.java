@@ -12,6 +12,7 @@ import com.meterengine.invoice.entity.InvoiceLine;
 import com.meterengine.invoice.repository.InvoiceLineRepository;
 import com.meterengine.invoice.repository.InvoiceRepository;
 import com.meterengine.metric.service.BillableMetricUsageService;
+import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
@@ -114,14 +115,16 @@ public class InvoiceService {
         invoice.getCustomerId(),
         invoice.getCustomerName(),
         invoice.getPeriod(),
-        invoice
-            .getFinalizedAt()
-            .atZoneSameInstant(BillableMetricUsageService.BILLING_ZONE)
-            .toOffsetDateTime(),
+        inBillingZone(invoice.getCutoffAt()),
+        inBillingZone(invoice.getFinalizedAt()),
         invoice.getSupplyAmount(),
         invoice.getTaxAmount(),
         invoice.getTotalAmount(),
         invoiceLines.stream().map(this::toInvoiceLineResponse).toList());
+  }
+
+  private static OffsetDateTime inBillingZone(OffsetDateTime dateTime) {
+    return dateTime.atZoneSameInstant(BillableMetricUsageService.BILLING_ZONE).toOffsetDateTime();
   }
 
   private InvoiceLineResponse toInvoiceLineResponse(InvoiceLine invoiceLine) {
