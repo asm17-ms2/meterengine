@@ -56,7 +56,7 @@ main() {
 	run_step warmup "$WARMUP_RATE" "$WARMUP_SECONDS"
 	local stored_total table="$RESULT_DIR/$RUN_ID-steps.tsv" rate file row
 	stored_total=$(json "$RESULT_DIR/$RUN_ID-ingest-warmup.json" '.k6.metrics.events_stored.values.count // 0')
-	printf 'rate\tsent_per_s\tdropped\tp50_ms\tp99_ms\terror_rate\tstored_total\tvus\tstart_kst\tend_kst\tgrafana\n' >"$table"
+	printf 'rate\tsent_per_s\tdropped\tp50_ms\tp99_ms\terror_rate\tstored_total\tvus\tstart_kst\tend_kst\tgrafana\tgrafana_db\n' >"$table"
 
 	for rate in $RATES; do
 		log "초당 ${rate}건 ${STEP_SECONDS}초"
