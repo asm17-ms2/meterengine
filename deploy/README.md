@@ -14,9 +14,10 @@
                  |   \------:8081---------/  (서버사이드 호출도 Caddy를 거쳐 백엔드로)
             인증서 자동 발급
 
-[Prometheus] --scrape--> backend-blue:8080, backend-green:8080, backend:8080 (블루그린 이전 이름, 첫 전환 배포용)의
-             /actuator/prometheus, node-exporter:9100,
-             postgres-exporter:9187 (RDS 통계 뷰), cloudwatch-exporter:9106 (RDS CloudWatch)
+[Prometheus] --scrape--> backend-blue:8080, backend-green:8080의
+             /actuator/prometheus, node-exporter:9100, cadvisor:8080 (컨테이너),
+             postgres-exporter:9187 (RDS 통계 뷰), cloudwatch-exporter:9106 (RDS CloudWatch),
+             grafana:3000 (경보 평가와 알림 전송)
      ^
 [Grafana:3001(127.0.0.1)] --경보--> Slack
 ```
@@ -38,7 +39,7 @@
 
 | 파일 | 내용 |
 | --- | --- |
-| `compose.prod.yml` | 배포 스택 정의. Caddy, backend-blue, backend-green, frontend, Prometheus, node exporter, postgres exporter, cloudwatch exporter, Grafana |
+| `compose.prod.yml` | 배포 스택 정의. Caddy, backend-blue, backend-green, frontend, Prometheus, node exporter, cAdvisor, postgres exporter, cloudwatch exporter, Grafana |
 | `caddy/Caddyfile` | 경로 분배와 HTTPS. `/v1/*`는 `upstreams.caddy`의 백엔드 중 헬스체크를 통과한 쪽, 나머지는 프론트엔드. `:8081`은 프론트엔드와 `deploy.sh`가 쓰는 내부 사이트 |
 | `deploy.sh` | 배포 절차 전체. 서버에서 root로 돈다 |
 | `prometheus/prometheus.yml` | Prometheus 수집 대상 |
@@ -181,7 +182,7 @@ aws ssm send-command \
 
 블루그린 이전 구성(백엔드 서비스 이름 `backend`)인 서버에 이 구성을 처음 배포할 때다.
 
-- `deploy.sh`는 `backend`를 둔 채 블루를 띄우고, Caddy 백엔드 목록을 `backend:8080`에서 블루로 바꿔 Caddy가 블루로 보내는 것을 확인한 뒤 `backend`를 지운다. prometheus.yml의 `backend:8080`은 이 전환을 위해 남겨 둔 것이다.
+- `deploy.sh`는 `backend`를 둔 채 블루를 띄우고, Caddy 백엔드 목록을 `backend:8080`에서 블루로 바꿔 Caddy가 블루로 보내는 것을 확인한 뒤 `backend`를 지운다. Prometheus는 `backend`를 긁지 않아 전환 중 그 지표는 남지 않는다. 이 배포에서 Prometheus는 정의가 바뀌어 다시 만들어지므로 블루가 뜰 때까지 백엔드 헬스체크 실패 경보가 한 번 울릴 수 있다.
 - 프론트엔드는 이 배포에서 백엔드 주소가 `http://caddy:8081`로 바뀌어 다시 만들어진다. 곧이어 Caddy가 reload 될 때까지 몇 초 동안 화면이 백엔드를 부르지 못할 수 있다. 수집 API는 영향이 없다.
 - 개발 서버의 첫 전환 배포는 머지 직전부터 CD가 끝날 때까지 로컬 터미널에서 아래 루프를 돌려 200이 아닌 응답을 센다. 조회 권한이 있는 API 키를 사용한다.
 
@@ -449,7 +450,7 @@ aws ssm get-parameter --name /meterengine/prod/operator-password --with-decrypti
 
 ## 모니터링
 
-- Prometheus가 백엔드 `/actuator/prometheus`와 node exporter와 postgres exporter를 15초마다, cloudwatch exporter를 1분마다 수집하고, Grafana가 대시보드와 경보로 만든다.
+- Prometheus가 백엔드 `/actuator/prometheus`와 node exporter, cAdvisor, postgres exporter, Grafana를 15초마다, cloudwatch exporter를 1분마다 수집하고, Grafana가 대시보드와 경보로 만든다.
 - postgres exporter는 RDS에 `pg_monitor` 권한의 읽기 전용 사용자 `meterengine_exporter`로 붙는다. 새 RDS에는 이 사용자를 먼저 만든다.
 
 ```sql
@@ -475,7 +476,11 @@ aws ssm start-session --target i-0f47bb1f028cd29a9 \
 
 2. 세션을 켠 채 http://localhost:3001 에 접속한다.
 3. `admin`과 Parameter Store `grafana-admin-password` 값으로 로그인한다.
-4. MeterEngine 폴더에서 대시보드를 연다. MeterEngine SLO는 가용성과 응답 지연, MeterEngine 저장단은 이벤트 저장 경로의 풀, RDS, PostgreSQL 지표, MeterEngine 결제와 예약 작업은 결제, 웹훅 발송, 예약 작업 지표다.
+4. MeterEngine 폴더에서 대시보드를 연다.
+    - MeterEngine SLO는 가용성과 응답 지연이다.
+    - MeterEngine 결제와 예약 작업은 결제, 웹훅 발송, 예약 작업 지표다.
+    - MeterEngine 앱 자원은 JVM, 톰캣, 커넥션 풀, 서버와 컨테이너 자원, 관측 시스템 상태다.
+    - MeterEngine 저장단은 이벤트 저장 경로의 풀, RDS, PostgreSQL 지표다.
 
 ### 경보
 

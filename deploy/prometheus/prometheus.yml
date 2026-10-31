@@ -13,16 +13,22 @@ global:
 scrape_configs:
   # 앱 지표. 5xx율과 응답 지연(http_server_requests_seconds)이 여기서 나온다.
   # up{job="backend"}가 백엔드 경보의 재료다. 블루와 그린은 instance 라벨로 갈린다.
-  # backend:8080은 첫 전환 배포용인 블루그린 이전 컨테이너다.
   - job_name: backend
     metrics_path: /actuator/prometheus
     static_configs:
-      - targets: ["backend:8080", "backend-blue:8080", "backend-green:8080"]
+      - targets: ["backend-blue:8080", "backend-green:8080"]
 
   # 서버 자원. CPU 경보(node_cpu_seconds_total)와 디스크 감시가 여기서 나온다.
   - job_name: node
     static_configs:
       - targets: ["node-exporter:9100"]
+
+  # 컨테이너별 CPU와 메모리, 서버 전체 네트워크. node-exporter는 자기 컨테이너의 네트워크만 본다.
+  - job_name: cadvisor
+    # cAdvisor는 표본에 시각을 붙인다. 이게 없으면 다시 만든 컨테이너의 옛 시계열이 5분 남아 겹쳐 그려진다.
+    track_timestamps_staleness: true
+    static_configs:
+      - targets: ["cadvisor:8080"]
 
   # PostgreSQL 안쪽. 체크포인트, 커밋과 삽입 행, 테이블 크기가 여기서 나온다.
   - job_name: postgres
@@ -35,6 +41,16 @@ scrape_configs:
     scrape_timeout: 50s
     static_configs:
       - targets: ["cloudwatch-exporter:9106"]
+
+  # Grafana 자신. 경보 평가 오류와 알림 전송 실패가 여기서 나온다.
+  - job_name: grafana
+    static_configs:
+      - targets: ["grafana:3000"]
+    # 대시보드가 쓰는 경보 지표만 남기고 나머지는 저장 크기 한도를 먹지 않게 버린다.
+    metric_relabel_configs:
+      - source_labels: [__name__]
+        regex: grafana_alerting_(rule_evaluation_failures|notifications_failed)_total
+        action: keep
 
   # 자기 자신. 수집이 밀리거나(scrape_duration) TSDB가 커지는 것을 볼 수 있다.
   - job_name: prometheus
