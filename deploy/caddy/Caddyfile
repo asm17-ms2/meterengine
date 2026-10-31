@@ -84,6 +84,9 @@
 	}
 }
 
+# sso.caddy는 deploy.sh가 CADDY_SSO_SITES(적지 않으면 운영 PARAM_PATH에서만 on)로 배포마다 쓴다. off면 grafana., prometheus. 사이트를 만들지 않는다.
+import sso.caddy
+
 # 프론트엔드와 deploy.sh만 compose 네트워크 안에서 부른다. compose가 8081을 서버 밖으로 열지 않는다.
 http://:8081 {
 	# 프론트 고정 주소가 아닌 연결이 보낸 클라이언트 IP는 접속 주소로 덮어쓴다. compose의 프론트 주소를 바꾸면 같이 바꾼다.

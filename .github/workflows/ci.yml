@@ -141,8 +141,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      # 로그 마스킹 시험은 이 이미지가 로컬에 있어야 돈다
+      # 로그 마스킹과 SSO 시험은 이 이미지들이 로컬에 있어야 돈다
       - run: docker pull caddy:2.11.7-alpine
+      - run: docker pull quay.io/oauth2-proxy/oauth2-proxy:v7.15.5
       - run: python3 -m unittest discover -s deploy/tests -v
 
 
