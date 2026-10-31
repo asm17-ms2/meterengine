@@ -8,6 +8,7 @@ import com.meterengine.global.error.BusinessException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.ErrorResponse.FieldError;
 import com.meterengine.global.error.InvalidRequestException;
+import com.meterengine.global.metrics.DatabaseOperationTimer;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -22,10 +23,14 @@ public class EventIngestionService {
 
   static final Duration MAX_EVENT_AGE = Duration.ofDays(35);
 
+  private static final String CUSTOMER_TABLE = "customer";
+  private static final String EVENT_TABLE = "event";
+
   private final EventRepository eventRepository;
   private final CustomerDirectory customerDirectory;
   private final JsonMapper jsonMapper;
   private final EventIngestMetrics eventIngestMetrics;
+  private final DatabaseOperationTimer databaseOperationTimer;
   private final TransactionTemplate transactionTemplate;
 
   EventIngestionService(
@@ -33,11 +38,13 @@ public class EventIngestionService {
       CustomerDirectory customerDirectory,
       JsonMapper jsonMapper,
       EventIngestMetrics eventIngestMetrics,
+      DatabaseOperationTimer databaseOperationTimer,
       PlatformTransactionManager platformTransactionManager) {
     this.eventRepository = eventRepository;
     this.customerDirectory = customerDirectory;
     this.jsonMapper = jsonMapper;
     this.eventIngestMetrics = eventIngestMetrics;
+    this.databaseOperationTimer = databaseOperationTimer;
     this.transactionTemplate = new TransactionTemplate(platformTransactionManager);
   }
 
@@ -46,7 +53,12 @@ public class EventIngestionService {
     Instant receivedAt = Instant.now();
     IngestEventResponse response;
     try {
-      response = transactionTemplate.execute(status -> store(organizationId, request, receivedAt));
+      response =
+          transactionTemplate.execute(
+              status -> {
+                databaseOperationTimer.timeCommit(EVENT_TABLE);
+                return store(organizationId, request, receivedAt);
+              });
     } catch (BusinessException rejection) {
       eventIngestMetrics.recordRejected(rejection.getErrorCode());
       throw rejection;
@@ -66,7 +78,8 @@ public class EventIngestionService {
   private IngestEventResponse store(
       UUID organizationId, IngestEventRequest request, Instant receivedAt) {
     try {
-      customerDirectory.check(organizationId, request.customerId());
+      databaseOperationTimer.timeSelect(
+          CUSTOMER_TABLE, () -> customerDirectory.check(organizationId, request.customerId()));
     } catch (com.meterengine.global.error.ConflictException exception) {
       if (exception.getErrorCode() != ErrorCode.CUSTOMER_ARCHIVED
           || !eventRepository.exists(organizationId, request.transactionId())) throw exception;
@@ -85,13 +98,16 @@ public class EventIngestionService {
     String propertiesJson = jsonMapper.writeValueAsString(request.properties());
 
     int inserted =
-        eventRepository.insertIfAbsent(
-            organizationId,
-            request.transactionId(),
-            request.customerId(),
-            request.type(),
-            propertiesJson,
-            request.occurredAt());
+        databaseOperationTimer.timeInsert(
+            EVENT_TABLE,
+            () ->
+                eventRepository.insertIfAbsent(
+                    organizationId,
+                    request.transactionId(),
+                    request.customerId(),
+                    request.type(),
+                    propertiesJson,
+                    request.occurredAt()));
     if (inserted == 1) {
       return IngestEventResponse.stored(request.transactionId());
     }

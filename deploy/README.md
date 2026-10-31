@@ -480,7 +480,7 @@ aws ssm start-session --target i-0f47bb1f028cd29a9 \
 4. MeterEngine 폴더에서 대시보드를 연다.
     - MeterEngine 서비스 개요는 가용성, 요청 수, 5xx 비율, 느린 API, Caddy 요청과 업스트림 상태다.
     - MeterEngine API 상세는 uri와 method로 고른 API의 지연과 오류, 그리고 전체 요청의 인증, 호출 제한, 감사 기록 실패 지표다.
-    - MeterEngine 이벤트 수집은 수집 API 요청, 이벤트 결과, 저장 실패 지표다.
+    - MeterEngine 이벤트 수집은 수집 API 요청, 이벤트 결과, 저장 실패 지표다. 맨 아래 접힌 DB 왕복 행은 단건 수집이 거치는 DB 왕복별 평균과 p99다.
     - MeterEngine 청구와 결제는 인보이스 확정, 결제, 토스페이먼츠 지표다.
     - MeterEngine 예약 작업과 웹훅 발송은 예약 작업 실행과 웹훅 전달, 적체 지표다.
     - MeterEngine 앱 자원은 JVM, 톰캣, 커넥션 풀, 서버와 컨테이너 자원, 관측 시스템 상태다.

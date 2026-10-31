@@ -18,6 +18,7 @@ import com.meterengine.event.repository.EventRepository;
 import com.meterengine.global.error.BusinessException;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
+import com.meterengine.global.metrics.DatabaseOperationTimer;
 import com.meterengine.metric.service.BillableMetricUsageService;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Timer;
@@ -63,6 +64,7 @@ class EventIngestionServiceTest {
             customerDirectory,
             JsonMapper.builder().build(),
             new EventIngestMetrics(meterRegistry),
+            new DatabaseOperationTimer(meterRegistry),
             platformTransactionManager);
   }
 
