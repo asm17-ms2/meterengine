@@ -9,6 +9,7 @@ import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.ErrorResponse.FieldError;
 import com.meterengine.global.error.InvalidRequestException;
 import com.meterengine.global.error.NotFoundException;
+import com.meterengine.global.metrics.DatabaseOperationTimer;
 import com.meterengine.global.security.AccessScopes;
 import com.meterengine.global.security.AuthenticatedCredential;
 import com.meterengine.global.security.AuthenticatedPrincipal;
@@ -34,17 +35,22 @@ public class ApiKeyService {
 
   public static final String CREATED_ACTION = "api_key_created";
 
+  private static final String API_KEY_TABLE = "api_key";
+
   private final ApiKeyRepository apiKeyRepository;
   private final ApiKeyProperties apiKeyProperties;
   private final AuditLogService auditLogService;
+  private final DatabaseOperationTimer databaseOperationTimer;
 
   ApiKeyService(
       ApiKeyRepository apiKeyRepository,
       ApiKeyProperties apiKeyProperties,
-      AuditLogService auditLogService) {
+      AuditLogService auditLogService,
+      DatabaseOperationTimer databaseOperationTimer) {
     this.apiKeyRepository = apiKeyRepository;
     this.apiKeyProperties = apiKeyProperties;
     this.auditLogService = auditLogService;
+    this.databaseOperationTimer = databaseOperationTimer;
   }
 
   @Transactional(readOnly = true)
@@ -53,8 +59,9 @@ public class ApiKeyService {
       return Optional.empty();
     }
     OffsetDateTime now = OffsetDateTime.now();
-    return apiKeyRepository
-        .findByKeyHash(SecureTokens.hash(rawKey))
+    byte[] keyHash = SecureTokens.hash(rawKey);
+    return databaseOperationTimer
+        .timeSelect(API_KEY_TABLE, () -> apiKeyRepository.findByKeyHash(keyHash))
         .filter(apiKey -> apiKey.isUsableAt(now))
         .map(ApiKeyService::credentialOf);
   }

@@ -2,6 +2,7 @@ package com.meterengine.organization.service;
 
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
+import com.meterengine.global.metrics.DatabaseOperationTimer;
 import com.meterengine.global.security.BusinessEnvironment;
 import com.meterengine.global.security.OrganizationEnvironments;
 import java.util.List;
@@ -12,16 +13,23 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class OrganizationEnvironmentService implements OrganizationEnvironments {
-  private final JdbcTemplate jdbcTemplate;
+  private static final String ORGANIZATION_ENVIRONMENT_TABLE = "organization_environment";
 
-  public OrganizationEnvironmentService(JdbcTemplate jdbcTemplate) {
+  private final JdbcTemplate jdbcTemplate;
+  private final DatabaseOperationTimer databaseOperationTimer;
+
+  public OrganizationEnvironmentService(
+      JdbcTemplate jdbcTemplate, DatabaseOperationTimer databaseOperationTimer) {
     this.jdbcTemplate = jdbcTemplate;
+    this.databaseOperationTimer = databaseOperationTimer;
   }
 
   @Override
   @Transactional(readOnly = true)
   public BusinessEnvironment resolve(UUID organizationId, String mode) {
-    return list(organizationId).stream()
+    return databaseOperationTimer
+        .timeSelect(ORGANIZATION_ENVIRONMENT_TABLE, () -> list(organizationId))
+        .stream()
         .filter(environment -> environment.mode().equals(mode))
         .findFirst()
         .orElseThrow(() -> new NotFoundException(ErrorCode.ORGANIZATION_NOT_FOUND));
