@@ -8,6 +8,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.jayway.jsonpath.JsonPath;
 import com.meterengine.TestClock;
 import com.meterengine.TestCredentials;
+import com.meterengine.TestEvents;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.event.controller.EventIssueController;
 import com.meterengine.event.dto.EventIssuesResponse;
@@ -47,9 +48,12 @@ class EventIssueIntegrationTest {
     testClock.reset();
   }
 
+  // 마감 시각 전에 받은 이벤트만 집계되므로 받은 시각을 고정한 시계에 맞춘다. 실제 날짜가 마감을 지나도 같다.
+  private static final String NOW = "2026-10-15T03:00:00Z";
+
   @BeforeEach
   void setUp() {
-    testClock.fix(OffsetDateTime.parse("2026-10-15T03:00:00Z"));
+    testClock.fix(OffsetDateTime.parse(NOW));
     mvc = MockMvcTester.from(context, builder -> builder.apply(springSecurity()).build());
     organization = UUID.randomUUID();
     read = TestCredentials.issueApiKey(jdbcTemplate, organization, "read");
@@ -196,13 +200,17 @@ class EventIssueIntegrationTest {
         explicitCustomer,
         organization,
         environment);
-    jdbcTemplate.update(
-        "INSERT INTO"
-            + " event(organization_id,environment_id,transaction_id,customer_id,type,occurred_at)"
-            + " VALUES (?,?,'explicit-event',?,'mystery','2026-10-10T00:00:00Z')",
-        organization,
-        environment,
-        explicitCustomer);
+    TestEvents.withGivenReceivedAt(
+        jdbcTemplate,
+        () ->
+            jdbcTemplate.update(
+                "INSERT INTO"
+                    + " event(organization_id,environment_id,transaction_id,customer_id,type,occurred_at,received_at)"
+                    + " VALUES (?,?,'explicit-event',?,'mystery','2026-10-10T00:00:00Z',?::timestamptz)",
+                organization,
+                environment,
+                explicitCustomer,
+                NOW));
     assertThat(number(body(get(read, "")), "$.total")).isEqualTo(3);
     String session = TestCredentials.issueMemberSession(jdbcTemplate, organization);
     var scoped =
@@ -282,15 +290,15 @@ class EventIssueIntegrationTest {
   }
 
   private void event(String transaction, String type, String properties, String timestamp) {
-    jdbcTemplate.update(
-        "INSERT INTO event(organization_id,transaction_id,customer_id,type,properties,occurred_at)"
-            + " VALUES (?,?,?,?,?::jsonb,?::timestamptz)",
+    TestEvents.insert(
+        jdbcTemplate,
         organization,
         transaction,
         customer,
         type,
         properties,
-        timestamp);
+        OffsetDateTime.parse(timestamp),
+        OffsetDateTime.parse(NOW));
   }
 
   private MvcTestResult get(String authorization, String suffix) {
