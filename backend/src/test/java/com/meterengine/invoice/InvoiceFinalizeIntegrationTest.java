@@ -124,6 +124,66 @@ class InvoiceFinalizeIntegrationTest {
   }
 
   @Test
+  void 마감이_지난_달은_마감_시각_전에_받은_이벤트로_확정하고_인보이스에_마감_시각을_남긴다() {
+    UUID organizationId = organizationWithTokenBillableMetric();
+    UUID acme = insertCustomer(organizationId, "아크메");
+    TestEvents.insertToken(
+        jdbcTemplate,
+        organizationId,
+        "tx-1",
+        acme,
+        3299,
+        "2026-08-31T10:00:00+09:00",
+        "2026-09-01T12:59:59+09:00");
+    TestEvents.insertToken(
+        jdbcTemplate,
+        organizationId,
+        "tx-2",
+        acme,
+        1000,
+        "2026-08-31T11:00:00+09:00",
+        "2026-09-01T13:00:00+09:00");
+    long draftAmount = draft(organizationId).totalAmount();
+
+    Invoice invoice =
+        invoiceFinalizationService.finalize(organizationId, AUGUST).invoices().getFirst();
+
+    assertThat(invoice.getSupplyAmount()).isEqualTo(draftAmount).isEqualTo(1640);
+    assertThat(invoice.getCutoffAt()).isEqualTo(OffsetDateTime.parse("2026-09-01T13:00:00+09:00"));
+  }
+
+  @Test
+  void 마감_시각_전에_확정하면_확정_시각까지_받은_이벤트로_확정하고_그_시각을_마감으로_남긴다() {
+    UUID organizationId = organizationWithTokenBillableMetric();
+    UUID acme = insertCustomer(organizationId, "아크메");
+    TestEvents.insertToken(
+        jdbcTemplate,
+        organizationId,
+        "tx-1",
+        acme,
+        3299,
+        "2026-08-10T10:00:00+09:00",
+        "2026-08-10T10:00:00+09:00");
+    TestEvents.insertToken(
+        jdbcTemplate,
+        organizationId,
+        "tx-2",
+        acme,
+        1000,
+        "2026-08-10T11:00:00+09:00",
+        "2026-08-20T10:00:01+09:00");
+    testClock.fix(OffsetDateTime.parse("2026-08-20T10:00:00+09:00"));
+
+    Invoice invoice =
+        invoiceFinalizationService.finalize(organizationId, AUGUST).invoices().getFirst();
+
+    assertThat(invoice.getSupplyAmount()).isEqualTo(1640);
+    assertThat(invoice.getCutoffAt())
+        .isEqualTo(invoice.getFinalizedAt())
+        .isEqualTo(OffsetDateTime.parse("2026-08-20T10:00:00+09:00"));
+  }
+
+  @Test
   void 단가는_세금_별도이고_세액은_공급가액의_10퍼센트이며_합계는_둘의_합이다() {
     UUID organizationId = organizationWithTokenBillableMetric();
     UUID acme = insertCustomer(organizationId, "아크메");
@@ -335,6 +395,7 @@ class InvoiceFinalizeIntegrationTest {
 
     MvcTestResult finalized = finalizeInvoices(organizationId, "?month=2026-08");
     assertThat(finalized).hasStatusOk().bodyJson().extractingPath("$.finalized_count").isEqualTo(1);
+    assertThat(finalized).bodyJson().extractingPath("$.failed_count").isEqualTo(0);
     assertThat(finalized).bodyJson().extractingPath("$.invoices").asArray().hasSize(1);
     assertThat(finalized).bodyJson().extractingPath("$.total_amount").isEqualTo(1804);
     assertThat(finalized).bodyJson().extractingPath("$.invoices[0].total_amount").isEqualTo(1804);

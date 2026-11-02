@@ -426,6 +426,15 @@ test("격리 계약: 월 확정 결과 창은 다섯 건까지만 펼치고 나�
   await expect(result.getByText("나머지 2건은 '인보이스 보기'에서 확인하세요.", { exact: true })).toBeVisible();
 });
 
+test("격리 계약: 다른 확정이 먼저 처리해 일부만 확정되면 결과 창이 그 원인도 안내한다", async ({ page, request }) => {
+  await control(request, "finalize-month-partial");
+  await page.goto("/billing?month=2026-09&environment=legacy");
+  await page.getByRole("button", { name: "월 전체 확정", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "확정", exact: true }).click();
+  const result = page.getByRole("dialog", { name: /인보이스 3건을 확정했습니다/ });
+  await expect(result.getByText("창을 연 뒤 사용량이 바뀌었거나 다른 확정이 먼저 처리한 고객이 있어 처음 안내한 7곳과 다릅니다. 금액은 인보이스에서 확인하세요.", { exact: true })).toBeVisible();
+});
+
 test("격리 계약: 청구할 고객이 없어 월 전체 확정이 비활성이면 그 이유를 버튼 설명으로 보인다", async ({ page, request }) => {
   await control(request, "finalized-month-zero-customer");
   await page.goto("/billing?month=2026-10&environment=legacy");
