@@ -166,6 +166,7 @@ class CaddyMetricsTest(unittest.TestCase):
         shutil.copyfile(CADDYFILE, root / "Caddyfile")
         (root / "upstreams.caddy").write_text("to backend-blue:8080\n")
         (root / "access-log.caddy").write_text("output discard\n")
+        (root / "sso.caddy").write_text("# CADDY_SSO_SITES=off\n")
         (root / "Upstreamfile").write_text("{\n admin off\n auto_https off\n}\n:8080 {\n respond 200\n}\n")
         mount = f"{root}:/etc/caddy:ro"
         cls.docker("network", "create", cls.network)
