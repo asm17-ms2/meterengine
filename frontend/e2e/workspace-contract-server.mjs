@@ -21,7 +21,20 @@ const invoice = { id: INVOICE_ID, customer_id: "77777777-7777-4777-8777-77777777
 const attempt = { id: ATTEMPT_ID, invoice_id: INVOICE_ID, status: "done", amount: 11_000, mode: "test", failure_message: null, requested_at: NOW };
 const delay = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
 const FAR_CUSTOMER_ID = "77777777-7777-4777-8777-777777777777";
+const PRICED_CUSTOMER_ID = "16161616-1616-4616-8616-161616161616";
+const HELD_CUSTOMER_ID = "17171717-1717-4717-8717-171717171717";
 const AUTO_FINALIZE_OFF = { auto_finalize_enabled: false, auto_finalize_at: null, auto_finalize_running: false };
+const shiftKstMonth = delta => {
+  const [year, month] = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit" }).format(new Date()).split("-").map(Number);
+  const shifted = new Date(Date.UTC(year, month - 1 + delta, 1));
+  return `${shifted.getUTCFullYear()}-${String(shifted.getUTCMonth() + 1).padStart(2, "0")}`;
+};
+// 화면이 끝난 달을 지금 시각으로 가르므로 이번 달 기준으로 둔다. 이번 달은 확정 시각 전, 지난달은 도는 중, 전전달은 다 훑고 보류만 남은 달, 그 밖은 꺼짐이다.
+const AUTO_FINALIZE_BY_MONTH = {
+  [shiftKstMonth(0)]: { auto_finalize_enabled: true, auto_finalize_at: `${shiftKstMonth(1)}-01T14:00:00+09:00`, auto_finalize_running: false },
+  [shiftKstMonth(-1)]: { auto_finalize_enabled: true, auto_finalize_at: `${shiftKstMonth(0)}-01T15:00:00+09:00`, auto_finalize_running: true },
+  [shiftKstMonth(-2)]: { auto_finalize_enabled: true, auto_finalize_at: null, auto_finalize_running: false },
+};
 const initialState = () => ({
   scenario: "normal", cancellationCalls: [], cancellations: [], cancellationEffects: 0,
   cancellationCompletedAfterMs: null, idempotentResults: new Map(), lostResponseSent: false, rejectionSent: false,
@@ -141,6 +154,26 @@ const server = createServer(async (request, response) => {
         const invoices = selectedCustomer === ZERO_CUSTOMER_ID ? [] : Array.from({ length: 101 }, (_, index) => ({ ...invoice, id: `13131313-1313-4313-8313-${String(index).padStart(12, "0")}`, customer_name: `다른 고객의 확정 청구 ${index}` }));
         return send(response, 200, { invoices });
       }
+    }
+    if (current.scenario === "auto-finalize") {
+      const searchParams = new URL(request.url, "http://127.0.0.1").searchParams;
+      const month = searchParams.get("month") ?? shiftKstMonth(0);
+      const metricCode = searchParams.get("billable_metric_code");
+      const autoFinalize = AUTO_FINALIZE_BY_MONTH[month] ?? AUTO_FINALIZE_OFF;
+      const tokenLine = amount => ({ billable_metric_code: "tokens", target_property: "token", dimension_values: {}, quantity: amount, unit_price: 1, amount });
+      const customers = [
+        { customer_id: PRICED_CUSTOMER_ID, customer_name: "단가 있는 고객", amount: 10_000, lines: [tokenLine(10_000)], unpriced_usages: [], negative_usages: [] },
+        { customer_id: HELD_CUSTOMER_ID, customer_name: "단가 없는 사용량 고객", amount: 5_000, lines: [tokenLine(5_000)], unpriced_usages: [{ billable_metric_code: "api_calls", target_property: null, dimension_values: { model: "beta" }, quantity: 3 }], negative_usages: [] },
+      ].map(customer => ({ ...customer, auto_finalize_held: autoFinalize.auto_finalize_enabled && customer.amount !== 0 && customer.unpriced_usages.length > 0 }));
+      // 서버처럼 미터 조건은 라인과 단가 없는 사용량만 거르고 보류 여부는 그대로 둔다.
+      const items = metricCode ? customers.map(customer => ({ ...customer, lines: customer.lines.filter(line => line.billable_metric_code === metricCode), unpriced_usages: customer.unpriced_usages.filter(usage => usage.billable_metric_code === metricCode) })) : customers;
+      if (path === "/v1/customers/options") return send(response, 200, { items: [], total: 0, total_unfiltered: 0, page: 1, size: 200, summary: {} });
+      if (path === "/v1/usage/months") return send(response, 200, { months: [-3, -2, -1, 0].map(shiftKstMonth) });
+      if (path === "/v1/invoices/draft/search") return send(response, 200, {
+        items, total: 2, total_unfiltered: 2, page: 1, size: 20,
+        summary: { month, calculated_at: NOW, amount: 15_000, customer_count: 2, billable_customer_count: 2, line_count: 2, unpriced_count: items.reduce((sum, item) => sum + item.unpriced_usages.length, 0), negative_count: 0, month_amount: 15_000, month_customer_count: 2, month_billable_customer_count: 2, month_unpriced_count: 1, month_negative_count: 0, month_line_count: 2, finalization_scope: "month", ...autoFinalize },
+      });
+      if (path === "/v1/invoices") return send(response, 200, { invoices: [] });
     }
     if (current.scenario === "failed-payments") {
       const statuses = ["failed", "failed", "paid"];
