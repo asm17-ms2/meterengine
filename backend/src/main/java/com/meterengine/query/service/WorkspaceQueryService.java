@@ -423,6 +423,7 @@ public class WorkspaceQueryService {
     return page(selected, invoiceService.count(organizationId), search, summary);
   }
 
+  // 보류 여부는 자동 확정처럼 고객의 모든 미터로 정하므로 미터 조건으로 다시 정하지 않는다.
   private static DraftInvoiceCustomer filterMetric(DraftInvoiceCustomer customer, String code) {
     if (code == null) return customer;
     var lines =
@@ -437,7 +438,8 @@ public class WorkspaceQueryService {
             .toList(),
         customer.negativeUsages().stream()
             .filter(usage -> code.equals(usage.billableMetricCode()))
-            .toList());
+            .toList(),
+        customer.autoFinalizeHeld());
   }
 
   private static <T> SearchPageResponse<T> page(

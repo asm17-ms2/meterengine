@@ -214,7 +214,8 @@ public class InvoiceFinalizationService {
             .filter(draftInvoiceLine -> draftInvoiceLine.quantity().signum() != 0)
             .toList(),
         draftInvoiceCustomer.unpricedUsages(),
-        draftInvoiceCustomer.negativeUsages());
+        draftInvoiceCustomer.negativeUsages(),
+        draftInvoiceCustomer.autoFinalizeHeld());
   }
 
   private InvoiceLine toInvoiceLine(

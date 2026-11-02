@@ -9119,6 +9119,10 @@ components:
         amount:
           type: integer
           format: int64
+        auto_finalize_held:
+          type: boolean
+          description: 자동 확정이 켜져 있고 금액이 0원이 아니면서 단가 없는 사용량이 있어 자동 확정이 이 고객을 보류하면 true.
+            검색의 미터 조건과 관계없이 고객의 모든 미터로 정한다
         customer_id:
           type: string
           format: uuid

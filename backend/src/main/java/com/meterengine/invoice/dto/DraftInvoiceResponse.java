@@ -36,7 +36,12 @@ public record DraftInvoiceResponse(
           List<DraftInvoiceUnpricedUsage> unpricedUsages,
       @Schema(description = "변환 전 집계량이 음수여서 금액을 0으로 보고 라인에서 뺀 조합의 사용량. 금액에 들지 않는다. 없으면 빈 배열이다")
           @JsonProperty("negative_usages")
-          List<DraftInvoiceNegativeUsage> negativeUsages) {}
+          List<DraftInvoiceNegativeUsage> negativeUsages,
+      @Schema(
+              description =
+                  "자동 확정이 켜져 있고 금액이 0원이 아니면서 단가 없는 사용량이 있어 자동 확정이 이 고객을 보류하면 true. 검색의 미터 조건과 관계없이 고객의 모든 미터로 정한다")
+          @JsonProperty("auto_finalize_held")
+          boolean autoFinalizeHeld) {}
 
   public record DraftInvoiceUnpricedUsage(
       @JsonProperty("billable_metric_code") String billableMetricCode,

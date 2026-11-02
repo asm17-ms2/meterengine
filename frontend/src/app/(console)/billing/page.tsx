@@ -3,6 +3,7 @@ import { CsvDownload } from "@/components/screen/CsvDownload";
 import { DataMonths } from "@/components/screen/DataMonths";
 import { Suspense } from "react";
 
+import { BillingAutoFinalizeStamp } from "@/components/billing/BillingAutoFinalizeStamp";
 import { BillingCalculatedStamp } from "@/components/billing/BillingCalculatedStamp";
 import { BillingExpandControls } from "@/components/billing/BillingExpandControls";
 import { BillingFinalizedLink } from "@/components/billing/BillingFinalizedLink";
@@ -90,6 +91,9 @@ export default async function BillingPage({
                   <BillingFinalizedLink invoices={monthInvoices} month={month} />
                 </Suspense>
                 <CutoffStamp month={month} now={new Date()} />
+                <Suspense fallback={null}>
+                  <BillingAutoFinalizeStamp draftInvoice={draftInvoice} />
+                </Suspense>
                 <Suspense fallback={null}>
                   <BillingCalculatedStamp draftInvoice={draftInvoice} />
                 </Suspense>

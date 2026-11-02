@@ -10,9 +10,11 @@ import type { DevState } from "@/lib/dev-state";
 import { toServerParams, type MonthlyListQuery, type PaginationFields } from "@/lib/list-query";
 
 export type DraftInvoiceResponse = PaginationFields & {
-  summary?: { month: string; calculated_at: string; amount: number; customer_count: number; billable_customer_count: number; line_count: number; unpriced_count: number; negative_count: number; month_amount: number; month_customer_count: number; month_billable_customer_count: number; month_unpriced_count: number; month_negative_count: number; month_line_count: number; finalization_scope: "month" };
+  summary?: { month: string; calculated_at: string; amount: number; customer_count: number; billable_customer_count: number; line_count: number; unpriced_count: number; negative_count: number; month_amount: number; month_customer_count: number; month_billable_customer_count: number; month_unpriced_count: number; month_negative_count: number; month_line_count: number; finalization_scope: "month"; auto_finalize_enabled: boolean; auto_finalize_at: string | null; auto_finalize_running: boolean };
   month: string;
   calculated_at: string;
+  auto_finalize_at: string | null;
+  auto_finalize_running: boolean;
   total_amount: number;
   customers: DraftInvoiceCustomer[];
 };
@@ -24,6 +26,7 @@ export type DraftInvoiceCustomer = {
   lines: DraftInvoiceLine[];
   unpriced_usages: DraftInvoiceUnpricedUsage[];
   negative_usages?: DraftInvoiceUnpricedUsage[];
+  auto_finalize_held: boolean;
 };
 
 export type DraftInvoiceLine = {
@@ -85,6 +88,8 @@ export async function previewDraftInvoice(
       data: {
         month: query.month,
         calculated_at: new Date().toISOString(),
+        auto_finalize_at: null,
+        auto_finalize_running: false,
         total_amount: 0,
         customers: [],
       },
@@ -104,5 +109,5 @@ export async function previewDraftInvoice(
   const result = await serverFetch<SearchPage<DraftInvoiceCustomer, NonNullable<DraftInvoiceResponse["summary"]>>>(
     config.apiBaseUrl, "/v1/invoices/draft/search", toServerParams(query, CAPABILITIES.previewDraftInvoice),
   );
-  return result.ok ? { ok: true, data: { ...result.data, customers: result.data.items, page: result.data.page - 1, month: result.data.summary.month, calculated_at: result.data.summary.calculated_at, total_amount: result.data.summary.amount } } : result;
+  return result.ok ? { ok: true, data: { ...result.data, customers: result.data.items, page: result.data.page - 1, month: result.data.summary.month, calculated_at: result.data.summary.calculated_at, auto_finalize_at: result.data.summary.auto_finalize_at, auto_finalize_running: result.data.summary.auto_finalize_running, total_amount: result.data.summary.amount } } : result;
 }

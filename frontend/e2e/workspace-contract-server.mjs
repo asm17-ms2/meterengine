@@ -21,6 +21,7 @@ const invoice = { id: INVOICE_ID, customer_id: "77777777-7777-4777-8777-77777777
 const attempt = { id: ATTEMPT_ID, invoice_id: INVOICE_ID, status: "done", amount: 11_000, mode: "test", failure_message: null, requested_at: NOW };
 const delay = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
 const FAR_CUSTOMER_ID = "77777777-7777-4777-8777-777777777777";
+const AUTO_FINALIZE_OFF = { auto_finalize_enabled: false, auto_finalize_at: null, auto_finalize_running: false };
 const initialState = () => ({
   scenario: "normal", cancellationCalls: [], cancellations: [], cancellationEffects: 0,
   cancellationCompletedAfterMs: null, idempotentResults: new Map(), lostResponseSent: false, rejectionSent: false,
@@ -110,12 +111,12 @@ const server = createServer(async (request, response) => {
       if (path === "/v1/invoices") return send(response, 200, { invoices: [] });
     }
     if (["finalize-month", "finalize-month-partial"].includes(current.scenario)) {
-      const customers = Array.from({ length: 7 }, (_, index) => ({ customer_id: `14141414-1414-4414-8414-${String(index).padStart(12, "0")}`, customer_name: `확정할 고객 ${index}`, amount: 10_000, lines: [], unpriced_usages: [], negative_usages: [] }));
+      const customers = Array.from({ length: 7 }, (_, index) => ({ customer_id: `14141414-1414-4414-8414-${String(index).padStart(12, "0")}`, customer_name: `확정할 고객 ${index}`, amount: 10_000, lines: [], unpriced_usages: [], negative_usages: [], auto_finalize_held: false }));
       if (path === "/v1/customers/options") return send(response, 200, { items: [], total: 0, total_unfiltered: 0, page: 1, size: 200, summary: {} });
       if (path === "/v1/usage/months") return send(response, 200, { months: ["2026-09"] });
       if (path === "/v1/invoices/draft/search") return send(response, 200, {
         items: customers, total: 7, total_unfiltered: 7, page: 1, size: 20,
-        summary: { month: "2026-09", calculated_at: NOW, amount: 70_000, customer_count: 7, billable_customer_count: 7, line_count: 0, unpriced_count: 0, negative_count: 0, month_amount: 70_000, month_customer_count: 7, month_billable_customer_count: 7, month_unpriced_count: 0, month_negative_count: 0, month_line_count: 0, finalization_scope: "month" },
+        summary: { month: "2026-09", calculated_at: NOW, amount: 70_000, customer_count: 7, billable_customer_count: 7, line_count: 0, unpriced_count: 0, negative_count: 0, month_amount: 70_000, month_customer_count: 7, month_billable_customer_count: 7, month_unpriced_count: 0, month_negative_count: 0, month_line_count: 0, finalization_scope: "month", ...AUTO_FINALIZE_OFF },
       });
       if (path === "/v1/invoices" && request.method === "POST" && current.scenario === "finalize-month-partial") return send(response, 201, { finalized_count: 3, failed_count: 0, supply_amount: 30_000, tax_amount: 3_000, total_amount: 33_000, invoices: customers.slice(0, 3).map((customer, index) => ({ ...invoice, id: `15151515-1515-4515-8515-${String(index).padStart(12, "0")}`, invoice_number: `INV-2026-09-${index}`, customer_id: customer.customer_id, customer_name: customer.customer_name, month: "2026-09" })) });
       if (path === "/v1/invoices" && request.method === "POST") return send(response, 201, { finalized_count: 7, failed_count: 0, supply_amount: 70_000, tax_amount: 7_000, total_amount: 77_000, invoices: customers.map((customer, index) => ({ ...invoice, id: `15151515-1515-4515-8515-${String(index).padStart(12, "0")}`, invoice_number: `INV-2026-09-${index}`, customer_id: customer.customer_id, customer_name: customer.customer_name, month: "2026-09" })) });
@@ -126,9 +127,9 @@ const server = createServer(async (request, response) => {
       if (path === "/v1/customers/options") return send(response, 200, { items: [{ value: ZERO_CUSTOMER_ID, label: "인보이스 없는 0원 고객", archived: false }], total: 1, total_unfiltered: 1, page: 1, size: 200, summary: {} });
       if (path === "/v1/usage/months") return send(response, 200, { months: ["2026-10"] });
       if (path === "/v1/invoices/draft/search") return send(response, 200, {
-        items: [{ customer_id: ZERO_CUSTOMER_ID, customer_name: "인보이스 없는 0원 고객", amount: 0, lines: [], unpriced_usages: [], negative_usages: [] }],
+        items: [{ customer_id: ZERO_CUSTOMER_ID, customer_name: "인보이스 없는 0원 고객", amount: 0, lines: [], unpriced_usages: [], negative_usages: [], auto_finalize_held: false }],
         total: 1, total_unfiltered: 1, page: 1, size: 20,
-        summary: { month: "2026-10", calculated_at: NOW, amount: 0, customer_count: 1, billable_customer_count: 0, line_count: 0, unpriced_count: 0, negative_count: 0, month_amount: 0, month_customer_count: 1, month_billable_customer_count: 0, month_unpriced_count: 0, month_negative_count: 0, month_line_count: 0, finalization_scope: "month" },
+        summary: { month: "2026-10", calculated_at: NOW, amount: 0, customer_count: 1, billable_customer_count: 0, line_count: 0, unpriced_count: 0, negative_count: 0, month_amount: 0, month_customer_count: 1, month_billable_customer_count: 0, month_unpriced_count: 0, month_negative_count: 0, month_line_count: 0, finalization_scope: "month", ...AUTO_FINALIZE_OFF },
       });
       if (path === "/v1/invoices/search") {
         current.invoiceSearchCalls++;

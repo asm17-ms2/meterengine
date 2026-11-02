@@ -31,7 +31,7 @@ import {
 } from "@/lib/format";
 import { buildListHref, type MonthlyListQuery } from "@/lib/list-query";
 import { sumOf, toMeterItems } from "@/lib/meter-items";
-import { shiftMonth } from "@/lib/month";
+import { formatKstMonth, shiftMonth } from "@/lib/month";
 
 export async function BillingSection({
   draftInvoice,
@@ -112,6 +112,7 @@ export async function BillingSection({
         totalAmount={formatKrw(result.data.total_amount)}
         query={query}
         capabilities={CAPABILITIES.previewDraftInvoice}
+        isPastMonth={month < formatKstMonth()}
       />
       <ListPagination
         query={query}
@@ -170,6 +171,7 @@ function toBillingGroupViews(customers: DraftInvoiceCustomer[]): BillingGroupVie
       }),
     ),
     unpricedUsage: toBillingUnpricedUsageView(customer.unpriced_usages),
+    isHeld: customer.auto_finalize_held,
   }));
 }
 
