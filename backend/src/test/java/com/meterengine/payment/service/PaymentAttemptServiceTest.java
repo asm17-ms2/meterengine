@@ -21,6 +21,7 @@ import com.meterengine.payment.entity.TossPaymentsCredential;
 import com.meterengine.payment.repository.BillingKeyRepository;
 import com.meterengine.payment.repository.PaymentAttemptRepository;
 import com.meterengine.payment.repository.TossPaymentsCredentialRepository;
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -187,8 +188,10 @@ class PaymentAttemptServiceTest {
     return meterRegistry
         .get("meterengine.payment.attempt")
         .tags("mode", "test", "result", result)
-        .counter()
-        .count();
+        .counters()
+        .stream()
+        .mapToDouble(Counter::count)
+        .sum();
   }
 
   private void insertBillingKey(Invoice invoice) {
