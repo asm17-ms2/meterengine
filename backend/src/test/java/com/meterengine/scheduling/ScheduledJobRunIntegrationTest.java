@@ -66,6 +66,20 @@ class ScheduledJobRunIntegrationTest {
   }
 
   @Test
+  void 가장_최근_실행이_도는_중이면_실행_중이고_도중에_죽어_남은_실행은_다음_실행이_시작되면_실행_중이_아니다() {
+    String jobName = newJobName();
+    assertThat(scheduledJobRunService.isRunning(jobName)).isFalse();
+
+    scheduledJobRunRepository.insertIfAbsent(
+        UUID.randomUUID(), jobName, SCHEDULED_AT, OffsetDateTime.now().minusHours(1));
+    assertThat(scheduledJobRunService.isRunning(jobName)).isTrue();
+
+    scheduledJobRunService.run(
+        jobName, SCHEDULED_AT.plusHours(1), () -> new ScheduledJobResult(0, 0, 0));
+    assertThat(scheduledJobRunService.isRunning(jobName)).isFalse();
+  }
+
+  @Test
   void 마지막_깨끗한_슬롯은_실패와_항목_실패와_실행_중_기록을_건너뛴다() {
     String jobName = newJobName();
     OffsetDateTime clean = SCHEDULED_AT.minusDays(4);

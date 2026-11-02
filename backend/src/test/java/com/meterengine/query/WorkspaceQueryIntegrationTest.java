@@ -279,6 +279,14 @@ class WorkspaceQueryIntegrationTest {
   }
 
   @Test
+  void 청구_예정액_요약은_자동_확정이_꺼져_있으면_켜짐_여부와_시각과_진행_중을_끔으로_싣는다() {
+    JsonNode summary = data(get("/v1/invoices/draft/search?month=2026-08")).get("summary");
+    assertThat(summary.get("auto_finalize_enabled").asBoolean()).isFalse();
+    assertThat(summary.get("auto_finalize_at").isNull()).isTrue();
+    assertThat(summary.get("auto_finalize_running").asBoolean()).isFalse();
+  }
+
+  @Test
   void 인보이스는_확정_시각과_금액으로_검색하고_전체_결제_요약을_반환한다() {
     UUID first = customer("가 고객", "first", false);
     UUID second = customer("나 고객", "second", false);

@@ -1,10 +1,13 @@
 package com.meterengine.invoice.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 import com.meterengine.customer.entity.Customer;
 import com.meterengine.customer.repository.CustomerRepository;
+import com.meterengine.global.security.BusinessEnvironment;
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.invoice.config.InvoiceAutoFinalizeProperties;
 import com.meterengine.invoice.dto.DraftInvoiceResponse;
 import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceCustomer;
@@ -28,6 +31,7 @@ import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -62,6 +66,141 @@ class DraftInvoiceServiceTest {
             invoiceFinalizationAttemptRepository,
             scheduledJobRunService,
             Clock.fixed(Instant.parse("2026-10-26T01:00:00Z"), ZoneOffset.UTC));
+  }
+
+  @Test
+  void 자동_확정이_꺼져_있으면_작업이_도는_중이어도_시각도_진행_중도_없다() {
+    stubCustomers();
+    stubCustomerCharges(Map.of());
+    stubRunningAndUnswept();
+
+    DraftInvoiceResponse response = draftInvoiceService.preview(ORGANIZATION_ID, AUGUST);
+
+    assertThat(response.autoFinalizeEnabled()).isFalse();
+    assertThat(response.autoFinalizeAt()).isNull();
+    assertThat(response.autoFinalizeRunning()).isFalse();
+  }
+
+  @Test
+  void 그_달의_확정_시각_전이면_작업이_도는_중이어도_다음_자동_확정_시각은_다음_달_1일_14시고_진행_중이_아니다() {
+    DraftInvoiceService enabled = draftInvoiceServiceAt("2026-09-01T13:30:00+09:00");
+    stubRunningAndUnswept();
+
+    DraftInvoiceResponse response = enabled.preview(ORGANIZATION_ID, AUGUST);
+
+    assertThat(response.autoFinalizeEnabled()).isTrue();
+    assertThat(response.autoFinalizeAt())
+        .isEqualTo(OffsetDateTime.parse("2026-09-01T14:00:00+09:00"));
+    assertThat(response.autoFinalizeRunning()).isFalse();
+  }
+
+  @Test
+  void 확정_시각이_지났고_아직_다_훑지_않은_달은_다음_정시이고_작업이_도는_중이면_진행_중이다() {
+    DraftInvoiceService enabled = draftInvoiceServiceAt("2026-09-01T14:05:00+09:00");
+    stubFirstCustomerCreatedAt("2026-07-01T00:00:00+09:00");
+    when(invoiceFinalizationAttemptRepository.existsSweptPeriod(ORGANIZATION_ID, null, "2026-08"))
+        .thenReturn(false);
+    when(scheduledJobRunService.isRunning(InvoiceAutoFinalizationService.JOB_NAME))
+        .thenReturn(true);
+
+    DraftInvoiceResponse response = enabled.preview(ORGANIZATION_ID, AUGUST);
+
+    assertThat(response.autoFinalizeAt())
+        .isEqualTo(OffsetDateTime.parse("2026-09-01T15:00:00+09:00"));
+    assertThat(response.autoFinalizeRunning()).isTrue();
+  }
+
+  @Test
+  void 확정_시각이_지났고_아직_다_훑지_않았어도_작업이_돌지_않으면_진행_중이_아니다() {
+    DraftInvoiceService enabled = draftInvoiceServiceAt("2026-09-01T14:05:00+09:00");
+    stubFirstCustomerCreatedAt("2026-07-01T00:00:00+09:00");
+    when(invoiceFinalizationAttemptRepository.existsSweptPeriod(ORGANIZATION_ID, null, "2026-08"))
+        .thenReturn(false);
+    when(scheduledJobRunService.isRunning(InvoiceAutoFinalizationService.JOB_NAME))
+        .thenReturn(false);
+
+    assertThat(enabled.preview(ORGANIZATION_ID, AUGUST).autoFinalizeRunning()).isFalse();
+  }
+
+  @Test
+  void 다_훑은_달에_실패가_남았으면_작업이_도는_중이어도_진행_중이_아니고_다음_정시에_다시_시도한다() {
+    DraftInvoiceService enabled = draftInvoiceServiceAt("2026-09-01T15:05:00+09:00");
+    stubFirstCustomerCreatedAt("2026-07-01T00:00:00+09:00");
+    lenient()
+        .when(scheduledJobRunService.isRunning(InvoiceAutoFinalizationService.JOB_NAME))
+        .thenReturn(true);
+    when(invoiceFinalizationAttemptRepository.existsSweptPeriod(ORGANIZATION_ID, null, "2026-08"))
+        .thenReturn(true);
+    when(invoiceFinalizationAttemptRepository.existsOpenFailure(ORGANIZATION_ID, null, "2026-08"))
+        .thenReturn(true);
+
+    DraftInvoiceResponse response = enabled.preview(ORGANIZATION_ID, AUGUST);
+
+    assertThat(response.autoFinalizeAt())
+        .isEqualTo(OffsetDateTime.parse("2026-09-01T16:00:00+09:00"));
+    assertThat(response.autoFinalizeRunning()).isFalse();
+  }
+
+  @Test
+  void 다_훑은_달에_실패가_없으면_다음_자동_확정_시각이_없다() {
+    DraftInvoiceService enabled = draftInvoiceServiceAt("2026-10-27T14:20:00+09:00");
+    stubFirstCustomerCreatedAt("2026-07-01T00:00:00+09:00");
+    when(invoiceFinalizationAttemptRepository.existsSweptPeriod(ORGANIZATION_ID, null, "2026-08"))
+        .thenReturn(true);
+    when(invoiceFinalizationAttemptRepository.existsOpenFailure(ORGANIZATION_ID, null, "2026-08"))
+        .thenReturn(false);
+
+    DraftInvoiceResponse response = enabled.preview(ORGANIZATION_ID, AUGUST);
+
+    assertThat(response.autoFinalizeEnabled()).isTrue();
+    assertThat(response.autoFinalizeAt()).isNull();
+    assertThat(response.autoFinalizeRunning()).isFalse();
+  }
+
+  @Test
+  void 첫_고객_등록_전의_달은_자동_확정이_훑지_않으므로_다음_자동_확정_시각도_진행_중도_없다() {
+    DraftInvoiceService enabled = draftInvoiceServiceAt("2026-10-27T14:20:00+09:00");
+    stubRunningAndUnswept();
+    stubFirstCustomerCreatedAt("2026-10-05T00:00:00+09:00");
+
+    DraftInvoiceResponse response = enabled.preview(ORGANIZATION_ID, AUGUST);
+
+    assertThat(response.autoFinalizeAt()).isNull();
+    assertThat(response.autoFinalizeRunning()).isFalse();
+  }
+
+  @Test
+  void 고객이_없는_도입사는_다음_자동_확정_시각도_진행_중도_없다() {
+    DraftInvoiceService enabled = draftInvoiceServiceAt("2026-10-27T14:20:00+09:00");
+    stubRunningAndUnswept();
+    when(customerRepository.findFirstCreatedAt(ORGANIZATION_ID)).thenReturn(Optional.empty());
+
+    DraftInvoiceResponse response = enabled.preview(ORGANIZATION_ID, AUGUST);
+
+    assertThat(response.autoFinalizeAt()).isNull();
+    assertThat(response.autoFinalizeRunning()).isFalse();
+  }
+
+  @Test
+  void 환경이_있는_요청은_그_환경의_첫_고객과_다_훑은_표시와_실패로_다음_자동_확정_시각을_정한다() {
+    UUID environmentId = UUID.randomUUID();
+    DraftInvoiceService enabled = draftInvoiceServiceAt("2026-09-01T15:05:00+09:00");
+    when(customerRepository.findFirstCreatedAtScoped(ORGANIZATION_ID, environmentId))
+        .thenReturn(Optional.of(OffsetDateTime.parse("2026-07-01T00:00:00+09:00")));
+    when(invoiceFinalizationAttemptRepository.existsSweptPeriod(
+            ORGANIZATION_ID, environmentId, "2026-08"))
+        .thenReturn(true);
+    when(invoiceFinalizationAttemptRepository.existsOpenFailure(
+            ORGANIZATION_ID, environmentId, "2026-08"))
+        .thenReturn(true);
+
+    DraftInvoiceResponse response =
+        BusinessEnvironmentContext.run(
+            new BusinessEnvironment(ORGANIZATION_ID, environmentId, "live"),
+            () -> enabled.preview(ORGANIZATION_ID, AUGUST));
+
+    assertThat(response.autoFinalizeAt())
+        .isEqualTo(OffsetDateTime.parse("2026-09-01T16:00:00+09:00"));
   }
 
   @Test
@@ -203,6 +342,35 @@ class DraftInvoiceServiceTest {
                   .isEqualTo(Map.of("model", "b"));
               assertThat(draftInvoiceNegativeUsage.quantity()).isEqualByComparingTo("-30");
             });
+  }
+
+  // 계산할 사용량이 없는 도입사에서 시계만 다른 청구 예정액 서비스를 만든다. 자동 확정은 켜져 있다.
+  private DraftInvoiceService draftInvoiceServiceAt(String now) {
+    return new DraftInvoiceService(
+        billableMetricUsageService,
+        customerRepository,
+        chargeService,
+        invoiceRepository,
+        new InvoiceAutoFinalizeProperties(true),
+        invoiceFinalizationAttemptRepository,
+        scheduledJobRunService,
+        Clock.fixed(OffsetDateTime.parse(now).toInstant(), ZoneOffset.UTC));
+  }
+
+  private void stubFirstCustomerCreatedAt(String createdAt) {
+    when(customerRepository.findFirstCreatedAt(ORGANIZATION_ID))
+        .thenReturn(Optional.of(OffsetDateTime.parse(createdAt)));
+  }
+
+  private void stubRunningAndUnswept() {
+    lenient()
+        .when(scheduledJobRunService.isRunning(InvoiceAutoFinalizationService.JOB_NAME))
+        .thenReturn(true);
+    lenient()
+        .when(
+            invoiceFinalizationAttemptRepository.existsSweptPeriod(
+                ORGANIZATION_ID, null, "2026-08"))
+        .thenReturn(false);
   }
 
   private static Customer customer(String name) {
