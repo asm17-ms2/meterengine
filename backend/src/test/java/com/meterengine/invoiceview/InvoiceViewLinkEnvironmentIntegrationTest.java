@@ -238,6 +238,7 @@ class InvoiceViewLinkEnvironmentIntegrationTest {
                     "2026-08",
                     1000,
                     100,
+                    OffsetDateTime.parse("2026-09-01T04:00:00Z"),
                     OffsetDateTime.now(),
                     env))
             .getId();

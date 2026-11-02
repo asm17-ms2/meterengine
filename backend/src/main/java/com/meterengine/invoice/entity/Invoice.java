@@ -41,6 +41,9 @@ public class Invoice {
   @Column(name = "total_amount", nullable = false)
   private long totalAmount;
 
+  @Column(name = "cutoff_at", nullable = false)
+  private OffsetDateTime cutoffAt;
+
   @Column(name = "finalized_at", nullable = false)
   private OffsetDateTime finalizedAt;
 
@@ -54,6 +57,7 @@ public class Invoice {
       String period,
       long supplyAmount,
       long taxAmount,
+      OffsetDateTime cutoffAt,
       OffsetDateTime finalizedAt) {
     this.id = id;
     this.organizationId = organizationId;
@@ -63,6 +67,7 @@ public class Invoice {
     this.supplyAmount = supplyAmount;
     this.taxAmount = taxAmount;
     this.totalAmount = supplyAmount + taxAmount;
+    this.cutoffAt = cutoffAt;
     this.finalizedAt = finalizedAt;
   }
 
@@ -106,6 +111,10 @@ public class Invoice {
     return totalAmount;
   }
 
+  public OffsetDateTime getCutoffAt() {
+    return cutoffAt;
+  }
+
   public OffsetDateTime getFinalizedAt() {
     return finalizedAt;
   }
@@ -118,10 +127,19 @@ public class Invoice {
       String period,
       long supplyAmount,
       long taxAmount,
+      OffsetDateTime cutoffAt,
       OffsetDateTime finalizedAt,
       UUID environmentId) {
     this(
-        id, organizationId, customerId, customerName, period, supplyAmount, taxAmount, finalizedAt);
+        id,
+        organizationId,
+        customerId,
+        customerName,
+        period,
+        supplyAmount,
+        taxAmount,
+        cutoffAt,
+        finalizedAt);
     this.environmentId = environmentId;
   }
 }

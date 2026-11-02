@@ -339,8 +339,8 @@ class EnvironmentBillingIntegrationTest {
       long supply = total * 10 / 11;
       jdbc.update(
           "INSERT INTO invoice (id,organization_id,environment_id,customer_id,customer_name,"
-              + " period,supply_amount,tax_amount,total_amount,finalized_at)"
-              + " VALUES (?,?,?,?,?,?,?,?,?,now())",
+              + " period,supply_amount,tax_amount,total_amount,cutoff_at,finalized_at)"
+              + " VALUES (?,?,?,?,?,?,?,?,?,now(),now())",
           UUID.randomUUID(),
           organizationId,
           mode.equals("legacy") ? null : environment(mode),

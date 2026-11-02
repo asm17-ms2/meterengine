@@ -230,7 +230,11 @@ class DraftInvoiceServiceTest {
                     "token",
                     List.of()),
                 List.of()));
-    when(billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST))
+    when(billableMetricUsageService.aggregate(
+            ORGANIZATION_ID,
+            AUGUST,
+            OffsetDateTime.parse("2026-10-26T10:00:00+09:00"),
+            BillableMetricUsageService.cutoffAt(AUGUST)))
         .thenReturn(billableMetricUsages);
     when(chargeService.calculate(ORGANIZATION_ID, AUGUST, billableMetricUsages))
         .thenReturn(customerChargeByCustomerId);

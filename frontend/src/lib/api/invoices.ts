@@ -49,6 +49,7 @@ export type InvoiceLineResponse = {
 export type FinalizeInvoicesResponse = {
   month: string;
   finalized_count: number;
+  failed_count: number;
   invoices: InvoiceResponse[];
   supply_amount: number;
   tax_amount: number;

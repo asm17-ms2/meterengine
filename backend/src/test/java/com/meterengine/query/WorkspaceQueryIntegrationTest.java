@@ -308,7 +308,7 @@ class WorkspaceQueryIntegrationTest {
     invoice(first, "가 고객", 100, "2026-08-05T23:59:59+09:00");
     invoice(second, "나 고객", 200, "2026-08-06T00:00:00+09:00");
     jdbc.update(
-        "INSERT INTO invoice (organization_id,customer_id,customer_name,period,supply_amount,tax_amount,total_amount,finalized_at) VALUES (?,?,'가 고객','2026-09',10,1,11,now())",
+        "INSERT INTO invoice (organization_id,customer_id,customer_name,period,supply_amount,tax_amount,total_amount,cutoff_at,finalized_at) VALUES (?,?,'가 고객','2026-09',10,1,11,now(),now())",
         organizationId,
         first);
     JsonNode august = data(get("/v1/invoices/search?month=2026-08&customer_id=" + first));
@@ -454,7 +454,7 @@ class WorkspaceQueryIntegrationTest {
 
   private UUID invoice(UUID customer, String name, long supply, String finalized) {
     return jdbc.queryForObject(
-        "INSERT INTO invoice (organization_id,customer_id,customer_name,period,supply_amount,tax_amount,total_amount,finalized_at) VALUES (?,?,?,'2026-08',?,?,?,cast(? AS timestamptz)) RETURNING id",
+        "INSERT INTO invoice (organization_id,customer_id,customer_name,period,supply_amount,tax_amount,total_amount,cutoff_at,finalized_at) VALUES (?,?,?,'2026-08',?,?,?,cast(? AS timestamptz),cast(? AS timestamptz)) RETURNING id",
         UUID.class,
         organizationId,
         customer,
@@ -462,6 +462,7 @@ class WorkspaceQueryIntegrationTest {
         supply,
         supply / 10,
         supply + supply / 10,
+        finalized,
         finalized);
   }
 

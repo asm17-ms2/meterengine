@@ -595,6 +595,7 @@ class InvoicePaymentIntegrationTest {
             period,
             supplyAmount,
             supplyAmount / 10,
+            OffsetDateTime.parse("2026-09-01T04:00:00Z"),
             OffsetDateTime.parse("2026-09-01T05:00:00Z"));
     return invoiceRepository.saveAndFlush(invoice).getId();
   }

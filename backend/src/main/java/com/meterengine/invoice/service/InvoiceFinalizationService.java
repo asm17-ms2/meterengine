@@ -6,6 +6,7 @@ import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceCustomer;
 import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceLine;
+import com.meterengine.invoice.dto.InvoiceFinalizationResult;
 import com.meterengine.invoice.entity.Invoice;
 import com.meterengine.invoice.entity.InvoiceLine;
 import com.meterengine.invoice.repository.InvoiceLineRepository;
@@ -17,17 +18,23 @@ import com.meterengine.organization.repository.OrganizationRepository;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
-import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.json.JsonMapper;
 
 @Service
 public class InvoiceFinalizationService {
+
+  private static final Logger logger = LoggerFactory.getLogger(InvoiceFinalizationService.class);
 
   private static final long TAX_RATE_PERCENT = 10;
 
@@ -40,6 +47,7 @@ public class InvoiceFinalizationService {
   private final JsonMapper jsonMapper;
   private final AuditLogService auditLogService;
   private final BillableMetricRepository billableMetricRepository;
+  private final TransactionTemplate transactionTemplate;
   private final Clock clock;
 
   InvoiceFinalizationService(
@@ -52,6 +60,7 @@ public class InvoiceFinalizationService {
       JsonMapper jsonMapper,
       AuditLogService auditLogService,
       BillableMetricRepository billableMetricRepository,
+      TransactionTemplate transactionTemplate,
       Clock clock) {
     this.draftInvoiceService = draftInvoiceService;
     this.invoiceRepository = invoiceRepository;
@@ -62,85 +71,134 @@ public class InvoiceFinalizationService {
     this.jsonMapper = jsonMapper;
     this.auditLogService = auditLogService;
     this.billableMetricRepository = billableMetricRepository;
+    this.transactionTemplate = transactionTemplate;
     this.clock = clock;
   }
 
-  // 도입사의 고객 중 그 달 청구 예정액이 0원이 아닌 고객을 확정하고, 고객마다 청구 메일을 남긴다.
-  @Transactional
-  public List<Invoice> finalize(UUID organizationId, YearMonth month) {
-    if (BusinessEnvironmentContext.environmentId() != null)
-      organizationRepository.findForUpdateById(organizationId).orElseThrow();
-    List<DraftInvoiceCustomer> draftInvoiceCustomers =
-        draftInvoiceService.preview(organizationId, month).customers().stream()
-            .filter(draftInvoiceCustomer -> draftInvoiceCustomer.amount() != 0)
-            .map(InvoiceFinalizationService::withoutZeroQuantityLines)
-            .toList();
-    if (draftInvoiceCustomers.isEmpty()) {
-      return List.of();
+  // 그 달 청구 예정액이 0원이 아닌 고객을 마감 시각까지 받은 이벤트로 확정한다.
+  // 마감 시각 전이면 지금을 마감으로 쓰고, 고객마다 따로 커밋해 한 고객의 실패가 다른 고객을 되돌리지 않는다.
+  public InvoiceFinalizationResult finalize(UUID organizationId, YearMonth month) {
+    OffsetDateTime now =
+        OffsetDateTime.now(clock.withZone(BillableMetricUsageService.BILLING_ZONE));
+    OffsetDateTime monthCutoffAt = BillableMetricUsageService.cutoffAt(month);
+    OffsetDateTime cutoffAt = now.isBefore(monthCutoffAt) ? now : monthCutoffAt;
+
+    Targets targets =
+        transactionTemplate.execute(status -> targets(organizationId, month, cutoffAt));
+    List<Invoice> invoices = new ArrayList<>();
+    int skippedCount = 0;
+    int failedCount = 0;
+    for (DraftInvoiceCustomer draftInvoiceCustomer : targets.draftInvoiceCustomers()) {
+      try {
+        Optional<Invoice> invoice =
+            transactionTemplate.execute(
+                status ->
+                    finalizeCustomer(
+                        organizationId,
+                        targets.organizationName(),
+                        month,
+                        cutoffAt,
+                        now,
+                        draftInvoiceCustomer,
+                        targets.billingEmailByCustomerId().get(draftInvoiceCustomer.customerId()),
+                        targets.metricNameByCode()));
+        if (invoice.isPresent()) {
+          invoices.add(invoice.get());
+        } else {
+          skippedCount++;
+        }
+      } catch (RuntimeException exception) {
+        failedCount++;
+        logger.error(
+            "invoice finalization failed: organization={}, environment={}, customer={}, month={}",
+            organizationId,
+            BusinessEnvironmentContext.mode(),
+            draftInvoiceCustomer.customerId(),
+            month,
+            exception);
+      }
     }
-
-    String organizationName =
-        organizationRepository.findById(organizationId).orElseThrow().getName();
-    Map<UUID, Customer> customerById =
-        (BusinessEnvironmentContext.environmentId() == null
-                ? customerRepository.findByOrganizationIdOrderByNameAscIdAsc(organizationId)
-                : customerRepository.listScoped(
-                    organizationId, BusinessEnvironmentContext.environmentId()))
-            .stream().collect(Collectors.toMap(Customer::getId, Function.identity()));
-
-    return draftInvoiceCustomers.stream()
-        .map(
-            draftInvoiceCustomer -> {
-              Invoice invoice = save(organizationId, month, draftInvoiceCustomer);
-              invoiceEmailService.record(
-                  organizationName,
-                  invoice,
-                  draftInvoiceCustomer.lines(),
-                  customerById.get(draftInvoiceCustomer.customerId()).getBillingEmail());
-              auditLogService.record(
-                  invoice.getOrganizationId(),
-                  "invoice_finalized",
-                  "invoice",
-                  invoice.getId().toString(),
-                  Map.of("month", month.toString()));
-              return invoice;
-            })
-        .toList();
+    return new InvoiceFinalizationResult(List.copyOf(invoices), skippedCount, failedCount);
   }
 
-  private Invoice save(
-      UUID organizationId, YearMonth month, DraftInvoiceCustomer draftInvoiceCustomer) {
-    long supplyAmount = draftInvoiceCustomer.amount();
-    Invoice invoice =
-        invoiceRepository.save(
-            new Invoice(
-                UUID.randomUUID(),
-                organizationId,
-                draftInvoiceCustomer.customerId(),
-                draftInvoiceCustomer.customerName(),
-                month.toString(),
-                supplyAmount,
-                Math.multiplyExact(supplyAmount, TAX_RATE_PERCENT) / 100,
-                OffsetDateTime.now(clock.withZone(BillableMetricUsageService.BILLING_ZONE)),
-                BusinessEnvironmentContext.environmentId()));
+  // 환경이 있으면 도입사 행을 잠근 채 계산해, 같은 행을 잠그는 확정과 단가, 미터 변경이 계산 도중에 끼지 않는다.
+  private Targets targets(UUID organizationId, YearMonth month, OffsetDateTime cutoffAt) {
+    UUID environmentId = BusinessEnvironmentContext.environmentId();
+    if (environmentId != null)
+      organizationRepository.findForUpdateById(organizationId).orElseThrow();
+    List<DraftInvoiceCustomer> draftInvoiceCustomers =
+        draftInvoiceService.calculate(organizationId, month, cutoffAt).stream()
+            .filter(draftInvoiceCustomer -> draftInvoiceCustomer.amount() != 0)
+            .toList();
+    if (draftInvoiceCustomers.isEmpty()) {
+      return new Targets(null, List.of(), Map.of(), Map.of());
+    }
 
-    Map<String, String> metricNames =
-        (BusinessEnvironmentContext.environmentId() == null
+    Map<UUID, String> billingEmailByCustomerId = new HashMap<>();
+    for (Customer customer :
+        environmentId == null
+            ? customerRepository.findByOrganizationIdOrderByNameAscIdAsc(organizationId)
+            : customerRepository.listScoped(organizationId, environmentId)) {
+      billingEmailByCustomerId.put(customer.getId(), customer.getBillingEmail());
+    }
+    Map<String, String> metricNameByCode =
+        (environmentId == null
                 ? billableMetricRepository.findByOrganizationIdOrderByCodeAsc(organizationId)
-                : billableMetricRepository.listScoped(
-                    organizationId, BusinessEnvironmentContext.environmentId()))
+                : billableMetricRepository.listScoped(organizationId, environmentId))
             .stream().collect(Collectors.toMap(BillableMetric::getCode, BillableMetric::getName));
+    return new Targets(
+        organizationRepository.findById(organizationId).orElseThrow().getName(),
+        draftInvoiceCustomers,
+        billingEmailByCustomerId,
+        metricNameByCode);
+  }
+
+  // 그 고객과 달의 인보이스가 이미 있으면 아무것도 남기지 않는다.
+  private Optional<Invoice> finalizeCustomer(
+      UUID organizationId,
+      String organizationName,
+      YearMonth month,
+      OffsetDateTime cutoffAt,
+      OffsetDateTime finalizedAt,
+      DraftInvoiceCustomer draftInvoiceCustomer,
+      String billingEmail,
+      Map<String, String> metricNameByCode) {
+    DraftInvoiceCustomer withoutZeroQuantityLines = withoutZeroQuantityLines(draftInvoiceCustomer);
+    long supplyAmount = withoutZeroQuantityLines.amount();
+    Invoice invoice =
+        new Invoice(
+            UUID.randomUUID(),
+            organizationId,
+            withoutZeroQuantityLines.customerId(),
+            withoutZeroQuantityLines.customerName(),
+            month.toString(),
+            supplyAmount,
+            Math.multiplyExact(supplyAmount, TAX_RATE_PERCENT) / 100,
+            cutoffAt,
+            finalizedAt,
+            BusinessEnvironmentContext.environmentId());
+    if (invoiceRepository.insertIfAbsent(invoice) == 0) {
+      return Optional.empty();
+    }
+
     invoiceLineRepository.saveAll(
-        draftInvoiceCustomer.lines().stream()
+        withoutZeroQuantityLines.lines().stream()
             .map(
                 draftInvoiceLine ->
                     toInvoiceLine(
                         invoice,
                         draftInvoiceLine,
-                        metricNames.get(draftInvoiceLine.billableMetricCode())))
+                        metricNameByCode.get(draftInvoiceLine.billableMetricCode())))
             .toList());
-
-    return invoice;
+    invoiceEmailService.record(
+        organizationName, invoice, withoutZeroQuantityLines.lines(), billingEmail);
+    auditLogService.record(
+        organizationId,
+        "invoice_finalized",
+        "invoice",
+        invoice.getId().toString(),
+        Map.of("month", month.toString()));
+    return Optional.of(invoice);
   }
 
   private static DraftInvoiceCustomer withoutZeroQuantityLines(
@@ -175,4 +233,10 @@ public class InvoiceFinalizationService {
         invoice.getEnvironmentId(),
         billableMetricName);
   }
+
+  private record Targets(
+      String organizationName,
+      List<DraftInvoiceCustomer> draftInvoiceCustomers,
+      Map<UUID, String> billingEmailByCustomerId,
+      Map<String, String> metricNameByCode) {}
 }

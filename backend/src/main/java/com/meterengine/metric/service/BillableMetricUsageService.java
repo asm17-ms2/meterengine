@@ -73,6 +73,13 @@ public class BillableMetricUsageService {
   @Transactional(readOnly = true)
   public List<BillableMetricUsage> aggregate(
       UUID organizationId, YearMonth month, OffsetDateTime cutoff) {
+    return aggregate(organizationId, month, cutoff, cutoffAt(month));
+  }
+
+  // 그 달에 cutoff 전에 발생했고 receivedBefore 전에 받은 이벤트를 집계한다.
+  @Transactional(readOnly = true)
+  public List<BillableMetricUsage> aggregate(
+      UUID organizationId, YearMonth month, OffsetDateTime cutoff, OffsetDateTime receivedBefore) {
     List<BillableMetric> billableMetrics =
         (BusinessEnvironmentContext.environmentId() == null
             ? billableMetricRepository.findByOrganizationIdOrderByCodeAsc(organizationId)
@@ -106,7 +113,7 @@ public class BillableMetricUsageService {
                             interval ->
                                 interval.getBillableMetricCode().equals(metric.getCode())
                                     && interval.includes(period)))
-        .map(billableMetric -> aggregate(billableMetric, customers, start, end, cutoffAt(month)))
+        .map(billableMetric -> aggregate(billableMetric, customers, start, end, receivedBefore))
         .toList();
   }
 

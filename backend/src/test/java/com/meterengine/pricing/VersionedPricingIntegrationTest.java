@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
+import com.meterengine.TestClock;
 import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.global.error.ConflictException;
@@ -38,6 +39,7 @@ import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -62,11 +64,17 @@ class VersionedPricingIntegrationTest {
   @Autowired private InvoiceFinalizationService invoiceFinalizationService;
   @Autowired private InvoiceService invoiceService;
   @Autowired private EntityManager entityManager;
+  @Autowired private TestClock testClock;
   @Autowired private WebApplicationContext webApplicationContext;
   private MockMvcTester mvc;
   private UUID organizationId;
   private UUID customerId;
   private YearMonth month;
+
+  @AfterEach
+  void resetClock() {
+    testClock.reset();
+  }
 
   @BeforeEach
   void setUp() {
@@ -405,7 +413,10 @@ class VersionedPricingIntegrationTest {
     DraftInvoiceResponse draft = draftInvoiceService.preview(organizationId, month);
     assertThat(draft.customers().getFirst().amount()).isEqualTo(12500);
     assertThat(draft.customers().getFirst().lines()).hasSize(5);
-    Invoice invoice = invoiceFinalizationService.finalize(organizationId, month).getFirst();
+    // 마감 전 확정은 확정 순간을 마감으로 쓴다. DB 컨테이너 시계가 앞서면 방금 받은 이벤트가 그 뒤로 찍혀 빠진다.
+    testClock.fix(OffsetDateTime.now().plusSeconds(1));
+    Invoice invoice =
+        invoiceFinalizationService.finalize(organizationId, month).invoices().getFirst();
     entityManager.flush();
     entityManager.clear();
     InvoiceResponse reloaded = invoiceService.get(organizationId, invoice.getId());

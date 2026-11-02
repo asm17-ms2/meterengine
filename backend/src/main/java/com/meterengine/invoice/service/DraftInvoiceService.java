@@ -3,6 +3,7 @@ package com.meterengine.invoice.service;
 import com.meterengine.customer.entity.Customer;
 import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.global.security.BusinessEnvironmentContext;
+import com.meterengine.global.time.BillingMonth;
 import com.meterengine.invoice.dto.DraftInvoiceResponse;
 import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceCustomer;
 import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceLine;
@@ -51,7 +52,22 @@ public class DraftInvoiceService {
   public DraftInvoiceResponse preview(UUID organizationId, YearMonth month) {
     OffsetDateTime calculatedAt =
         OffsetDateTime.now(clock.withZone(BillableMetricUsageService.BILLING_ZONE));
+    List<DraftInvoiceCustomer> draftInvoiceCustomers =
+        calculate(organizationId, month, BillableMetricUsageService.cutoffAt(month));
 
+    long totalAmount =
+        draftInvoiceCustomers.stream()
+            .mapToLong(DraftInvoiceCustomer::amount)
+            .reduce(0L, Math::addExact);
+
+    return new DraftInvoiceResponse(
+        month.toString(), calculatedAt, totalAmount, draftInvoiceCustomers);
+  }
+
+  // 그 달을 확정하지 않은 고객마다, 그 달에 발생했고 receivedBefore 전에 받은 이벤트로 금액을 계산한다.
+  @Transactional(readOnly = true)
+  public List<DraftInvoiceCustomer> calculate(
+      UUID organizationId, YearMonth month, OffsetDateTime receivedBefore) {
     Set<UUID> finalizedCustomerIds =
         Set.copyOf(
             (BusinessEnvironmentContext.environmentId() == null
@@ -67,27 +83,20 @@ public class DraftInvoiceService {
 
     Map<UUID, CustomerCharge> customerChargeByCustomerId =
         chargeService.calculate(
-            organizationId, month, billableMetricUsageService.aggregate(organizationId, month));
+            organizationId,
+            month,
+            billableMetricUsageService.aggregate(
+                organizationId, month, BillingMonth.now(clock), receivedBefore));
 
-    List<DraftInvoiceCustomer> draftInvoiceCustomers =
-        organizationCustomers.stream()
-            .map(
-                customer ->
-                    toDraftInvoiceCustomer(
-                        customer,
-                        customerChargeByCustomerId.getOrDefault(
-                            customer.getId(),
-                            new CustomerCharge(
-                                customer.getId(), 0, List.of(), List.of(), List.of()))))
-            .toList();
-
-    long totalAmount =
-        draftInvoiceCustomers.stream()
-            .mapToLong(DraftInvoiceCustomer::amount)
-            .reduce(0L, Math::addExact);
-
-    return new DraftInvoiceResponse(
-        month.toString(), calculatedAt, totalAmount, draftInvoiceCustomers);
+    return organizationCustomers.stream()
+        .map(
+            customer ->
+                toDraftInvoiceCustomer(
+                    customer,
+                    customerChargeByCustomerId.getOrDefault(
+                        customer.getId(),
+                        new CustomerCharge(customer.getId(), 0, List.of(), List.of(), List.of()))))
+        .toList();
   }
 
   private static DraftInvoiceCustomer toDraftInvoiceCustomer(

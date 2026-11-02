@@ -249,7 +249,10 @@ class AuditLogIntegrationTest {
     insertEvent(organizationId, "tx-1", insertCustomer(organizationId, "아크메"), 1000);
 
     Invoice invoice =
-        invoiceFinalizationService.finalize(organizationId, YearMonth.of(2026, 8)).getFirst();
+        invoiceFinalizationService
+            .finalize(organizationId, YearMonth.of(2026, 8))
+            .invoices()
+            .getFirst();
 
     assertThat(auditLogsOfTarget(invoice.getId().toString()))
         .singleElement()

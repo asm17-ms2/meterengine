@@ -120,7 +120,7 @@ class PricingMigrationIntegrationTest {
                 scalar(
                     connection,
                     "SELECT"
-                        + " (to_jsonb(invoice)-'display_number'-'environment_id'-'environment_scope_id')::text"
+                        + " (to_jsonb(invoice)-'display_number'-'environment_id'-'environment_scope_id'-'cutoff_at')::text"
                         + " FROM invoice WHERE id=?",
                     invoiceId))
             .isEqualTo(invoiceBefore);
@@ -201,8 +201,8 @@ class PricingMigrationIntegrationTest {
         execute(
             connection,
             "INSERT INTO"
-                + " invoice(id,organization_id,customer_id,customer_name,period,supply_amount,tax_amount,total_amount,finalized_at)"
-                + " VALUES (?,?,?,'신규 확정 고객','2026-10',12500,1250,13750,now())",
+                + " invoice(id,organization_id,customer_id,customer_name,period,supply_amount,tax_amount,total_amount,cutoff_at,finalized_at)"
+                + " VALUES (?,?,?,'신규 확정 고객','2026-10',12500,1250,13750,now(),now())",
             nextInvoiceId,
             organizationId,
             customerId);
@@ -246,7 +246,7 @@ class PricingMigrationIntegrationTest {
                 scalar(
                     connection,
                     "SELECT"
-                        + " (to_jsonb(invoice)-'display_number'-'environment_id'-'environment_scope_id')::text"
+                        + " (to_jsonb(invoice)-'display_number'-'environment_id'-'environment_scope_id'-'cutoff_at')::text"
                         + " FROM invoice WHERE id=?",
                     invoiceId))
             .isEqualTo(invoiceBefore);

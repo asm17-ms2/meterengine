@@ -99,11 +99,13 @@ function InvoiceFinalizeForm({ onClose, ...target }: FinalizeTarget & { onClose:
         <ul>{state.invoices.slice(0, FINALIZED_PREVIEW_COUNT).map(invoice => <li key={invoice.id}><LinkButton href={`/payments/${invoice.id}`}>{invoice.invoice_number ?? invoice.id}</LinkButton> {invoice.customer_name} / {formatKrw(invoice.total_amount)}</li>)}</ul>
         {state.invoices.length > FINALIZED_PREVIEW_COUNT && <p className="field-hint">{`나머지 ${state.invoices.length - FINALIZED_PREVIEW_COUNT}건은 '인보이스 보기'에서 확인하세요.`}</p>}
         <Typography.Paragraph style={PARAGRAPH_STYLE}>
-          {state.finalizedCount === 0
-            ? `${monthLabel}에 청구할 금액이 있는 고객이 없거나 이미 모두 확정됐습니다.`
-            : state.finalizedCount === targetCount
-              ? "확정한 인보이스에는 공급가액에 세액 10%를 더한 합계가 찍혔습니다."
-              : `창을 연 뒤 사용량이 바뀌어 처음 안내한 ${targetCount}곳과 다릅니다. 금액은 인보이스에서 확인하세요.`}
+          {state.failedCount > 0
+            ? `확정하지 못한 고객이 ${state.failedCount}곳 있습니다. 확정한 고객은 그대로 남고, 다시 확정하면 남은 고객만 다시 시도합니다.`
+            : state.finalizedCount === 0
+              ? `${monthLabel}에 청구할 금액이 있는 고객이 없거나 이미 모두 확정됐습니다.`
+              : state.finalizedCount === targetCount
+                ? "확정한 인보이스에는 공급가액에 세액 10%를 더한 합계가 찍혔습니다."
+                : `창을 연 뒤 사용량이 바뀌었거나 다른 확정이 먼저 처리한 고객이 있어 처음 안내한 ${targetCount}곳과 다릅니다. 금액은 인보이스에서 확인하세요.`}
         </Typography.Paragraph>
       </Modal>
     );
@@ -136,8 +138,9 @@ function InvoiceFinalizeForm({ onClose, ...target }: FinalizeTarget & { onClose:
       <Flex vertical gap="medium">
         <Typography.Paragraph style={PARAGRAPH_STYLE}>
           청구할 금액이 있는 고객 {targetCount}곳의 인보이스를 확정합니다. 공급가액 합은{" "}
-          {supplyAmount}이고, 인보이스에는 세액 10%를 더한 합계가 찍힙니다. 금액은 확정하는 순간의
-          사용량으로 다시 계산합니다.
+          {supplyAmount}이고, 인보이스에는 세액 10%를 더한 합계가 찍힙니다. 금액은 집계 마감
+          시각(다음 달 1일 13:00)까지 받은 사용량으로 다시 계산하고, 마감 전이면 확정하는 순간까지
+          받은 사용량으로 계산합니다.
         </Typography.Paragraph>
         <Typography.Paragraph style={PARAGRAPH_STYLE}>
           확정한 인보이스는 고치거나 지울 수 없습니다. 확정한 고객에게 그 뒤 이 달에 들어온

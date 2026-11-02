@@ -7,6 +7,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
@@ -82,4 +83,23 @@ public interface InvoiceRepository extends JpaRepository<Invoice, UUID> {
               + " DISTINCT FROM CAST(:environmentId AS UUID) AND id = :id FOR UPDATE",
       nativeQuery = true)
   Optional<Invoice> lockScoped(UUID organizationId, UUID environmentId, UUID id);
+
+  // 같은 환경 범위에 그 고객과 달의 인보이스가 이미 있으면 넣지 않고 0을 돌려준다. 동시에 확정해도 한 장이다.
+  @Modifying
+  @Query(
+      value =
+          """
+          INSERT INTO invoice
+            (id, organization_id, environment_id, customer_id, customer_name, period,
+             supply_amount, tax_amount, total_amount, cutoff_at, finalized_at)
+          VALUES
+            (:#{#invoice.id}, :#{#invoice.organizationId},
+             CAST(:#{#invoice.environmentId} AS UUID), :#{#invoice.customerId},
+             :#{#invoice.customerName}, :#{#invoice.period}, :#{#invoice.supplyAmount},
+             :#{#invoice.taxAmount}, :#{#invoice.totalAmount}, :#{#invoice.cutoffAt},
+             :#{#invoice.finalizedAt})
+          ON CONFLICT (organization_id, environment_scope_id, customer_id, period) DO NOTHING
+          """,
+      nativeQuery = true)
+  int insertIfAbsent(Invoice invoice);
 }
