@@ -8,6 +8,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.jayway.jsonpath.JsonPath;
 import com.meterengine.TestClock;
 import com.meterengine.TestCredentials;
+import com.meterengine.TestEvents;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.event.controller.EventIssueController;
 import com.meterengine.event.dto.EventIssuesResponse;
@@ -282,15 +283,16 @@ class EventIssueIntegrationTest {
   }
 
   private void event(String transaction, String type, String properties, String timestamp) {
-    jdbcTemplate.update(
-        "INSERT INTO event(organization_id,transaction_id,customer_id,type,properties,occurred_at)"
-            + " VALUES (?,?,?,?,?::jsonb,?::timestamptz)",
+    OffsetDateTime occurredAt = OffsetDateTime.parse(timestamp);
+    TestEvents.insert(
+        jdbcTemplate,
         organization,
         transaction,
         customer,
         type,
         properties,
-        timestamp);
+        occurredAt,
+        occurredAt);
   }
 
   private MvcTestResult get(String authorization, String suffix) {
