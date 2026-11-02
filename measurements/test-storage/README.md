@@ -168,8 +168,8 @@ aws ssm start-session --region ap-northeast-2 \
 ```
 
 - http://localhost:3001 에 `admin`과 위 비밀번호로 들어간다.
-- 저장단 대시보드는 `RDS 인스턴스` 변수 기본값이 개발 서버 DB다. 아래 주소로 SUT DB를 골라 연다.
-  http://localhost:3001/d/meterengine-storage?var-db=meterengine-test-storage-db
+- DB 대시보드는 `RDS 인스턴스` 변수 기본값이 개발 서버 DB다. 아래 주소로 SUT DB를 골라 연다.
+  http://localhost:3001/d/meterengine-db?var-db=meterengine-test-storage-db
 
 ## 비밀번호
 
@@ -265,7 +265,8 @@ scripts/run-ingest-steps.sh
 - `cloud-init status`가 `done`이 아니면 `/var/log/cloud-init-output.log`를 본다.
 - 초당 100, 250, 500, 1,000부터 4,000건까지 6분씩 보낸다. 오류율이 0.01%를 넘거나 VU를 다 쓰면 멈춘다. VU 최대치는 단계 속도와 같아서(최소 500), 500건 이상 단계에서는 응답이 평균 1초를 넘으면 VU를 다 쓴다. 못 보낸 요청(dropped)만으로는 멈추지 않는다.
 - 결과는 부하 발생기의 `load-generator/k6/results/<RUN_ID>/`에 남고, 결과 표는 `<RUN_ID>-steps.tsv`다.
-- 결과 표의 `grafana` 칸 주소로 그 구간의 저장단 대시보드를 연다. 응답 시간 패널은 구간 끝 시각의 값을 읽는다.
+- 결과 표의 `grafana` 칸 주소로 그 구간의 이벤트 수집 대시보드를, `grafana_db` 칸 주소로 SUT DB를 고른 DB 대시보드를 연다. 응답 시간은 이벤트 수집 대시보드에서 구간 끝 시각의 값을 읽는다.
+- 앱 자원 대시보드도 같은 구간으로 본다. 대시보드 위쪽 `MeterEngine 대시보드` 메뉴로 옮겨 가면 구간이 그대로 유지된다.
 - 부하 발생기 CPU가 80%를 넘은 구간은 결과로 쓰지 않는다(`<RUN_ID>-load-generator-cpu.tsv`).
 
 실험 뒤 보낸 것과 저장된 것을 대조한다. 보낸 이벤트의 1%는 같은 id로 다시 보내므로, 단계마다 `유실 0건, 재전송 N건 중 duplicate N건`이 나와야 한다.
@@ -455,4 +456,4 @@ terraform -chdir=measurements/test-storage/sut/terraform destroy
 - 켜 둔 동안 시간당 약 $0.34(EC2 $0.10, RDS $0.23, 탄력적 IP $0.005). RDS Multi-AZ를 켠 동안은 RDS 몫이 약 두 배다.
 - 꺼 둔 동안 월 약 $8(EBS, RDS 스토리지, 탄력적 IP).
 - 부하 발생기는 켜 둔 동안 시간당 약 $0.11(EC2 $0.10, 공인 IP $0.005), 꺼 둔 동안 월 약 $2(EBS).
-- SUT RDS가 있는 동안 cloudwatch exporter의 CloudWatch API 호출이 RDS 한 대 몫만큼 늘어 월 약 $12.5가 더 든다. exporter 설정([`deploy/cloudwatch/config.yml`](../../deploy/cloudwatch/config.yml))이 계정의 RDS를 모두 읽기 때문이다.
+- SUT RDS가 있는 동안 cloudwatch exporter의 CloudWatch API 호출이 RDS 한 대 몫만큼 늘어 월 약 $17이 더 든다. exporter 설정([`deploy/cloudwatch/config.yml`](../../deploy/cloudwatch/config.yml))이 계정의 RDS를 모두 읽기 때문이다.
