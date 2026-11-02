@@ -45,6 +45,14 @@ public class ScheduledJobRunService {
     refreshLastSuccess(jobName);
   }
 
+  // 가장 최근 실행이 아직 도는 중인지다. 도중에 서버가 죽어 남은 실행은 다음 실행이 시작되면 최근이 아니게 된다.
+  public boolean isRunning(String jobName) {
+    return scheduledJobRunRepository
+        .findLatestStatus(jobName)
+        .filter(ScheduledJobRun.RUNNING::equals)
+        .isPresent();
+  }
+
   public void run(String jobName, OffsetDateTime scheduledAt, Supplier<ScheduledJobResult> job) {
     UUID id = UUID.randomUUID();
     if (scheduledJobRunRepository.insertIfAbsent(id, jobName, scheduledAt, OffsetDateTime.now())

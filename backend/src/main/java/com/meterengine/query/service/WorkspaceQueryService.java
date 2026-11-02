@@ -293,6 +293,9 @@ public class WorkspaceQueryService {
         "month_line_count",
         draft.customers().stream().mapToLong(customer -> customer.lines().size()).sum());
     summary.put("finalization_scope", "month");
+    summary.put("auto_finalize_enabled", draft.autoFinalizeEnabled());
+    summary.put("auto_finalize_at", draft.autoFinalizeAt());
+    summary.put("auto_finalize_running", draft.autoFinalizeRunning());
     return page(selected, draft.customers().size(), search, summary);
   }
 

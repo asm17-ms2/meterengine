@@ -29,7 +29,8 @@ public class OperationsService {
                  where r.job_name = expected.job_name and r.status = 'succeeded') last_success_at,
               latest.started_at last_started_at, latest.status latest_status
             from (values ('payment_attempt_confirmation'), ('payment_retry'), ('payment_reconciliation'),
-                         ('webhook_delivery'), ('unbilled_usage_report')) expected(job_name)
+                         ('webhook_delivery'), ('unbilled_usage_report'), ('invoice_auto_finalize'))
+                         expected(job_name)
             left join lateral (select started_at, status from scheduled_job_run r
               where r.job_name = expected.job_name order by started_at desc limit 1) latest on true
             order by expected.job_name

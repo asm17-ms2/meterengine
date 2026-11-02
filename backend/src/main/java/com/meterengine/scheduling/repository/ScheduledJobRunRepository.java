@@ -44,4 +44,15 @@ public interface ScheduledJobRunRepository extends JpaRepository<ScheduledJobRun
       WHERE run.jobName = :jobName AND run.scheduledAt < :before
       """)
   Optional<OffsetDateTime> findFirstScheduledAt(String jobName, OffsetDateTime before);
+
+  @Query(
+      value =
+          """
+          SELECT status FROM scheduled_job_run
+          WHERE job_name = :jobName
+          ORDER BY started_at DESC
+          LIMIT 1
+          """,
+      nativeQuery = true)
+  Optional<String> findLatestStatus(String jobName);
 }

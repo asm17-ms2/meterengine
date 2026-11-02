@@ -11,6 +11,18 @@ import java.util.UUID;
 public record DraftInvoiceResponse(
     String month,
     @JsonProperty("calculated_at") OffsetDateTime calculatedAt,
+    @Schema(description = "인보이스 자동 확정이 켜져 있으면 true") @JsonProperty("auto_finalize_enabled")
+        boolean autoFinalizeEnabled,
+    @Schema(
+            description =
+                "이 달을 다음에 자동 확정하는 시각(KST). 그 달의 확정 시각(다음 달 1일 14:00) 전이면 그 시각이다. 지났으면 요청한 환경에서 아직 다 훑지 않았거나 마지막 시도가 실패인 고객이 있을 때만 다음 정시고, 다 훑었고 실패도 없거나 첫 고객 등록 전의 달이면 null이다. 단가 없는 사용량으로 보류된 고객은 지난달 단가를 등록할 수 없어 다시 시도하지 않으므로 수동 확정으로 끝낸다. 꺼져 있으면 null")
+        @JsonProperty("auto_finalize_at")
+        OffsetDateTime autoFinalizeAt,
+    @Schema(
+            description =
+                "자동 확정이 지금 돌고 있고 요청한 환경에서 확정 시각이 지난 이 달을 아직 다 훑지 않았으면 true. 이번 실행이 이 달에 닿기 전에도 true다. 다 훑은 뒤 남은 고객은 보류나 실패라 false다. 자동 확정이 꺼져 있으면 false")
+        @JsonProperty("auto_finalize_running")
+        boolean autoFinalizeRunning,
     @JsonProperty("total_amount") long totalAmount,
     List<DraftInvoiceCustomer> customers) {
 

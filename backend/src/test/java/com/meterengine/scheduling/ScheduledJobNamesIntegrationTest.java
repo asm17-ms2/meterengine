@@ -30,7 +30,11 @@ import org.springframework.web.context.WebApplicationContext;
 
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest(
-    properties = {"meterengine.scheduling.enabled=true", "meterengine.webhook.enabled=true"})
+    properties = {
+      "meterengine.scheduling.enabled=true",
+      "meterengine.webhook.enabled=true",
+      "meterengine.invoice.auto-finalize.enabled=true"
+    })
 class ScheduledJobNamesIntegrationTest {
   private static final Path ALERTING =
       Path.of("..", "deploy", "grafana", "provisioning", "alerting", "alerting.yml");

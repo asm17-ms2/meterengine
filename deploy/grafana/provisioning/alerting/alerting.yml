@@ -244,6 +244,36 @@ groups:
               conditions:
                 - evaluator: { type: gt, params: [1800] }
 
+      # 인보이스 자동 확정은 매시 정각에 돌아 마지막 성공이 끝난 뒤 2시간 안에 다음 성공이 없으면 울린다. 꺼져 있어 한 번도 돌지 않았으면 시계열이 없어 울리지 않는다.
+      - uid: invoice-auto-finalize-missed
+        title: 인보이스 자동 확정 미실행
+        condition: C
+        for: 0m
+        noDataState: OK
+        execErrState: Error
+        annotations:
+          summary: 예약 작업 {{ $labels.job_name }} 이 2시간 넘게 성공하지 않았다. 작업이 멈췄거나 계속 실패하고 있다.
+        data:
+          - refId: A
+            relativeTimeRange: { from: 900, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: >-
+                (time() - max by (job_name) (meterengine_scheduled_job_last_success_seconds{job_name="invoice_auto_finalize"}))
+                or on (job_name) (count by (job_name) (meterengine_scheduled_job_run_total{job_name="invoice_auto_finalize"}) * 0
+                + scalar(time() - max(process_start_time_seconds{job="backend"})))
+              instant: true
+          - refId: C
+            relativeTimeRange: { from: 0, to: 0 }
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [7200] }
+
       # 하루 한 번 도는 작업은 정해진 시각에서 1시간이 지나도록 그날 성공이 없으면 울린다.
       # 슬롯을 이긴 색이 배포로 멈춰 그 시리즈가 사라져도 26시간 안의 가장 최근 성공을 본다.
       - uid: scheduled-job-missed-day
