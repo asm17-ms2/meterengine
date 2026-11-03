@@ -692,6 +692,146 @@ class SchemaConstraintTest {
     assertThat(amountColumnsOf("invoice_line")).containsExactly("amount");
   }
 
+  // --- 자동 확정 시도 기록 ---
+
+  @Test
+  void 정한_결과가_아닌_확정_시도는_저장되지_않는다() {
+    UUID organizationId = insertOrganization();
+    UUID customerId = insertCustomer(organizationId, "acme");
+
+    assertThatThrownBy(
+            () -> insertFinalizationAttempt(organizationId, null, customerId, "pending", null))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("invoice_finalization_attempt_result_check");
+  }
+
+  @Test
+  void 보류인_확정_시도만_단가_없는_사용량을_가진다() {
+    UUID organizationId = insertOrganization();
+    UUID customerId = insertCustomer(organizationId, "acme");
+    insertFinalizationAttempt(organizationId, null, customerId, "held", "[]");
+    insertFinalizationAttempt(organizationId, null, customerId, "failed", null);
+
+    assertThatThrownBy(
+            () -> insertFinalizationAttempt(organizationId, null, customerId, "held", null))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("invoice_finalization_attempt_held_unpriced_usages_check");
+  }
+
+  @Test
+  void 확정_시도의_환경은_고객의_환경과_같아야_한다() {
+    UUID organizationId = insertOrganization();
+    UUID customerId = insertCustomer(organizationId, "acme");
+    UUID testEnvironmentId =
+        jdbcTemplate.queryForObject(
+            "SELECT id FROM organization_environment WHERE organization_id = ? AND mode = 'test'",
+            UUID.class,
+            organizationId);
+
+    assertThatThrownBy(
+            () ->
+                insertFinalizationAttempt(
+                    organizationId, testEnvironmentId, customerId, "failed", null))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("invoice_finalization_attempt_customer_same_environment_fk");
+  }
+
+  @Test
+  void 다_훑은_달_표시에는_다른_도입사의_환경을_적을_수_없다() {
+    UUID organizationId = insertOrganization();
+    UUID otherEnvironmentId =
+        jdbcTemplate.queryForObject(
+            "SELECT id FROM organization_environment WHERE organization_id = ? AND mode = 'test'",
+            UUID.class,
+            insertOrganization());
+
+    assertThatThrownBy(
+            () ->
+                jdbcTemplate.update(
+                    """
+                    INSERT INTO invoice_finalization_month
+                      (organization_id, environment_id, period, swept_at)
+                    VALUES (?, ?, '2026-09', now())
+                    """,
+                    organizationId,
+                    otherEnvironmentId))
+        .isInstanceOf(DataIntegrityViolationException.class)
+        .hasMessageContaining("invoice_finalization_month_environment_fk");
+  }
+
+  @Test
+  void 저장된_확정_시도는_UPDATE할_수_없다() {
+    UUID organizationId = insertOrganization();
+    UUID customerId = insertCustomer(organizationId, "acme");
+    insertFinalizationAttempt(organizationId, null, customerId, "failed", null);
+
+    assertThatThrownBy(
+            () ->
+                jdbcTemplate.update(
+                    "UPDATE invoice_finalization_attempt SET result = 'finalized'"
+                        + " WHERE customer_id = ?",
+                    customerId))
+        .isInstanceOf(UncategorizedSQLException.class)
+        .hasMessageContaining("invoice_finalization_attempt is append-only");
+  }
+
+  @Test
+  void 저장된_확정_시도는_DELETE할_수_없다() {
+    UUID organizationId = insertOrganization();
+    UUID customerId = insertCustomer(organizationId, "acme");
+    insertFinalizationAttempt(organizationId, null, customerId, "failed", null);
+
+    assertThatThrownBy(
+            () ->
+                jdbcTemplate.update(
+                    "DELETE FROM invoice_finalization_attempt WHERE customer_id = ?", customerId))
+        .isInstanceOf(UncategorizedSQLException.class)
+        .hasMessageContaining("invoice_finalization_attempt is append-only");
+  }
+
+  @Test
+  void 확정_시도_테이블은_TRUNCATE할_수_없다() {
+    assertThatThrownBy(() -> jdbcTemplate.execute("TRUNCATE invoice_finalization_attempt"))
+        .isInstanceOf(UncategorizedSQLException.class)
+        .hasMessageContaining("invoice_finalization_attempt is append-only");
+  }
+
+  @Test
+  void 다_훑은_달_표시는_UPDATE할_수_없다() {
+    UUID organizationId = insertOrganization();
+    insertSweptMonth(organizationId);
+
+    assertThatThrownBy(
+            () ->
+                jdbcTemplate.update(
+                    "UPDATE invoice_finalization_month SET swept_at = now()"
+                        + " WHERE organization_id = ?",
+                    organizationId))
+        .isInstanceOf(UncategorizedSQLException.class)
+        .hasMessageContaining("invoice_finalization_month is append-only");
+  }
+
+  @Test
+  void 다_훑은_달_표시는_DELETE할_수_없다() {
+    UUID organizationId = insertOrganization();
+    insertSweptMonth(organizationId);
+
+    assertThatThrownBy(
+            () ->
+                jdbcTemplate.update(
+                    "DELETE FROM invoice_finalization_month WHERE organization_id = ?",
+                    organizationId))
+        .isInstanceOf(UncategorizedSQLException.class)
+        .hasMessageContaining("invoice_finalization_month is append-only");
+  }
+
+  @Test
+  void 다_훑은_달_표시_테이블은_TRUNCATE할_수_없다() {
+    assertThatThrownBy(() -> jdbcTemplate.execute("TRUNCATE invoice_finalization_month"))
+        .isInstanceOf(UncategorizedSQLException.class)
+        .hasMessageContaining("invoice_finalization_month is append-only");
+  }
+
   // --- 보낼 메일 ---
 
   @Test
@@ -1077,6 +1217,35 @@ class SchemaConstraintTest {
         organizationId,
         customerId,
         period);
+  }
+
+  private void insertFinalizationAttempt(
+      UUID organizationId,
+      UUID environmentId,
+      UUID customerId,
+      String result,
+      String unpricedUsages) {
+    jdbcTemplate.update(
+        """
+        INSERT INTO invoice_finalization_attempt
+          (id, organization_id, environment_id, customer_id, period, result, unpriced_usages,
+           attempted_at)
+        VALUES (gen_random_uuid(), ?, ?, ?, '2026-09', ?, ?::jsonb, now())
+        """,
+        organizationId,
+        environmentId,
+        customerId,
+        result,
+        unpricedUsages);
+  }
+
+  private void insertSweptMonth(UUID organizationId) {
+    jdbcTemplate.update(
+        """
+        INSERT INTO invoice_finalization_month (organization_id, period, swept_at)
+        VALUES (?, '2026-09', now())
+        """,
+        organizationId);
   }
 
   private UUID insertInvoiceWithLine() {
