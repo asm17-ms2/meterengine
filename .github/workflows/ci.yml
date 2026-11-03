@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
   merge_group:
 
@@ -46,9 +46,16 @@ jobs:
             # deploy 시험이 읽는 바깥 파일도 넣는다
             deploy:
               - 'deploy/**'
-              - '.github/workflows/cd.yml'
+              - '.github/workflows/cd-production.yml'
+              - '.github/workflows/cd-staging.yml'
+              - '.github/workflows/deploy.yml'
               - 'measurements/test-slo/k6/README.md'
+              - 'measurements/*/README.md'
+              - 'measurements/*/lib/common.sh'
               - 'measurements/*/sut/scripts/sut-deploy.sh'
+              - 'measurements/*/sut/scripts/remote/upsert-exporter-user.sh'
+              - 'measurements/*/sut/terraform/iam.tf'
+              - 'measurements/*/sut/terraform/locals.tf'
               - '.github/workflows/ci.yml'
             rds_auto_stop:
               - 'measurements/terraform/modules/rds-auto-stop/**'

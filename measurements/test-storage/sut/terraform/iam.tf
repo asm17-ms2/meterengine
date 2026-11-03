@@ -64,6 +64,8 @@ data "aws_iam_policy_document" "sut" {
     resources = [
       "arn:aws:ssm:${local.region}:${local.account_id}:parameter${local.dev_param_path}",
       "arn:aws:ssm:${local.region}:${local.account_id}:parameter${local.dev_param_path}/*",
+      "arn:aws:ssm:${local.region}:${local.account_id}:parameter${local.production_param_path}",
+      "arn:aws:ssm:${local.region}:${local.account_id}:parameter${local.production_param_path}/*",
     ]
   }
 

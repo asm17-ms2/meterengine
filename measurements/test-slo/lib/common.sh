@@ -14,6 +14,7 @@ export AWS_REGION=ap-northeast-2
 LOG_PREFIX=$(basename "$0" .sh)
 
 readonly DEV_SERVER_PARAM_PATH=/meterengine/prod
+readonly PRODUCTION_PARAM_PATH=/meterengine/production
 readonly SSM_EXECUTION_TIMEOUT_SECONDS=900
 readonly SSM_DELIVERY_TIMEOUT_SECONDS=600
 readonly SSM_POLL_INTERVAL_SECONDS=5
@@ -62,8 +63,8 @@ require_shell_safe() {
 require_not_dev_server_path() {
 	local param_path="$1"
 	case "$param_path" in
-	"$DEV_SERVER_PARAM_PATH" | "$DEV_SERVER_PARAM_PATH"/*)
-		die "개발 서버 경로 $DEV_SERVER_PARAM_PATH 는 쓰지 않는다"
+	"$DEV_SERVER_PARAM_PATH" | "$DEV_SERVER_PARAM_PATH"/* | "$PRODUCTION_PARAM_PATH" | "$PRODUCTION_PARAM_PATH"/*)
+		die "production 경로 $param_path 는 쓰지 않는다"
 		;;
 	esac
 }

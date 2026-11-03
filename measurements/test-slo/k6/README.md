@@ -97,7 +97,7 @@ SUT=$(terraform -chdir=measurements/test-slo/sut/terraform output -raw sut_insta
 SHA=<고른 SHA 40자>
 REF=<측정할 브랜치 끝 커밋 SHA 40자>
 CMD=$(aws ssm send-command --instance-ids $SUT --document-name AWS-RunShellScript \
-  --parameters commands="exec 8>/etc/meterengine/deploy-command.lock && flock -n 8 && cd /opt/meterengine && git fetch --quiet origin 8>&- 9>&- && git checkout --quiet --force $REF 8>&- 9>&- && ./deploy/deploy.sh $SHA $REF" \
+  --parameters commands="exec 8>/etc/meterengine/deploy-command.lock && flock -n 8 && cd /opt/meterengine && git fetch --quiet origin 8>&- 9>&- && git checkout --quiet --force $REF 8>&- 9>&- && ./deploy/deploy.sh test-slo $SHA $REF" \
   --query Command.CommandId --output text)
 st=Pending
 while [ "$st" = Pending ] || [ "$st" = InProgress ] || [ "$st" = Delayed ] || [ "$st" = Cancelling ]; do

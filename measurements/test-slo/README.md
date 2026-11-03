@@ -18,7 +18,7 @@
 | [`scripts/deploy-report.sh`](scripts/deploy-report.sh) | 배포 중 실패 계산. 쓰는 법은 k6 README "배포 중 실패 측정" |
 
 - 자원 이름 접두는 `meterengine-test-slo`, 도메인은 `test-slo.meterengine.com`, 파라미터 경로는 `/meterengine/test-slo`다.
-- EC2 역할은 Parameter Store에서 자기 경로만 읽는다. `/meterengine/prod`는 Deny로 막혀 있다.
+- EC2 역할은 Parameter Store에서 자기 경로만 읽는다. `/meterengine/prod`와 `/meterengine/production`은 Deny로 막혀 있다.
 - VPC, 서브넷, RDS 서브넷 그룹, 호스티드 존, ECR 이미지는 개발 서버와 같이 쓴다. 호스티드 존에는 SUT 도메인 레코드를 더하고, 나머지는 읽기만 한다.
 - Slack 웹훅은 아무도 받지 않는 주소라 SUT 경보가 팀 채널로 가지 않는다.
 - 자원에는 `Project=meterengine`, `Owner=sjparkx1129`, `Purpose=sut` 태그가 붙는다. 자동 중지 스케줄(EventBridge Scheduler)은 태그를 붙일 수 없다.
@@ -50,7 +50,7 @@ measurements/test-slo/sut/scripts/sut-deploy.sh
 ```
 
 - SHA를 빼면 ECR `meterengine-backend`와 `meterengine-frontend` 둘 다에 이미지가 있는 가장 최근 main 커밋을 배포한다.
-- 배포 전에 ECR 이미지, DNS, RDS 상태, EC2 상태, `deploy.conf`를 확인하고 하나라도 틀리면 멈춘다. EC2 준비가 끝나기 전이면 원격 명령이 실패하니 몇 분 뒤 다시 돌린다.
+- 배포 전에 ECR 이미지, DNS, RDS 상태, EC2 상태를 확인하고 하나라도 틀리면 멈춘다. 서버의 `deploy.sh`도 DB 식별자를 `deploy/environments/test-slo.json`과 대조한다. 환경 파일이 없는 옛 커밋은 `deploy.conf`를 대조한다. EC2 준비가 끝나기 전이면 원격 명령이 실패하니 몇 분 뒤 다시 돌린다.
 - 성공하면 아래 줄이 나온다. 첫 배포는 Caddy가 인증서를 받는다(같은 도메인 주 5회 제한).
 
 ```

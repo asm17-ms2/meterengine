@@ -1,0 +1,11 @@
+{
+  "database_identifier": "meterengine-test-slo-db",
+  "parameter_path": "/meterengine/test-slo",
+  "site_domain": "test-slo.meterengine.com",
+  "site_aliases": [],
+  "compose_profiles": ["agents", "monitoring"],
+  "sso_sites": false,
+  "image_repository_prefix": "meterengine",
+  "backend_mem_limit": "768m",
+  "backend_max_ram_percentage": 50
+}
