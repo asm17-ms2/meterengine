@@ -30,6 +30,7 @@ import com.meterengine.payment.entity.TossPaymentsCredential;
 import com.meterengine.payment.repository.BillingKeyRepository;
 import com.meterengine.payment.repository.TossPaymentsCredentialRepository;
 import com.meterengine.payment.service.PaymentAttemptService;
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.sql.Timestamp;
 import java.time.OffsetDateTime;
@@ -997,8 +998,10 @@ class PaymentAttemptIntegrationTest {
     return meterRegistry
         .get("meterengine.payment.attempt")
         .tags("mode", mode, "result", result)
-        .counter()
-        .count();
+        .counters()
+        .stream()
+        .mapToDouble(Counter::count)
+        .sum();
   }
 
   private MvcTestResult createPaymentAttempt(UUID organizationId, UUID invoiceId) {

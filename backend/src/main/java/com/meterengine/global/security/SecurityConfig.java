@@ -96,7 +96,7 @@ public class SecurityConfig {
                 apiKeyCredentials, sessionCredentials, errorResponseWriter),
             AnonymousAuthenticationFilter.class)
         .addFilterAfter(
-            new RateLimitFilter(clock, errorResponseWriter),
+            new RateLimitFilter(clock, errorResponseWriter, meterRegistry),
             ApiCredentialAuthenticationFilter.class)
         .build();
   }

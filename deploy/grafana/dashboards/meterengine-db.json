@@ -1,19 +1,35 @@
 {
-  "__comment": "MeterEngine 저장단 대시보드. 정본은 이 파일이고 UI 수정은 배포 때 되돌아간다. 행은 저장단 변화 기준의 네 변화 단계이고 맨 위 행은 결과 지표다. 기준값은 그 문서에만 두고 여기에는 그리지 않는다.",
-  "uid": "meterengine-storage",
-  "title": "MeterEngine 저장단",
-  "timezone": "browser",
+  "__comment": "MeterEngine DB 대시보드. 정본은 이 파일이고 UI 수정은 배포 때 되돌아간다. PostgreSQL 행은 postgres-exporter가 붙은 DB를, RDS 행은 db 변수로 고른 인스턴스의 CloudWatch 값을 그린다.",
+  "uid": "meterengine-db",
+  "title": "MeterEngine DB",
+  "tags": [
+    "meterengine"
+  ],
   "schemaVersion": 39,
-  "refresh": "1m",
   "time": {
-    "from": "now-6h",
+    "from": "now-24h",
     "to": "now"
   },
+  "timezone": "browser",
+  "refresh": "1m",
+  "links": [
+    {
+      "type": "dashboards",
+      "tags": [
+        "meterengine"
+      ],
+      "asDropdown": true,
+      "title": "MeterEngine 대시보드",
+      "includeVars": false,
+      "keepTime": true
+    }
+  ],
   "templating": {
     "list": [
       {
         "name": "db",
         "label": "RDS 인스턴스",
+        "description": "CloudWatch에서 온 RDS 행 패널에만 걸린다. PostgreSQL 행은 postgres-exporter가 붙은 DB 하나를 그린다.",
         "type": "query",
         "datasource": {
           "type": "prometheus",
@@ -40,104 +56,26 @@
     {
       "id": 1,
       "type": "row",
-      "title": "결과: 응답 시간과 오류. 무엇을 바꿀지는 아래 네 단계 중 먼저 찬 자원을 따른다. 기준값은 저장단 변화 기준 문서에 있다",
-      "collapsed": false,
-      "panels": [],
+      "title": "PostgreSQL (postgres-exporter가 붙은 DB)",
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
         "y": 0
-      }
-    },
-    {
-      "id": 38,
-      "type": "timeseries",
-      "title": "수집 API 초당 요청 수 (POST /v1/events, /v1/event-batches)",
-      "description": "수집 API가 1초에 몇 번 불렸나. 같은 시간대의 처리 시간, p99, CPU 패널과 나란히 본다.",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 1
       },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum by (uri) (rate(http_server_requests_seconds_count{uri=~\"/v1/events|/v1/event-batches\",method=\"POST\"}[1m]))",
-          "legendFormat": "{{uri}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "reqps",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 39,
-      "type": "timeseries",
-      "title": "수집 API 평균 처리 시간 (POST /v1/events, /v1/event-batches)",
-      "description": "수집 요청 한 건을 처리하는 데 평균 몇 초 걸렸나. 왼쪽 요청 수가 늘 때 같이 느는지 본다.",
-      "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 1
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum by (uri) (rate(http_server_requests_seconds_sum{uri=~\"/v1/events|/v1/event-batches\",method=\"POST\"}[1m])) / sum by (uri) (rate(http_server_requests_seconds_count{uri=~\"/v1/events|/v1/event-batches\",method=\"POST\"}[1m]))",
-          "legendFormat": "{{uri}} 평균"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
+      "collapsed": false,
+      "panels": []
     },
     {
       "id": 2,
       "type": "timeseries",
-      "title": "수집 API 응답 p99 (POST /v1/events, /v1/event-batches)",
-      "description": "서버가 받은 뒤 저장하고 응답할 때까지. 지금 구조는 요청 안에서 저장하므로 이 값이 곧 서버 쪽 저장 지연이다. 커넥션 쥔 시간과 비교해 DB 몫이 크면 아래 2, 3단계 행을 본다.",
+      "title": "수출기 상태",
+      "description": "postgres-exporter가 Prometheus에 응답하면 수출기 응답이, DB에 붙어 있으면 pg_up이 1이다. 수출기 응답이 0이면 수출기 컨테이너가 죽은 것이고, pg_up이 0이면 이 행의 값이 모두 멈춘 것이다. 내장 질의가 실패하면 수집 오류가, 수집기가 실패하면 그 수집기 이름의 선이 1이 되며 권한이나 버전 차이로 일부 패널의 값이 빠진 것이다. 지표: `up`, `pg_up`, `pg_exporter_last_scrape_error`, `pg_scrape_collector_success`",
       "gridPos": {
         "h": 8,
-        "w": 12,
+        "w": 8,
         "x": 0,
-        "y": 9
+        "y": 1
       },
       "datasource": {
         "type": "prometheus",
@@ -146,19 +84,30 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.99, sum by (le, uri) (rate(http_server_requests_seconds_bucket{uri=~\"/v1/events|/v1/event-batches\",method=\"POST\"}[5m])))",
-          "legendFormat": "{{uri}} p99"
+          "expr": "max(up{job=\"postgres\"})",
+          "legendFormat": "수출기 응답"
         },
         {
           "refId": "B",
-          "expr": "histogram_quantile(0.50, sum by (le, uri) (rate(http_server_requests_seconds_bucket{uri=~\"/v1/events|/v1/event-batches\",method=\"POST\"}[5m])))",
-          "legendFormat": "{{uri}} p50"
+          "expr": "max(pg_up)",
+          "legendFormat": "pg_up"
+        },
+        {
+          "refId": "C",
+          "expr": "max(pg_exporter_last_scrape_error)",
+          "legendFormat": "수집 오류"
+        },
+        {
+          "refId": "D",
+          "expr": "max by (collector) (1 - pg_scrape_collector_success)",
+          "legendFormat": "{{collector}}"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s",
-          "min": 0
+          "unit": "short",
+          "min": 0,
+          "max": 1
         },
         "overrides": []
       },
@@ -175,13 +124,13 @@
     {
       "id": 3,
       "type": "timeseries",
-      "title": "수집 API 오류율 (5xx)",
-      "description": "수집 요청 중 5xx 비율. 무엇을 바꿀지가 아니라 얼마나 급한지를 정한다.",
+      "title": "최장 트랜잭션",
+      "description": "클라이언트 연결이 지금 열어 둔 트랜잭션 가운데 가장 오래된 것의 길이를 연결 상태별로 보고, autovacuum 작업은 뺀다. 오르면 긴 트랜잭션이 락을 쥐고 있거나 vacuum이 죽은 행을 치우지 못하게 막는 것이다. 지표: `pg_stat_activity_max_tx_duration`",
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 9
+        "w": 8,
+        "x": 8,
+        "y": 1
       },
       "datasource": {
         "type": "prometheus",
@@ -190,13 +139,13 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "100 * (sum by (uri) (rate(http_server_requests_seconds_count{uri=~\"/v1/events|/v1/event-batches\",method=\"POST\",status=~\"5..\"}[5m])) or sum by (uri) (rate(http_server_requests_seconds_count{uri=~\"/v1/events|/v1/event-batches\",method=\"POST\"}[5m])) * 0) / sum by (uri) (rate(http_server_requests_seconds_count{uri=~\"/v1/events|/v1/event-batches\",method=\"POST\"}[5m]))",
-          "legendFormat": "{{uri}} 5xx %"
+          "expr": "max by (state) (pg_stat_activity_max_tx_duration{datname!~\"template.*|postgres|rdsadmin\", backend_type=\"client backend\"})",
+          "legendFormat": "{{state}}"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "percent",
+          "unit": "s",
           "min": 0
         },
         "overrides": []
@@ -214,13 +163,13 @@
     {
       "id": 4,
       "type": "timeseries",
-      "title": "중복 응답 비율 (duplicate true)",
-      "description": "200 응답 중 duplicate true 비율. 오르면 저장단이 아니라 클라이언트 재시도 쪽 문제다. 기본 키 조회가 늘어 DB CPU에 나타날 수 있다.",
+      "title": "커밋과 롤백",
+      "description": "DB의 초당 커밋 수와 롤백 수다. 커밋이 갑자기 줄면 앱이 DB에 보내는 트랜잭션이 줄어든 것이고, 롤백이 커밋의 10%를 넘으면 실패하는 트랜잭션이 많은 것이다. 지표: `pg_stat_database_xact_commit`, `pg_stat_database_xact_rollback`",
       "gridPos": {
         "h": 8,
         "w": 8,
-        "x": 0,
-        "y": 17
+        "x": 16,
+        "y": 1
       },
       "datasource": {
         "type": "prometheus",
@@ -229,13 +178,18 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "100 * sum(rate(meterengine_event_ingest_total{result=\"duplicate\"}[5m])) / sum(rate(meterengine_event_ingest_total{result=~\"stored|duplicate\"}[5m]))",
-          "legendFormat": "duplicate %"
+          "expr": "sum(rate(pg_stat_database_xact_commit{datname!~\"template.*|postgres|rdsadmin\"}[$__rate_interval]))",
+          "legendFormat": "커밋"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(pg_stat_database_xact_rollback{datname!~\"template.*|postgres|rdsadmin\"}[$__rate_interval]))",
+          "legendFormat": "롤백"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "percent",
+          "unit": "ops",
           "min": 0
         },
         "overrides": []
@@ -253,13 +207,13 @@
     {
       "id": 5,
       "type": "timeseries",
-      "title": "초당 저장 응답 대 DB 삽입 행",
-      "description": "둘이 같아야 한다. 저장 응답이 삽입 행보다 많은 상태가 이어지면 유실이라 사고 조사. 큐를 두면 이 차이가 적체량이 된다.",
+      "title": "캐시 적중률",
+      "description": "읽은 블록 가운데 PostgreSQL 버퍼 캐시에서 찾은 블록의 비율이다. 98% 아래로 떨어지면 작업 집합이 메모리에 들지 않아 디스크 읽기가 늘고 응답이 느려진다. 지표: `pg_stat_database_blks_hit`, `pg_stat_database_blks_read`",
       "gridPos": {
         "h": 8,
         "w": 8,
-        "x": 8,
-        "y": 17
+        "x": 0,
+        "y": 9
       },
       "datasource": {
         "type": "prometheus",
@@ -268,19 +222,14 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(meterengine_event_ingest_total{result=\"stored\"}[1m]))",
-          "legendFormat": "저장 응답 EPS"
-        },
-        {
-          "refId": "B",
-          "expr": "sum(rate(pg_stat_database_tup_inserted{datname!~\"template.*|postgres|rdsadmin\"}[1m]))",
-          "legendFormat": "DB 삽입 행/s"
+          "expr": "sum(rate(pg_stat_database_blks_hit{datname!~\"template.*|postgres|rdsadmin\"}[$__rate_interval])) / (sum(rate(pg_stat_database_blks_hit{datname!~\"template.*|postgres|rdsadmin\"}[$__rate_interval])) + sum(rate(pg_stat_database_blks_read{datname!~\"template.*|postgres|rdsadmin\"}[$__rate_interval])))",
+          "legendFormat": "적중률"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
-          "min": 0
+          "unit": "percentunit",
+          "max": 1
         },
         "overrides": []
       },
@@ -297,13 +246,13 @@
     {
       "id": 6,
       "type": "timeseries",
-      "title": "커넥션을 쥐고 있던 시간 p99",
-      "description": "커넥션을 받아서 돌려줄 때까지. 늘면 DB가 느려진 신호라 2, 3단계 중 같이 오른 행을 본다.",
+      "title": "디스크 읽기 블록",
+      "description": "PostgreSQL 버퍼 캐시에 없어 읽어 온 블록의 초당 수다. 운영체제 캐시에서 온 읽기도 들어 있다. 읽기량이 늘거나 적중률이 떨어지면 오르므로 캐시 적중률과 같이 본다. 지표: `pg_stat_database_blks_read`",
       "gridPos": {
         "h": 8,
         "w": 8,
-        "x": 16,
-        "y": 17
+        "x": 8,
+        "y": 9
       },
       "datasource": {
         "type": "prometheus",
@@ -312,13 +261,13 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(hikaricp_connections_usage_seconds_bucket[5m])))",
-          "legendFormat": "usage p99"
+          "expr": "sum(rate(pg_stat_database_blks_read{datname!~\"template.*|postgres|rdsadmin\"}[$__rate_interval]))",
+          "legendFormat": "blks_read"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s",
+          "unit": "short",
           "min": 0
         },
         "overrides": []
@@ -335,27 +284,14 @@
     },
     {
       "id": 7,
-      "type": "row",
-      "title": "1 설정: 풀 크기나 PostgreSQL 파라미터만 바꾼다",
-      "collapsed": false,
-      "panels": [],
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 25
-      }
-    },
-    {
-      "id": 8,
       "type": "timeseries",
-      "title": "커넥션을 기다리는 스레드 수",
-      "description": "커넥션이 모자라 기다리는 스레드. 0을 넘는 상태가 이어지면 풀 크기를 올리는 신호다.",
+      "title": "교착",
+      "description": "트랜잭션끼리 서로의 락을 기다려 PostgreSQL이 하나를 취소한 교착을 분당 수로 센다. 0보다 크면 같은 행을 다른 순서로 잠그는 코드가 있는 것이고, 분당 5건을 넘으면 postgres_mixin이 경보하는 수준이다. 지표: `pg_stat_database_deadlocks`",
       "gridPos": {
         "h": 8,
         "w": 8,
-        "x": 0,
-        "y": 26
+        "x": 16,
+        "y": 9
       },
       "datasource": {
         "type": "prometheus",
@@ -364,15 +300,53 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(hikaricp_connections_pending)",
-          "legendFormat": "pending"
+          "expr": "sum(rate(pg_stat_database_deadlocks{datname!~\"template.*|postgres|rdsadmin\"}[$__rate_interval])) * 60",
+          "legendFormat": "분당 교착"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "min": 0,
-          "decimals": 0
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "죽은 행",
+      "description": "지우거나 고친 뒤 아직 vacuum이 치우지 않은 행 수이고, 많은 10개 테이블만 그린다. 계속 오르기만 하면 autovacuum이 따라가지 못하는 것이라 마지막 autovacuum 패널과 같이 본다. 지표: `pg_stat_user_tables_n_dead_tup`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 17
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "topk(10, max by (relname) (pg_stat_user_tables_n_dead_tup))",
+          "legendFormat": "{{relname}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
         },
         "overrides": []
       },
@@ -389,13 +363,13 @@
     {
       "id": 9,
       "type": "timeseries",
-      "title": "커넥션을 받기까지 줄 선 시간 p99",
-      "description": "커넥션을 받기까지 기다린 시간. 늘면 풀이 모자란 것이다.",
+      "title": "마지막 autovacuum",
+      "description": "죽은 행이 많은 10개 테이블에서 마지막 autovacuum이 끝난 뒤 지난 시간이다. autovacuum이 한 번도 돌지 않은 테이블은 빠진다. 죽은 행이 쌓이는데 이 값도 계속 오르면 autovacuum이 그 테이블을 치우지 못하는 것이다. 지표: `pg_stat_user_tables_last_autovacuum`",
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 26
+        "y": 17
       },
       "datasource": {
         "type": "prometheus",
@@ -404,8 +378,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(hikaricp_connections_acquire_seconds_bucket[5m])))",
-          "legendFormat": "acquire p99"
+          "expr": "(time() - max by (relname) (pg_stat_user_tables_last_autovacuum > 0)) and on (relname) topk(10, max by (relname) (pg_stat_user_tables_n_dead_tup))",
+          "legendFormat": "{{relname}}"
         }
       ],
       "fieldConfig": {
@@ -428,13 +402,13 @@
     {
       "id": 10,
       "type": "timeseries",
-      "title": "사용 중 커넥션 대 최대",
-      "description": "사용 중 커넥션과 풀 최대. 최대에 붙어 있어도 기다리는 스레드가 0이면 아직 바꾸지 않는다.",
+      "title": "잠금 수",
+      "description": "잡혀 있거나 기다리는 락 수를 락 종류별로 센다. 평소보다 늘고 최장 트랜잭션도 길어지면 조회나 확정 작업이 서로 막고 있는 것이다. 지표: `pg_locks_count`",
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 26
+        "y": 17
       },
       "datasource": {
         "type": "prometheus",
@@ -443,20 +417,14 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(hikaricp_connections_active)",
-          "legendFormat": "active"
-        },
-        {
-          "refId": "B",
-          "expr": "sum(hikaricp_connections_max)",
-          "legendFormat": "max"
+          "expr": "sum by (mode) (pg_locks_count{datname!~\"template.*|postgres|rdsadmin\"})",
+          "legendFormat": "{{mode}}"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "min": 0,
-          "decimals": 0
+          "min": 0
         },
         "overrides": []
       },
@@ -473,53 +441,13 @@
     {
       "id": 11,
       "type": "timeseries",
-      "title": "커넥션을 못 받고 포기한 횟수 (5분)",
-      "description": "커넥션을 기다리다 포기한 요청 수. 포기까지 30초라 그 요청은 이미 30초 늦었다.",
+      "title": "체크포인트 간격",
+      "description": "15분 동안 예정되거나 요청된 체크포인트 수(건너뛴 것 포함)로 평균 간격을 구하므로, 쉬는 동안에도 checkpoint_timeout 간격으로 보인다. checkpoint_timeout보다 훨씬 짧아지면 WAL이 금방 차는 것이라 max_wal_size를 볼 때다. 지표: `pg_stat_checkpointer_num_timed_total`, `pg_stat_checkpointer_num_requested_total`",
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 34
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum(increase(hikaricp_connections_timeout_total[5m]))",
-          "legendFormat": "timeouts / 5m"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "min": 0,
-          "decimals": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 12,
-      "type": "timeseries",
-      "title": "체크포인트 평균 간격 (15분 창)",
-      "description": "체크포인트 사이의 평균 시간. checkpoint_timeout보다 훨씬 짧아지면 WAL이 금방 차는 것이라 max_wal_size를 보는 신호다. 15분 창에 체크포인트가 없으면 15분으로 보인다.",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 34
+        "y": 25
       },
       "datasource": {
         "type": "prometheus",
@@ -550,15 +478,15 @@
       }
     },
     {
-      "id": 13,
+      "id": 12,
       "type": "timeseries",
-      "title": "체크포인트 시간형 대 요청형 (15분 증가분)",
-      "description": "시간형은 checkpoint_timeout마다, 요청형은 WAL이 차서 생긴 것. 요청형이 많아지면 max_wal_size가 작은 것이다.",
+      "title": "체크포인트 종류별 수",
+      "description": "15분 동안 `checkpoint_timeout`으로 예정된 체크포인트와 WAL이 차서 요청된 체크포인트 수다. PostgreSQL 17부터 둘 다 건너뛴 체크포인트도 센다. 요청형이 많으면 WAL 크기 설정이 쓰기량보다 작은 것이다. 지표: `pg_stat_checkpointer_num_timed_total`, `pg_stat_checkpointer_num_requested_total`",
       "gridPos": {
         "h": 8,
         "w": 8,
-        "x": 16,
-        "y": 34
+        "x": 8,
+        "y": 25
       },
       "datasource": {
         "type": "prometheus",
@@ -579,8 +507,51 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "min": 0,
-          "decimals": 0
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "WAL 크기",
+      "description": "pg_wal 디렉터리의 WAL 파일 크기를 max_wal_size 설정과 함께 그린다. max_wal_size에 붙어 있으면 체크포인트가 자주 일어나고, 그보다 계속 커지면 WAL을 지우지 못하고 있는 것이다. 지표: `pg_wal_size_bytes`, `pg_settings_max_wal_size_bytes`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 25
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(pg_wal_size_bytes)",
+          "legendFormat": "pg_wal"
+        },
+        {
+          "refId": "B",
+          "expr": "max(pg_settings_max_wal_size_bytes)",
+          "legendFormat": "max_wal_size"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "min": 0
         },
         "overrides": []
       },
@@ -596,730 +567,14 @@
     },
     {
       "id": 14,
-      "type": "row",
-      "title": "2 쓰기 방식: 요청마다 커밋하던 것을 묶어 쓰기나 비동기 저장으로 바꾼다",
-      "collapsed": false,
-      "panels": [],
+      "type": "timeseries",
+      "title": "event 테이블 크기",
+      "description": "event 테이블과 그 인덱스가 디스크에서 차지하는 크기다. 기본 키 인덱스가 메모리에 들지 않으면 삽입마다 디스크를 읽고, 커지면서 조회도 같이 느려지면 파티셔닝이나 읽기 분리를 볼 때다. 지표: `pg_stat_user_tables_table_size_bytes`, `pg_stat_user_tables_index_size_bytes`",
       "gridPos": {
-        "h": 1,
+        "h": 8,
         "w": 24,
         "x": 0,
-        "y": 42
-      }
-    },
-    {
-      "id": 15,
-      "type": "timeseries",
-      "title": "RDS 디스크 쓰기 한 번에 걸리는 시간",
-      "description": "디스크 쓰기 한 번의 시간. 대기 큐와 같이 오르면 디스크가 느린 것이라 묶어 쓰기를 보는 신호다.",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 43
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "aws_rds_write_latency_average{dbinstance_identifier=\"$db\"}",
-          "legendFormat": "WriteLatency"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 16,
-      "type": "timeseries",
-      "title": "RDS 디스크 대기 큐",
-      "description": "디스크를 기다리는 I/O 수. 0을 넘는 상태가 이어지면 디스크가 요청을 다 못 받는 것이다.",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 43
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "aws_rds_disk_queue_depth_average{dbinstance_identifier=\"$db\"}",
-          "legendFormat": "DiskQueueDepth"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 17,
-      "type": "timeseries",
-      "title": "RDS 초당 디스크 쓰기",
-      "description": "초당 디스크 쓰기 횟수. 커밋 한 번이 WAL 쓰기 한 번 이상이라 커밋을 묶으면 준다.",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 43
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "aws_rds_write_iops_average{dbinstance_identifier=\"$db\"}",
-          "legendFormat": "WriteIOPS"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "iops",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 18,
-      "type": "timeseries",
-      "title": "RDS 초당 WAL 생성량",
-      "description": "초당 새로 쓰이는 WAL 양. 묶어 쓰기를 하면 행당 WAL이 준다.",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 51
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "aws_rds_transaction_logs_generation_average{dbinstance_identifier=\"$db\"}",
-          "legendFormat": "WAL bytes/s"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "Bps",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 19,
-      "type": "timeseries",
-      "title": "RDS 디스크 쓰기 처리량",
-      "description": "참고 값. WAL 생성량과 같이 본다.",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 51
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "aws_rds_write_throughput_average{dbinstance_identifier=\"$db\"}",
-          "legendFormat": "WriteThroughput"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "Bps",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 20,
-      "type": "timeseries",
-      "title": "DB 잠금 수 (종류별)",
-      "description": "참고 값. 수집 경로는 INSERT 하나라 서로 막을 일이 없다. 막힘이 보이면 조회나 확정 작업과 부딪친 것.",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 51
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum by (mode) (pg_locks_count{datname!~\"template.*|postgres|rdsadmin\"})",
-          "legendFormat": "{{mode}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "min": 0,
-          "decimals": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 21,
-      "type": "row",
-      "title": "3 DB 자원: RDS 등급을 올리거나 스토리지를 늘린다",
-      "collapsed": false,
-      "panels": [],
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 59
-      }
-    },
-    {
-      "id": 22,
-      "type": "timeseries",
-      "title": "RDS CPU 사용률",
-      "description": "RDS CPU. 높은 상태가 이어지고 커넥션 쥔 시간도 늘면 등급을 올리는 신호다. CloudWatch는 1분 해상도라 짧은 포화는 숨을 수 있다.",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 60
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "aws_rds_cpuutilization_average{dbinstance_identifier=\"$db\"}",
-          "legendFormat": "CPU %"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "min": 0,
-          "max": 100
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 23,
-      "type": "timeseries",
-      "title": "RDS 연결 수 대 max_connections",
-      "description": "RDS 연결 수와 max_connections. 평상은 풀 크기와 같다. 풀을 올리다 max_connections에 가까워지면 등급을 올리는 신호다.",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 60
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "aws_rds_database_connections_average{dbinstance_identifier=\"$db\"}",
-          "legendFormat": "연결 수"
-        },
-        {
-          "refId": "B",
-          "expr": "max(pg_settings_max_connections)",
-          "legendFormat": "max_connections"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "min": 0,
-          "decimals": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 24,
-      "type": "timeseries",
-      "title": "RDS CPU 크레딧 잔량",
-      "description": "t4g의 CPU 크레딧. 0이 되면 CPU가 기준선(vCPU당 20%)으로 떨어진다. unlimited라 지금은 비용으로 바뀐다.",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 60
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "aws_rds_cpucredit_balance_average{dbinstance_identifier=\"$db\"}",
-          "legendFormat": "CPUCreditBalance"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 25,
-      "type": "timeseries",
-      "title": "EBS 버스트 잔량",
-      "description": "EBS 버스트 잔량. 떨어지는 중이면 디스크 기준선을 넘겨 쓰는 것이라 등급을 올리는 신호다.",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 68
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "aws_rds_ebsiobalance__average{dbinstance_identifier=\"$db\"}",
-          "legendFormat": "IO balance %"
-        },
-        {
-          "refId": "B",
-          "expr": "aws_rds_ebsbyte_balance__average{dbinstance_identifier=\"$db\"}",
-          "legendFormat": "Byte balance %"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "min": 0,
-          "max": 100
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 26,
-      "type": "timeseries",
-      "title": "RDS 남은 메모리",
-      "description": "RDS 남은 메모리.",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 68
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "aws_rds_freeable_memory_average{dbinstance_identifier=\"$db\"}",
-          "legendFormat": "FreeableMemory"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 27,
-      "type": "timeseries",
-      "title": "RDS 스왑 사용량",
-      "description": "스왑이 생기면 메모리가 모자란 것이라 메모리가 큰 등급으로 올리는 신호다.",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 68
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "aws_rds_swap_usage_average{dbinstance_identifier=\"$db\"}",
-          "legendFormat": "SwapUsage"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 28,
-      "type": "timeseries",
-      "title": "저장 공간이 찰 때까지 남은 날 (하루 증가량 기준)",
-      "description": "남은 공간을 하루 사이 줄어든 양으로 나눈 값. 하루 사이 줄어든 양이 없으면 값이 매우 커진다.",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 76
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "aws_rds_free_storage_space_average{dbinstance_identifier=\"$db\"} / clamp_min(-delta(aws_rds_free_storage_space_average{dbinstance_identifier=\"$db\"}[1d]), 1) / 86400",
-          "legendFormat": "남은 날"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "d",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 29,
-      "type": "timeseries",
-      "title": "RDS 남은 저장 공간",
-      "description": "참고 값. gp3 20GB.",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 76
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "aws_rds_free_storage_space_average{dbinstance_identifier=\"$db\"}",
-          "legendFormat": "FreeStorageSpace"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "bytes",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 30,
-      "type": "timeseries",
-      "title": "디스크에서 읽은 블록 수 (초당)",
-      "description": "수집 중에 늘고 조회 응답도 같이 늘면 메모리가 큰 등급으로. 등급을 올려도 느리면 읽기 분리(4 구조).",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 76
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum(rate(pg_stat_database_blks_read{datname!~\"template.*|postgres|rdsadmin\"}[5m]))",
-          "legendFormat": "blks_read/s"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 31,
-      "type": "row",
-      "title": "4 구조: 앞단에 큐를 두거나 읽기를 분리하거나 테이블을 나눈다",
-      "collapsed": false,
-      "panels": [],
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 84
-      }
-    },
-    {
-      "id": 32,
-      "type": "timeseries",
-      "title": "사용량 조회 p99 (GET /v1/usage)",
-      "description": "수집 부하 중에만 늘면 읽기 분리를 보는 신호다. 부하가 없어도 느리면 쿼리 문제라 저장단 변화가 아니다.",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 85
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{uri=\"/v1/usage\"}[5m])))",
-          "legendFormat": "p99"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 33,
-      "type": "timeseries",
-      "title": "청구 예정액 조회 p99 (GET /v1/invoices/draft)",
-      "description": "사용량 조회와 같은 뜻이다.",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 85
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{uri=\"/v1/invoices/draft\"}[5m])))",
-          "legendFormat": "p99"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 34,
-      "type": "timeseries",
-      "title": "event 테이블과 인덱스 크기",
-      "description": "기본 키 인덱스가 메모리에 안 들어가면 삽입마다 디스크를 읽는다. 커지면서 조회가 같이 느려지면 파티셔닝이나 읽기 분리를 보는 신호다.",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 85
+        "y": 33
       },
       "datasource": {
         "type": "prometheus",
@@ -1360,15 +615,28 @@
       }
     },
     {
-      "id": 35,
+      "id": 15,
+      "type": "row",
+      "title": "RDS (CloudWatch, db 변수로 고른 인스턴스)",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 41
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 16,
       "type": "timeseries",
-      "title": "바쁜 톰캣 스레드 대 최대",
-      "description": "동시에 처리 중인 요청 수. 요청이 느려져 스레드가 돌아오지 않는 결과 지표라 먼저 찬 자원을 따른다.",
+      "title": "연결 사용률",
+      "description": "CloudWatch의 RDS 연결 수를 postgres-exporter가 읽은 max_connections로 나눈 비율이다. 100%에 다가가면 새 연결이 거절된다. max_connections는 postgres-exporter가 붙은 DB 값이라 db 변수가 그 DB일 때만 맞다. 지표: `aws_rds_database_connections_average`, `pg_settings_max_connections`",
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 93
+        "y": 42
       },
       "datasource": {
         "type": "prometheus",
@@ -1377,20 +645,15 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(tomcat_threads_busy_threads)",
-          "legendFormat": "busy"
-        },
-        {
-          "refId": "B",
-          "expr": "sum(tomcat_threads_config_max_threads)",
-          "legendFormat": "max"
+          "expr": "aws_rds_database_connections_average{dbinstance_identifier=\"$db\"} / scalar(max(pg_settings_max_connections))",
+          "legendFormat": "연결 사용률"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "percentunit",
           "min": 0,
-          "decimals": 0
+          "max": 1
         },
         "overrides": []
       },
@@ -1405,15 +668,15 @@
       }
     },
     {
-      "id": 36,
+      "id": 17,
       "type": "timeseries",
-      "title": "초당 저장 응답 (stored)",
-      "description": "사다리 측정에서 칸마다 실제로 들어간 속도. 지속 부하는 되는데 순간 부하에서만 위 결과 지표가 깨지면 앞단에 큐.",
+      "title": "DB 부하",
+      "description": "DB에서 CPU를 쓰거나 무언가를 기다리는 활성 세션 수의 평균이다. vCPU 수를 넘는 상태가 15분 넘게 이어지면 세션이 차례를 기다리며 쌓인 것이다. 지표: `aws_rds_dbload_average`",
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 93
+        "y": 42
       },
       "datasource": {
         "type": "prometheus",
@@ -1422,8 +685,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(meterengine_event_ingest_total{result=\"stored\"}[1m]))",
-          "legendFormat": "EPS"
+          "expr": "aws_rds_dbload_average{dbinstance_identifier=\"$db\"}",
+          "legendFormat": "DBLoad"
         }
       ],
       "fieldConfig": {
@@ -1444,15 +707,15 @@
       }
     },
     {
-      "id": 37,
+      "id": 18,
       "type": "timeseries",
-      "title": "WAL 크기 (pg_wal)",
-      "description": "참고 값. max_wal_size에 붙어 있으면 체크포인트가 자주 일어난다.",
+      "title": "RDS CPU",
+      "description": "RDS 인스턴스의 CPU 사용률이다. 90%를 넘는 상태가 5분 이어지면 AWS가 경보를 권하는 수준이고, CloudWatch는 1분 단위라 짧은 포화는 숨을 수 있다. 지표: `aws_rds_cpuutilization_average`",
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 93
+        "y": 42
       },
       "datasource": {
         "type": "prometheus",
@@ -1461,18 +724,605 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max(pg_wal_size_bytes)",
-          "legendFormat": "pg_wal"
+          "expr": "aws_rds_cpuutilization_average{dbinstance_identifier=\"$db\"}",
+          "legendFormat": "CPU"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100
         },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 19,
+      "type": "timeseries",
+      "title": "RDS CPU 크레딧",
+      "description": "버스트 인스턴스가 기준선 위로 CPU를 쓸 수 있게 쌓아 둔 크레딧이다. 줄어드는 중이면 기준선을 넘겨 쓰는 것이고, RDS의 t 계열은 unlimited 모드라 0이 되면 추가 요금이 붙는다. 지표: `aws_rds_cpucredit_balance_average`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 50
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
         {
-          "refId": "B",
-          "expr": "max(pg_settings_max_wal_size_bytes)",
-          "legendFormat": "max_wal_size"
+          "refId": "A",
+          "expr": "aws_rds_cpucredit_balance_average{dbinstance_identifier=\"$db\"}",
+          "legendFormat": "CPUCreditBalance"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "RDS 메모리",
+      "description": "RDS가 바로 쓸 수 있는 남은 메모리다. 전체 메모리의 25% 아래로 오래 머물면 메모리가 모자란 것이라 스왑과 같이 본다. 지표: `aws_rds_freeable_memory_average`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 50
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "aws_rds_freeable_memory_average{dbinstance_identifier=\"$db\"}",
+          "legendFormat": "FreeableMemory"
         }
       ],
       "fieldConfig": {
         "defaults": {
           "unit": "bytes",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "RDS 스왑",
+      "description": "RDS가 디스크로 밀어낸 메모리 양이다. 늘어나면 메모리가 모자라 디스크를 메모리처럼 쓰는 것이라 응답이 느려진다. 지표: `aws_rds_swap_usage_average`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 50
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "aws_rds_swap_usage_average{dbinstance_identifier=\"$db\"}",
+          "legendFormat": "SwapUsage"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "RDS 쓰기 지연",
+      "description": "RDS 디스크 쓰기 한 번에 걸린 시간의 p90이다. 오르면 디스크가 쓰기 요청을 따라가지 못하는 것이고, AWS는 20ms를 넘으면 살피라고 한다. 지표: `aws_rds_write_latency_p90`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 58
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "aws_rds_write_latency_p90{dbinstance_identifier=\"$db\"}",
+          "legendFormat": "WriteLatency p90"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "RDS 읽기 지연",
+      "description": "RDS 디스크 읽기 한 번에 걸린 시간의 p90이다. 오르면 디스크가 읽기 요청을 따라가지 못하는 것이고, 캐시 적중률이 떨어질 때 같이 오르면 집계 조회가 디스크를 많이 읽는 것이다. 지표: `aws_rds_read_latency_p90`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 58
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "aws_rds_read_latency_p90{dbinstance_identifier=\"$db\"}",
+          "legendFormat": "ReadLatency p90"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 24,
+      "type": "timeseries",
+      "title": "RDS 디스크 대기열",
+      "description": "디스크 처리를 기다리는 I/O 요청 수다. 0보다 큰 상태가 이어지고 지연도 오르면 디스크가 요청을 다 받지 못하는 것이다. 지표: `aws_rds_disk_queue_depth_average`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 58
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "aws_rds_disk_queue_depth_average{dbinstance_identifier=\"$db\"}",
+          "legendFormat": "DiskQueueDepth"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 25,
+      "type": "timeseries",
+      "title": "RDS 쓰기 IOPS",
+      "description": "RDS 디스크의 초당 쓰기 횟수다. 커밋마다 WAL을 쓰므로 수집량과 함께 오르고, 이때 EBS 버스트 잔량이 줄면 기준선을 넘겨 쓰는 것이다. 지표: `aws_rds_write_iops_average`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 66
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "aws_rds_write_iops_average{dbinstance_identifier=\"$db\"}",
+          "legendFormat": "WriteIOPS"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "iops",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 26,
+      "type": "timeseries",
+      "title": "RDS 읽기 IOPS",
+      "description": "RDS 디스크의 초당 읽기 횟수다. 부하 중에도 작고 안정적이면 작업 집합이 메모리에 드는 것이고, 오르면 조회가 디스크를 읽는 것이다. 지표: `aws_rds_read_iops_average`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 66
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "aws_rds_read_iops_average{dbinstance_identifier=\"$db\"}",
+          "legendFormat": "ReadIOPS"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "iops",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 27,
+      "type": "timeseries",
+      "title": "EBS 버스트 잔량",
+      "description": "디스크가 기준선 위로 IOPS와 처리량을 쓸 수 있게 남은 버스트 크레딧의 비율이고, 5분마다 갱신된다. 떨어지는 중이면 기준선을 넘겨 쓰는 것이고, 10% 아래면 곧 디스크 성능이 기준선으로 묶인다. 지표: `aws_rds_ebsiobalance__average`, `aws_rds_ebsbyte_balance__average`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 66
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "aws_rds_ebsiobalance__average{dbinstance_identifier=\"$db\"}",
+          "legendFormat": "IO balance"
+        },
+        {
+          "refId": "B",
+          "expr": "aws_rds_ebsbyte_balance__average{dbinstance_identifier=\"$db\"}",
+          "legendFormat": "Byte balance"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 28,
+      "type": "timeseries",
+      "title": "RDS 쓰기 처리량",
+      "description": "RDS 디스크에 초당 쓴 바이트 수다. WAL 생성량과 같이 오르면 늘어난 쓰기가 WAL에서 온 것이다. 지표: `aws_rds_write_throughput_average`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 74
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "aws_rds_write_throughput_average{dbinstance_identifier=\"$db\"}",
+          "legendFormat": "WriteThroughput"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 29,
+      "type": "timeseries",
+      "title": "RDS 읽기 처리량",
+      "description": "RDS 디스크에서 초당 읽은 바이트 수다. 읽기 IOPS와 같이 오르면 넓은 범위를 훑는 조회가 늘어난 것이다. 지표: `aws_rds_read_throughput_average`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 74
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "aws_rds_read_throughput_average{dbinstance_identifier=\"$db\"}",
+          "legendFormat": "ReadThroughput"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 30,
+      "type": "timeseries",
+      "title": "WAL 생성량",
+      "description": "RDS가 초당 새로 만든 WAL 크기다. 쓰기와 함께 오르고, 여러 행을 묶어 쓰면 행당 WAL이 줄어 내려간다. 지표: `aws_rds_transaction_logs_generation_average`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 74
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "aws_rds_transaction_logs_generation_average{dbinstance_identifier=\"$db\"}",
+          "legendFormat": "WAL"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "RDS 남은 공간",
+      "description": "RDS 저장 공간에서 남은 크기를 1분 안의 최솟값으로 본다. 줄어들면 데이터나 WAL이 늘어난 것이고, 자동 확장이 켜져 있으면 바닥에 다가갈 때 공간이 늘어 값이 뛴다. 지표: `aws_rds_free_storage_space_minimum`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 82
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "aws_rds_free_storage_space_minimum{dbinstance_identifier=\"$db\"}",
+          "legendFormat": "FreeStorageSpace"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 32,
+      "type": "timeseries",
+      "title": "저장 공간 소진까지 일수",
+      "description": "남은 저장 공간을 하루 사이 줄어든 양으로 나눠, 지금 속도로 며칠 뒤 공간이 차는지 본다. 하루 사이 줄어든 양이 없으면 값이 매우 커진다. 운영 RDS는 자동 확장이 켜져 있어 공간이 늘면 값이 뛰고, 확장 상한(`aws rds describe-db-instances`의 MaxAllocatedStorage)까지 남은 양은 이 패널로 볼 수 없다. 지표: `aws_rds_free_storage_space_minimum`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 82
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "aws_rds_free_storage_space_minimum{dbinstance_identifier=\"$db\"} / clamp_min(-delta(aws_rds_free_storage_space_minimum{dbinstance_identifier=\"$db\"}[1d]), 1)",
+          "legendFormat": "남은 일수"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "d",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 33,
+      "type": "timeseries",
+      "title": "트랜잭션 ID 사용량",
+      "description": "vacuum이 아직 얼리지 않은 트랜잭션 ID 수 가운데 가장 큰 값이다. 21억 가까이 가면 PostgreSQL이 새 쓰기를 막으므로, 10억을 넘으면 AWS가 경보를 권한다. 지표: `aws_rds_maximum_used_transaction_ids_average`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 82
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "aws_rds_maximum_used_transaction_ids_average{dbinstance_identifier=\"$db\"}",
+          "legendFormat": "MaximumUsedTransactionIDs"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
           "min": 0
         },
         "overrides": []

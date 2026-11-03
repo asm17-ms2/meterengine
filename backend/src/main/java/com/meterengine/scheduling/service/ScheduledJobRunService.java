@@ -22,6 +22,7 @@ public class ScheduledJobRunService {
   static final String RUN_COUNTER_NAME = "meterengine.scheduled.job.run";
   static final String ITEMS_COUNTER_NAME = "meterengine.scheduled.job.items";
   static final String LAST_SUCCESS_GAUGE_NAME = "meterengine.scheduled.job.last.success";
+  static final String LAST_COMPLETION_GAUGE_NAME = "meterengine.scheduled.job.last.completion";
   static final String JOB_TAG = "job_name";
   static final String RESULT_TAG = "result";
   static final String PROCESSED = "processed";
@@ -34,6 +35,8 @@ public class ScheduledJobRunService {
   private final MeterRegistry meterRegistry;
   private final Map<String, AtomicLong> lastSuccessEpochSecondsByJobName =
       new ConcurrentHashMap<>();
+  private final Map<String, AtomicLong> lastCompletionEpochSecondsByJobName =
+      new ConcurrentHashMap<>();
 
   ScheduledJobRunService(
       ScheduledJobRunRepository scheduledJobRunRepository, MeterRegistry meterRegistry) {
@@ -43,6 +46,7 @@ public class ScheduledJobRunService {
 
   public void register(String jobName) {
     refreshLastSuccess(jobName);
+    refreshLastCompletion(jobName);
   }
 
   public void run(String jobName, OffsetDateTime scheduledAt, Supplier<ScheduledJobResult> job) {
@@ -50,6 +54,7 @@ public class ScheduledJobRunService {
     if (scheduledJobRunRepository.insertIfAbsent(id, jobName, scheduledAt, OffsetDateTime.now())
         == 0) {
       refreshLastSuccess(jobName);
+      refreshLastCompletion(jobName);
       return;
     }
 
@@ -57,8 +62,10 @@ public class ScheduledJobRunService {
     try {
       result = job.get();
     } catch (RuntimeException exception) {
-      finish(id, run -> run.fail(errorSummaryOf(exception), OffsetDateTime.now()));
+      OffsetDateTime failedAt = OffsetDateTime.now();
+      finish(id, run -> run.fail(errorSummaryOf(exception), failedAt));
       countRun(jobName, ScheduledJobRun.FAILED);
+      recordCompletion(jobName, failedAt);
       throw exception;
     }
 
@@ -67,6 +74,7 @@ public class ScheduledJobRunService {
     countRun(jobName, ScheduledJobRun.SUCCEEDED);
     countItems(jobName, result);
     recordSuccess(jobName, finishedAt);
+    recordCompletion(jobName, finishedAt);
   }
 
   public Optional<OffsetDateTime> watermark(String jobName, OffsetDateTime before) {
@@ -85,6 +93,16 @@ public class ScheduledJobRunService {
 
   private void recordSuccess(String jobName, OffsetDateTime finishedAt) {
     lastSuccessOf(jobName).accumulateAndGet(finishedAt.toEpochSecond(), Math::max);
+  }
+
+  private void refreshLastCompletion(String jobName) {
+    scheduledJobRunRepository
+        .findLastFinishedAt(jobName)
+        .ifPresent(finishedAt -> recordCompletion(jobName, finishedAt));
+  }
+
+  private void recordCompletion(String jobName, OffsetDateTime finishedAt) {
+    lastCompletionOf(jobName).accumulateAndGet(finishedAt.toEpochSecond(), Math::max);
   }
 
   private void finish(UUID id, Consumer<ScheduledJobRun> transition) {
@@ -126,15 +144,22 @@ public class ScheduledJobRunService {
 
   private AtomicLong lastSuccessOf(String jobName) {
     return lastSuccessEpochSecondsByJobName.computeIfAbsent(
+        jobName, name -> epochSecondsGauge(LAST_SUCCESS_GAUGE_NAME, "예약 작업이 마지막으로 성공한 시각", name));
+  }
+
+  private AtomicLong lastCompletionOf(String jobName) {
+    return lastCompletionEpochSecondsByJobName.computeIfAbsent(
         jobName,
-        name -> {
-          AtomicLong epochSeconds = new AtomicLong();
-          Gauge.builder(LAST_SUCCESS_GAUGE_NAME, epochSeconds, AtomicLong::get)
-              .description("예약 작업이 마지막으로 성공한 시각")
-              .baseUnit("seconds")
-              .tag(JOB_TAG, name)
-              .register(meterRegistry);
-          return epochSeconds;
-        });
+        name -> epochSecondsGauge(LAST_COMPLETION_GAUGE_NAME, "예약 작업이 성공이나 실패로 마지막으로 끝난 시각", name));
+  }
+
+  private AtomicLong epochSecondsGauge(String gaugeName, String description, String jobName) {
+    AtomicLong epochSeconds = new AtomicLong();
+    Gauge.builder(gaugeName, epochSeconds, AtomicLong::get)
+        .description(description)
+        .baseUnit("seconds")
+        .tag(JOB_TAG, jobName)
+        .register(meterRegistry);
+    return epochSeconds;
   }
 }
