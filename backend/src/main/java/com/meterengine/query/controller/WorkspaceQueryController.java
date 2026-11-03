@@ -342,7 +342,8 @@ public class WorkspaceQueryController {
               + " amount는 선택 조건 전체 합계이며 month_amount는 월 전체다. 기존 확정 요청은 검색 조건과 관계없이 월 전체를 확정하므로"
               + " finalization_scope는 month다. summary는 month, calculated_at, amount, customer_count,"
               + " billable_customer_count, line_count, unpriced_count, negative_count와 같은 이름의 month_ 월 전체 값,"
-              + " finalization_scope다.")
+              + " finalization_scope, 청구 예정액 조회와 같은 auto_finalize_enabled, auto_finalize_at,"
+              + " auto_finalize_running이다.")
   @Parameters({
     @Parameter(
         name = "q",

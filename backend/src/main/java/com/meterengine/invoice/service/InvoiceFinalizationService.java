@@ -89,6 +89,9 @@ public class InvoiceFinalizationService {
     int skippedCount = 0;
     int failedCount = 0;
     for (DraftInvoiceCustomer draftInvoiceCustomer : targets.draftInvoiceCustomers()) {
+      if (draftInvoiceCustomer.amount() == 0) {
+        continue;
+      }
       try {
         Optional<Invoice> invoice =
             transactionTemplate.execute(
@@ -122,16 +125,16 @@ public class InvoiceFinalizationService {
   }
 
   // 환경이 있으면 도입사 행을 잠근 채 계산해, 같은 행을 잠그는 확정과 단가, 미터 변경이 계산 도중에 끼지 않는다.
-  private Targets targets(UUID organizationId, YearMonth month, OffsetDateTime cutoffAt) {
+  // 0원 고객도 담는다. 호출한 쪽의 트랜잭션에서 쓴다.
+  Targets targets(UUID organizationId, YearMonth month, OffsetDateTime cutoffAt) {
     UUID environmentId = BusinessEnvironmentContext.environmentId();
     if (environmentId != null)
       organizationRepository.findForUpdateById(organizationId).orElseThrow();
     List<DraftInvoiceCustomer> draftInvoiceCustomers =
-        draftInvoiceService.calculate(organizationId, month, cutoffAt).stream()
-            .filter(draftInvoiceCustomer -> draftInvoiceCustomer.amount() != 0)
-            .toList();
-    if (draftInvoiceCustomers.isEmpty()) {
-      return new Targets(null, List.of(), Map.of(), Map.of());
+        draftInvoiceService.calculate(organizationId, month, cutoffAt);
+    if (draftInvoiceCustomers.stream()
+        .allMatch(draftInvoiceCustomer -> draftInvoiceCustomer.amount() == 0)) {
+      return new Targets(null, draftInvoiceCustomers, Map.of(), Map.of());
     }
 
     Map<UUID, String> billingEmailByCustomerId = new HashMap<>();
@@ -153,8 +156,8 @@ public class InvoiceFinalizationService {
         metricNameByCode);
   }
 
-  // 그 고객과 달의 인보이스가 이미 있으면 아무것도 남기지 않는다.
-  private Optional<Invoice> finalizeCustomer(
+  // 그 고객과 달의 인보이스가 이미 있으면 아무것도 남기지 않는다. 호출한 쪽의 트랜잭션에서 쓴다.
+  Optional<Invoice> finalizeCustomer(
       UUID organizationId,
       String organizationName,
       YearMonth month,
@@ -234,7 +237,7 @@ public class InvoiceFinalizationService {
         billableMetricName);
   }
 
-  private record Targets(
+  record Targets(
       String organizationName,
       List<DraftInvoiceCustomer> draftInvoiceCustomers,
       Map<UUID, String> billingEmailByCustomerId,

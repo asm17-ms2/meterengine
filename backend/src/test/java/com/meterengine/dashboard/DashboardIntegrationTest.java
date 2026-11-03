@@ -310,7 +310,7 @@ class DashboardIntegrationTest {
         .bodyJson()
         .extractingPath("$.jobs")
         .asArray()
-        .hasSize(5);
+        .hasSize(6);
   }
 
   private UUID insertInvoice(UUID organizationId, String month, long supplyAmount) {

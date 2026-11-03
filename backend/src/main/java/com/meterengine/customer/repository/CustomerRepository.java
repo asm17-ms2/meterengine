@@ -1,6 +1,7 @@
 package com.meterengine.customer.repository;
 
 import com.meterengine.customer.entity.Customer;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -76,4 +77,14 @@ public interface CustomerRepository extends JpaRepository<Customer, UUID> {
       nativeQuery = true)
   List<Customer> lockScoped(
       UUID organizationId, UUID environmentId, java.util.Collection<UUID> ids);
+
+  @Query(
+      "SELECT min(c.createdAt) FROM Customer c WHERE c.organizationId = :organizationId AND"
+          + " c.environmentId IS NULL")
+  Optional<OffsetDateTime> findFirstCreatedAt(UUID organizationId);
+
+  @Query(
+      "SELECT min(c.createdAt) FROM Customer c WHERE c.organizationId = :organizationId AND"
+          + " c.environmentId = :environmentId")
+  Optional<OffsetDateTime> findFirstCreatedAtScoped(UUID organizationId, UUID environmentId);
 }

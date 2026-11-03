@@ -5,8 +5,10 @@ import static org.mockito.Mockito.when;
 
 import com.meterengine.customer.entity.Customer;
 import com.meterengine.customer.repository.CustomerRepository;
+import com.meterengine.invoice.config.InvoiceAutoFinalizeProperties;
 import com.meterengine.invoice.dto.DraftInvoiceResponse;
 import com.meterengine.invoice.dto.DraftInvoiceResponse.DraftInvoiceCustomer;
+import com.meterengine.invoice.repository.InvoiceFinalizationAttemptRepository;
 import com.meterengine.invoice.repository.InvoiceRepository;
 import com.meterengine.metric.dto.BillableMetricUsage;
 import com.meterengine.metric.entity.BillableMetric;
@@ -16,6 +18,7 @@ import com.meterengine.pricing.dto.DimensionCharge;
 import com.meterengine.pricing.dto.NegativeUsage;
 import com.meterengine.pricing.dto.UnpricedUsage;
 import com.meterengine.pricing.service.ChargeService;
+import com.meterengine.scheduling.service.ScheduledJobRunService;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -42,6 +45,8 @@ class DraftInvoiceServiceTest {
   @Mock private CustomerRepository customerRepository;
   @Mock private ChargeService chargeService;
   @Mock private InvoiceRepository invoiceRepository;
+  @Mock private InvoiceFinalizationAttemptRepository invoiceFinalizationAttemptRepository;
+  @Mock private ScheduledJobRunService scheduledJobRunService;
 
   private DraftInvoiceService draftInvoiceService;
 
@@ -53,6 +58,9 @@ class DraftInvoiceServiceTest {
             customerRepository,
             chargeService,
             invoiceRepository,
+            new InvoiceAutoFinalizeProperties(false),
+            invoiceFinalizationAttemptRepository,
+            scheduledJobRunService,
             Clock.fixed(Instant.parse("2026-10-26T01:00:00Z"), ZoneOffset.UTC));
   }
 

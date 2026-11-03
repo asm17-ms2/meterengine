@@ -281,6 +281,9 @@ class InvoiceFinalizationBacklogServiceTest {
     return new DraftInvoiceResponse(
         "2026-09",
         OffsetDateTime.parse("2026-10-30T10:00:00+09:00"),
+        false,
+        null,
+        false,
         customers.stream().mapToLong(DraftInvoiceCustomer::amount).sum(),
         customers);
   }
