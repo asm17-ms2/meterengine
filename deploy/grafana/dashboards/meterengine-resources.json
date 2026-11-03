@@ -1,0 +1,1472 @@
+{
+  "__comment": "MeterEngine 앱 자원 대시보드. 정본은 이 파일이고 UI 수정은 배포 때 되돌아간다. 원인을 찾을 때 앱, 서버, 컨테이너, 관측 시스템 중 어느 자원이 찼는지 본다.",
+  "uid": "meterengine-resources",
+  "title": "MeterEngine 앱 자원",
+  "tags": [
+    "meterengine"
+  ],
+  "schemaVersion": 39,
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "refresh": "1m",
+  "links": [
+    {
+      "type": "dashboards",
+      "tags": [
+        "meterengine"
+      ],
+      "asDropdown": true,
+      "title": "MeterEngine 대시보드",
+      "includeVars": false,
+      "keepTime": true
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "instance",
+        "label": "백엔드 색",
+        "description": "백엔드 행과 커넥션 풀 행의 패널에만 걸린다. 다른 패널의 지표에는 블루와 그린 구분이 없거나 색별로 이미 나눠 그린다.",
+        "type": "custom",
+        "query": "backend-blue : backend-blue:8080,backend-green : backend-green:8080",
+        "includeAll": true,
+        "multi": true,
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "options": [
+          {
+            "selected": true,
+            "text": "All",
+            "value": "$__all"
+          },
+          {
+            "selected": false,
+            "text": "backend-blue",
+            "value": "backend-blue:8080"
+          },
+          {
+            "selected": false,
+            "text": "backend-green",
+            "value": "backend-green:8080"
+          }
+        ],
+        "hide": 0
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "백엔드",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "JVM 힙",
+      "description": "백엔드 JVM 힙의 사용량과 최대를 색별로 그리고, 오른쪽 축에 마지막 GC 뒤에도 차 있는 오래 사는 객체 영역의 비율을 그린다. GC 뒤 비율이 내려오지 않고 계속 오르면 메모리 누수나 힙 부족을 의심한다. 지표: `jvm_memory_used_bytes`, `jvm_memory_max_bytes`, `jvm_memory_usage_after_gc`",
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (instance) (jvm_memory_used_bytes{area=\"heap\", job=\"backend\", instance=~\"$instance\"})",
+          "legendFormat": "{{instance}} 사용"
+        },
+        {
+          "refId": "B",
+          "expr": "sum by (instance) (jvm_memory_max_bytes{area=\"heap\", job=\"backend\", instance=~\"$instance\"} > 0)",
+          "legendFormat": "{{instance}} 최대"
+        },
+        {
+          "refId": "C",
+          "expr": "max by (instance) (jvm_memory_usage_after_gc{area=\"heap\", job=\"backend\", instance=~\"$instance\"})",
+          "legendFormat": "{{instance}} GC 뒤 비율"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "C"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "max",
+                "value": 1
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "GC 정지 시간",
+      "description": "GC로 앱이 멈춘 시간을 초당 합계와 최근 가장 긴 한 번으로 나눠 색별로 그린다. 오르면 그동안 요청 처리가 멈춰 응답 지연이 늘어난다. 지표: `jvm_gc_pause_seconds_sum`, `jvm_gc_pause_seconds_max`",
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 6,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (instance) (rate(jvm_gc_pause_seconds_sum{job=\"backend\", instance=~\"$instance\"}[$__rate_interval]))",
+          "legendFormat": "{{instance}} 초당 정지"
+        },
+        {
+          "refId": "B",
+          "expr": "max by (instance) (jvm_gc_pause_seconds_max{job=\"backend\", instance=~\"$instance\"})",
+          "legendFormat": "{{instance}} 가장 긴 정지"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "JVM 스레드",
+      "description": "백엔드 JVM 스레드 수를 상태(runnable, blocked, waiting 등)별로 센다. blocked가 늘면 락 경합을, 전체가 계속 늘면 스레드 누수를 의심한다. 지표: `jvm_threads_states_threads`",
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 12,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (instance, state) (jvm_threads_states_threads{job=\"backend\", instance=~\"$instance\"})",
+          "legendFormat": "{{instance}} {{state}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "재시작",
+      "description": "백엔드 프로세스가 뜬 뒤 지난 시간을 색별로 그린다. 선이 0으로 떨어지면 그때 다시 떴고, 배포 시각이 아닌데 떨어지면 비정상 종료다. 지표: `process_start_time_seconds`",
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "time() - process_start_time_seconds{job=\"backend\", instance=~\"$instance\"}",
+          "legendFormat": "{{instance}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "톰캣 바쁜 스레드",
+      "description": "요청을 처리 중인 톰캣 스레드 수를 최대 스레드와 함께 그린다. 최대에 붙으면 새 요청이 줄을 선다. 지표: `tomcat_threads_busy_threads`, `tomcat_threads_config_max_threads`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (instance) (tomcat_threads_busy_threads{job=\"backend\", instance=~\"$instance\"})",
+          "legendFormat": "{{instance}} 바쁨"
+        },
+        {
+          "refId": "B",
+          "expr": "sum by (instance) (tomcat_threads_config_max_threads{job=\"backend\", instance=~\"$instance\"})",
+          "legendFormat": "{{instance}} 최대"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "진행 중 요청",
+      "description": "지금 처리 중인 HTTP 요청 수를 색별로 그린다. Prometheus 수집 요청 자신도 세므로 평소 값은 1 안팎이고, 계속 늘면 요청이 끝나지 못하고 쌓이는 것이다. 지표: `http_server_requests_active_seconds_gcount`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (instance) (http_server_requests_active_seconds_gcount{job=\"backend\", instance=~\"$instance\"})",
+          "legendFormat": "{{instance}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "error 로그 수",
+      "description": "백엔드가 남긴 error 수준 로그를 초당 수로 색별로 그린다. 갑자기 늘면 같은 시각의 요청 로그에서 오류를 찾는다. 지표: `logback_events_total{level=\"error\"}`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 9
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (instance) (rate(logback_events_total{job=\"backend\", level=\"error\", instance=~\"$instance\"}[$__rate_interval]))",
+          "legendFormat": "{{instance}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "cps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 9,
+      "type": "row",
+      "title": "커넥션 풀",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 17
+      }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "활성 커넥션",
+      "description": "지금 쓰이는 커넥션 수를 풀 최대와 함께 그린다. 최대에 붙어 있으면 풀이 찬 것이다. 지표: `hikaricp_connections_active`, `hikaricp_connections_max`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 18
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (instance) (hikaricp_connections_active{job=\"backend\", instance=~\"$instance\"})",
+          "legendFormat": "{{instance}} 활성"
+        },
+        {
+          "refId": "B",
+          "expr": "sum by (instance) (hikaricp_connections_max{job=\"backend\", instance=~\"$instance\"})",
+          "legendFormat": "{{instance}} 최대"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "커넥션 대기 스레드",
+      "description": "커넥션을 받으려고 줄 서 있는 스레드 수다. 0보다 큰 값이 이어지면 풀이 모자란 것이다. 지표: `hikaricp_connections_pending`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 18
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (instance) (hikaricp_connections_pending{job=\"backend\", instance=~\"$instance\"})",
+          "legendFormat": "{{instance}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "커넥션 타임아웃",
+      "description": "기다리다 시간 초과로 커넥션을 못 받은 횟수를 5분 단위로 센다. 0보다 크면 그만큼 요청이 실패했다. 지표: `hikaricp_connections_timeout_total`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 18
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (instance) (increase(hikaricp_connections_timeout_total{job=\"backend\", instance=~\"$instance\"}[5m]))",
+          "legendFormat": "{{instance}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "커넥션 획득 시간 p99",
+      "description": "요청이 풀에서 커넥션을 받기까지 기다린 시간의 p99다. 오르면 풀 크기보다 동시 요청이 많은 것이다. 지표: `hikaricp_connections_acquire_seconds`",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 26
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.99, sum by (le, instance) (rate(hikaricp_connections_acquire_seconds_bucket{job=\"backend\", instance=~\"$instance\"}[$__rate_interval])))",
+          "legendFormat": "{{instance}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "커넥션 사용 시간 p99",
+      "description": "앱이 풀에서 받은 커넥션을 돌려주기까지 쥐고 있던 시간의 p99다. 오르면 트랜잭션이 길어졌거나 DB 쿼리가 느려진 것이다. 지표: `hikaricp_connections_usage_seconds`",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 26
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.99, sum by (le, instance) (rate(hikaricp_connections_usage_seconds_bucket{job=\"backend\", instance=~\"$instance\"}[$__rate_interval])))",
+          "legendFormat": "{{instance}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 15,
+      "type": "row",
+      "title": "서버",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 34
+      }
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "서버 CPU",
+      "description": "서버 전체 CPU 가운데 idle이 아닌 시간의 비율이다. 높은 값이 이어지면 컨테이너 CPU 패널에서 어느 컨테이너가 쓰는지 본다. 지표: `node_cpu_seconds_total`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 35
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "100 * (1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[$__rate_interval])))",
+          "legendFormat": "CPU"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 17,
+      "type": "timeseries",
+      "title": "서버 메모리",
+      "description": "서버 전체 메모리 가운데 새로 쓸 수 없는 비율이다. 오르면 컨테이너 메모리 패널에서 어느 컨테이너가 쓰는지 본다. 지표: `node_memory_MemAvailable_bytes`, `node_memory_MemTotal_bytes`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 35
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "100 * (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)",
+          "legendFormat": "메모리"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 18,
+      "type": "timeseries",
+      "title": "디스크 사용률",
+      "description": "서버 루트 파일 시스템의 사용 비율이다. 오르면 디스크 소진까지 시간 패널에서 언제 찰지 본다. 지표: `node_filesystem_avail_bytes`, `node_filesystem_size_bytes`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 35
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "100 * (1 - node_filesystem_avail_bytes{mountpoint=\"/\", fstype!~\"tmpfs|overlay\"} / node_filesystem_size_bytes{mountpoint=\"/\", fstype!~\"tmpfs|overlay\"})",
+          "legendFormat": "루트 디스크"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 19,
+      "type": "timeseries",
+      "title": "CPU 포화",
+      "description": "1분 평균 load를 CPU 수로 나눈 값이다. 1을 넘으면 실행이나 디스크 IO를 기다리는 일이 생긴 것이고, 서버 CPU가 낮은데 이 값이 높으면 디스크 IO 포화를 본다. 지표: `node_load1`, `node_cpu_seconds_total`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 43
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "node_load1 / count without (cpu, mode) (node_cpu_seconds_total{mode=\"idle\"})",
+          "legendFormat": "코어당 load"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "디스크 IO 포화",
+      "description": "디스크마다 처리 중이거나 기다리는 IO 요청의 평균 개수다. 오르면 디스크가 요청을 따라가지 못해 IO가 줄을 선다. 지표: `node_disk_io_time_weighted_seconds_total`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 43
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(node_disk_io_time_weighted_seconds_total[$__rate_interval])",
+          "legendFormat": "{{device}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "디스크 소진까지 시간",
+      "description": "최근 6시간 동안 루트 파일 시스템의 남은 공간이 줄어든 속도로, 지금 속도면 언제 다 차는지 본다. 남은 공간이 줄지 않으면 값을 그리지 않는다. 24시간 아래로 내려가면 지금 속도로 하루 안에 루트 디스크가 찬다. 지표: `node_filesystem_avail_bytes`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 43
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(node_filesystem_avail_bytes{mountpoint=\"/\", fstype!~\"tmpfs|overlay\"} / -deriv(node_filesystem_avail_bytes{mountpoint=\"/\", fstype!~\"tmpfs|overlay\"}[6h])) and deriv(node_filesystem_avail_bytes{mountpoint=\"/\", fstype!~\"tmpfs|overlay\"}[6h]) < 0",
+          "legendFormat": "루트 디스크"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0,
+          "noValue": "줄지 않음"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "네트워크 송수신",
+      "description": "서버 네트워크 장치가 초당 받고 보낸 바이트이고, 평소보다 크게 늘면 요청이나 큰 응답이 몰린 것이다. node-exporter는 자기 컨테이너 네트워크만 보므로 cAdvisor가 읽은 서버 값(id=\"/\")에서 도커 가상 장치를 빼고 쓴다. 지표: `container_network_receive_bytes_total`, `container_network_transmit_bytes_total`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 51
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (interface) (rate(container_network_receive_bytes_total{id=\"/\", interface!~\"lo|veth.*|docker.*|br-.*\"}[$__rate_interval]))",
+          "legendFormat": "{{interface}} 수신"
+        },
+        {
+          "refId": "B",
+          "expr": "sum by (interface) (rate(container_network_transmit_bytes_total{id=\"/\", interface!~\"lo|veth.*|docker.*|br-.*\"}[$__rate_interval]))",
+          "legendFormat": "{{interface}} 송신"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "네트워크 버림",
+      "description": "서버 네트워크 장치가 초당 버린 수신, 송신 패킷 수다. 0보다 큰 값이 이어지면 장치나 커널 버퍼가 차서 패킷을 잃는 것이다. 지표: `container_network_receive_packets_dropped_total`, `container_network_transmit_packets_dropped_total`(cAdvisor, id=\"/\")",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 51
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (interface) (rate(container_network_receive_packets_dropped_total{id=\"/\", interface!~\"lo|veth.*|docker.*|br-.*\"}[$__rate_interval]))",
+          "legendFormat": "{{interface}} 수신"
+        },
+        {
+          "refId": "B",
+          "expr": "sum by (interface) (rate(container_network_transmit_packets_dropped_total{id=\"/\", interface!~\"lo|veth.*|docker.*|br-.*\"}[$__rate_interval]))",
+          "legendFormat": "{{interface}} 송신"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "pps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 24,
+      "type": "timeseries",
+      "title": "OOM 종료 수",
+      "description": "커널이 메모리가 모자라 프로세스를 강제로 끝낸 횟수를 5분 단위로 센다. 서버 전체 수라 0보다 크면 컨테이너 메모리와 재시작 패널에서 어느 컨테이너인지 찾는다. 지표: `node_vmstat_oom_kill`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 51
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "increase(node_vmstat_oom_kill[5m])",
+          "legendFormat": "OOM 종료"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 25,
+      "type": "row",
+      "title": "컨테이너",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 59
+      }
+    },
+    {
+      "id": 26,
+      "type": "timeseries",
+      "title": "컨테이너 CPU",
+      "description": "컨테이너마다 쓰는 CPU를 코어 수로 그린다. 1이면 코어 하나를 다 쓴 것이고, 서버 CPU가 높을 때 어느 컨테이너가 쓰는지 가린다. 지표: `container_cpu_usage_seconds_total`(cAdvisor)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 60
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (name) (rate(container_cpu_usage_seconds_total{name!=\"\"}[$__rate_interval]))",
+          "legendFormat": "{{name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 27,
+      "type": "timeseries",
+      "title": "컨테이너 메모리",
+      "description": "컨테이너마다 쓰는 메모리(working set)를 그리고, 한도가 있는 컨테이너는 한도 선도 그린다. 한도에 다가가면 그 컨테이너가 메모리 초과로 죽을 수 있다. 지표: `container_memory_working_set_bytes`, `container_spec_memory_limit_bytes`(cAdvisor)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 60
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (name) (container_memory_working_set_bytes{name!=\"\"})",
+          "legendFormat": "{{name}}"
+        },
+        {
+          "refId": "B",
+          "expr": "max by (name) (container_spec_memory_limit_bytes{name!=\"\"}) > 0",
+          "legendFormat": "{{name}} 한도"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 28,
+      "type": "row",
+      "title": "관측",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 68
+      }
+    },
+    {
+      "id": 29,
+      "type": "stat",
+      "title": "수집 대상 상태",
+      "description": "Prometheus가 수집 대상마다 마지막 긁기에 성공했는지(1) 실패했는지(0) 보인다. 백엔드는 블루그린이라 두 색을 한 행으로 묶어 어느 한 색이라도 긁히면 정상이고, 0인 행은 그 대상의 지표가 끊긴 것이다. 지표: `up`",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 69
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (job) (up{job=\"backend\"}) or up{job!=\"backend\"}",
+          "legendFormat": "{{job}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "실패"
+                },
+                "1": {
+                  "text": "정상"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 30,
+      "type": "stat",
+      "title": "설정 반영 성공",
+      "description": "Prometheus가 마지막으로 설정 파일을 다시 읽을 때 성공했는지(1) 실패했는지(0) 보인다. 0이면 바뀐 수집 설정이 반영되지 않고 옛 설정으로 긁고 있다. 지표: `prometheus_config_last_reload_successful`",
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 12,
+        "y": 69
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "prometheus_config_last_reload_successful{job=\"prometheus\"}",
+          "legendFormat": "설정",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "실패"
+                },
+                "1": {
+                  "text": "성공"
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "CloudWatch 수집 오류",
+      "description": "cloudwatch exporter가 수집 때 AWS에서 지표를 읽지 못했으면 1이다. 읽기가 실패해도 `up`은 1이라 RDS 패널이 비면 이 값을 본다. 지표: `cloudwatch_exporter_scrape_error`",
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 69
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(cloudwatch_exporter_scrape_error{job=\"cloudwatch\"})",
+          "legendFormat": "수집 오류"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 32,
+      "type": "timeseries",
+      "title": "시계열 수",
+      "description": "Prometheus 메모리에 있는 활성 시계열 수다. 갑자기 늘면 라벨 값이 끝없이 늘어나는 지표가 생긴 것이다. 지표: `prometheus_tsdb_head_series`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 77
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "prometheus_tsdb_head_series{job=\"prometheus\"}",
+          "legendFormat": "활성 시계열"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 33,
+      "type": "timeseries",
+      "title": "대상별 표본 수",
+      "description": "수집 대상마다 한 번 긁어 저장한 표본 수이고, 수집 설정에서 버린 표본은 세지 않는다. 한 대상만 크게 늘면 그 대상에서 라벨 폭증이 생긴 것이다. 지표: `scrape_samples_post_metric_relabeling`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 77
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "scrape_samples_post_metric_relabeling",
+          "legendFormat": "{{job}} {{instance}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 34,
+      "type": "timeseries",
+      "title": "TSDB 크기 한도 삭제",
+      "description": "저장 크기 한도에 닿아 옛 데이터를 지운 횟수를 5분 단위로 센다. 0보다 크면 보관 기간보다 크기 한도가 먼저 걸려 그만큼 옛 지표가 일찍 사라진다. 지표: `prometheus_tsdb_size_retentions_total`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 77
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "increase(prometheus_tsdb_size_retentions_total{job=\"prometheus\"}[5m])",
+          "legendFormat": "크기 한도 삭제"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 35,
+      "type": "timeseries",
+      "title": "경보 평가 오류",
+      "description": "Grafana가 경보 규칙을 평가하다 실패한 횟수를 5분 단위로 센다. 0보다 크면 경보 규칙의 식이나 데이터 소스에 문제가 있다. 지표: `grafana_alerting_rule_evaluation_failures_total`",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 85
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(grafana_alerting_rule_evaluation_failures_total{job=\"grafana\"}[5m]))",
+          "legendFormat": "평가 오류"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 36,
+      "type": "timeseries",
+      "title": "알림 전송 실패",
+      "description": "Grafana가 Slack 같은 연락처로 알림을 보내다 실패한 횟수를 5분 단위로 센다. 0보다 크면 경보가 울려도 사람에게 닿지 않았다. 첫 알림 전에는 지표가 없어 0으로 보이므로, 수집이 끊겼는지는 수집 대상 상태의 grafana 행으로 본다. 지표: `grafana_alerting_notifications_failed_total`",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 85
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (integration) (increase(grafana_alerting_notifications_failed_total{job=\"grafana\"}[5m]))",
+          "legendFormat": "{{integration}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "noValue": "0"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    }
+  ]
+}

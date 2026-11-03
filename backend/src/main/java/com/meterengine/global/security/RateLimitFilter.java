@@ -1,6 +1,8 @@
 package com.meterengine.global.security;
 
 import com.meterengine.global.error.ErrorCode;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,6 +17,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 public class RateLimitFilter extends OncePerRequestFilter {
 
+  static final String REJECTION_COUNTER_NAME = "meterengine.api.key.rate.limit.rejections";
+
   private static final long REFILL_PERIOD_MILLIS = 60_000;
 
   private static final long MILLIS_PER_SECOND = 1_000;
@@ -25,11 +29,18 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
   private final ErrorResponseWriter errorResponseWriter;
 
+  private final Counter rejections;
+
   private final Map<UUID, TokenBucket> bucketsByApiKeyId = new ConcurrentHashMap<>();
 
-  public RateLimitFilter(Clock clock, ErrorResponseWriter errorResponseWriter) {
+  public RateLimitFilter(
+      Clock clock, ErrorResponseWriter errorResponseWriter, MeterRegistry meterRegistry) {
     this.clock = clock;
     this.errorResponseWriter = errorResponseWriter;
+    this.rejections =
+        Counter.builder(REJECTION_COUNTER_NAME)
+            .description("API 키 분당 호출 한도를 넘어 429로 거절한 요청 수")
+            .register(meterRegistry);
   }
 
   @Override
@@ -47,6 +58,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
               principal.apiKeyId(),
               (apiKeyId, current) -> TokenBucket.take(current, limitPerMinute, nowMillis));
       if (bucket.retryAfterSeconds() > 0) {
+        rejections.increment();
         response.setHeader(HttpHeaders.RETRY_AFTER, Long.toString(bucket.retryAfterSeconds()));
         errorResponseWriter.write(response, ErrorCode.RATE_LIMIT_EXCEEDED);
         return;

@@ -1,7 +1,7 @@
 {
-  "__comment": "MeterEngine 결제와 예약 작업 대시보드. 정본은 이 파일이고 UI 수정은 배포 때 되돌아간다. 경보 조건은 provisioning/alerting/alerting.yml에 있다.",
+  "__comment": "MeterEngine 청구와 결제 대시보드. 정본은 이 파일이고 UI 수정은 배포 때 되돌아간다. 경보 조건은 provisioning/alerting/alerting.yml에 있다.",
   "uid": "meterengine-billing",
-  "title": "MeterEngine 결제와 예약 작업",
+  "title": "MeterEngine 청구와 결제",
   "schemaVersion": 39,
   "time": {
     "from": "now-24h",
@@ -9,11 +9,56 @@
   },
   "timezone": "browser",
   "refresh": "1m",
+  "tags": [
+    "meterengine"
+  ],
+  "links": [
+    {
+      "type": "dashboards",
+      "tags": [
+        "meterengine"
+      ],
+      "asDropdown": true,
+      "title": "MeterEngine 대시보드",
+      "includeVars": false,
+      "keepTime": true
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "mode",
+        "label": "mode",
+        "type": "custom",
+        "description": "결제 지표의 mode 라벨(test, live) 가운데 하나를 골라 본다. mode 라벨이 있는 결제 행 패널에만 걸리고, 인보이스 확정과 토스페이먼츠 행 지표에는 mode 라벨이 없어 걸리지 않는다.",
+        "query": "test,live",
+        "multi": false,
+        "includeAll": false,
+        "current": {
+          "selected": true,
+          "text": "live",
+          "value": "live"
+        },
+        "options": [
+          {
+            "selected": false,
+            "text": "test",
+            "value": "test"
+          },
+          {
+            "selected": true,
+            "text": "live",
+            "value": "live"
+          }
+        ]
+      }
+    ]
+  },
   "panels": [
     {
-      "id": 1,
+      "id": 21,
       "type": "row",
-      "title": "결제",
+      "title": "인보이스 확정",
       "collapsed": false,
       "panels": [],
       "gridPos": {
@@ -24,13 +69,13 @@
       }
     },
     {
-      "id": 2,
+      "id": 22,
       "type": "timeseries",
-      "title": "결제 시도 결과 (1시간 증가)",
-      "description": "모드와 결과(done, failed, unknown)별 결제 시도 수.",
+      "title": "인보이스 확정 결과",
+      "description": "확정 API(POST /v1/invoices) 호출을 상태 코드별로 1시간 단위로 센다. 확정은 드물고 배포마다 카운터가 새로 생겨 increase가 첫 호출을 놓치므로, 1시간 안에 새로 생긴 시계열은 그 값을 그대로 더한다. 확정은 요청 하나가 한 트랜잭션에서 그 달 모든 고객을 확정하고 실패하면 전부 되돌리므로, 5xx가 보이면 그 달 확정이 통째로 실패한 것이다. 지표: `http_server_requests_seconds_count`",
       "gridPos": {
-        "h": 8,
-        "w": 8,
+        "h": 5,
+        "w": 12,
         "x": 0,
         "y": 1
       },
@@ -41,8 +86,290 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (mode, result) (increase(meterengine_payment_attempt_total[1h]))",
-          "legendFormat": "{{mode}} {{result}}"
+          "expr": "sum by (status) ((http_server_requests_seconds_count{job=\"backend\", method=\"POST\", uri=\"/v1/invoices\"} unless http_server_requests_seconds_count{job=\"backend\", method=\"POST\", uri=\"/v1/invoices\"} offset 1h) or increase(http_server_requests_seconds_count{job=\"backend\", method=\"POST\", uri=\"/v1/invoices\"}[1h]))",
+          "legendFormat": "{{status}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "확정 대기 건수와 최장 경과",
+      "description": "집계 마감(다음 달 1일 13시)이 지난 최근 12개월에서 0원이 아닌 청구 예정액이 남았는데 확정하지 않은 고객과 달의 수(만들어질 인보이스 수)와 가장 오래 기다린 달의 마감 뒤 경과를 환경별로 보며, 건수는 매일 새벽 4시에 다시 세어 확정한 뒤에도 다음 계산까지 남고 배포 뒤 첫 계산 전에는 직전 값을 잇는다. 건수가 0보다 크면 마감이 지난 달에 확정하지 않은 0원 아닌 청구가 남은 것이고, 경과는 마감 시각부터 지금까지로 그려 계속 늘어나므로 길면 그 달 확정을 잊은 것이다. 계산은 도입사, 환경, 달마다 따로 해 실패한 달은 합계에서 빠지고 예약 작업 invoice_finalization_backlog가 failed로 달마다 한 건씩 세므로, 계산이 모두 실패해 건수가 0으로 떨어진 날은 1일 동안의 계산 실패 건수 선(배포 뒤 첫 계산의 실패도 센다)에서 드러난다. 지표: `meterengine_invoice_finalization_backlog`, `meterengine_invoice_finalization_backlog_oldest_cutoff_seconds`, `meterengine_scheduled_job_items_total`",
+      "gridPos": {
+        "h": 5,
+        "w": 12,
+        "x": 12,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "last_over_time(max by (environment) (meterengine_invoice_finalization_backlog)[26h:5m])",
+          "legendFormat": "{{environment}} 대기 건수"
+        },
+        {
+          "refId": "B",
+          "expr": "time() - (last_over_time(max by (environment) (meterengine_invoice_finalization_backlog_oldest_cutoff_seconds)[26h:5m]) > 0)",
+          "legendFormat": "{{environment}} 최장 경과"
+        },
+        {
+          "refId": "C",
+          "expr": "sum((meterengine_scheduled_job_items_total{job_name=\"invoice_finalization_backlog\", result=\"failed\"} unless meterengine_scheduled_job_items_total{job_name=\"invoice_finalization_backlog\", result=\"failed\"} offset 1d) or increase(meterengine_scheduled_job_items_total{job_name=\"invoice_finalization_backlog\", result=\"failed\"}[1d]))",
+          "legendFormat": "계산 실패 건수 (1일)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 1,
+      "type": "row",
+      "title": "결제",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "결제 성공률",
+      "description": "1시간 동안 결과가 정해진 결제 승인 가운데 성공한 비율로, 결과 모름으로 센 시도가 확정 뒤 다시 세지므로 done / (done + failed)로 구한다. 재시도 실패와 토스를 부르기 전 실패도 분모에 들어, 떨어지면 실패 사유별 결제 수에서 늘어난 묶음을 본다. 오른쪽 축은 같은 1시간의 done과 failed 건수로, 건수가 적으면 비율이 크게 흔들린다. 지표: `meterengine_payment_attempt_total`",
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (mode) (increase(meterengine_payment_attempt_total{mode=\"$mode\", result=\"done\"}[1h])) / ((sum by (mode) (increase(meterengine_payment_attempt_total{mode=\"$mode\", result=\"done\"}[1h])) + sum by (mode) (increase(meterengine_payment_attempt_total{mode=\"$mode\", result=\"failed\"}[1h]))) > 0)",
+          "legendFormat": "{{mode}}"
+        },
+        {
+          "refId": "B",
+          "expr": "sum by (mode) (increase(meterengine_payment_attempt_total{mode=\"$mode\", result=\"done\"}[1h])) + sum by (mode) (increase(meterengine_payment_attempt_total{mode=\"$mode\", result=\"failed\"}[1h]))",
+          "legendFormat": "{{mode}} 건수 (1시간)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "A"
+            },
+            "properties": [
+              {
+                "id": "max",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "실패 사유별 결제 수",
+      "description": "실패한 결제 승인을 사유 묶음별로 1시간 단위로 센다(card_declined 카드사 거절, request_error 다른 묶음에 없는 토스 4xx 거절로 주로 우리 요청 오류, pg_error 토스나 카드사 시스템 오류, unconfirmed 승인 응답을 받지 못해 나중에 토스 조회로 실패를 확정한 것, not_requested 키나 카드가 없어 토스를 부르기 전 실패). 특정 묶음이 늘면 그쪽 원인을 보고, 원래 오류 코드는 결제 시도 목록과 로그에서 본다. 지표: `meterengine_payment_attempt_total{result=\"failed\"}`",
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 6,
+        "y": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (mode, reason) (increase(meterengine_payment_attempt_total{mode=\"$mode\", result=\"failed\"}[1h]))",
+          "legendFormat": "{{mode}} {{reason}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 17,
+      "type": "stat",
+      "title": "재시도 회복률",
+      "description": "최근 7일 동안 첫 시도 결제의 성공률(done / (done + failed))과, 재시도로 성공한 결제 수를 첫 시도에 실패한 결제 수로 나눈 재시도 회복률을 함께 본다. 재시도는 실패하고 하루 뒤에 하므로 고른 시간 범위와 상관없이 7일로 고정하고, 회복률은 기간 경계에 걸려 1을 넘으면 1로 자르며 두 값 모두 분모가 0이면 비운다. 첫 시도 성공률이 떨어지면 첫 시도에 실패하는 결제가 늘어난 것이고, 회복률이 낮게 이어지면 재시도로 되찾지 못하는 실패가 많은 것이다. 지표: `meterengine_payment_attempt_total`의 attempt 라벨",
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 12,
+        "y": 7
+      },
+      "timeFrom": "7d",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "clamp_max(sum by (mode) (increase(meterengine_payment_attempt_total{mode=\"$mode\", attempt=\"retry\", result=\"done\"}[$__range])) / (sum by (mode) (increase(meterengine_payment_attempt_total{mode=\"$mode\", attempt=\"first\", result=\"failed\"}[$__range])) > 0), 1)",
+          "legendFormat": "{{mode}} 재시도 회복률",
+          "instant": true,
+          "range": false
+        },
+        {
+          "refId": "B",
+          "expr": "sum by (mode) (increase(meterengine_payment_attempt_total{mode=\"$mode\", attempt=\"first\", result=\"done\"}[$__range])) / ((sum by (mode) (increase(meterengine_payment_attempt_total{mode=\"$mode\", attempt=\"first\", result=\"done\"}[$__range])) + sum by (mode) (increase(meterengine_payment_attempt_total{mode=\"$mode\", attempt=\"first\", result=\"failed\"}[$__range]))) > 0)",
+          "legendFormat": "{{mode}} 첫 시도 성공률",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "decimals": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "재시도 소진 수",
+      "description": "재시도 상한까지 실패해 자동 청구를 멈춘 인보이스 수를 하루 단위로 센다. 0보다 크면 사람이 고객에게 연락해야 하고, live는 경보도 울린다. 지표: `meterengine_payment_retry_exhausted_total`",
+      "gridPos": {
+        "h": 6,
+        "w": 6,
+        "x": 18,
+        "y": 7
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (mode) (increase(meterengine_payment_retry_exhausted_total{mode=\"$mode\"}[1d]))",
+          "legendFormat": "{{mode}}"
         }
       ],
       "fieldConfig": {
@@ -65,13 +392,13 @@
     {
       "id": 3,
       "type": "timeseries",
-      "title": "결과 모름 미해결",
-      "description": "확정 작업으로도 결과를 알지 못한 채 남은 결제 수. 10분 넘게 0보다 크면 경보가 울린다.",
+      "title": "결과 모름 건수",
+      "description": "요청한 지 2분이 지나도 결과를 모르는 결제 시도와 결제 취소의 합을 mode별로 본다. 확인 작업이 1분마다 다시 세며, 0보다 큰 값이 이어지면 확인 작업이 풀지 못하는 것이고 live가 10분 넘게 0보다 크면 경보가 울린다. 지표: `meterengine_payment_stale_pending`",
       "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 1
+        "h": 6,
+        "w": 6,
+        "x": 0,
+        "y": 13
       },
       "datasource": {
         "type": "prometheus",
@@ -80,7 +407,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max by (mode) (meterengine_payment_stale_pending)",
+          "expr": "max by (mode) (meterengine_payment_stale_pending{mode=\"$mode\"})",
           "legendFormat": "{{mode}}"
         }
       ],
@@ -102,15 +429,15 @@
       }
     },
     {
-      "id": 4,
+      "id": 18,
       "type": "timeseries",
-      "title": "재시도 소진 (하루 증가)",
-      "description": "재시도 상한까지 실패해 자동 청구를 멈춘 인보이스 수.",
+      "title": "결과 모름 최장 경과",
+      "description": "결과를 모르는 결제 시도와 결제 취소 가운데 가장 오래된 건이 요청된 뒤 지난 시간을 mode별로 본다. 확인 작업이 1분마다 가장 오래된 요청 시각을 내고 경과는 지금 시각에서 빼서 그리므로, 확인 작업이 멈춰도 경과는 늘어난다. 계속 늘면 같은 건이 풀리지 않고 남은 것이고, 7일이 넘은 건은 토스에 다시 묻지 않으므로 사람이 확인해야 한다. 지표: `meterengine_payment_stale_pending_oldest_requested_seconds`",
       "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 1
+        "h": 6,
+        "w": 6,
+        "x": 6,
+        "y": 13
       },
       "datasource": {
         "type": "prometheus",
@@ -119,13 +446,13 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (mode) (increase(meterengine_payment_retry_exhausted_total[1d]))",
+          "expr": "time() - (max by (mode) (meterengine_payment_stale_pending_oldest_requested_seconds{mode=\"$mode\"}) > 0)",
           "legendFormat": "{{mode}}"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
+          "unit": "s",
           "min": 0
         },
         "overrides": []
@@ -143,13 +470,13 @@
     {
       "id": 5,
       "type": "timeseries",
-      "title": "결제 취소 결과 (1시간 증가)",
-      "description": "모드와 결과별 취소 요청 수.",
+      "title": "결제 취소 결과",
+      "description": "결제 취소 요청이 done(성공), failed(실패), unknown(결과 모름) 가운데 어디로 끝났는지 1시간 단위로 센다. failed나 unknown이 늘면 토스가 취소를 거절했거나 답을 받지 못한 것이고, failed에는 토스 키가 없어 토스를 부르기 전에 실패한 취소도 들어간다. 지표: `meterengine_payment_cancellation_total`",
       "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 9
+        "h": 6,
+        "w": 6,
+        "x": 12,
+        "y": 13
       },
       "datasource": {
         "type": "prometheus",
@@ -158,7 +485,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (mode, result) (increase(meterengine_payment_cancellation_total[1h]))",
+          "expr": "sum by (mode, result) (increase(meterengine_payment_cancellation_total{mode=\"$mode\"}[1h]))",
           "legendFormat": "{{mode}} {{result}}"
         }
       ],
@@ -182,13 +509,13 @@
     {
       "id": 6,
       "type": "timeseries",
-      "title": "대사 불일치 (하루 증가)",
-      "description": "매일 대사에서 나온 불일치 수. 종류는 kind 라벨이다.",
+      "title": "대사 불일치 수",
+      "description": "매일 새벽 대사에서 새로 나온 불일치를 종류(kind)별로 하루 단위로 센다. 0보다 크면 우리 결제 기록과 토스페이먼츠 거래가 어긋난 것이고 live는 경보도 울린다. 지표: `meterengine_payment_reconciliation_mismatch_total`",
       "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 9
+        "h": 6,
+        "w": 6,
+        "x": 18,
+        "y": 13
       },
       "datasource": {
         "type": "prometheus",
@@ -197,7 +524,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (mode, kind) (increase(meterengine_payment_reconciliation_mismatch_total[1d]))",
+          "expr": "sum by (mode, kind) (increase(meterengine_payment_reconciliation_mismatch_total{mode=\"$mode\"}[1d]))",
           "legendFormat": "{{mode}} {{kind}}"
         }
       ],
@@ -219,15 +546,28 @@
       }
     },
     {
+      "id": 19,
+      "type": "row",
+      "title": "토스페이먼츠",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 19
+      }
+    },
+    {
       "id": 7,
       "type": "timeseries",
-      "title": "토스페이먼츠 웹훅 수신 (1시간 증가)",
-      "description": "받은 웹훅을 이벤트 종류와 처리 결과별로 센다.",
+      "title": "토스 웹훅 수신 수",
+      "description": "토스페이먼츠에서 받은 웹훅을 이벤트 종류와 처리 결과(applied 반영, ignored 무시, unknown 결과 모름)별로 1시간 단위로 센다. unknown이 늘면 웹훅을 받고도 토스 조회가 실패해 결과를 반영하지 못한 것이다. 지표: `meterengine_toss_payments_webhook_total`",
       "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 9
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 20
       },
       "datasource": {
         "type": "prometheus",
@@ -258,15 +598,97 @@
       }
     },
     {
+      "id": 20,
+      "type": "timeseries",
+      "title": "토스 웹훅 응답 시간과 5xx",
+      "description": "토스 웹훅을 받는 우리 경로의 성공 응답 p99와 1시간 동안의 5xx 수다. 토스는 10초 안에 2xx를 받아야 성공으로 치므로, p99가 10초에 다가가거나 5xx가 생기면 토스가 실패로 보고 웹훅을 다시 보낸다. 오른쪽 축의 성공 수는 p99와 같은 창의 요청 수라 0인 구간은 p99가 빈 칸이고, 5xx는 1시간 안에 처음 생긴 것도 세며 없으면 0으로 그린다. 지표: `http_server_requests_seconds`",
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 6,
+        "y": 20
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{job=\"backend\", method=\"POST\", uri=\"/v1/toss-payments-webhooks/{organization_id}\", outcome=\"SUCCESS\"}[$__rate_interval])))",
+          "legendFormat": "p99"
+        },
+        {
+          "refId": "B",
+          "expr": "sum((http_server_requests_seconds_count{job=\"backend\", method=\"POST\", uri=\"/v1/toss-payments-webhooks/{organization_id}\", outcome=\"SERVER_ERROR\"} unless http_server_requests_seconds_count{job=\"backend\", method=\"POST\", uri=\"/v1/toss-payments-webhooks/{organization_id}\", outcome=\"SERVER_ERROR\"} offset 1h) or increase(http_server_requests_seconds_count{job=\"backend\", method=\"POST\", uri=\"/v1/toss-payments-webhooks/{organization_id}\", outcome=\"SERVER_ERROR\"}[1h])) or vector(0)",
+          "legendFormat": "5xx (1시간)"
+        },
+        {
+          "refId": "C",
+          "expr": "sum(increase(http_server_requests_seconds_count{job=\"backend\", method=\"POST\", uri=\"/v1/toss-payments-webhooks/{organization_id}\", outcome=\"SUCCESS\"}[$__rate_interval]))",
+          "legendFormat": "성공 (p99 창)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "C"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
       "id": 8,
       "type": "timeseries",
-      "title": "토스페이먼츠 호출 결과 (1시간 증가)",
-      "description": "호출 종류(operation)와 결과(success, rejected, unknown)별 호출 수.",
+      "title": "토스 호출 결과",
+      "description": "토스 API 호출을 작업(operation)과 결과(success 성공, rejected 거절, unknown 결과 모름)별로 1시간 단위로 센다. rejected가 늘면 토스가 요청을 거절한 것이고, unknown이 늘면 연결 실패, 시간 초과, 5xx, 처리 중 응답처럼 토스의 최종 답을 받지 못한 것이다. 지표: `meterengine_toss_payments_request_seconds_count`",
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 0,
-        "y": 17
+        "h": 5,
+        "w": 6,
+        "x": 12,
+        "y": 20
       },
       "datasource": {
         "type": "prometheus",
@@ -299,13 +721,13 @@
     {
       "id": 9,
       "type": "timeseries",
-      "title": "토스페이먼츠 호출 평균 시간",
-      "description": "호출 종류별 평균 응답 시간.",
+      "title": "토스 호출 지연 p99",
+      "description": "토스 API가 성공으로 답한 호출의 응답 시간 p99를 작업별로 본다. 읽기 제한 60초에 다가가면 시간 초과로 결과 모름이 늘 수 있고, 시간 초과는 토스 호출 결과의 unknown으로 센다. 오른쪽 축은 p99와 같은 창의 성공 호출 수로, 호출이 드물어 0인 구간은 p99가 빈 칸이다. 지표: `meterengine_toss_payments_request_seconds_bucket`, `meterengine_toss_payments_request_seconds_count`",
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 17
+        "h": 5,
+        "w": 6,
+        "x": 18,
+        "y": 20
       },
       "datasource": {
         "type": "prometheus",
@@ -314,8 +736,13 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (operation) (rate(meterengine_toss_payments_request_seconds_sum[5m])) / sum by (operation) (rate(meterengine_toss_payments_request_seconds_count[5m]))",
+          "expr": "histogram_quantile(0.99, sum by (le, operation) (rate(meterengine_toss_payments_request_seconds_bucket{outcome=\"success\"}[$__rate_interval])))",
           "legendFormat": "{{operation}}"
+        },
+        {
+          "refId": "B",
+          "expr": "sum by (operation) (increase(meterengine_toss_payments_request_seconds_count{outcome=\"success\"}[$__rate_interval]))",
+          "legendFormat": "{{operation}} 성공 (p99 창)"
         }
       ],
       "fieldConfig": {
@@ -323,189 +750,24 @@
           "unit": "s",
           "min": 0
         },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 10,
-      "type": "row",
-      "title": "웹훅 발송",
-      "collapsed": false,
-      "panels": [],
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 25
-      }
-    },
-    {
-      "id": 11,
-      "type": "timeseries",
-      "title": "웹훅 발송 결과 (1시간 증가)",
-      "description": "done은 전송 성공, retry는 다시 보낼 예정, failed는 재시도 상한까지 실패해 포기한 것이다.",
-      "gridPos": {
-        "h": 8,
-        "w": 24,
-        "x": 0,
-        "y": 26
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum by (result) (increase(meterengine_webhook_delivery_total[1h]))",
-          "legendFormat": "{{result}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 12,
-      "type": "row",
-      "title": "예약 작업",
-      "collapsed": false,
-      "panels": [],
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 34
-      }
-    },
-    {
-      "id": 13,
-      "type": "timeseries",
-      "title": "작업별 실행 결과 (1시간 증가)",
-      "description": "작업과 결과(succeeded, failed)별 실행 수. 다른 인스턴스가 먼저 잡은 슬롯은 세지 않는다.",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 35
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum by (job_name, result) (increase(meterengine_scheduled_job_run_total[1h]))",
-          "legendFormat": "{{job_name}} {{result}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 14,
-      "type": "timeseries",
-      "title": "마지막 성공 이후 경과",
-      "description": "작업별로 마지막 성공에서 지금까지 걸린 시간. 작업 주기보다 크게 벌어지면 멈췄거나 실패하고 있다.",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 35
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "time() - max by (job_name) (max_over_time(meterengine_scheduled_job_last_success_seconds[26h]))",
-          "legendFormat": "{{job_name}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "s",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 15,
-      "type": "timeseries",
-      "title": "작업 대상 건수 (1시간 증가)",
-      "description": "성공한 실행이 처리, 건너뜀, 실패로 끝낸 대상 수. failed가 늘면 실행은 끝났지만 일부 도입사가 실패한 것이다.",
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 35
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sum by (job_name, result) (increase(meterengine_scheduled_job_items_total[1h]))",
-          "legendFormat": "{{job_name}} {{result}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "min": 0
-        },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byFrameRefID",
+              "options": "B"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "short"
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "legend": {
