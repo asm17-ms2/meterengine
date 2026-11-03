@@ -1,0 +1,433 @@
+{
+  "__comment": "MeterEngine 예약 작업과 웹훅 발송 대시보드. 정본은 이 파일이고 UI 수정은 배포 때 되돌아간다. 경보 조건은 provisioning/alerting/alerting.yml에 있다.",
+  "uid": "meterengine-jobs",
+  "title": "MeterEngine 예약 작업과 웹훅 발송",
+  "tags": ["meterengine"],
+  "schemaVersion": 39,
+  "time": { "from": "now-24h", "to": "now" },
+  "timezone": "browser",
+  "refresh": "1m",
+  "links": [
+    {
+      "type": "dashboards",
+      "tags": ["meterengine"],
+      "asDropdown": true,
+      "title": "MeterEngine 대시보드",
+      "includeVars": false,
+      "keepTime": true
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "job_name",
+        "label": "작업",
+        "description": "예약 작업 이름이다. meterengine_scheduled_job_ 지표 패널에만 걸린다. 작업 실행 시간과 실행 중 작업은 code_function 라벨이고, 웹훅 지표에는 작업 라벨이 없어 늘 전체를 그린다.",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "definition": "label_values({__name__=~\"meterengine_scheduled_job_.*\"}, job_name)",
+        "query": {
+          "query": "label_values({__name__=~\"meterengine_scheduled_job_.*\"}, job_name)",
+          "refId": "JobNames"
+        },
+        "refresh": 2,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": { "text": ["All"], "value": ["$__all"] }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "예약 작업",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "마지막 성공 경과",
+      "description": "작업별로 마지막 성공 뒤 지난 시간이다. 경보 기준(1분 이하 주기 5분, 10분 주기 30분, 하루 주기 25시간)을 넘으면 작업이 멈췄거나 계속 실패하는 것이다. 지표: `meterengine_scheduled_job_last_success_seconds`",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "time() - max by (job_name) (max_over_time(meterengine_scheduled_job_last_success_seconds{job_name=~\"$job_name\"}[26h]))",
+          "legendFormat": "{{job_name}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s", "min": 0 }, "overrides": [] },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "마지막 완료 경과",
+      "description": "작업별로 성공과 실패에 상관없이 마지막으로 끝난 뒤 지난 시간이다. 이 값은 작은데 마지막 성공 경과만 크면 작업이 돌지만 실패하는 것이고, 둘 다 크면 작업이 아예 돌지 않는 것이다. 지표: `meterengine_scheduled_job_last_completion_seconds`",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "time() - max by (job_name) (max_over_time(meterengine_scheduled_job_last_completion_seconds{job_name=~\"$job_name\"}[26h]))",
+          "legendFormat": "{{job_name}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s", "min": 0 }, "overrides": [] },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "작업 실행 결과",
+      "description": "작업과 결과(succeeded, failed)별 분당 실행 수다. 다른 인스턴스가 먼저 잡은 슬롯은 세지 않는다. failed가 보이면 실행이 예외로 끝난 것이다. 지표: `meterengine_scheduled_job_run_total`",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (job_name, result) (rate(meterengine_scheduled_job_run_total{job_name=~\"$job_name\"}[$__rate_interval])) * 60",
+          "legendFormat": "{{job_name}} {{result}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "opm", "min": 0 }, "overrides": [] },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "작업 대상 건수",
+      "description": "성공한 실행이 처리(processed), 건너뜀(skipped), 실패(failed)로 끝낸 대상의 분당 건수다. failed가 늘면 실행은 끝났지만 일부 대상이 실패한 것이다. 지표: `meterengine_scheduled_job_items_total`",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 9 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (job_name, result) (rate(meterengine_scheduled_job_items_total{job_name=~\"$job_name\"}[$__rate_interval])) * 60",
+          "legendFormat": "{{job_name}} {{result}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "opm", "min": 0 }, "overrides": [] },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "작업 실행 시간 평균",
+      "description": "예약 작업 메서드 한 번 실행에 걸린 평균 시간을 메서드 이름(code_function)별로 본다. 히스토그램이 없어 분위수 대신 평균을 보고, 10분과 하루 주기 작업은 실행한 때만 점으로 보인다. 작업 주기(30초, 1분)에 다가가면 다음 실행이 밀린다. 지표: `tasks_scheduled_execution_seconds_sum`, `tasks_scheduled_execution_seconds_count`",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 9 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (code_function) (rate(tasks_scheduled_execution_seconds_sum[$__rate_interval])) / sum by (code_function) (rate(tasks_scheduled_execution_seconds_count[$__rate_interval]))",
+          "legendFormat": "{{code_function}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "s", "min": 0, "custom": { "showPoints": "always" } },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "작업 실행 시간 최대",
+      "description": "메서드 이름(code_function)별로 최근 몇 분 안의 실행 가운데 가장 오래 걸린 시간이다. 실행이 뜸한 작업은 시간이 지나면 0으로 돌아간다. 작업 주기보다 길면 실행이 겹치거나 밀린 것이다. 지표: `tasks_scheduled_execution_seconds_max`",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 9 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (code_function) (tasks_scheduled_execution_seconds_max)",
+          "legendFormat": "{{code_function}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s", "min": 0 }, "overrides": [] },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "실행 중 작업 수",
+      "description": "지금 실행 중인 예약 작업 수를 메서드 이름(code_function)별로 블루와 그린을 합쳐 센다. 1보다 큰 값이 이어지면 실행이 겹치고, 0으로 내려오지 않으면 작업이 멈춰 끝나지 않는 것이다. 지표: `tasks_scheduled_execution_active_seconds_count`",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 17 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (code_function) (tasks_scheduled_execution_active_seconds_count)",
+          "legendFormat": "{{code_function}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0 }, "overrides": [] },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      }
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "실행 중 시간 최장",
+      "description": "지금 실행 중인 예약 작업 가운데 가장 오래 돌고 있는 것의 경과 시간이다. 작업 주기보다 계속 커지면 작업이 멈춰 끝나지 않는 것이다. 지표: `tasks_scheduled_execution_active_seconds_max`",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 17 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (code_function) (tasks_scheduled_execution_active_seconds_max)",
+          "legendFormat": "{{code_function}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s", "min": 0 }, "overrides": [] },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      }
+    },
+    {
+      "id": 10,
+      "type": "row",
+      "title": "웹훅 발송",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 25 }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "웹훅 전달 결과",
+      "description": "웹훅 발송 시도를 환경, 결과, 사유별로 분당 센다. done은 전송 성공, retry는 다시 보낼 예정, failed는 재시도 상한, 선점 만료, 막힌 주소, 꺼진 수신처로 끝낸 것이다. retry가 늘면 수신 측이 실패를 돌려주는 것이고, failed가 보이면 도입사가 그 이벤트를 받지 못한 것이다. 지표: `meterengine_webhook_delivery_total`",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 26 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (environment, result, reason) (rate(meterengine_webhook_delivery_total[$__rate_interval])) * 60",
+          "legendFormat": "{{environment}} {{result}} {{reason}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "opm", "min": 0 }, "overrides": [] },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      }
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "웹훅 전달 성공률",
+      "description": "환경별로 발송 시도 가운데 전송에 성공한 비율이다. 도입사가 끄거나 지운 수신처로 끝낸 시도는 분모에서 빼고, 시도가 없는 구간은 비어 보인다. 99% 아래로 내려가면 수신 측이 실패를 돌려주거나 연결이 안 되는 것이다. 지표: `meterengine_webhook_delivery_total`",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 26 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (environment) (rate(meterengine_webhook_delivery_total{result=\"done\"}[$__rate_interval])) / sum by (environment) (rate(meterengine_webhook_delivery_total{reason!=\"endpoint_disabled\"}[$__rate_interval]))",
+          "legendFormat": "{{environment}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 }, "overrides": [] },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      }
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "웹훅 실패 상태 코드",
+      "description": "수신 주소가 2xx가 아닌 응답을 돌려준 시도를 상태 코드 묶음별로 분당 센다. 3xx는 리다이렉트를 따라가지 않아 실패로 세고, 4xx는 410, 429를 뺀 수신 측 거절, 410은 주소 삭제, 429는 수신 측 속도 제한, 5xx는 수신 측 장애이며, 1xx 같은 코드는 other다. 지표: `meterengine_webhook_delivery_total`의 `status_group` 라벨",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 26 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (environment, status_group) (rate(meterengine_webhook_delivery_total{reason=\"unexpected_status\"}[$__rate_interval])) * 60",
+          "legendFormat": "{{environment}} {{status_group}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "opm", "min": 0 }, "overrides": [] },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      }
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "웹훅 적체 건수",
+      "description": "보낼 때가 지났는데 아직 보내지 않은 웹훅 수를 환경별로 본다. 발송 작업이 30초마다 보낸 뒤 센 값이라, 0보다 큰 값이 이어지면 발송이 처리량을 따라가지 못하는 것이다. 지표: `meterengine_webhook_delivery_backlog`",
+      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 34 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (environment) (meterengine_webhook_delivery_backlog)",
+          "legendFormat": "{{environment}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0 }, "overrides": [] },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      }
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "웹훅 적체 최장 경과",
+      "description": "보낼 때가 지난 웹훅 가운데 다음 시도 예정 시각부터 가장 오래 밀린 시간을 환경별로 보고, 다음 시도를 기다리는 재시도는 세지 않는다. 커지면 발송이 처리량을 따라가지 못해 도입사 통보가 늦는 것이고, test를 뺀 환경에서 10분을 넘는 상태가 5분 이어지면 경보가 울린다. 지표: `meterengine_webhook_delivery_backlog_age_seconds`",
+      "gridPos": { "h": 8, "w": 6, "x": 6, "y": 34 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (environment) (meterengine_webhook_delivery_backlog_age_seconds)",
+          "legendFormat": "{{environment}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s", "min": 0 }, "overrides": [] },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      }
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "미전달 웹훅 최장 경과",
+      "description": "아직 전달하지 못한 웹훅 가운데 가장 먼저 생긴 전송이 생긴 뒤 지난 시간을 환경별로 보고, 다음 시도를 기다리는 재시도도 넣는다. 꾸준히 오르면 한 수신 주소가 계속 실패를 돌려줘 그 이벤트를 아직 재시도하는 것이다. 지표: `meterengine_webhook_delivery_pending_oldest_age_seconds`",
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 34 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (environment) (meterengine_webhook_delivery_pending_oldest_age_seconds)",
+          "legendFormat": "{{environment}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s", "min": 0 }, "overrides": [] },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      }
+    },
+    {
+      "id": 16,
+      "type": "timeseries",
+      "title": "웹훅 재시도 예정 건수",
+      "description": "실패 뒤 다음 시도 예정 시각을 기다리는 웹훅 수를 환경별로 본다. 늘어나면 수신 측이 실패를 돌려주고 있어 곧 보낼 재시도가 쌓이는 것이다. 지표: `meterengine_webhook_delivery_retry_waiting`",
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 34 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max by (environment) (meterengine_webhook_delivery_retry_waiting)",
+          "legendFormat": "{{environment}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "min": 0 }, "overrides": [] },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      }
+    },
+    {
+      "id": 17,
+      "type": "timeseries",
+      "title": "웹훅 수신 측 응답 시간 p50, p99",
+      "description": "수신 주소에 요청을 보낸 때부터 응답을 받거나 시간 초과로 끊을 때까지 걸린 시간의 p50과 p99다. 보내기 전에 끝난 시도(꺼진 수신처, 비밀값 오류, 막힌 주소)는 뺀다. p99가 읽기 제한 10초, 전체 제한 15초에 다가가면 시간 초과 실패가 늘어난다. 지표: `meterengine_webhook_receiver_response_seconds`",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 42 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.5, sum by (le, environment) (rate(meterengine_webhook_receiver_response_seconds_bucket[$__rate_interval])))",
+          "legendFormat": "{{environment}} p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.99, sum by (le, environment) (rate(meterengine_webhook_receiver_response_seconds_bucket[$__rate_interval])))",
+          "legendFormat": "{{environment}} p99"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s", "min": 0 }, "overrides": [] },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      }
+    },
+    {
+      "id": 18,
+      "type": "timeseries",
+      "title": "웹훅 전달 소요 시간 p50, p99",
+      "description": "웹훅 이벤트가 생긴 때부터 전달에 성공할 때까지 걸린 시간의 p50과 p99이고, 성공한 전달만 잰다. 수동 재시도로 성공한 전달도 이벤트가 생긴 때부터 재므로, 며칠 지난 전송을 다시 보내면 p99가 하루 가까이 튈 수 있다. 오르면 발송이 밀리거나 재시도 끝에 성공한 전달이 늘어 도입사가 사건을 늦게 아는 것이다. 지표: `meterengine_webhook_delivery_latency_seconds`",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 42 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.5, sum by (le, environment) (rate(meterengine_webhook_delivery_latency_seconds_bucket[$__rate_interval])))",
+          "legendFormat": "{{environment}} p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.99, sum by (le, environment) (rate(meterengine_webhook_delivery_latency_seconds_bucket[$__rate_interval])))",
+          "legendFormat": "{{environment}} p99"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s", "min": 0 }, "overrides": [] },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      }
+    },
+    {
+      "id": 19,
+      "type": "timeseries",
+      "title": "웹훅 첫 시도 성공률",
+      "description": "환경별로 첫 시도가 바로 성공한 비율이다. 꺼진 수신처로 끝낸 시도는 분모에서 빼고, 수동 재시도는 이전 시도 기록이 있어 첫 시도로 세지 않는다. 내려가면 재시도에 기대는 전달이 늘어난 것이다. 지표: `meterengine_webhook_delivery_total`의 `first_attempt` 라벨",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 42 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (environment) (rate(meterengine_webhook_delivery_total{first_attempt=\"true\", result=\"done\"}[$__rate_interval])) / sum by (environment) (rate(meterengine_webhook_delivery_total{first_attempt=\"true\", reason!=\"endpoint_disabled\"}[$__rate_interval]))",
+          "legendFormat": "{{environment}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 }, "overrides": [] },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      }
+    }
+  ]
+}

@@ -157,6 +157,7 @@ public class TossPaymentsClient {
         restClient
             .get()
             .uri(
+                "/v1/transactions",
                 uriBuilder ->
                     transactionsUri(uriBuilder, startDate, endDate, startingAfter, limit)),
         TRANSACTIONS);
@@ -169,7 +170,6 @@ public class TossPaymentsClient {
       String startingAfter,
       int limit) {
     uriBuilder
-        .path("/v1/transactions")
         .queryParam("startDate", QUERY_DATE_TIME.format(startDate))
         .queryParam("endDate", QUERY_DATE_TIME.format(endDate));
     if (startingAfter == null) {
