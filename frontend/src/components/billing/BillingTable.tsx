@@ -1,6 +1,6 @@
 "use client";
 
-import { Table, theme, Typography } from "antd";
+import { Flex, Table, Tag, theme, Typography } from "antd";
 import { useMemo } from "react";
 
 import { useExpandedRowKeys } from "@/components/table/CollapseProvider";
@@ -11,10 +11,11 @@ import { MeterLabel } from "@/components/table/MeterLabel";
 import { NumberText } from "@/components/table/NumberText";
 import { koreanCompare, TABLE_STICKY } from "@/components/table/table-defaults";
 import { useTableSort, type SortableColumn } from "@/components/table/table-sort";
+import { ScopedLink } from "@/components/workspace/ScopedLink";
 import type { DimensionValues as DimensionValueMap } from "@/lib/api/billable-metric-prices";
 import type { ListCapabilities } from "@/lib/api/capabilities";
 import { toMeterRows, type MeterRow } from "@/lib/grouped-rows";
-import type { ListQuery } from "@/lib/list-query";
+import type { MonthlyListQuery } from "@/lib/list-query";
 import { linesOf, type MeterItem } from "@/lib/meter-items";
 
 export type BillingGroupView = {
@@ -24,6 +25,7 @@ export type BillingGroupView = {
   amountValue: number;
   items: MeterItem<BillingLineView>[];
   unpricedUsage: BillingUnpricedUsageView | null;
+  isHeld: boolean;
 };
 
 export type BillingLineView = {
@@ -71,6 +73,7 @@ type BillingCustomerRow = {
   amount: string;
   amountValue: number;
   lineCount: number;
+  isHeld: boolean;
   isCollapsedByDefault: false;
   children?: BillingRow[];
 };
@@ -83,6 +86,8 @@ type BillingRow =
 
 const MIN_WIDTH = 900;
 const UNPRICED_LABEL = "기타 (단가 없음)";
+const HELD_GUIDANCE = "이 달이 끝나기 전에 단가를 등록하세요. 달이 끝나면 월 전체 확정으로 단가 있는 사용량만 청구합니다.";
+const PAST_HELD_GUIDANCE = "끝난 달은 단가를 등록할 수 없어 다시 시도하지 않습니다. 월 전체 확정으로 단가 있는 사용량만 청구하세요.";
 
 function byCustomerName(left: BillingRow, right: BillingRow): number {
   return left.kind === "customer" && right.kind === "customer"
@@ -104,6 +109,40 @@ function toExpandLabel(row: BillingRow): string {
 }
 
 const BILLING_EXPAND_ICON = labeledExpandIcon(toExpandLabel);
+
+// 끝난 달은 단가를 등록할 수 없어(price_rate_history_immutable) 가격 화면 대신 수동 확정을 안내한다.
+// 안내는 월 전체 확정 비활성 이유처럼 툴팁이 아닌 보이는 글자로 두고 표시가 그 글자를 설명으로 가리킨다.
+function HeldTag({
+  customerId,
+  month,
+  isPastMonth,
+  guidanceId,
+}: {
+  customerId: string;
+  month: string;
+  isPastMonth: boolean;
+  guidanceId: string;
+}) {
+  if (isPastMonth) {
+    return (
+      <Tag color="warning" variant="outlined" aria-describedby={guidanceId}>
+        자동 확정 보류: 수동 확정 필요
+      </Tag>
+    );
+  }
+  const pricingHref = `/pricing?month=${month}&customer_id=${encodeURIComponent(customerId)}`;
+  return (
+    <Tag color="warning" variant="outlined">
+      <ScopedLink href={pricingHref} aria-describedby={guidanceId} onClick={(event) => event.stopPropagation()}>
+        자동 확정 보류: 단가 없는 사용량
+      </ScopedLink>
+    </Tag>
+  );
+}
+
+function HeldGuidance({ id, isPastMonth }: { id: string; isPastMonth: boolean }) {
+  return <p id={id} className="field-hint">{isPastMonth ? PAST_HELD_GUIDANCE : HELD_GUIDANCE}</p>;
+}
 
 function toUnpricedRow(customerId: string, unpricedUsage: BillingUnpricedUsageView): BillingUnpricedRow {
   const key = `${customerId}#unpriced`;
@@ -134,6 +173,7 @@ function toCustomerRow(group: BillingGroupView): BillingCustomerRow {
     amount: group.amount,
     amountValue: group.amountValue,
     lineCount: linesOf(group.items).length,
+    isHeld: group.isHeld,
     isCollapsedByDefault: false,
     ...(children.length > 0 ? { children } : {}),
   };
@@ -144,11 +184,13 @@ export function BillingTable({
   totalAmount,
   query,
   capabilities,
+  isPastMonth,
 }: {
   groups: BillingGroupView[];
   totalAmount: string;
-  query: ListQuery;
+  query: MonthlyListQuery;
   capabilities: ListCapabilities;
+  isPastMonth: boolean;
 }) {
   const { token } = theme.useToken();
   const rows = useMemo(() => groups.map(toCustomerRow), [groups]);
@@ -174,7 +216,15 @@ export function BillingTable({
       onCell: (row) => ({ colSpan: row.kind === "customer" ? 2 : 1 }),
       render: (_, row) => {
         if (row.kind === "customer") {
-          return (
+          return row.isHeld ? (
+            <>
+              <Flex align="center" gap="small">
+                <CustomerLabel name={row.customerName} id={row.customerId} />
+                <HeldTag customerId={row.customerId} month={query.month} isPastMonth={isPastMonth} guidanceId={`held-guidance-${row.customerId}`} />
+              </Flex>
+              <HeldGuidance id={`held-guidance-${row.customerId}`} isPastMonth={isPastMonth} />
+            </>
+          ) : (
             <CustomerLabel name={row.customerName} id={row.customerId} />
           );
         }
@@ -251,7 +301,7 @@ export function BillingTable({
 
   return (
     <>
-    <div className="data-mobile-records">{groups.map(group => <article key={group.customerId} className="data-mobile-record"><div className="data-mobile-line"><h3>{group.customerName}</h3><strong className="numeric">{group.amount}</strong></div><details><summary>청구 계산 내역</summary>{linesOf(group.items).map((line, index) => <div key={index}><div className="data-mobile-line"><span>{line.label}</span><strong className="numeric">{line.amount}</strong></div><p className="field-hint">수량 {line.quantity} / 단가 {line.unitPrice}</p>{line.quantityBasis && <p className="field-hint" style={{ overflowWrap: "anywhere" }}>{line.quantityBasis}</p>}{Object.keys(line.dimensionValues).length > 0 && <p className="field-hint">{Object.entries(line.dimensionValues).map(([key, value]) => `${key}: ${String(value)}`).join(", ")}</p>}</div>)}</details>{group.unpricedUsage && <p className="field-error">단가 없는 사용량 {group.unpricedUsage.quantity}, {group.unpricedUsage.lines.length}개 조합</p>}</article>)}<div className="data-mobile-total"><span>{query.customerId ? "선택 고객 공급가액" : "조건 전체 공급가액"}</span><span className="numeric">{totalAmount}</span></div></div>
+    <div className="data-mobile-records">{groups.map(group => <article key={group.customerId} className="data-mobile-record"><div className="data-mobile-line"><h3>{group.customerName}</h3><strong className="numeric">{group.amount}</strong></div><details><summary>청구 계산 내역</summary>{linesOf(group.items).map((line, index) => <div key={index}><div className="data-mobile-line"><span>{line.label}</span><strong className="numeric">{line.amount}</strong></div><p className="field-hint">수량 {line.quantity} / 단가 {line.unitPrice}</p>{line.quantityBasis && <p className="field-hint" style={{ overflowWrap: "anywhere" }}>{line.quantityBasis}</p>}{Object.keys(line.dimensionValues).length > 0 && <p className="field-hint">{Object.entries(line.dimensionValues).map(([key, value]) => `${key}: ${String(value)}`).join(", ")}</p>}</div>)}</details>{group.unpricedUsage && <p className="field-error">단가 없는 사용량 {group.unpricedUsage.quantity}, {group.unpricedUsage.lines.length}개 조합</p>}{group.isHeld && <><p><HeldTag customerId={group.customerId} month={query.month} isPastMonth={isPastMonth} guidanceId={`held-guidance-mobile-${group.customerId}`} /></p><HeldGuidance id={`held-guidance-mobile-${group.customerId}`} isPastMonth={isPastMonth} /></>}</article>)}<div className="data-mobile-total"><span>{query.customerId ? "선택 고객 공급가액" : "조건 전체 공급가액"}</span><span className="numeric">{totalAmount}</span></div></div>
     <div className="data-desktop-table"><Table<BillingRow>
       rowKey="key"
       columns={columns}

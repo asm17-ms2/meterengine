@@ -159,7 +159,7 @@ public class DraftInvoiceService {
         .toList();
   }
 
-  private static DraftInvoiceCustomer toDraftInvoiceCustomer(
+  private DraftInvoiceCustomer toDraftInvoiceCustomer(
       Customer customer, CustomerCharge customerCharge) {
     return new DraftInvoiceCustomer(
         customer.getId(),
@@ -173,7 +173,15 @@ public class DraftInvoiceService {
             .toList(),
         customerCharge.negativeUsages().stream()
             .map(DraftInvoiceService::toDraftInvoiceNegativeUsage)
-            .toList());
+            .toList(),
+        isAutoFinalizeHeld(customerCharge));
+  }
+
+  // 자동 확정처럼 0원이면 단가 없는 사용량이 있어도 보류하지 않는다.
+  private boolean isAutoFinalizeHeld(CustomerCharge customerCharge) {
+    return invoiceAutoFinalizeProperties.enabled()
+        && customerCharge.amount() != 0
+        && !customerCharge.unpricedUsages().isEmpty();
   }
 
   private static DraftInvoiceLine toDraftInvoiceLine(DimensionCharge dimensionCharge) {
