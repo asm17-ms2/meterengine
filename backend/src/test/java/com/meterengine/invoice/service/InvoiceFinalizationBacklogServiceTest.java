@@ -281,12 +281,15 @@ class InvoiceFinalizationBacklogServiceTest {
     return new DraftInvoiceResponse(
         "2026-09",
         OffsetDateTime.parse("2026-10-30T10:00:00+09:00"),
+        false,
+        null,
+        false,
         customers.stream().mapToLong(DraftInvoiceCustomer::amount).sum(),
         customers);
   }
 
   private static DraftInvoiceCustomer customer(long amount) {
     return new DraftInvoiceCustomer(
-        UUID.randomUUID(), "고객", amount, List.of(), List.of(), List.of());
+        UUID.randomUUID(), "고객", amount, List.of(), List.of(), List.of(), false);
   }
 }
