@@ -290,6 +290,6 @@ class InvoiceFinalizationBacklogServiceTest {
 
   private static DraftInvoiceCustomer customer(long amount) {
     return new DraftInvoiceCustomer(
-        UUID.randomUUID(), "고객", amount, List.of(), List.of(), List.of());
+        UUID.randomUUID(), "고객", amount, List.of(), List.of(), List.of(), false);
   }
 }
