@@ -16,32 +16,12 @@ public record WebhookClaim(
     boolean deleted,
     int attemptCount,
     OffsetDateTime lastAttemptedAt,
-    UUID environmentId) {
-  public WebhookClaim(
-      UUID id,
-      UUID organizationId,
-      UUID webhookEventId,
-      UUID claimToken,
-      String url,
-      String secret,
-      String payload,
-      boolean enabled,
-      boolean deleted,
-      int attemptCount,
-      OffsetDateTime lastAttemptedAt) {
-    this(
-        id,
-        organizationId,
-        webhookEventId,
-        claimToken,
-        url,
-        secret,
-        payload,
-        enabled,
-        deleted,
-        attemptCount,
-        lastAttemptedAt,
-        null);
+    UUID environmentId,
+    OffsetDateTime eventCreatedAt,
+    boolean attemptedBefore) {
+  // 수동 재시도는 시도 횟수를 0으로 되돌리므로 남은 시도 기록으로도 첫 시도인지 가린다.
+  public boolean isFirstAttempt() {
+    return attemptCount == 1 && !attemptedBefore;
   }
 
   public boolean sameOrganizationEnvironment(WebhookClaim other) {

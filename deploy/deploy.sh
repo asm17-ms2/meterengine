@@ -14,6 +14,8 @@ DEPLOY_TIMING=off
 BACKEND_MEM_LIMIT=768m
 BACKEND_MAX_RAM_PERCENTAGE=50
 CADDY_ACCESS_LOG=discard
+# 셸에서 물려받은 값이 deploy.conf를 앞서지 않게 비운다. deploy.conf에 없으면 write_sso_file이 PARAM_PATH로 정한다.
+unset CADDY_SSO_SITES
 
 if [ -f "$CONFIG_FILE" ]; then
 	. "$CONFIG_FILE"
@@ -332,6 +334,27 @@ write_access_log_file() {
 	mv "$tmp" "$file"
 }
 
+# SUT도 이 Caddyfile을 쓰는데 DNS 없는 이름은 meterengine.com 공용 Let's Encrypt 한도로 발급을 계속 재시도하고, 이미 있는 SUT는 user-data를 다시 돌지 않아 PARAM_PATH로 정한다.
+sso_sites_default() {
+	if [ "$PARAM_PATH" = /meterengine/prod ]; then echo on; else echo off; fi
+}
+
+# Caddyfile이 가져오는 SSO 사이트 설정을 쓴다. deploy.conf의 CADDY_SSO_SITES가 있으면 그 값을 따른다.
+# Caddy가 반쯤 쓴 파일을 읽지 않도록 같은 디렉터리에 쓰고 mv한다.
+write_sso_file() {
+	local file="$REPO_DIR/deploy/caddy/sso.caddy" value content tmp
+	value=${CADDY_SSO_SITES-$(sso_sites_default)}
+	case "$value" in
+	on) content='import sso-sites.caddy' ;;
+	off) content='# CADDY_SSO_SITES=off' ;;
+	*) die "deploy.conf의 CADDY_SSO_SITES는 on이나 off여야 한다. 지금 값: '$value'" ;;
+	esac
+	tmp=$(mktemp "$file.XXXXXX")
+	printf '%s\n' "$content" >"$tmp"
+	mv "$tmp" "$file"
+	log "SSO 사이트: $value"
+}
+
 # Caddyfile이 가져오는 백엔드 목록을 쓴다. Caddy가 반쯤 쓴 파일을 읽지 않도록 같은 디렉터리에 쓰고 mv한다.
 write_upstreams_file() {
 	local file="$REPO_DIR/deploy/caddy/upstreams.caddy" tmp
@@ -466,6 +489,7 @@ main() {
 	log "레포를 $(git rev-parse --short HEAD) 로 맞췄다"
 	# 체크아웃한 Caddyfile이 이 파일들을 import하므로, 뒤에서 실패해도 Caddy가 다시 뜰 때 읽을 수 있게 바로 쓴다.
 	write_access_log_file
+	write_sso_file
 	serving=$(serving_upstreams "$target_color" "$live_color" "$previous_color" "$legacy_container")
 	write_upstreams_file "$serving" || die "Caddy 백엔드 목록 파일을 쓰지 못했다"
 	log "Caddy가 보낼 백엔드: $serving"
@@ -523,6 +547,13 @@ main() {
 	wait_for_prometheus_ready "${compose[@]}" || die "Prometheus가 90초 안에 준비되지 않았다"
 	"${compose[@]}" exec -T prometheus kill -HUP 1
 	log "Prometheus 설정 반영 완료"
+	# cloudwatch exporter도 기동할 때만 config.yml을 읽는다.
+	# 실패해도 새 색은 멀쩡하므로 이것 때문에 새 색을 버리지 않는다.
+	if "${compose[@]}" exec -T cloudwatch-exporter kill -HUP 1; then
+		log "cloudwatch exporter 설정 반영 완료"
+	else
+		log "cloudwatch exporter가 설정을 다시 읽지 못했다"
+	fi
 
 	# 옛 색을 멈추기 전에 목록에서 빼야 Caddy가 멈추는 색에 새 요청을 보내지 않는다.
 	switched=yes
