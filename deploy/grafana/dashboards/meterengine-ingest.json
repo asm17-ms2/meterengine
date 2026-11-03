@@ -1,0 +1,574 @@
+{
+  "__comment": "MeterEngine 이벤트 수집 대시보드. 정본은 이 파일이고 UI 수정은 배포 때 되돌아간다. HTTP와 PostgreSQL 지표에는 환경 라벨이 없어 변수를 두지 않고, 수집 카운터와 도착 지연도 환경(legacy, test, live)을 모두 합쳐 그린다.",
+  "uid": "meterengine-ingest",
+  "title": "MeterEngine 이벤트 수집",
+  "tags": [
+    "meterengine"
+  ],
+  "links": [
+    {
+      "type": "dashboards",
+      "tags": [
+        "meterengine"
+      ],
+      "asDropdown": true,
+      "title": "MeterEngine 대시보드",
+      "includeVars": false,
+      "keepTime": true
+    }
+  ],
+  "schemaVersion": 39,
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "refresh": "1m",
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "수집 API",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "수집 요청 수",
+      "description": "단건 수집(/v1/events)과 배치 수집(/v1/event-batches) API가 받은 초당 요청 수다. 평소보다 크게 줄면 도입사 연동이 끊겼을 수 있고, 수집 키의 401과 429는 보안 필터에서 끝나 uri가 UNKNOWN으로 남으므로 여기에 들지 않는다. 키 조회가 DB 오류로 실패한 요청도 보안 필터가 500으로 끝내 uri가 UNKNOWN이므로, 요청 수가 갑자기 줄면 `uri=\"UNKNOWN\", status=\"500\"` 응답도 본다. 지표: `http_server_requests_seconds_count`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (uri) (rate(http_server_requests_seconds_count{job=\"backend\", method=\"POST\", uri=~\"/v1/events|/v1/event-batches\"}[$__rate_interval]))",
+          "legendFormat": "{{uri}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "수집 지연 p99",
+      "description": "수집 API가 성공 응답을 내기까지 걸린 시간의 p99를 단건과 배치로 나눠 본다. 요청 안에서 고객 조회와 저장까지 하므로 오르면 저장 경로(커넥션 대기, 조회, 삽입)가 느려진 것이고, 실패 응답은 빼고 계산하므로 수집 5xx 비율과 같이 본다. 지표: `http_server_requests_seconds_bucket`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.99, sum by (le, uri) (rate(http_server_requests_seconds_bucket{job=\"backend\", method=\"POST\", uri=~\"/v1/events|/v1/event-batches\", outcome=\"SUCCESS\"}[$__rate_interval])))",
+          "legendFormat": "{{uri}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "수집 5xx 비율",
+      "description": "수집 API 응답 가운데 5xx가 차지하는 비율을 단건과 배치로 나눠 본다. 오르면 서버 잘못으로 이벤트를 받지 못하는 것이라 저장 실패 수와 같이 본다. 지표: `http_server_requests_seconds_count`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 1
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum by (uri) (rate(http_server_requests_seconds_count{job=\"backend\", method=\"POST\", uri=~\"/v1/events|/v1/event-batches\", status=~\"5..\"}[$__rate_interval])) or sum by (uri) (rate(http_server_requests_seconds_count{job=\"backend\", method=\"POST\", uri=~\"/v1/events|/v1/event-batches\"}[$__rate_interval])) * 0) / sum by (uri) (rate(http_server_requests_seconds_count{job=\"backend\", method=\"POST\", uri=~\"/v1/events|/v1/event-batches\"}[$__rate_interval]))",
+          "legendFormat": "{{uri}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "row",
+      "title": "이벤트 결과",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "결과별 이벤트 수",
+      "description": "들어온 이벤트가 저장(stored), 중복(duplicate), 거절(rejected), 저장 실패(failed) 가운데 어디로 갔는지 환경을 모두 합친 초당 수로 본다. 커밋이 끝난 뒤 세고 단건의 형식 검사 400도 거절에 들며, 평소 수집량에서 크게 벗어나면 도입사 쪽 변화를 의심한다. 지표: `meterengine_event_ingest_total`",
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 0,
+        "y": 10
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (result) (rate(meterengine_event_ingest_total[$__rate_interval]))",
+          "legendFormat": "{{result}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "cps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "거절 사유별 수",
+      "description": "거절한 이벤트를 응답의 오류 code(reason)별로 환경을 모두 합친 초당 수로 본다. 한 사유가 갑자기 늘면 특정 도입사 연동이 깨진 것이고, 수집이 내지 않는 code의 거절은 other로 모인다. 지표: `meterengine_event_ingest_total{result=\"rejected\"}`",
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 6,
+        "y": 10
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (reason) (rate(meterengine_event_ingest_total{result=\"rejected\"}[$__rate_interval]))",
+          "legendFormat": "{{reason}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "cps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "중복률",
+      "description": "중복으로 판정한 이벤트 수를 저장과 중복의 합으로 나눈 값으로, 거절은 분모에 넣지 않고 환경은 모두 합친다. 오르면 도입사가 같은 이벤트를 다시 보내는 것이라 재시도 폭주를 의심한다. 지표: `meterengine_event_ingest_total`",
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 12,
+        "y": 10
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(meterengine_event_ingest_total{result=\"duplicate\"}[$__rate_interval])) / sum(rate(meterengine_event_ingest_total{result=~\"stored|duplicate\"}[$__rate_interval]))",
+          "legendFormat": "중복률"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "custom": {
+            "axisSoftMax": 0.05
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "이벤트 도착 지연",
+      "description": "저장한 이벤트의 발생 시각부터 서버가 받은 시각까지 걸린 시간의 p50과 p99를 환경을 모두 합쳐 본다. 발생 시각이 서버 시각보다 늦으면 0으로 넣고 버킷 경계가 1초에서 35일 사이에 성겨 값은 대략이다. 오르면 도입사가 이벤트를 늦게 보내는 것이라 35일 거절 기준에 다가가는지 본다. 지표: `meterengine_event_arrival_delay_seconds_bucket`",
+      "gridPos": {
+        "h": 8,
+        "w": 6,
+        "x": 18,
+        "y": 10
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.5, sum by (le) (rate(meterengine_event_arrival_delay_seconds_bucket[$__rate_interval])))",
+          "legendFormat": "p50"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(meterengine_event_arrival_delay_seconds_bucket[$__rate_interval])))",
+          "legendFormat": "p99"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 10,
+      "type": "row",
+      "title": "저장",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "저장 실패 수",
+      "description": "받았지만 DB 오류, 시간 초과, 커밋 실패로 저장하지 못한 이벤트를 환경을 모두 합친 초당 수로 본다. 배치 요청이 실패하면 거절할 원소까지 그 안의 이벤트를 모두 세며, 0보다 큰 값이 이어지면 저장 경로에 장애가 난 것이다. 지표: `meterengine_event_ingest_total{result=\"failed\"}`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 19
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(meterengine_event_ingest_total{result=\"failed\"}[$__rate_interval]))",
+          "legendFormat": "저장 실패"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "cps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "저장 응답과 삽입 행",
+      "description": "앱이 저장했다고 응답한 이벤트 수(환경을 모두 합친다)와 event 테이블 삽입 행 수를 초당으로 나란히 그린다. 저장 응답이 삽입 행보다 많은 상태가 이어지면 유실을 의심한다. 삽입 행은 롤백된 삽입도 세므로, 삽입 행이 저장 응답보다 많으면 삽입 뒤 커밋이 실패한 것이라 저장 실패 수 패널과 같이 본다. 지표: `meterengine_event_ingest_total{result=\"stored\"}`, `pg_stat_user_tables_n_tup_ins{relname=\"event\"}`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 19
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(meterengine_event_ingest_total{result=\"stored\"}[$__rate_interval]))",
+          "legendFormat": "저장 응답"
+        },
+        {
+          "refId": "B",
+          "expr": "sum(rate(pg_stat_user_tables_n_tup_ins{relname=\"event\"}[$__rate_interval]))",
+          "legendFormat": "삽입 행"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "cps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "거절 기록 실패 수",
+      "description": "거절 기록 저장이 실패한 요청의 초당 수이고, 배치는 거절이 여럿이어도 한 번 센다. 0보다 크면 수집 거절 조회에 빠진 거절이 있다. 지표: `meterengine_event_rejection_recording_failures_total`",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 19
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(rate(meterengine_event_rejection_recording_failures_total[$__rate_interval]))",
+          "legendFormat": "거절 기록 실패"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "cps",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 14,
+      "type": "row",
+      "title": "DB 왕복",
+      "collapsed": true,
+      "panels": [
+        {
+          "id": 15,
+          "type": "timeseries",
+          "title": "DB 왕복 평균 시간",
+          "description": "DB 왕복(API 키, 환경, 도입사, 고객 조회와 이벤트 삽입, 커밋)마다 걸린 평균 시간을 SQL 종류와 테이블별로 그리고, 성공한 단건 수집 요청의 평균 시간을 한 줄 더 그린다. 고객 조회, 이벤트 삽입, 커밋은 단건 수집에서만 잰다. API 키 조회는 API 키를 보낸 모든 요청(거절된 키 포함)에서, 도입사 조회는 도입사를 쓰는 인증된 요청에서, 환경 조회는 환경 키 요청에서 재므로, 단건 수집만 흐르는 부하에서 요청 줄과 견준다. 한 줄이 먼저 오르며 요청 평균을 끌어올리면 그 왕복이 병목이고, 모든 줄이 같이 오르면 DB 전체가 느려진 것이며, DB 줄은 그대로인데 요청 평균만 오르면 여기서 재지 않은 커넥션 대기나 앱 처리가 는 것이라 앱 자원의 커넥션 풀 패널을 같이 본다. 지표: `meterengine_db_operation_seconds_sum`, `meterengine_db_operation_seconds_count`, `http_server_requests_seconds_sum`, `http_server_requests_seconds_count`",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 28
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum by (operation, table) (rate(meterengine_db_operation_seconds_sum{job=\"backend\"}[$__rate_interval])) / sum by (operation, table) (rate(meterengine_db_operation_seconds_count{job=\"backend\"}[$__rate_interval]))",
+              "legendFormat": "{{operation}} {{table}}"
+            },
+            {
+              "refId": "B",
+              "expr": "sum(rate(http_server_requests_seconds_sum{job=\"backend\", method=\"POST\", uri=\"/v1/events\", outcome=\"SUCCESS\"}[$__rate_interval])) / sum(rate(http_server_requests_seconds_count{job=\"backend\", method=\"POST\", uri=\"/v1/events\", outcome=\"SUCCESS\"}[$__rate_interval]))",
+              "legendFormat": "단건 수집 요청"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "min": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
+          }
+        },
+        {
+          "id": 16,
+          "type": "timeseries",
+          "title": "DB 왕복 p99",
+          "description": "DB 왕복마다 걸린 시간의 p99를 SQL 종류와 테이블별로 그리고, 성공한 단건 수집 요청의 p99를 한 줄 더 그린다. 부하를 올릴 때 가장 먼저 오르는 줄이 먼저 막히는 DB 호출이다. 고객 조회는 고객 행을 FOR SHARE로 잠그므로, 같은 고객 행을 고치거나 보관하는 중이면 그 대기가 여기에 든다. 지표: `meterengine_db_operation_seconds_bucket`, `http_server_requests_seconds_bucket`",
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 28
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "histogram_quantile(0.99, sum by (le, operation, table) (rate(meterengine_db_operation_seconds_bucket{job=\"backend\"}[$__rate_interval])))",
+              "legendFormat": "{{operation}} {{table}}"
+            },
+            {
+              "refId": "B",
+              "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{job=\"backend\", method=\"POST\", uri=\"/v1/events\", outcome=\"SUCCESS\"}[$__rate_interval])))",
+              "legendFormat": "단건 수집 요청"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s",
+              "min": 0
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
+          }
+        }
+      ],
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 27
+      }
+    }
+  ]
+}

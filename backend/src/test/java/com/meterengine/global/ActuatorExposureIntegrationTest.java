@@ -58,6 +58,26 @@ class ActuatorExposureIntegrationTest {
   }
 
   @Test
+  void HTTP_요청_지연_히스토그램은_30초를_넘는_120초_경계까지_둔다() {
+    restTestClient.get().uri("/actuator/health").exchange().expectStatus().isOk();
+
+    restTestClient
+        .get()
+        .uri("/actuator/prometheus")
+        .exchange()
+        .expectStatus()
+        .isOk()
+        .expectBody(String.class)
+        .value(
+            body ->
+                assertThat(body.lines())
+                    .anyMatch(
+                        line ->
+                            line.startsWith("http_server_requests_seconds_bucket{")
+                                && line.contains("le=\"120.0\"")));
+  }
+
+  @Test
   void 헬스는_인증_없이_연다() {
     restTestClient.get().uri("/actuator/health").exchange().expectStatus().isOk();
   }
