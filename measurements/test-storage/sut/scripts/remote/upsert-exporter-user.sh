@@ -8,6 +8,7 @@ set -euo pipefail
 export AWS_REGION=ap-northeast-2
 
 readonly DEV_SERVER_PARAM_PATH=/meterengine/prod
+readonly PRODUCTION_PARAM_PATH=/meterengine/production
 readonly EXPORTER_ROLE=meterengine_exporter
 readonly POSTGRES_CLIENT_IMAGE=postgres:18
 readonly EXPECTED_ROLE_ROW="$EXPORTER_ROLE|t|t"
@@ -29,7 +30,7 @@ require_sut_param_path() {
 	local param_path="$1"
 	[ -n "$param_path" ] || die "파라미터 경로를 인자로 줘야 한다. 예: /meterengine/test-storage"
 	case "$param_path" in
-	"$DEV_SERVER_PARAM_PATH" | "$DEV_SERVER_PARAM_PATH"/*) die "개발 서버 경로 $DEV_SERVER_PARAM_PATH 는 쓰지 않는다" ;;
+	"$DEV_SERVER_PARAM_PATH" | "$DEV_SERVER_PARAM_PATH"/* | "$PRODUCTION_PARAM_PATH" | "$PRODUCTION_PARAM_PATH"/*) die "production 경로 $param_path 는 쓰지 않는다" ;;
 	esac
 	[[ "$param_path" =~ ^/meterengine/[a-z0-9-]+$ ]] || die "파라미터 경로 형식이 아니다: $param_path"
 }

@@ -1,8 +1,5 @@
-# 경보 규칙과 Slack 연동. 임계값의 근거는 각 규칙의 주석에 있다.
-# 값은 운영하면서 조정하는 것을 전제로 한 시작값이다. 조정하면 이 파일을 고쳐 배포한다.
-#
+# 경보 규칙과 Slack 연동. 임계값은 운영하며 조정하는 시작값이다.
 # 발화 테스트: 임계값을 일부러 낮춰 배포해 Slack 수신을 확인하고 원복한다.
-# 한 번도 울려 보지 않은 경보는 없는 것과 같다.
 apiVersion: 1
 
 contactPoints:
@@ -13,7 +10,7 @@ contactPoints:
         type: slack
         settings:
           # Grafana가 기동 때 환경변수로 치환한다. 값은 Parameter Store
-          # /meterengine/prod/slack-webhook-url 에서 온다 (deploy.sh -> compose environment).
+          # 환경의 Parameter Store 경로 아래 slack-webhook-url 에서 온다 (deploy.sh -> compose environment).
           url: $SLACK_WEBHOOK_URL
 
 policies:
@@ -29,8 +26,7 @@ groups:
     folder: MeterEngine
     interval: 1m
     rules:
-      # 헬스체크 실패. Prometheus가 백엔드 scrape에 실패하면 up이 0이 된다.
-      # 프로세스 다운, 포트 불통, 응답 불능을 전부 잡는다. 멈춘 색은 늘 0이라 대상 중 최댓값을 본다.
+      # 프로세스 다운, 포트 불통, 응답 불능을 잡는다. 멈춘 색은 up이 늘 0이라 대상 중 최댓값을 본다.
       # 블루그린 배포는 배포 중에도 한 색이 응답하므로 1분이면 정상 배포로는 울리지 않는다.
       - uid: backend-down
         title: 백엔드 헬스체크 실패

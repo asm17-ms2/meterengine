@@ -212,13 +212,12 @@ class RealOAuth2ProxyLoginTest(CaddySsoFixture, unittest.TestCase):
         self.assertIn("domain=localhost", headers["Set-Cookie"].lower())
 
 
-def write_sso_file(repo, value=None, param_path="/meterengine/prod"):
+def write_sso_file(repo, value=None):
     source = (DEPLOY / "deploy.sh").read_text()
     functions = repo / "functions.sh"
     functions.write_text(source[source.index("log() {"):source.rindex('\nmain "$@"')])
     (repo / "deploy/caddy").mkdir(parents=True, exist_ok=True)
     environment = {name: text for name, text in os.environ.items() if name != "CADDY_SSO_SITES"}
-    environment["PARAM_PATH"] = param_path
     if value is not None:
         environment["CADDY_SSO_SITES"] = value
     return subprocess.run(
@@ -241,16 +240,14 @@ class SsoSitesSwitchTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         return (self.repo / "deploy/caddy/sso.caddy").read_text()
 
-    def test_default_is_on_only_for_the_production_parameter_path(self):
-        source = (DEPLOY / "deploy.sh").read_text()
-        production = re.findall(r"^PARAM_PATH=(.+)$", source, re.M)[0]
-        self.assertEqual(self.written(param_path=production), self.ON)
-        for path in ("/meterengine/test-slo", "/meterengine/test-storage"):
-            self.assertEqual(self.written(param_path=path), self.OFF, path)
+    def test_value_decides_the_file(self):
+        self.assertEqual(self.written(value="on"), self.ON)
+        self.assertEqual(self.written(value="off"), self.OFF)
 
-    def test_deploy_conf_value_overrides_the_default(self):
-        self.assertEqual(self.written(value="off", param_path="/meterengine/prod"), self.OFF)
-        self.assertEqual(self.written(value="on", param_path="/meterengine/test-slo"), self.ON)
+    def test_missing_value_stops_the_deploy(self):
+        result = write_sso_file(self.repo)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("CADDY_SSO_SITES", result.stderr)
 
     def test_unknown_value_stops_the_deploy(self):
         for value in ("", "yes", "OFF"):

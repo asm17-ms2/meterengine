@@ -1,7 +1,7 @@
 name: AWS 접근 점검
 
 # 수동 실행 전용. OIDC 신뢰 관계와 ECR 접근이 살아 있는지 확인한다.
-# 신뢰 정책이 main 한정(refs/heads/main)이라 main에서 실행해야 통과한다.
+# GitHub Environment production은 main에서만 돌아 main에서 실행해야 통과한다.
 on: workflow_dispatch
 
 permissions:
@@ -11,6 +11,7 @@ permissions:
 jobs:
   check:
     name: check
+    environment: production
     runs-on: ubuntu-latest
     steps:
       - uses: aws-actions/configure-aws-credentials@v6
