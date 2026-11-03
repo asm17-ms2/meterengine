@@ -305,6 +305,7 @@ unset SESSION
 - 로컬 계정과 키는 `src/main/resources/db/local/R__local_credentials.sql`이 넣는다. 이 로케이션은 `local` 프로파일(`application-local.properties`)에서만 읽는다.
 - `create_webhook_tables` 마이그레이션은 `webhook_event`와 `webhook_delivery_attempt`의 UPDATE, DELETE, TRUNCATE를 트리거로 막는다. 통보와 시도 기록은 고치거나 지우지 않는다.
 - `create_event_rejections` 마이그레이션은 `event_rejection`의 UPDATE, DELETE, TRUNCATE를 트리거로 막는다. 수집 거절 기록도 다른 기록 표처럼 보존 기간 없이 지우지 않는다.
+- `create_invoice_finalization_attempt_table` 마이그레이션은 자동 확정의 시도 기록(`invoice_finalization_attempt`)과 다 훑은 달 표시(`invoice_finalization_month`)의 UPDATE, DELETE, TRUNCATE를 트리거로 막는다. 둘 다 인보이스처럼 환경 범위마다 따로 쌓는다.
 - 이미 적용된 `V__` 파일은 주석만 고쳐도 체크섬이 바뀌어 그 DB의 기동이 실패한다. 아래 "문제 해결" 참조.
 - V41은 기존 인보이스에도 고유한 표시 번호를 부여하고, 조회 링크의 토큰 해시, 만료와 폐기, 발급 당시 결제 모드를 저장한다. 공개 조회 감사는 토큰 대신 링크 ID를 행위자로 남긴다.
 - V44는 링크의 고객 결제 재시도 권한을 추가한다. 기존 링크와 옵션을 생략한 새 링크는 모두 조회만 허용한다.
