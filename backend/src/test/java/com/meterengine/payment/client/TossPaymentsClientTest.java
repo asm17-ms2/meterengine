@@ -13,7 +13,9 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import com.meterengine.payment.config.TossPaymentsConfig;
 import com.meterengine.payment.config.TossPaymentsProperties;
 import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.observation.DefaultMeterObservationHandler;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.micrometer.observation.ObservationRegistry;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -497,6 +499,42 @@ class TossPaymentsClientTest {
 
     assertThat(transactions).isEmpty();
     server.verify();
+  }
+
+  @Test
+  void 거래_목록_조회도_외부_호출_지표의_uri에_경로_틀을_남긴다() {
+    SimpleMeterRegistry observedMeterRegistry = new SimpleMeterRegistry();
+    ObservationRegistry observationRegistry = ObservationRegistry.create();
+    observationRegistry
+        .observationConfig()
+        .observationHandler(new DefaultMeterObservationHandler(observedMeterRegistry));
+    RestClient.Builder builder = RestClient.builder().observationRegistry(observationRegistry);
+    MockRestServiceServer observedServer = MockRestServiceServer.bindTo(builder).build();
+    TossPaymentsConfig.withTossDefaults(builder, new TossPaymentsProperties(URI.create(BASE)));
+    observedServer
+        .expect(
+            requestTo(
+                BASE
+                    + "/v1/transactions?startDate=2026-10-25T00:00:00"
+                    + "&endDate=2026-10-26T00:00:00&limit=100"))
+        .andRespond(withSuccess("[]", MediaType.APPLICATION_JSON));
+
+    new TossPaymentsClient(builder.build(), observedMeterRegistry)
+        .listTransactions(
+            SECRET_KEY,
+            LocalDateTime.parse("2026-10-25T00:00:00"),
+            LocalDateTime.parse("2026-10-26T00:00:00"),
+            null,
+            100);
+
+    assertThat(
+            observedMeterRegistry
+                .get("http.client.requests")
+                .tag("uri", "/v1/transactions")
+                .timer()
+                .count())
+        .isEqualTo(1);
+    observedServer.verify();
   }
 
   @Test

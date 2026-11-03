@@ -19,6 +19,12 @@ ephemeral "random_password" "frontend_api_key" {
   special = false
 }
 
+# random_bytes.base64 44자는 oauth2-proxy가 44바이트로 읽어 기동하지 못하므로 32자 문자열로 만든다.
+ephemeral "random_password" "oauth2_proxy_cookie_secret" {
+  length  = 32
+  special = false
+}
+
 ephemeral "random_bytes" "crypto_encryption_key" {
   length = 32
 }
@@ -35,6 +41,9 @@ locals {
 
   # SUT 경보가 팀 Slack으로 가지 않게 아무도 받지 않는 주소를 준다. Grafana가 URL 형식은 요구한다.
   unreachable_slack_webhook_url = "http://127.0.0.1:9/no-slack-in-${var.sut_name}"
+
+  # SUT는 GitHub 로그인을 쓰지 않는다. oauth2-proxy는 기동할 때 GitHub에 묻지 않아 가짜 값으로도 뜬다.
+  unused_oauth2_proxy_client = "unused-in-${var.sut_name}"
 
   # deploy.sh가 이 경로 아래 이름을 대문자 환경변수로 바꿔 compose에 넘긴다.
   plain_parameters = {
@@ -60,6 +69,18 @@ resource "aws_ssm_parameter" "slack_webhook_url" {
   name  = "${local.param_path}/slack-webhook-url"
   type  = "SecureString"
   value = local.unreachable_slack_webhook_url
+}
+
+resource "aws_ssm_parameter" "oauth2_proxy_client_id" {
+  name  = "${local.param_path}/oauth2-proxy-client-id"
+  type  = "SecureString"
+  value = local.unused_oauth2_proxy_client
+}
+
+resource "aws_ssm_parameter" "oauth2_proxy_client_secret" {
+  name  = "${local.param_path}/oauth2-proxy-client-secret"
+  type  = "SecureString"
+  value = local.unused_oauth2_proxy_client
 }
 
 # --- 상태 파일에 남지 않는 비밀번호 ---
@@ -109,4 +130,11 @@ resource "aws_ssm_parameter" "crypto_encryption_key" {
   type             = "SecureString"
   value_wo         = ephemeral.random_bytes.crypto_encryption_key.base64
   value_wo_version = local.crypto_encryption_key_version
+}
+
+resource "aws_ssm_parameter" "oauth2_proxy_cookie_secret" {
+  name             = "${local.param_path}/oauth2-proxy-cookie-secret"
+  type             = "SecureString"
+  value_wo         = ephemeral.random_password.oauth2_proxy_cookie_secret.result
+  value_wo_version = local.password_version
 }

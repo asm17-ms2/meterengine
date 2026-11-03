@@ -23,6 +23,7 @@ import com.meterengine.payment.dto.UpdateTossPaymentsCredentialRequest;
 import com.meterengine.payment.entity.TossPaymentsCredential;
 import com.meterengine.payment.repository.TossPaymentsCredentialRepository;
 import com.meterengine.payment.service.TossPaymentsCredentialService;
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -475,8 +476,10 @@ class TossPaymentsWebhookIntegrationTest {
     return meterRegistry
         .get("meterengine.payment.attempt")
         .tags("mode", "test", "result", result)
-        .counter()
-        .count();
+        .counters()
+        .stream()
+        .mapToDouble(Counter::count)
+        .sum();
   }
 
   private double cancellationCount(String result) {
