@@ -27,13 +27,24 @@
   "templating": {
     "list": [
       {
-        "name": "instance",
-        "label": "백엔드 색",
-        "description": "백엔드 행과 커넥션 풀 행의 패널에만 걸린다. 다른 패널의 지표에는 블루와 그린 구분이 없거나 색별로 이미 나눠 그린다.",
-        "type": "custom",
-        "query": "backend-blue : backend-blue:8080,backend-green : backend-green:8080",
+        "name": "env",
+        "label": "환경",
+        "description": "공용 모니터링 서버가 붙이는 env 라벨로 환경을 고른다. env 라벨이 없는 서버 안 Prometheus에서는 All만 보이고 모든 값을 그린다. 관측 시스템과 Caddy 패널에는 걸리지 않는다.",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "label_values(up, env)",
+          "refId": "env"
+        },
+        "definition": "label_values(up, env)",
+        "refresh": 2,
         "includeAll": true,
+        "allValue": ".*",
         "multi": true,
+        "sort": 1,
         "current": {
           "selected": true,
           "text": [
@@ -42,25 +53,36 @@
           "value": [
             "$__all"
           ]
+        }
+      },
+      {
+        "name": "instance",
+        "label": "서버",
+        "description": "고른 환경의 백엔드 서버다. 공용 모니터링 서버에서는 인스턴스 ID라 백엔드, 서버, 컨테이너 패널에 함께 걸린다. 서버 안 Prometheus에서는 백엔드 색이라 특정 값을 고르면 서버와 컨테이너 패널이 빈다.",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
         },
-        "options": [
-          {
-            "selected": true,
-            "text": "All",
-            "value": "$__all"
-          },
-          {
-            "selected": false,
-            "text": "backend-blue",
-            "value": "backend-blue:8080"
-          },
-          {
-            "selected": false,
-            "text": "backend-green",
-            "value": "backend-green:8080"
-          }
-        ],
-        "hide": 0
+        "query": {
+          "query": "label_values(up{job=\"backend\", env=~\"$env\"}, instance)",
+          "refId": "instance"
+        },
+        "definition": "label_values(up{job=\"backend\", env=~\"$env\"}, instance)",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "sort": 1,
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        }
       }
     ]
   },
@@ -82,7 +104,7 @@
       "id": 2,
       "type": "timeseries",
       "title": "JVM 힙",
-      "description": "백엔드 JVM 힙의 사용량과 최대를 색별로 그리고, 오른쪽 축에 마지막 GC 뒤에도 차 있는 오래 사는 객체 영역의 비율을 그린다. GC 뒤 비율이 내려오지 않고 계속 오르면 메모리 누수나 힙 부족을 의심한다. 지표: `jvm_memory_used_bytes`, `jvm_memory_max_bytes`, `jvm_memory_usage_after_gc`",
+      "description": "백엔드 JVM 힙의 사용량과 최대를 백엔드별로 그리고, 오른쪽 축에 마지막 GC 뒤에도 차 있는 오래 사는 객체 영역의 비율을 그린다. GC 뒤 비율이 내려오지 않고 계속 오르면 메모리 누수나 힙 부족을 의심한다. 지표: `jvm_memory_used_bytes`, `jvm_memory_max_bytes`, `jvm_memory_usage_after_gc`",
       "gridPos": {
         "h": 8,
         "w": 6,
@@ -96,17 +118,17 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (instance) (jvm_memory_used_bytes{area=\"heap\", job=\"backend\", instance=~\"$instance\"})",
+          "expr": "sum by (instance) (jvm_memory_used_bytes{env=~\"$env\", area=\"heap\", job=\"backend\", instance=~\"$instance\"})",
           "legendFormat": "{{instance}} 사용"
         },
         {
           "refId": "B",
-          "expr": "sum by (instance) (jvm_memory_max_bytes{area=\"heap\", job=\"backend\", instance=~\"$instance\"} > 0)",
+          "expr": "sum by (instance) (jvm_memory_max_bytes{env=~\"$env\", area=\"heap\", job=\"backend\", instance=~\"$instance\"} > 0)",
           "legendFormat": "{{instance}} 최대"
         },
         {
           "refId": "C",
-          "expr": "max by (instance) (jvm_memory_usage_after_gc{area=\"heap\", job=\"backend\", instance=~\"$instance\"})",
+          "expr": "max by (instance) (jvm_memory_usage_after_gc{env=~\"$env\", area=\"heap\", job=\"backend\", instance=~\"$instance\"})",
           "legendFormat": "{{instance}} GC 뒤 비율"
         }
       ],
@@ -152,7 +174,7 @@
       "id": 3,
       "type": "timeseries",
       "title": "GC 정지 시간",
-      "description": "GC로 앱이 멈춘 시간을 초당 합계와 최근 가장 긴 한 번으로 나눠 색별로 그린다. 오르면 그동안 요청 처리가 멈춰 응답 지연이 늘어난다. 지표: `jvm_gc_pause_seconds_sum`, `jvm_gc_pause_seconds_max`",
+      "description": "GC로 앱이 멈춘 시간을 초당 합계와 최근 가장 긴 한 번으로 나눠 백엔드별로 그린다. 오르면 그동안 요청 처리가 멈춰 응답 지연이 늘어난다. 지표: `jvm_gc_pause_seconds_sum`, `jvm_gc_pause_seconds_max`",
       "gridPos": {
         "h": 8,
         "w": 6,
@@ -166,12 +188,12 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (instance) (rate(jvm_gc_pause_seconds_sum{job=\"backend\", instance=~\"$instance\"}[$__rate_interval]))",
+          "expr": "sum by (instance) (rate(jvm_gc_pause_seconds_sum{env=~\"$env\", job=\"backend\", instance=~\"$instance\"}[$__rate_interval]))",
           "legendFormat": "{{instance}} 초당 정지"
         },
         {
           "refId": "B",
-          "expr": "max by (instance) (jvm_gc_pause_seconds_max{job=\"backend\", instance=~\"$instance\"})",
+          "expr": "max by (instance) (jvm_gc_pause_seconds_max{env=~\"$env\", job=\"backend\", instance=~\"$instance\"})",
           "legendFormat": "{{instance}} 가장 긴 정지"
         }
       ],
@@ -210,7 +232,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (instance, state) (jvm_threads_states_threads{job=\"backend\", instance=~\"$instance\"})",
+          "expr": "sum by (instance, state) (jvm_threads_states_threads{env=~\"$env\", job=\"backend\", instance=~\"$instance\"})",
           "legendFormat": "{{instance}} {{state}}"
         }
       ],
@@ -235,7 +257,7 @@
       "id": 5,
       "type": "timeseries",
       "title": "재시작",
-      "description": "백엔드 프로세스가 뜬 뒤 지난 시간을 색별로 그린다. 선이 0으로 떨어지면 그때 다시 떴고, 배포 시각이 아닌데 떨어지면 비정상 종료다. 지표: `process_start_time_seconds`",
+      "description": "백엔드 프로세스가 뜬 뒤 지난 시간을 백엔드별로 그린다. 선이 0으로 떨어지면 그때 다시 떴고, 배포 시각이 아닌데 떨어지면 비정상 종료다. 지표: `process_start_time_seconds`",
       "gridPos": {
         "h": 8,
         "w": 6,
@@ -249,7 +271,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "time() - process_start_time_seconds{job=\"backend\", instance=~\"$instance\"}",
+          "expr": "time() - process_start_time_seconds{env=~\"$env\", job=\"backend\", instance=~\"$instance\"}",
           "legendFormat": "{{instance}}"
         }
       ],
@@ -288,12 +310,12 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (instance) (tomcat_threads_busy_threads{job=\"backend\", instance=~\"$instance\"})",
+          "expr": "sum by (instance) (tomcat_threads_busy_threads{env=~\"$env\", job=\"backend\", instance=~\"$instance\"})",
           "legendFormat": "{{instance}} 바쁨"
         },
         {
           "refId": "B",
-          "expr": "sum by (instance) (tomcat_threads_config_max_threads{job=\"backend\", instance=~\"$instance\"})",
+          "expr": "sum by (instance) (tomcat_threads_config_max_threads{env=~\"$env\", job=\"backend\", instance=~\"$instance\"})",
           "legendFormat": "{{instance}} 최대"
         }
       ],
@@ -318,7 +340,7 @@
       "id": 7,
       "type": "timeseries",
       "title": "진행 중 요청",
-      "description": "지금 처리 중인 HTTP 요청 수를 색별로 그린다. Prometheus 수집 요청 자신도 세므로 평소 값은 1 안팎이고, 계속 늘면 요청이 끝나지 못하고 쌓이는 것이다. 지표: `http_server_requests_active_seconds_gcount`",
+      "description": "지금 처리 중인 HTTP 요청 수를 백엔드별로 그린다. Prometheus 수집 요청 자신도 세므로 평소 값은 1 안팎이고, 계속 늘면 요청이 끝나지 못하고 쌓이는 것이다. 지표: `http_server_requests_active_seconds_gcount`",
       "gridPos": {
         "h": 8,
         "w": 8,
@@ -332,7 +354,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (instance) (http_server_requests_active_seconds_gcount{job=\"backend\", instance=~\"$instance\"})",
+          "expr": "sum by (instance) (http_server_requests_active_seconds_gcount{env=~\"$env\", job=\"backend\", instance=~\"$instance\"})",
           "legendFormat": "{{instance}}"
         }
       ],
@@ -357,7 +379,7 @@
       "id": 8,
       "type": "timeseries",
       "title": "error 로그 수",
-      "description": "백엔드가 남긴 error 수준 로그를 초당 수로 색별로 그린다. 갑자기 늘면 같은 시각의 요청 로그에서 오류를 찾는다. 지표: `logback_events_total{level=\"error\"}`",
+      "description": "백엔드가 남긴 error 수준 로그를 초당 수로 백엔드별로 그린다. 갑자기 늘면 같은 시각의 요청 로그에서 오류를 찾는다. 지표: `logback_events_total{level=\"error\"}`",
       "gridPos": {
         "h": 8,
         "w": 8,
@@ -371,7 +393,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (instance) (rate(logback_events_total{job=\"backend\", level=\"error\", instance=~\"$instance\"}[$__rate_interval]))",
+          "expr": "sum by (instance) (rate(logback_events_total{env=~\"$env\", job=\"backend\", level=\"error\", instance=~\"$instance\"}[$__rate_interval]))",
           "legendFormat": "{{instance}}"
         }
       ],
@@ -423,12 +445,12 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (instance) (hikaricp_connections_active{job=\"backend\", instance=~\"$instance\"})",
+          "expr": "sum by (instance) (hikaricp_connections_active{env=~\"$env\", job=\"backend\", instance=~\"$instance\"})",
           "legendFormat": "{{instance}} 활성"
         },
         {
           "refId": "B",
-          "expr": "sum by (instance) (hikaricp_connections_max{job=\"backend\", instance=~\"$instance\"})",
+          "expr": "sum by (instance) (hikaricp_connections_max{env=~\"$env\", job=\"backend\", instance=~\"$instance\"})",
           "legendFormat": "{{instance}} 최대"
         }
       ],
@@ -467,7 +489,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (instance) (hikaricp_connections_pending{job=\"backend\", instance=~\"$instance\"})",
+          "expr": "sum by (instance) (hikaricp_connections_pending{env=~\"$env\", job=\"backend\", instance=~\"$instance\"})",
           "legendFormat": "{{instance}}"
         }
       ],
@@ -506,7 +528,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (instance) (increase(hikaricp_connections_timeout_total{job=\"backend\", instance=~\"$instance\"}[5m]))",
+          "expr": "sum by (instance) (increase(hikaricp_connections_timeout_total{env=~\"$env\", job=\"backend\", instance=~\"$instance\"}[5m]))",
           "legendFormat": "{{instance}}"
         }
       ],
@@ -545,7 +567,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.99, sum by (le, instance) (rate(hikaricp_connections_acquire_seconds_bucket{job=\"backend\", instance=~\"$instance\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.99, sum by (le, instance) (rate(hikaricp_connections_acquire_seconds_bucket{env=~\"$env\", job=\"backend\", instance=~\"$instance\"}[$__rate_interval])))",
           "legendFormat": "{{instance}}"
         }
       ],
@@ -584,7 +606,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.99, sum by (le, instance) (rate(hikaricp_connections_usage_seconds_bucket{job=\"backend\", instance=~\"$instance\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.99, sum by (le, instance) (rate(hikaricp_connections_usage_seconds_bucket{env=~\"$env\", job=\"backend\", instance=~\"$instance\"}[$__rate_interval])))",
           "legendFormat": "{{instance}}"
         }
       ],
@@ -636,8 +658,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "100 * (1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[$__rate_interval])))",
-          "legendFormat": "CPU"
+          "expr": "100 * (1 - avg by (instance) (rate(node_cpu_seconds_total{env=~\"$env\", instance=~\"$instance\", mode=\"idle\"}[$__rate_interval])))",
+          "legendFormat": "{{instance}}"
         }
       ],
       "fieldConfig": {
@@ -676,8 +698,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "100 * (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)",
-          "legendFormat": "메모리"
+          "expr": "100 * (1 - node_memory_MemAvailable_bytes{env=~\"$env\", instance=~\"$instance\"} / node_memory_MemTotal_bytes{env=~\"$env\", instance=~\"$instance\"})",
+          "legendFormat": "{{instance}}"
         }
       ],
       "fieldConfig": {
@@ -716,8 +738,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "100 * (1 - node_filesystem_avail_bytes{mountpoint=\"/\", fstype!~\"tmpfs|overlay\"} / node_filesystem_size_bytes{mountpoint=\"/\", fstype!~\"tmpfs|overlay\"})",
-          "legendFormat": "루트 디스크"
+          "expr": "100 * (1 - node_filesystem_avail_bytes{env=~\"$env\", instance=~\"$instance\", mountpoint=\"/\", fstype!~\"tmpfs|overlay\"} / node_filesystem_size_bytes{env=~\"$env\", instance=~\"$instance\", mountpoint=\"/\", fstype!~\"tmpfs|overlay\"})",
+          "legendFormat": "{{instance}}"
         }
       ],
       "fieldConfig": {
@@ -756,8 +778,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "node_load1 / count without (cpu, mode) (node_cpu_seconds_total{mode=\"idle\"})",
-          "legendFormat": "코어당 load"
+          "expr": "node_load1{env=~\"$env\", instance=~\"$instance\"} / count without (cpu, mode) (node_cpu_seconds_total{env=~\"$env\", instance=~\"$instance\", mode=\"idle\"})",
+          "legendFormat": "{{instance}}"
         }
       ],
       "fieldConfig": {
@@ -795,8 +817,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "rate(node_disk_io_time_weighted_seconds_total[$__rate_interval])",
-          "legendFormat": "{{device}}"
+          "expr": "rate(node_disk_io_time_weighted_seconds_total{env=~\"$env\", instance=~\"$instance\"}[$__rate_interval])",
+          "legendFormat": "{{instance}} {{device}}"
         }
       ],
       "fieldConfig": {
@@ -834,8 +856,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(node_filesystem_avail_bytes{mountpoint=\"/\", fstype!~\"tmpfs|overlay\"} / -deriv(node_filesystem_avail_bytes{mountpoint=\"/\", fstype!~\"tmpfs|overlay\"}[6h])) and deriv(node_filesystem_avail_bytes{mountpoint=\"/\", fstype!~\"tmpfs|overlay\"}[6h]) < 0",
-          "legendFormat": "루트 디스크"
+          "expr": "(node_filesystem_avail_bytes{env=~\"$env\", instance=~\"$instance\", mountpoint=\"/\", fstype!~\"tmpfs|overlay\"} / -deriv(node_filesystem_avail_bytes{env=~\"$env\", instance=~\"$instance\", mountpoint=\"/\", fstype!~\"tmpfs|overlay\"}[6h])) and deriv(node_filesystem_avail_bytes{env=~\"$env\", instance=~\"$instance\", mountpoint=\"/\", fstype!~\"tmpfs|overlay\"}[6h]) < 0",
+          "legendFormat": "{{instance}}"
         }
       ],
       "fieldConfig": {
@@ -874,13 +896,13 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (interface) (rate(container_network_receive_bytes_total{id=\"/\", interface!~\"lo|veth.*|docker.*|br-.*\"}[$__rate_interval]))",
-          "legendFormat": "{{interface}} 수신"
+          "expr": "sum by (instance, interface) (rate(container_network_receive_bytes_total{env=~\"$env\", instance=~\"$instance\", id=\"/\", interface!~\"lo|veth.*|docker.*|br-.*\"}[$__rate_interval]))",
+          "legendFormat": "{{instance}} {{interface}} 수신"
         },
         {
           "refId": "B",
-          "expr": "sum by (interface) (rate(container_network_transmit_bytes_total{id=\"/\", interface!~\"lo|veth.*|docker.*|br-.*\"}[$__rate_interval]))",
-          "legendFormat": "{{interface}} 송신"
+          "expr": "sum by (instance, interface) (rate(container_network_transmit_bytes_total{env=~\"$env\", instance=~\"$instance\", id=\"/\", interface!~\"lo|veth.*|docker.*|br-.*\"}[$__rate_interval]))",
+          "legendFormat": "{{instance}} {{interface}} 송신"
         }
       ],
       "fieldConfig": {
@@ -918,13 +940,13 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (interface) (rate(container_network_receive_packets_dropped_total{id=\"/\", interface!~\"lo|veth.*|docker.*|br-.*\"}[$__rate_interval]))",
-          "legendFormat": "{{interface}} 수신"
+          "expr": "sum by (instance, interface) (rate(container_network_receive_packets_dropped_total{env=~\"$env\", instance=~\"$instance\", id=\"/\", interface!~\"lo|veth.*|docker.*|br-.*\"}[$__rate_interval]))",
+          "legendFormat": "{{instance}} {{interface}} 수신"
         },
         {
           "refId": "B",
-          "expr": "sum by (interface) (rate(container_network_transmit_packets_dropped_total{id=\"/\", interface!~\"lo|veth.*|docker.*|br-.*\"}[$__rate_interval]))",
-          "legendFormat": "{{interface}} 송신"
+          "expr": "sum by (instance, interface) (rate(container_network_transmit_packets_dropped_total{env=~\"$env\", instance=~\"$instance\", id=\"/\", interface!~\"lo|veth.*|docker.*|br-.*\"}[$__rate_interval]))",
+          "legendFormat": "{{instance}} {{interface}} 송신"
         }
       ],
       "fieldConfig": {
@@ -962,8 +984,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "increase(node_vmstat_oom_kill[5m])",
-          "legendFormat": "OOM 종료"
+          "expr": "increase(node_vmstat_oom_kill{env=~\"$env\", instance=~\"$instance\"}[5m])",
+          "legendFormat": "{{instance}}"
         }
       ],
       "fieldConfig": {
@@ -1014,8 +1036,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (name) (rate(container_cpu_usage_seconds_total{name!=\"\"}[$__rate_interval]))",
-          "legendFormat": "{{name}}"
+          "expr": "sum by (instance, name) (rate(container_cpu_usage_seconds_total{env=~\"$env\", instance=~\"$instance\", name!=\"\"}[$__rate_interval]))",
+          "legendFormat": "{{instance}} {{name}}"
         }
       ],
       "fieldConfig": {
@@ -1053,13 +1075,13 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (name) (container_memory_working_set_bytes{name!=\"\"})",
-          "legendFormat": "{{name}}"
+          "expr": "sum by (instance, name) (container_memory_working_set_bytes{env=~\"$env\", instance=~\"$instance\", name!=\"\"})",
+          "legendFormat": "{{instance}} {{name}}"
         },
         {
           "refId": "B",
-          "expr": "max by (name) (container_spec_memory_limit_bytes{name!=\"\"}) > 0",
-          "legendFormat": "{{name}} 한도"
+          "expr": "max by (instance, name) (container_spec_memory_limit_bytes{env=~\"$env\", instance=~\"$instance\", name!=\"\"}) > 0",
+          "legendFormat": "{{instance}} {{name}} 한도"
         }
       ],
       "fieldConfig": {

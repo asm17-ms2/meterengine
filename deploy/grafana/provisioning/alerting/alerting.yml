@@ -10,7 +10,7 @@ contactPoints:
         type: slack
         settings:
           # Grafana가 기동 때 환경변수로 치환한다. 값은 Parameter Store
-          # 환경의 Parameter Store 경로 아래 slack-webhook-url 에서 온다 (deploy.sh -> compose environment).
+          # 환경의 Parameter Store 경로 아래 slack-webhook-url 에서 온다 (deploy.sh나 공용 서버의 monitoring/start.sh -> compose environment).
           url: $SLACK_WEBHOOK_URL
 
 policies:
@@ -25,8 +25,10 @@ groups:
     name: meterengine
     folder: MeterEngine
     interval: 1m
+    # 공용 Prometheus는 측정 환경(test-로 시작)도 긁어 모든 선택자에서 빼고 env별로 울린다.
+    # 포함 필터를 쓰면 env 라벨이 없는 서버 안 Prometheus에서 경보가 모두 꺼진다.
     rules:
-      # 프로세스 다운, 포트 불통, 응답 불능을 잡는다. 멈춘 색은 up이 늘 0이라 대상 중 최댓값을 본다.
+      # 프로세스 다운, 포트 불통, 응답 불능을 잡는다. 멈춘 색은 up이 늘 0이라 환경마다 대상 중 최댓값을 본다.
       # 블루그린 배포는 배포 중에도 한 색이 응답하므로 1분이면 정상 배포로는 울리지 않는다.
       - uid: backend-down
         title: 백엔드 헬스체크 실패
@@ -36,14 +38,14 @@ groups:
         noDataState: Alerting
         execErrState: Alerting
         annotations:
-          summary: 어느 백엔드 색도 1분 넘게 scrape에 응답하지 않는다. meterengine.com API가 죽었을 가능성이 높다.
+          summary: 환경 {{ $labels.env }}에서 어느 백엔드도 1분 넘게 scrape에 응답하지 않는다. 그 환경의 API가 죽었을 가능성이 높다.
         data:
           - refId: A
             relativeTimeRange: { from: 300, to: 0 }
             datasourceUid: prometheus
             model:
               refId: A
-              expr: max(up{job="backend"})
+              expr: max by (env) (up{env!~"test-.*", job="backend"})
               instant: true
           - refId: C
             relativeTimeRange: { from: 0, to: 0 }
@@ -65,14 +67,14 @@ groups:
         noDataState: OK
         execErrState: Error
         annotations:
-          summary: 블루와 그린이 15분 넘게 함께 떠 있다. 배포가 옛 색을 멈추기 전에 중단됐을 수 있으니 deploy.sh 로그를 보고 한쪽을 멈춘다.
+          summary: 환경 {{ $labels.env }}에서 블루와 그린이 15분 넘게 함께 떠 있다. 배포가 옛 색을 멈추기 전에 중단됐을 수 있으니 deploy.sh 로그를 보고 한쪽을 멈춘다.
         data:
           - refId: A
             relativeTimeRange: { from: 300, to: 0 }
             datasourceUid: prometheus
             model:
               refId: A
-              expr: sum(up{job="backend"})
+              expr: sum by (env) (up{env!~"test-.*", job="backend"})
               instant: true
           - refId: C
             relativeTimeRange: { from: 0, to: 0 }
@@ -95,14 +97,14 @@ groups:
         noDataState: OK
         execErrState: Alerting
         annotations:
-          summary: 최근 5분 요청의 5% 넘게 5xx로 실패하고 있다.
+          summary: 환경 {{ $labels.env }}에서 최근 5분 요청의 5% 넘게 5xx로 실패하고 있다.
         data:
           - refId: A
             relativeTimeRange: { from: 300, to: 0 }
             datasourceUid: prometheus
             model:
               refId: A
-              expr: sum(rate(http_server_requests_seconds_count{outcome="SERVER_ERROR",uri!~"/actuator.*"}[5m])) / sum(rate(http_server_requests_seconds_count{uri!~"/actuator.*"}[5m]))
+              expr: sum by (env) (rate(http_server_requests_seconds_count{env!~"test-.*", outcome="SERVER_ERROR",uri!~"/actuator.*"}[5m])) / sum by (env) (rate(http_server_requests_seconds_count{env!~"test-.*", uri!~"/actuator.*"}[5m]))
               instant: true
           - refId: C
             relativeTimeRange: { from: 0, to: 0 }
@@ -114,7 +116,7 @@ groups:
               conditions:
                 - evaluator: { type: gt, params: [0.05] }
 
-      # CPU 5분 평균 80% 초과가 10분 지속. t4g.medium 2vCPU 기준으로, 짧은 스파이크(배포,
+      # 서버마다 CPU 5분 평균 80% 초과가 10분 지속. t4g.medium 2vCPU 기준으로, 짧은 스파이크(배포,
       # 마이그레이션)는 넘기고 지속 포화만 잡는 값이다.
       - uid: high-cpu
         title: CPU 사용률 초과
@@ -123,14 +125,14 @@ groups:
         noDataState: OK
         execErrState: Alerting
         annotations:
-          summary: EC2 CPU가 10분 넘게 80%를 웃돌고 있다. 처리량 한계이거나 폭주하는 프로세스가 있다.
+          summary: 환경 {{ $labels.env }}의 서버 {{ $labels.instance }} CPU가 10분 넘게 80%를 웃돌고 있다. 처리량 한계이거나 폭주하는 프로세스가 있다.
         data:
           - refId: A
             relativeTimeRange: { from: 600, to: 0 }
             datasourceUid: prometheus
             model:
               refId: A
-              expr: 100 * (1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m])))
+              expr: 100 * (1 - avg by (env, instance) (rate(node_cpu_seconds_total{env!~"test-.*", mode="idle"}[5m])))
               instant: true
           - refId: C
             relativeTimeRange: { from: 0, to: 0 }
@@ -154,7 +156,7 @@ groups:
         noDataState: OK
         execErrState: Error
         annotations:
-          summary: 예약 작업 {{ $labels.job_name }} 이 최근 15분 안에 실패했다. scheduled_job_run의 error_summary와 백엔드 로그를 본다.
+          summary: 환경 {{ $labels.env }}의 예약 작업 {{ $labels.job_name }} 이 최근 15분 안에 실패했다. scheduled_job_run의 error_summary와 백엔드 로그를 본다.
         data:
           - refId: A
             relativeTimeRange: { from: 900, to: 0 }
@@ -162,12 +164,12 @@ groups:
             model:
               refId: A
               expr: >-
-                (sum by (job_name) (meterengine_scheduled_job_run_total{result="failed",job_name=~"payment_attempt_confirmation|payment_retry|payment_reconciliation|webhook_delivery|unbilled_usage_report"}
-                unless meterengine_scheduled_job_run_total{result="failed"} offset 15m) > 0)
-                or (sum by (job_name) (increase(meterengine_scheduled_job_run_total{result="failed",job_name=~"payment_attempt_confirmation|payment_retry|payment_reconciliation|webhook_delivery|unbilled_usage_report"}[15m])) > 0)
-                or (sum by (job_name) (meterengine_scheduled_job_items_total{result="failed",job_name=~"payment_attempt_confirmation|payment_retry|payment_reconciliation|webhook_delivery|unbilled_usage_report"}
-                unless meterengine_scheduled_job_items_total{result="failed"} offset 15m) > 0)
-                or (sum by (job_name) (increase(meterengine_scheduled_job_items_total{result="failed",job_name=~"payment_attempt_confirmation|payment_retry|payment_reconciliation|webhook_delivery|unbilled_usage_report"}[15m])) > 0)
+                (sum by (env, job_name) (meterengine_scheduled_job_run_total{env!~"test-.*", result="failed",job_name=~"payment_attempt_confirmation|payment_retry|payment_reconciliation|webhook_delivery|unbilled_usage_report"}
+                unless meterengine_scheduled_job_run_total{env!~"test-.*", result="failed"} offset 15m) > 0)
+                or (sum by (env, job_name) (increase(meterengine_scheduled_job_run_total{env!~"test-.*", result="failed",job_name=~"payment_attempt_confirmation|payment_retry|payment_reconciliation|webhook_delivery|unbilled_usage_report"}[15m])) > 0)
+                or (sum by (env, job_name) (meterengine_scheduled_job_items_total{env!~"test-.*", result="failed",job_name=~"payment_attempt_confirmation|payment_retry|payment_reconciliation|webhook_delivery|unbilled_usage_report"}
+                unless meterengine_scheduled_job_items_total{env!~"test-.*", result="failed"} offset 15m) > 0)
+                or (sum by (env, job_name) (increase(meterengine_scheduled_job_items_total{env!~"test-.*", result="failed",job_name=~"payment_attempt_confirmation|payment_retry|payment_reconciliation|webhook_delivery|unbilled_usage_report"}[15m])) > 0)
               instant: true
           - refId: C
             relativeTimeRange: { from: 0, to: 0 }
@@ -188,7 +190,7 @@ groups:
         noDataState: OK
         execErrState: Error
         annotations:
-          summary: 예약 작업 {{ $labels.job_name }} 이 5분 넘게 성공하지 않았다. 작업이 멈췄거나 계속 실패하고 있다.
+          summary: 환경 {{ $labels.env }}의 예약 작업 {{ $labels.job_name }} 이 5분 넘게 성공하지 않았다. 작업이 멈췄거나 계속 실패하고 있다.
         data:
           - refId: A
             relativeTimeRange: { from: 900, to: 0 }
@@ -196,9 +198,9 @@ groups:
             model:
               refId: A
               expr: >-
-                (time() - max by (job_name) (meterengine_scheduled_job_last_success_seconds{job_name=~"payment_attempt_confirmation|webhook_delivery"}))
-                or on (job_name) (count by (job_name) (meterengine_scheduled_job_run_total{job_name=~"payment_attempt_confirmation|webhook_delivery"}) * 0
-                + scalar(time() - max(process_start_time_seconds{job="backend"})))
+                (time() - max by (env, job_name) (meterengine_scheduled_job_last_success_seconds{env!~"test-.*", job_name=~"payment_attempt_confirmation|webhook_delivery"}))
+                or on (env, job_name) (count by (env, job_name) (meterengine_scheduled_job_run_total{env!~"test-.*", job_name=~"payment_attempt_confirmation|webhook_delivery"}) * 0
+                + on (env) group_left () (time() - max by (env) (process_start_time_seconds{env!~"test-.*", job="backend"})))
               instant: true
           - refId: C
             relativeTimeRange: { from: 0, to: 0 }
@@ -218,7 +220,7 @@ groups:
         noDataState: OK
         execErrState: Error
         annotations:
-          summary: 예약 작업 {{ $labels.job_name }} 이 30분 넘게 성공하지 않았다. 작업이 멈췄거나 계속 실패하고 있다.
+          summary: 환경 {{ $labels.env }}의 예약 작업 {{ $labels.job_name }} 이 30분 넘게 성공하지 않았다. 작업이 멈췄거나 계속 실패하고 있다.
         data:
           - refId: A
             relativeTimeRange: { from: 900, to: 0 }
@@ -226,9 +228,9 @@ groups:
             model:
               refId: A
               expr: >-
-                (time() - max by (job_name) (meterengine_scheduled_job_last_success_seconds{job_name="payment_retry"}))
-                or on (job_name) (count by (job_name) (meterengine_scheduled_job_run_total{job_name="payment_retry"}) * 0
-                + scalar(time() - max(process_start_time_seconds{job="backend"})))
+                (time() - max by (env, job_name) (meterengine_scheduled_job_last_success_seconds{env!~"test-.*", job_name="payment_retry"}))
+                or on (env, job_name) (count by (env, job_name) (meterengine_scheduled_job_run_total{env!~"test-.*", job_name="payment_retry"}) * 0
+                + on (env) group_left () (time() - max by (env) (process_start_time_seconds{env!~"test-.*", job="backend"})))
               instant: true
           - refId: C
             relativeTimeRange: { from: 0, to: 0 }
@@ -248,7 +250,7 @@ groups:
         noDataState: OK
         execErrState: Error
         annotations:
-          summary: 예약 작업 {{ $labels.job_name }} 이 2시간 넘게 성공하지 않았다. 작업이 멈췄거나 계속 실패하고 있다.
+          summary: 환경 {{ $labels.env }}의 예약 작업 {{ $labels.job_name }} 이 2시간 넘게 성공하지 않았다. 작업이 멈췄거나 계속 실패하고 있다.
         data:
           - refId: A
             relativeTimeRange: { from: 900, to: 0 }
@@ -256,9 +258,9 @@ groups:
             model:
               refId: A
               expr: >-
-                (time() - max by (job_name) (meterengine_scheduled_job_last_success_seconds{job_name="invoice_auto_finalize"}))
-                or on (job_name) (count by (job_name) (meterengine_scheduled_job_run_total{job_name="invoice_auto_finalize"}) * 0
-                + scalar(time() - max(process_start_time_seconds{job="backend"})))
+                (time() - max by (env, job_name) (meterengine_scheduled_job_last_success_seconds{env!~"test-.*", job_name="invoice_auto_finalize"}))
+                or on (env, job_name) (count by (env, job_name) (meterengine_scheduled_job_run_total{env!~"test-.*", job_name="invoice_auto_finalize"}) * 0
+                + on (env) group_left () (time() - max by (env) (process_start_time_seconds{env!~"test-.*", job="backend"})))
               instant: true
           - refId: C
             relativeTimeRange: { from: 0, to: 0 }
@@ -279,7 +281,7 @@ groups:
         noDataState: OK
         execErrState: Error
         annotations:
-          summary: 예약 작업 {{ $labels.job_name }} 이 25시간 넘게 성공하지 않았다. 오늘 실행이 빠졌거나 실패했다.
+          summary: 환경 {{ $labels.env }}의 예약 작업 {{ $labels.job_name }} 이 25시간 넘게 성공하지 않았다. 오늘 실행이 빠졌거나 실패했다.
         data:
           - refId: A
             relativeTimeRange: { from: 900, to: 0 }
@@ -287,9 +289,9 @@ groups:
             model:
               refId: A
               expr: >-
-                (time() - max by (job_name) (max_over_time(meterengine_scheduled_job_last_success_seconds{job_name=~"payment_reconciliation|unbilled_usage_report"}[26h])))
-                or on (job_name) (count by (job_name) (meterengine_scheduled_job_run_total{job_name=~"payment_reconciliation|unbilled_usage_report"}) * 0
-                + scalar(time() - max(process_start_time_seconds{job="backend"})))
+                (time() - max by (env, job_name) (max_over_time(meterengine_scheduled_job_last_success_seconds{env!~"test-.*", job_name=~"payment_reconciliation|unbilled_usage_report"}[26h])))
+                or on (env, job_name) (count by (env, job_name) (meterengine_scheduled_job_run_total{env!~"test-.*", job_name=~"payment_reconciliation|unbilled_usage_report"}) * 0
+                + on (env) group_left () (time() - max by (env) (process_start_time_seconds{env!~"test-.*", job="backend"})))
               instant: true
           - refId: C
             relativeTimeRange: { from: 0, to: 0 }
@@ -311,14 +313,14 @@ groups:
         noDataState: OK
         execErrState: Error
         annotations:
-          summary: 결과를 모르는 결제가 10분 넘게 남아 있다. 토스페이먼츠 조회가 실패하고 있는지 백엔드 로그를 본다.
+          summary: 환경 {{ $labels.env }}에서 결과를 모르는 결제가 10분 넘게 남아 있다. 토스페이먼츠 조회가 실패하고 있는지 백엔드 로그를 본다.
         data:
           - refId: A
             relativeTimeRange: { from: 300, to: 0 }
             datasourceUid: prometheus
             model:
               refId: A
-              expr: max by (mode) (meterengine_payment_stale_pending{mode="live"})
+              expr: max by (env, mode) (meterengine_payment_stale_pending{env!~"test-.*", mode="live"})
               instant: true
           - refId: C
             relativeTimeRange: { from: 0, to: 0 }
@@ -339,7 +341,7 @@ groups:
         noDataState: OK
         execErrState: Error
         annotations:
-          summary: 재시도 상한까지 결제가 실패한 인보이스가 최근 1시간 안에 생겼다 (mode {{ $labels.mode }}).
+          summary: 재시도 상한까지 결제가 실패한 인보이스가 최근 1시간 안에 생겼다 (env {{ $labels.env }}, mode {{ $labels.mode }}).
         data:
           - refId: A
             relativeTimeRange: { from: 3600, to: 0 }
@@ -347,8 +349,8 @@ groups:
             model:
               refId: A
               expr: >-
-                (sum by (mode) (meterengine_payment_retry_exhausted_total{mode="live"} unless meterengine_payment_retry_exhausted_total{mode="live"} offset 1h) > 0)
-                or (sum by (mode) (increase(meterengine_payment_retry_exhausted_total{mode="live"}[1h])) > 0)
+                (sum by (env, mode) (meterengine_payment_retry_exhausted_total{env!~"test-.*", mode="live"} unless meterengine_payment_retry_exhausted_total{env!~"test-.*", mode="live"} offset 1h) > 0)
+                or (sum by (env, mode) (increase(meterengine_payment_retry_exhausted_total{env!~"test-.*", mode="live"}[1h])) > 0)
               instant: true
           - refId: C
             relativeTimeRange: { from: 0, to: 0 }
@@ -369,7 +371,7 @@ groups:
         noDataState: OK
         execErrState: Error
         annotations:
-          summary: 결제 대사에서 불일치가 나왔다 (mode {{ $labels.mode }}). GET /v1/payment-reconciliation-mismatches 로 내용을 본다.
+          summary: 결제 대사에서 불일치가 나왔다 (env {{ $labels.env }}, mode {{ $labels.mode }}). GET /v1/payment-reconciliation-mismatches 로 내용을 본다.
         data:
           - refId: A
             relativeTimeRange: { from: 3600, to: 0 }
@@ -377,8 +379,8 @@ groups:
             model:
               refId: A
               expr: >-
-                (sum by (mode) (meterengine_payment_reconciliation_mismatch_total{mode="live"} unless meterengine_payment_reconciliation_mismatch_total{mode="live"} offset 1h) > 0)
-                or (sum by (mode) (increase(meterengine_payment_reconciliation_mismatch_total{mode="live"}[1h])) > 0)
+                (sum by (env, mode) (meterengine_payment_reconciliation_mismatch_total{env!~"test-.*", mode="live"} unless meterengine_payment_reconciliation_mismatch_total{env!~"test-.*", mode="live"} offset 1h) > 0)
+                or (sum by (env, mode) (increase(meterengine_payment_reconciliation_mismatch_total{env!~"test-.*", mode="live"}[1h])) > 0)
               instant: true
           - refId: C
             relativeTimeRange: { from: 0, to: 0 }
@@ -399,14 +401,14 @@ groups:
         noDataState: OK
         execErrState: Error
         annotations:
-          summary: 자동 확정에 실패한 고객과 달이 남았다 (environment {{ $labels.environment }}). invoice_finalization_attempt의 reason과 백엔드 로그를 본다.
+          summary: 자동 확정에 실패한 고객과 달이 남았다 (env {{ $labels.env }}, environment {{ $labels.environment }}). invoice_finalization_attempt의 reason과 백엔드 로그를 본다.
         data:
           - refId: A
             relativeTimeRange: { from: 300, to: 0 }
             datasourceUid: prometheus
             model:
               refId: A
-              expr: max by (environment) (meterengine_invoice_unfinalized{result="failed",environment!="test"})
+              expr: max by (env, environment) (meterengine_invoice_unfinalized{env!~"test-.*", result="failed",environment!="test"})
               instant: true
           - refId: C
             relativeTimeRange: { from: 0, to: 0 }
@@ -427,7 +429,7 @@ groups:
         noDataState: OK
         execErrState: Error
         annotations:
-          summary: 실패로 끝난 웹훅이 최근 15분 안에 생겼다. 전송 기록 조회 API로 엔드포인트와 실패 이유를 본다.
+          summary: 환경 {{ $labels.env }}에서 실패로 끝난 웹훅이 최근 15분 안에 생겼다. 전송 기록 조회 API로 엔드포인트와 실패 이유를 본다.
         data:
           - refId: A
             relativeTimeRange: { from: 900, to: 0 }
@@ -435,8 +437,8 @@ groups:
             model:
               refId: A
               expr: >-
-                (sum (meterengine_webhook_delivery_total{result="failed",reason!="endpoint_disabled",environment!="test"} unless meterengine_webhook_delivery_total{result="failed"} offset 15m) > 0)
-                or (sum (increase(meterengine_webhook_delivery_total{result="failed",reason!="endpoint_disabled",environment!="test"}[15m])) > 0)
+                (sum by (env) (meterengine_webhook_delivery_total{env!~"test-.*", result="failed",reason!="endpoint_disabled",environment!="test"} unless meterengine_webhook_delivery_total{env!~"test-.*", result="failed"} offset 15m) > 0)
+                or (sum by (env) (increase(meterengine_webhook_delivery_total{env!~"test-.*", result="failed",reason!="endpoint_disabled",environment!="test"}[15m])) > 0)
               instant: true
           - refId: C
             relativeTimeRange: { from: 0, to: 0 }
@@ -457,14 +459,14 @@ groups:
         noDataState: OK
         execErrState: Error
         annotations:
-          summary: 보낼 때가 지난 웹훅이 10분 넘게 밀려 있다. 응답이 느린 수신 주소가 발송 시간을 쓰고 있는지 전송 기록 조회 API와 백엔드 로그를 본다.
+          summary: 환경 {{ $labels.env }}에서 보낼 때가 지난 웹훅이 10분 넘게 밀려 있다. 응답이 느린 수신 주소가 발송 시간을 쓰고 있는지 전송 기록 조회 API와 백엔드 로그를 본다.
         data:
           - refId: A
             relativeTimeRange: { from: 300, to: 0 }
             datasourceUid: prometheus
             model:
               refId: A
-              expr: max(meterengine_webhook_delivery_backlog_age_seconds{environment!="test"})
+              expr: max by (env) (meterengine_webhook_delivery_backlog_age_seconds{env!~"test-.*", environment!="test"})
               instant: true
           - refId: C
             relativeTimeRange: { from: 0, to: 0 }

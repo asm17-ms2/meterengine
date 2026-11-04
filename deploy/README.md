@@ -54,6 +54,7 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
   - 레지스트리 `928618307647.dkr.ecr.ap-northeast-2.amazonaws.com`.
 - 설정과 비밀값: SSM Parameter Store `/meterengine/<환경>/*`.
 - 인터넷에 열린 포트는 80과 443이다. SSH 포트는 열려 있지 않고 접속은 SSM으로 한다.
+- agents 프로필의 node exporter `9100`과 cAdvisor `9101`은 서버의 모든 주소에 열려 공용 모니터링 서버가 긁는다. 보안 그룹이 들이지 않으면 밖에서 닿지 않는다.
 - `3000`, `3001`은 서버의 127.0.0.1에만 열려 있다. 백엔드의 `8080`, Caddy 내부 사이트 `8081`과 지표 사이트 `2020`은 compose 네트워크 안에서만 닿는다.
 - 백엔드 두 색과 프론트는 고정 대역의 `proxy` 네트워크에만 붙고, Caddy와 Prometheus는 `default`와 `proxy`에 모두 붙는다. 이유는 "공개 인증의 실제 IP" 참조.
 - Grafana, oauth2-proxy, exporter들은 `monitoring` 네트워크(`172.30.1.0/24`)에만 붙어 프론트와 백엔드에서 닿지 않는다. Caddy는 이 네트워크에서 `172.30.1.10`으로 주소를 고정하고, Grafana는 이 주소에서 온 사용자 헤더만 믿는다. Prometheus는 `default`, `proxy`, `monitoring`에 모두 붙는다.
@@ -70,7 +71,8 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
 | `caddy/Caddyfile` | 경로 분배와 HTTPS. `/v1/*`는 `upstreams.caddy`의 백엔드 중 헬스체크를 통과한 쪽, 나머지는 프론트엔드. `:8081`은 프론트엔드와 `deploy.sh`가 쓰는 내부 사이트, `:2020`은 Prometheus가 긁는 지표 사이트 |
 | `caddy/sso-sites.caddy` | `grafana.`, `prometheus.` 사이트. oauth2-proxy 확인을 거친다. `CADDY_SSO_SITES`가 `on`일 때만 Caddyfile에 들어간다 |
 | `deploy.sh` | 배포 절차 전체. 서버에서 root로 돈다 |
-| `prometheus/prometheus.yml` | Prometheus 수집 대상 |
+| `prometheus/prometheus.yml` | 서버 안 Prometheus 수집 대상 |
+| `compose.monitoring.yml`, `monitoring/` | 공용 모니터링 서버의 스택, 수집 설정, 기동 스크립트, 읽을 파라미터 이름 목록. "공용 모니터링 서버" 참조 |
 | `cloudwatch/config.yml` | cloudwatch exporter가 읽을 RDS 지표 목록 |
 | `grafana/provisioning/`, `grafana/dashboards/` | Grafana 데이터 소스, 대시보드, 경보의 정본 |
 
@@ -517,7 +519,8 @@ aws ssm get-parameter --name /meterengine/production/operator-password --with-de
 
 ## 모니터링
 
-- Prometheus가 백엔드 `/actuator/prometheus`와 Caddy `:2020/metrics`, node exporter, cAdvisor, postgres exporter, Grafana를 15초마다, cloudwatch exporter를 1분마다 수집하고, Grafana가 대시보드와 경보로 만든다.
+- 서버 안 감시(monitoring 프로필)와 모든 환경을 한 곳에서 긁는 공용 모니터링 서버가 있다. 대시보드와 경보 파일은 둘이 같이 쓴다.
+- 서버 안 Prometheus가 백엔드 `/actuator/prometheus`와 Caddy `:2020/metrics`, node exporter, cAdvisor, postgres exporter, Grafana를 15초마다, cloudwatch exporter를 1분마다 수집하고, Grafana가 대시보드와 경보로 만든다.
 - postgres exporter는 RDS에 `pg_monitor` 권한의 읽기 전용 사용자 `meterengine_exporter`로 붙는다. 새 RDS에는 이 사용자를 먼저 만든다.
 
 ```sql
@@ -529,11 +532,60 @@ GRANT pg_monitor TO meterengine_exporter;
 - 지표 보관은 15일 또는 2GB 중 먼저 닿는 쪽에서 오래된 것부터 지운다.
 - 모니터링 컨테이너는 서비스 트래픽을 받지 않는다.
 
+### 공용 모니터링 서버
+
+EC2 `meterengine-monitoring` 한 대가 모든 환경의 앱 서버와 DB를 긁는다. 서버와 권한은 `deploy/terraform/monitoring`이 정한다.
+
+- 앱 서버는 태그 `Role=app`인 실행 중 서버를 30초마다 다시 찾아 백엔드 `8080`, node exporter `9100`, cAdvisor `9101`을 긁는다. `Environment` 태그가 `env` 라벨, 인스턴스 ID가 `instance` 라벨이 된다.
+- DB는 환경마다 postgres exporter를 하나씩 띄워 `env`를 붙이고, RDS 지표는 DB 식별자에서 `env`를 만든다.
+- 서버나 DB 보안 그룹이 보안 그룹 `meterengine-monitoring`을 들여야 긁힌다. 들이지 않은 대상은 down으로 보인다. 다른 루트가 이 이름으로 찾으므로 이름을 바꾸지 않는다.
+- 이 서버는 들어오는 규칙이 없다. Prometheus는 서버의 127.0.0.1:9090, Grafana는 3000에 뜬다.
+- 지표 보관은 15일 또는 20GB 중 먼저 닿는 쪽에서 오래된 것부터 지운다. 기록은 서버 디스크에만 있어 서버를 다시 만들면 지워진다.
+- 서버가 읽는 파라미터 이름은 `monitoring/parameters.json` 하나가 정한다. `start.sh`와 서버 역할이 이 파일을 같이 읽어, 목록 밖 파라미터는 읽지 못한다. 환경을 더하면 이 파일과 `compose.monitoring.yml`, `monitoring/prometheus/prometheus.yml`을 같이 고친다.
+- 환경의 `db-exporter-password`가 없으면 그 환경 exporter는 띄우지 않는다.
+
+서버를 만들면 `/meterengine/monitoring/` 아래 비밀 파라미터가 생긴다. Terraform은 값을 쓰기만 하고 읽거나 되돌리지 않는다.
+
+| 파라미터 | 처음 값 | 할 일 |
+| --- | --- | --- |
+| `grafana-admin-password` | 난수 | 없음 |
+| `grafana-github-client-id`, `grafana-github-client-secret` | `unset` | Grafana용 GitHub OAuth App(콜백 `https://grafana.meterengine.com/login/github`)의 값을 넣는다. `unset`이 남아 있으면 `start.sh`가 멈춘다 |
+| `slack-webhook-url` | 받는 곳 없는 자리 주소 | 공용 Grafana를 열 때 실제 주소를 넣는다. 그 전에는 공용 서버의 경보가 아무 데도 가지 않는다 |
+
+```bash
+aws ssm put-parameter --overwrite --type SecureString \
+  --name /meterengine/monitoring/grafana-github-client-id --value '<Client ID>'
+```
+
+띄우거나 설정을 바꿀 때는 서버에 붙어 저장소를 원하는 SHA로 바꾼 뒤 `start.sh`를 부른다. `start.sh`는 스스로 체크아웃하지 않고 저장소 HEAD가 인자와 같은지만 본다.
+
+```bash
+aws ec2 describe-instances --filters Name=tag:Role,Values=monitoring Name=instance-state-name,Values=running \
+  --query 'Reservations[].Instances[].InstanceId' --output text
+aws ssm start-session --target <서버 ID>
+```
+
+세션 안에서 아래를 부른다.
+
+```bash
+sudo bash -c 'cd /opt/meterengine && git fetch origin && git checkout --force <SHA> && ./deploy/monitoring/start.sh <SHA>'
+```
+
+- Grafana는 GitHub `asm17-ms2` 조직 로그인만 받고 로그인 폼과 기본 인증은 꺼져 있다. 도메인으로 열리기 전에는 Grafana 화면에 들어갈 수 없고, 9090 포트 포워딩으로 Prometheus 화면에서 조회한다.
+
+```bash
+aws ssm start-session --target <서버 ID> \
+  --document-name AWS-StartPortForwardingSession \
+  --parameters '{"portNumber":["9090"],"localPortNumber":["9090"]}'
+```
+
 ### 대시보드 보기
 
 - https://grafana.meterengine.com, https://prometheus.meterengine.com 에 GitHub로 로그인한다. `asm17-ms2` 조직 멤버만 들어온다.
   - 로그인은 24시간 유지된다. 조직 멤버인지는 로그인할 때만 보므로, 조직에서 뺀 사람도 그동안은 들어온다.
 - Grafana의 MeterEngine 폴더에서 대시보드를 연다.
+  - 대시보드마다 맨 위 `환경` 변수로 `env`를 고른다. 서버 안 Grafana에는 `env` 라벨이 없어 All만 보인다. 관측 시스템과 Caddy 패널은 환경을 가리지 않는다.
+  - 앱 자원 대시보드의 `서버` 변수는 고른 환경의 백엔드 서버다. 서버 안 Grafana에서는 백엔드 색이라 특정 색을 고르면 서버와 컨테이너 패널이 빈다.
   - MeterEngine 서비스 개요는 가용성, 요청 수, 5xx 비율, 느린 API, Caddy 요청과 업스트림 상태다.
   - MeterEngine API 상세는 uri와 method로 고른 API의 지연과 오류, 그리고 전체 요청의 인증, 호출 제한, 감사 기록 실패 지표다.
   - MeterEngine 이벤트 수집은 수집 API 요청, 이벤트 결과, 저장 실패 지표다. 맨 아래 접힌 DB 왕복 행은 단건 수집이 거치는 DB 왕복별 평균과 p99다.
@@ -561,14 +613,15 @@ aws ssm start-session --target i-0f47bb1f028cd29a9 \
 ### 경보
 
 - Slack으로 간다 (`slack-webhook-url`).
+- 경보는 `env`마다 따로 울린다. 측정 환경(`test-`로 시작하는 `env`)은 모든 경보에서 뺀다. `env` 라벨이 없는 서버 안 Prometheus에서는 지금처럼 그 서버 하나를 본다.
 - 같은 경보의 재알림 주기는 4시간이다.
 
 | 경보 | 조건 | 뜻 |
 | --- | --- | --- |
-| 백엔드 헬스체크 실패 | `max(up{job="backend"}) < 1` 1분 지속 | 어느 색도 scrape에 응답하지 않는다. 프로세스 다운이나 응답 불능 |
-| 백엔드 두 색이 함께 떠 있음 | `sum(up{job="backend"}) > 1` 15분 지속 | 배포가 옛 색을 멈추기 전에 중단됐다 |
+| 백엔드 헬스체크 실패 | `max by (env) (up{job="backend"}) < 1` 1분 지속 | 어느 색도 scrape에 응답하지 않는다. 프로세스 다운이나 응답 불능 |
+| 백엔드 두 색이 함께 떠 있음 | `sum by (env) (up{job="backend"}) > 1` 15분 지속 | 배포가 옛 색을 멈추기 전에 중단됐다 |
 | 5xx 응답 비율 초과 | 5분 창 5xx 비율 > 5%, 5분 지속 | 요청이 실패로 새고 있다 |
-| CPU 사용률 초과 | 5분 평균 > 80%, 10분 지속 | 처리량 한계이거나 폭주 프로세스 |
+| CPU 사용률 초과 | 서버마다 5분 평균 > 80%, 10분 지속 | 처리량 한계이거나 폭주 프로세스 |
 | 예약 작업 실패 | 15분 안에 실행이 예외로 끝나거나 대상 일부가 실패 | 작업이 일을 다 끝내지 못했다. 작업 이름별로 울린다 |
 | 예약 작업 미실행 | 마지막 성공 뒤 5분(30초, 1분 주기), 30분(10분 주기), 25시간(하루 주기) | 작업이 멈췄거나 계속 실패한다. 한 번도 실행되지 않은 작업은 잡지 못한다 |
 | 인보이스 자동 확정 미실행 | 자동 확정이 2시간 넘게 성공하지 않음 | 마지막 성공이 끝난 뒤 2시간 안에 다음 성공이 없다. 정시 실행이 빠졌거나 실패했거나, 그 달 첫 훑기가 오래 걸린다. 꺼져 있으면 울리지 않는다 |
