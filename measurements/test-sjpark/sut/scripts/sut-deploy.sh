@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SUT에 커밋 하나를 배포한다. 사용법: sut-deploy.sh [SHA]  (없으면 ECR에 이미지가 있는 가장 최근 main 커밋)
+# SUT에 커밋 하나를 배포한다. 사용법: sut-deploy.sh [SHA]  (없으면 ECR에 이미지가 있고 Caddy와 환경 파일이 있는 가장 최근 main 커밋)
 
 set -euo pipefail
 
@@ -17,6 +17,9 @@ readonly REMOTE_DEPLOY_CONFIG=/etc/meterengine/deploy.conf
 # 이 커밋보다 앞선 deploy.sh는 deploy.conf를 읽지 않아 개발 서버 파라미터 경로와 도메인을 쓴다.
 readonly FIRST_SHA_WITH_DEPLOY_CONF=a4bdf42e963df521514bf54283393f217c0d93cf
 readonly DEPLOY_DB_LINE_PREFIX='[deploy] DB: '
+# 이 SUT는 HTTPS를 서버의 Caddy가 맡는다. Caddy가 빠진 커밋을 checkout하면 다음 기동부터 서버가 뜨지 못한다.
+readonly CADDYFILE_PATH=deploy/caddy/Caddyfile
+readonly ENVIRONMENT_FILE_PATH=deploy/environments/test-sjpark.json
 
 deploy_output_file=""
 
@@ -35,18 +38,43 @@ ecr_sha_tags_newest_first() {
 	printf '%s\n' "$tags" | tr '\t' '\n' | grep -E "$FULL_SHA_PATTERN" || true
 }
 
-# CD는 main 커밋 SHA로만 태그를 올리므로, 두 레포에 다 있는 가장 최근 태그가 배포할 수 있는 가장 최근 main 커밋이다.
+fetch_operator_checkout() {
+	git -C "$SCRIPT_DIR" fetch --quiet origin || die "운영자 체크아웃에서 git fetch origin이 실패했다"
+}
+
+# 이 SUT에 배포할 수 없는 커밋이면 이유를 찍는다. 원격 명령을 보내기 전에 운영자 체크아웃에서 본다.
+commit_problem() {
+	local sha="$1"
+	if ! git -C "$SCRIPT_DIR" cat-file -e "$sha^{commit}" 2>/dev/null; then
+		echo "운영자 체크아웃에 없는 커밋이다"
+	elif ! git -C "$SCRIPT_DIR" cat-file -e "$sha:$CADDYFILE_PATH" 2>/dev/null; then
+		echo "Caddy가 빠진 커밋이라 test-sjpark에 배포하지 않는다"
+	elif ! git -C "$SCRIPT_DIR" cat-file -e "$sha:$ENVIRONMENT_FILE_PATH" 2>/dev/null; then
+		echo "test-sjpark 환경 파일이 없는 커밋이다"
+	fi
+}
+
+require_deployable_commit() {
+	local sha="$1" problem
+	problem=$(commit_problem "$sha")
+	[ -z "$problem" ] || die "$sha 는 $problem"
+}
+
+# CD는 main 커밋 SHA로만 태그를 올리므로, 두 레포에 다 있는 태그를 최근부터 보며 이 SUT에 띄울 수 있는 첫 커밋을 고른다.
 latest_deployable_sha() {
-	local backend_tags frontend_tags sha
+	local backend_tags frontend_tags sha problem
 	backend_tags=$(ecr_sha_tags_newest_first "$BACKEND_ECR_REPOSITORY") || exit 1
 	frontend_tags=$(ecr_sha_tags_newest_first "$FRONTEND_ECR_REPOSITORY") || exit 1
 	for sha in $backend_tags; do
-		if printf '%s\n' "$frontend_tags" | grep -Fxq "$sha"; then
+		printf '%s\n' "$frontend_tags" | grep -Fxq "$sha" || continue
+		problem=$(commit_problem "$sha")
+		if [ -z "$problem" ]; then
 			printf '%s' "$sha"
 			return 0
 		fi
+		log "$sha 건너뜀: $problem" >&2
 	done
-	die "ECR $ECR_REPOSITORIES 둘 다에 있는 커밋 SHA 태그가 없다. SHA를 직접 준다"
+	die "ECR $ECR_REPOSITORIES 둘 다에 이미지가 있으면서 Caddy와 test-sjpark 환경 파일이 있는 커밋이 없다. measurements/test-sjpark/README.md \"보존 이미지\"를 본다"
 }
 
 log_when_behind_main() {
@@ -56,8 +84,12 @@ log_when_behind_main() {
 		warn "main 최신 커밋을 읽지 못해 비교를 건너뛴다"
 		return 0
 	fi
-	[ "$main_sha" = "$sha" ] ||
+	[ "$main_sha" != "$sha" ] || return 0
+	if git -C "$SCRIPT_DIR" cat-file -e "$main_sha^{commit}" 2>/dev/null && ! git -C "$SCRIPT_DIR" cat-file -e "$main_sha:$CADDYFILE_PATH" 2>/dev/null; then
+		log "main 최신은 Caddy가 없어 test-sjpark에 배포할 수 없다. Caddy가 있는 가장 최근 커밋 $sha 를 쓴다"
+	else
 		log "main 최신 $main_sha 는 아직 이미지가 없다(CD가 도는 중이거나 CD가 이미지를 올리지 않는 커밋). 이미지가 있는 가장 최근 커밋 $sha 를 쓴다"
+	fi
 }
 
 require_ecr_images() {
@@ -127,12 +159,14 @@ main() {
 	need_cmd aws terraform git curl jq dig
 
 	local sha="${1:-}"
+	fetch_operator_checkout
 	if [ -z "$sha" ]; then
 		sha=$(latest_deployable_sha) || exit 1
-		log "SHA를 주지 않아 ECR에 이미지가 있는 가장 최근 커밋을 쓴다: $sha"
+		log "SHA를 주지 않아 ECR에 이미지가 있고 Caddy와 환경 파일이 있는 가장 최근 커밋을 쓴다: $sha"
 		log_when_behind_main "$sha"
 	fi
 	require_full_sha "$sha"
+	require_deployable_commit "$sha"
 
 	local domain param_path sut_public_ip sut_instance_id db_identifier db_address
 	domain=$(tf_out domain)

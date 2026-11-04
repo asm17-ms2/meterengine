@@ -1,11 +1,10 @@
 {
-  "instance_id": "i-07af113d3e710e766",
+  "autoscaling_group_name": "meterengine-staging-app",
   "database_identifier": "meterengine-staging-db",
   "parameter_path": "/meterengine/staging",
   "site_domain": "staging.meterengine.com",
   "site_aliases": [],
   "compose_profiles": ["agents"],
-  "sso_sites": false,
   "image_repository_prefix": "meterengine-staging",
   "backend_mem_limit": "768m",
   "backend_max_ram_percentage": 50

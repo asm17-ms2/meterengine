@@ -13,24 +13,29 @@ import sys
 
 AWS_REGION = "ap-northeast-2"
 SERVICE_ENVIRONMENTS = ("staging", "production")
-SUT_ENVIRONMENTS = ("test-sjpark", "test-storage")
-PROFILES = {"agents", "monitoring"}
-FIELDS = {"instance_id", "database_identifier", "parameter_path", "site_domain", "site_aliases", "compose_profiles",
-          "sso_sites", "image_repository_prefix", "backend_mem_limit", "backend_max_ram_percentage"}
-BASE_PARAMETERS = ["DB_HOST", "DB_PORT", "DB_NAME", "DB_USERNAME", "DB_PASSWORD", "CRYPTO_ENCRYPTION_KEY", "OPERATOR_EMAIL", "OPERATOR_PASSWORD"]
-MONITORING_PARAMETERS = ["DB_EXPORTER_PASSWORD", "GRAFANA_ADMIN_PASSWORD", "SLACK_WEBHOOK_URL", "OAUTH2_PROXY_CLIENT_ID", "OAUTH2_PROXY_CLIENT_SECRET", "OAUTH2_PROXY_COOKIE_SECRET"]
+SUT_ENVIRONMENTS = ("test-storage",)
+# 이 커밋의 compose는 Caddy가 없어 HTTPS를 Caddy에 맡기는 서버에서는 뜨지 못한다.
+UNSUPPORTED_ENVIRONMENTS = {
+    "test-sjpark": "test-sjpark는 HTTPS를 서버의 Caddy가 맡는다. Caddy가 있는 마지막 릴리스 커밋으로 배포한다",
+}
+PROFILES = {"agents"}
+FIELDS = {"autoscaling_group_name", "database_identifier", "parameter_path", "site_domain", "site_aliases", "compose_profiles",
+          "image_repository_prefix", "backend_mem_limit", "backend_max_ram_percentage"}
+REQUIRED_PARAMETERS = ["DB_HOST", "DB_PORT", "DB_NAME", "DB_USERNAME", "DB_PASSWORD", "CRYPTO_ENCRYPTION_KEY", "OPERATOR_EMAIL", "OPERATOR_PASSWORD"]
 IMDS = "http://169.254.169.254/latest"
 
 
 def load_target(name: str, directory: Path) -> dict:
+    if name in UNSUPPORTED_ENVIRONMENTS:
+        raise ValueError(UNSUPPORTED_ENVIRONMENTS[name])
     if name not in (*SERVICE_ENVIRONMENTS, *SUT_ENVIRONMENTS):
         raise ValueError(f"환경 이름은 {', '.join((*SERVICE_ENVIRONMENTS, *SUT_ENVIRONMENTS))} 중 하나여야 한다: {name}")
     target = json.loads((directory / f"{name}.json").read_text())
     is_service = name in SERVICE_ENVIRONMENTS
-    if not isinstance(target, dict) or set(target) != (FIELDS if is_service else FIELDS - {"instance_id"}):
+    if not isinstance(target, dict) or set(target) != (FIELDS if is_service else FIELDS - {"autoscaling_group_name"}):
         raise ValueError(f"{name}.json의 필드가 다르다")
-    if is_service and not re.fullmatch(r"i-[0-9a-f]{8,17}", str(target["instance_id"])):
-        raise ValueError(f"{name}.json의 instance_id 형식이 다르다")
+    if is_service and target["autoscaling_group_name"] != f"meterengine-{name}-app":
+        raise ValueError(f"{name}.json의 autoscaling_group_name은 meterengine-{name}-app이어야 한다")
     if not re.fullmatch(r"[a-z][a-z0-9-]*", str(target["database_identifier"])):
         raise ValueError(f"{name}.json의 database_identifier는 전체 주소가 아니라 RDS 식별자다")
     for key in ("parameter_path", "site_domain", "image_repository_prefix", "backend_mem_limit"):
@@ -46,35 +51,38 @@ def load_target(name: str, directory: Path) -> dict:
     profiles = target["compose_profiles"]
     if not isinstance(profiles, list) or not set(profiles) <= PROFILES:
         raise ValueError(f"{name}.json의 compose_profiles는 {sorted(PROFILES)} 안에서 고른다")
-    if type(target["sso_sites"]) is not bool:
-        raise ValueError(f"{name}.json의 sso_sites는 true나 false다")
     if type(target["backend_max_ram_percentage"]) is not int:
         raise ValueError(f"{name}.json의 backend_max_ram_percentage는 정수다")
     return target
 
 
 def validate_target(target: dict, observed: dict) -> None:
-    # 측정 서버는 다시 만들거나 ASG로 늘리면 ID가 바뀌어 DB만 대조한다.
-    for key in ("instance_id", "database_identifier") if "instance_id" in target else ("database_identifier",):
+    # 측정 서버는 DB만 대조한다. 서비스 환경은 그 환경의 오토스케일링 그룹 서버여야 한다.
+    for key in ("autoscaling_group_name", "database_identifier") if "autoscaling_group_name" in target else ("database_identifier",):
         if target.get(key) != observed.get(key):
-            raise ValueError(f"{key}가 환경 파일과 다릅니다.")
+            raise ValueError(f"{key}가 환경 파일과 다릅니다. 이 서버의 값: {observed.get(key) or '없음'}")
 
 
 def database_identifier(host: str) -> str:
     return host.split(".", 1)[0]
 
 
-def observe_target(target: dict) -> dict:
+def autoscaling_group_name() -> str:
+    """오토스케일링 그룹 밖 서버(옛 단일 서버)는 태그가 없어 빈 값이다."""
     curl = ["curl", "-fsS", "--noproxy", "*", "--connect-timeout", "2", "--max-time", "5"]
     token = subprocess.check_output([*curl, "-X", "PUT", "-H", "X-aws-ec2-metadata-token-ttl-seconds: 60", f"{IMDS}/api/token"], text=True).strip()
-    instance_id = subprocess.check_output([*curl, "-H", f"X-aws-ec2-metadata-token: {token}", f"{IMDS}/meta-data/instance-id"], text=True).strip()
+    result = subprocess.run([*curl, "-H", f"X-aws-ec2-metadata-token: {token}", f"{IMDS}/meta-data/tags/instance/aws:autoscaling:groupName"],
+                            text=True, capture_output=True)
+    return result.stdout.strip() if result.returncode == 0 else ""
+
+
+def observe_target(target: dict) -> dict:
     database_host = subprocess.check_output(["aws", "ssm", "get-parameter", "--region", AWS_REGION, "--name", f"{target['parameter_path']}/db-host",
                                              "--query", "Parameter.Value", "--output", "text"], text=True).strip()
-    return {"instance_id": instance_id, "database_identifier": database_identifier(database_host)}
-
-
-def required_parameters(target: dict) -> list:
-    return BASE_PARAMETERS + (MONITORING_PARAMETERS if "monitoring" in target["compose_profiles"] else [])
+    observed = {"database_identifier": database_identifier(database_host)}
+    if "autoscaling_group_name" in target:
+        observed["autoscaling_group_name"] = autoscaling_group_name()
+    return observed
 
 
 def shell_values(target: dict) -> dict:
@@ -83,12 +91,11 @@ def shell_values(target: dict) -> dict:
         "SITE_DOMAIN": target["site_domain"],
         "SITE_ALIASES": " ".join(target["site_aliases"]),
         "COMPOSE_PROFILES": ",".join(target["compose_profiles"]),
-        "CADDY_SSO_SITES": "on" if target["sso_sites"] else "off",
         "BACKEND_MEM_LIMIT": target["backend_mem_limit"],
         "BACKEND_MAX_RAM_PERCENTAGE": str(target["backend_max_ram_percentage"]),
         "IMAGE_REPOSITORY_PREFIX": target["image_repository_prefix"],
         "EXPECTED_DB_IDENTIFIER": target["database_identifier"],
-        "REQUIRED_PARAMETERS": " ".join(required_parameters(target)),
+        "REQUIRED_PARAMETERS": " ".join(REQUIRED_PARAMETERS),
     }
 
 

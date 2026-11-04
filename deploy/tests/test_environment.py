@@ -16,8 +16,8 @@ import environment  # noqa: E402
 
 
 ENVIRONMENTS = DEPLOY / "environments"
+LAUNCH_TEMPLATE = DEPLOY / "terraform/modules/app_fleet/asg.tf"
 BASE_PARAMETERS = ["DB_HOST", "DB_PORT", "DB_NAME", "DB_USERNAME", "DB_PASSWORD", "CRYPTO_ENCRYPTION_KEY", "OPERATOR_EMAIL", "OPERATOR_PASSWORD"]
-MONITORING_PARAMETERS = ["DB_EXPORTER_PASSWORD", "GRAFANA_ADMIN_PASSWORD", "SLACK_WEBHOOK_URL", "OAUTH2_PROXY_CLIENT_ID", "OAUTH2_PROXY_CLIENT_SECRET", "OAUTH2_PROXY_COOKIE_SECRET"]
 
 
 def staging():
@@ -25,9 +25,9 @@ def staging():
 
 
 def write_target(directory, name, **changes):
-    target = {**staging(), **changes}
+    target = {**staging(), "autoscaling_group_name": f"meterengine-{name}-app", **changes}
     if name.startswith("test-"):
-        del target["instance_id"]
+        del target["autoscaling_group_name"]
     (directory / f"{name}.json").write_text(json.dumps(target))
     return target
 
@@ -44,16 +44,38 @@ class LoadTargetTest(unittest.TestCase):
 
     def test_load_rejects_missing_field(self):
         target = write_target(self.directory, "staging")
-        del target["instance_id"]
+        del target["autoscaling_group_name"]
         (self.directory / "staging.json").write_text(json.dumps(target))
         with self.assertRaisesRegex(ValueError, "필드"):
             environment.load_target("staging", self.directory)
 
-    def test_load_rejects_instance_id_for_sut(self):
-        target = write_target(self.directory, "test-sjpark", parameter_path="/meterengine/test-sjpark")
-        (self.directory / "test-sjpark.json").write_text(json.dumps({**target, "instance_id": "i-0123456789abcdef0"}))
+    def test_load_rejects_group_for_sut(self):
+        target = write_target(self.directory, "test-storage", parameter_path="/meterengine/test-storage")
+        (self.directory / "test-storage.json").write_text(json.dumps({**target, "autoscaling_group_name": "meterengine-test-storage-app"}))
         with self.assertRaisesRegex(ValueError, "필드"):
-            environment.load_target("test-sjpark", self.directory)
+            environment.load_target("test-storage", self.directory)
+
+    def test_load_rejects_test_slo_with_the_reason(self):
+        with self.assertRaisesRegex(ValueError, "Caddy가 있는 마지막 릴리스 커밋"):
+            environment.load_target("test-sjpark", ENVIRONMENTS)
+
+    def test_load_rejects_monitoring_profile(self):
+        write_target(self.directory, "staging", compose_profiles=["agents", "monitoring"])
+        with self.assertRaisesRegex(ValueError, "compose_profiles"):
+            environment.load_target("staging", self.directory)
+
+    def test_load_rejects_group_of_another_environment(self):
+        write_target(self.directory, "production", parameter_path="/meterengine/production", autoscaling_group_name="meterengine-staging-app")
+        with self.assertRaisesRegex(ValueError, "autoscaling_group_name"):
+            environment.load_target("production", self.directory)
+
+    def test_service_environments_name_their_own_group(self):
+        for name in ("staging", "production"):
+            self.assertEqual(environment.load_target(name, ENVIRONMENTS)["autoscaling_group_name"], f"meterengine-{name}-app")
+
+    def test_launch_template_exposes_tags_to_the_server(self):
+        # 서버가 자기 오토스케일링 그룹 이름을 인스턴스 메타데이터 태그로 읽는다. 끄면 부팅 배포가 늘 멈춘다.
+        self.assertRegex(LAUNCH_TEMPLATE.read_text(), r'instance_metadata_tags\s*=\s*"enabled"')
 
     def test_load_rejects_unknown_profile(self):
         write_target(self.directory, "staging", compose_profiles=["agents", "everything"])
@@ -62,12 +84,12 @@ class LoadTargetTest(unittest.TestCase):
 
     def test_load_rejects_service_path_for_sut(self):
         for path in ("/meterengine/prod", "/meterengine/production", "/meterengine/staging"):
-            write_target(self.directory, "test-sjpark", parameter_path=path)
+            write_target(self.directory, "test-storage", parameter_path=path)
             with self.assertRaisesRegex(ValueError, "parameter_path"):
-                environment.load_target("test-sjpark", self.directory)
+                environment.load_target("test-storage", self.directory)
 
     def test_every_environment_file_loads(self):
-        for name in ("staging", "production", "test-sjpark", "test-storage"):
+        for name in ("staging", "production", "test-storage"):
             self.assertEqual(environment.load_target(name, ENVIRONMENTS)["parameter_path"], f"/meterengine/{name}")
 
     def test_database_identifier_rejects_full_address(self):
@@ -82,8 +104,8 @@ class LoadTargetTest(unittest.TestCase):
 
     def test_only_staging_has_its_own_image_repositories(self):
         prefixes = {name: environment.load_target(name, ENVIRONMENTS)["image_repository_prefix"]
-                    for name in ("staging", "production", "test-sjpark", "test-storage")}
-        self.assertEqual(prefixes, {"staging": "meterengine-staging", "production": "meterengine", "test-sjpark": "meterengine", "test-storage": "meterengine"})
+                    for name in ("staging", "production", "test-storage")}
+        self.assertEqual(prefixes, {"staging": "meterengine-staging", "production": "meterengine", "test-storage": "meterengine"})
 
     def test_production_memory_fits_the_current_server(self):
         # 서버 메모리에 맞춘 값이다. 사양을 바꾸면 같이 바꾼다.
@@ -99,44 +121,38 @@ class LoadTargetTest(unittest.TestCase):
 class ValidateTargetTest(unittest.TestCase):
     def setUp(self):
         self.target = environment.load_target("staging", ENVIRONMENTS)
-        self.observed = {"instance_id": self.target["instance_id"], "database_identifier": self.target["database_identifier"]}
+        self.observed = {"autoscaling_group_name": self.target["autoscaling_group_name"], "database_identifier": self.target["database_identifier"]}
 
     def test_validate_accepts_matching_server(self):
         environment.validate_target(self.target, self.observed)
 
-    def test_validate_rejects_other_instance(self):
+    def test_validate_rejects_other_group(self):
         production = environment.load_target("production", ENVIRONMENTS)
-        with self.assertRaisesRegex(ValueError, "instance_id"):
-            environment.validate_target(self.target, {**self.observed, "instance_id": production["instance_id"]})
+        with self.assertRaisesRegex(ValueError, "autoscaling_group_name"):
+            environment.validate_target(self.target, {**self.observed, "autoscaling_group_name": production["autoscaling_group_name"]})
+
+    def test_validate_rejects_server_outside_any_group(self):
+        with self.assertRaisesRegex(ValueError, "autoscaling_group_name.*없음"):
+            environment.validate_target(self.target, {**self.observed, "autoscaling_group_name": ""})
 
     def test_validate_rejects_other_database(self):
         production = environment.load_target("production", ENVIRONMENTS)
         with self.assertRaisesRegex(ValueError, "database_identifier"):
             environment.validate_target(self.target, {**self.observed, "database_identifier": production["database_identifier"]})
 
-    def test_validate_ignores_instance_for_sut(self):
+    def test_validate_ignores_group_for_sut(self):
         target = environment.load_target("test-storage", ENVIRONMENTS)
-        observed = {"instance_id": "i-0123456789abcdef0", "database_identifier": target["database_identifier"]}
+        observed = {"database_identifier": target["database_identifier"]}
         environment.validate_target(target, observed)
 
     def test_validate_rejects_other_database_for_sut(self):
         target = environment.load_target("test-storage", ENVIRONMENTS)
         with self.assertRaisesRegex(ValueError, "database_identifier"):
-            environment.validate_target(target, {"instance_id": "i-0123456789abcdef0", "database_identifier": "meterengine-db"})
+            environment.validate_target(target, {"database_identifier": "meterengine-db"})
 
     def test_validate_rejects_missing_observation(self):
         with self.assertRaisesRegex(ValueError, "database_identifier"):
-            environment.validate_target(self.target, {"instance_id": self.target["instance_id"]})
-
-
-class RequiredParametersTest(unittest.TestCase):
-    def test_required_parameters_without_monitoring(self):
-        target = environment.load_target("staging", ENVIRONMENTS)
-        self.assertEqual(environment.required_parameters(target), BASE_PARAMETERS)
-
-    def test_required_parameters_with_monitoring(self):
-        target = environment.load_target("production", ENVIRONMENTS)
-        self.assertEqual(environment.required_parameters(target), BASE_PARAMETERS + MONITORING_PARAMETERS)
+            environment.validate_target(self.target, {"autoscaling_group_name": self.target["autoscaling_group_name"]})
 
 
 class PreflightTest(unittest.TestCase):
@@ -149,10 +165,10 @@ class PreflightTest(unittest.TestCase):
         self.target = write_target(self.root / "environments", "staging", site_aliases=["www.one.example", "www.two.example"])
         bin_dir = self.root / "bin"
         bin_dir.mkdir()
-        self.fake(bin_dir / "curl", 'case "$*" in *api/token*) echo token ;; *) echo "$FAKE_INSTANCE_ID" ;; esac\n')
+        self.fake(bin_dir / "curl", 'case "$*" in *api/token*) echo token ;; *aws:autoscaling:groupName*) [ -n "$FAKE_GROUP" ] || exit 22; echo "$FAKE_GROUP" ;; *) exit 22 ;; esac\n')
         self.fake(bin_dir / "aws", 'echo "$FAKE_DB_HOST"\n')
         self.env = dict(os.environ, PATH=f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
-                        FAKE_INSTANCE_ID=self.target["instance_id"], FAKE_DB_HOST=f"{self.target['database_identifier']}.example.invalid")
+                        FAKE_GROUP=self.target["autoscaling_group_name"], FAKE_DB_HOST=f"{self.target['database_identifier']}.example.invalid")
 
     @staticmethod
     def fake(path, body):
@@ -164,9 +180,9 @@ class PreflightTest(unittest.TestCase):
         return subprocess.run(["bash", "-c", script], cwd=self.root, env={**self.env, **env}, text=True, capture_output=True)
 
     def test_preflight_prints_shell_quoted_values(self):
-        result = self.preflight('printf "%s|%s|%s|%s|%s|%s" "$PARAM_PATH" "$SITE_ALIASES" "$COMPOSE_PROFILES" "$CADDY_SSO_SITES" "$BACKEND_MEM_LIMIT" "$EXPECTED_DB_IDENTIFIER"')
+        result = self.preflight('printf "%s|%s|%s|%s|%s" "$PARAM_PATH" "$SITE_ALIASES" "$COMPOSE_PROFILES" "$BACKEND_MEM_LIMIT" "$EXPECTED_DB_IDENTIFIER"')
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(result.stdout, "|".join(["/meterengine/staging", "www.one.example www.two.example", "agents", "off", "768m", self.target["database_identifier"]]))
+        self.assertEqual(result.stdout, "|".join(["/meterengine/staging", "www.one.example www.two.example", "agents", "768m", self.target["database_identifier"]]))
 
     def test_preflight_prints_image_repository_prefix(self):
         result = self.preflight('printf "%s" "$IMAGE_REPOSITORY_PREFIX"')
@@ -201,17 +217,22 @@ class PreflightTest(unittest.TestCase):
     def test_preflight_passes_sut_on_any_instance(self):
         write_target(self.root / "environments", "test-storage", parameter_path="/meterengine/test-storage")
         result = subprocess.run([sys.executable, "environment.py", "preflight", "--environment", "test-storage"],
-                                cwd=self.root, env={**self.env, "FAKE_INSTANCE_ID": "i-00000000000000000"},
+                                cwd=self.root, env={**self.env, "FAKE_GROUP": ""},
                                 text=True, capture_output=True)
         self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_preflight_failure_exits_2(self):
         result = subprocess.run([sys.executable, "environment.py", "preflight", "--environment", "staging"],
-                                cwd=self.root, env={**self.env, "FAKE_INSTANCE_ID": "i-00000000000000000"},
+                                cwd=self.root, env={**self.env, "FAKE_GROUP": "meterengine-production-app"},
                                 text=True, capture_output=True)
         self.assertEqual(result.returncode, 2)
         self.assertEqual(result.stdout, "")
-        self.assertIn("instance_id", result.stderr)
+        self.assertIn("autoscaling_group_name", result.stderr)
+
+    def test_server_outside_any_group_stops_before_printing(self):
+        result = self.preflight(FAKE_GROUP="")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("없음", result.stderr)
 
 
 if __name__ == "__main__":

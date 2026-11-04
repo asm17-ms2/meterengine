@@ -12,18 +12,14 @@ COMPOSE_FILE = Path(__file__).resolve().parents[1] / "compose.prod.yml"
 APPLICATION_PROPERTIES = (Path(__file__).resolve().parents[2]
                           / "backend/src/main/resources/application.properties")
 AUTH_RATE_LIMIT_SETTING = re.compile(r"\$\{(METERENGINE_AUTH_RATE_LIMIT_[A-Z_]+):([^}]*)\}")
-BACKENDS = ("backend-blue", "backend-green")
+BACKENDS = ("backend",)
 # 배포 주소 대역은 서버 구성에 따라 정해져 application.properties 기본값(빈 값)과 다르다.
 DEPLOYMENT_SPECIFIC_SETTINGS = ("METERENGINE_AUTH_RATE_LIMIT_TRUSTED_PROXIES",
                                 "METERENGINE_AUTH_RATE_LIMIT_LOAD_BALANCERS")
 DUMMY_ENV = {
     name: "dummy" for name in (
-        "DB_HOST", "DB_PORT", "DB_NAME", "DB_USERNAME", "DB_PASSWORD", "DB_EXPORTER_PASSWORD",
-        "CRYPTO_ENCRYPTION_KEY", "OPERATOR_EMAIL", "OPERATOR_PASSWORD", "FRONTEND_API_KEY",
-        "ORGANIZATION_ID", "ORGANIZATION_NAME", "BACKEND_MAX_RAM_PERCENTAGE", "ECR_REGISTRY", "IMAGE_REPOSITORY_PREFIX",
-        "BACKEND_BLUE_TAG", "BACKEND_GREEN_TAG", "IMAGE_TAG", "SITE_DOMAIN", "SITE_ALIASES",
-        "GRAFANA_ADMIN_PASSWORD", "SLACK_WEBHOOK_URL",
-        "OAUTH2_PROXY_CLIENT_ID", "OAUTH2_PROXY_CLIENT_SECRET", "OAUTH2_PROXY_COOKIE_SECRET")
+        "DB_HOST", "DB_PORT", "DB_NAME", "DB_USERNAME", "DB_PASSWORD", "CRYPTO_ENCRYPTION_KEY", "OPERATOR_EMAIL", "OPERATOR_PASSWORD",
+        "BACKEND_MAX_RAM_PERCENTAGE", "ECR_REGISTRY", "IMAGE_REPOSITORY_PREFIX", "IMAGE_TAG", "SITE_DOMAIN")
 }
 DUMMY_ENV["BACKEND_MEM_LIMIT"] = "768m"
 
@@ -46,16 +42,16 @@ class TrustedProxyDefaultTest(unittest.TestCase):
         value = self.config["services"][backend]["environment"]["METERENGINE_AUTH_RATE_LIMIT_TRUSTED_PROXIES"]
         return [ipaddress.ip_network(item.strip()) for item in value.split(",") if item.strip()]
 
-    def test_caddy_reaches_backends_from_a_fixed_trusted_address(self):
-        caddy_networks = self.config["services"]["caddy"]["networks"]
+    def test_frontend_reaches_backends_from_a_fixed_trusted_address(self):
+        frontend_networks = self.config["services"]["frontend"]["networks"]
         for backend in BACKENDS:
             trusted = self.trusted_networks(backend)
             for network in self.config["services"][backend]["networks"]:
-                fixed = (caddy_networks.get(network) or {}).get("ipv4_address")
-                self.assertIsNotNone(fixed, f"Caddy needs a fixed address on {network}")
+                fixed = (frontend_networks.get(network) or {}).get("ipv4_address")
+                self.assertIsNotNone(fixed, f"Frontend needs a fixed address on {network}")
                 address = ipaddress.ip_address(fixed)
                 self.assertTrue(any(address in band for band in trusted),
-                                f"{backend} must trust Caddy address {address}")
+                                f"{backend} must trust frontend address {address}")
 
     def test_dynamic_addresses_stay_outside_the_trusted_band(self):
         for backend in BACKENDS:

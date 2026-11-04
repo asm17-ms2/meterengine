@@ -31,7 +31,7 @@ public class RequestLogFilter extends OncePerRequestFilter {
 
   private static final int MAX_DECODE_ROUNDS = 4;
 
-  // deploy/caddy/Caddyfile의 redacted_path와 같은 경로 목록이다. 바꾸면 같이 바꾼다.
+  // 경로에 토큰이 실린다. 같은 이유로 ALB 접속 로그는 꺼 두었다(deploy/terraform/modules/app_fleet/alb.tf).
   private static final Pattern PAYMENT_METHOD_REGISTRATION_TOKEN =
       Pattern.compile(
           "(/(?:payment-method-registrations|organization-invitations)).+",
