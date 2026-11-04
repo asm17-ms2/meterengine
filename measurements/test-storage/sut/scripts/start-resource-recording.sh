@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# SUT EC2에 remote/start-resource-recording.sh 를 보내 부하 실험 동안 컨테이너별 CPU와 메모리, 백엔드 JVM 힙과 GC 기록을 켠다. 정한 시간이 지나면 스스로 멈춘다.
+# 일하는 앱 서버마다 remote/start-resource-recording.sh 를 보내 부하 실험 동안 컨테이너별 CPU와 메모리, 백엔드 JVM 힙과 GC 기록을 켠다. 정한 시간이 지나면 스스로 멈춘다.
+# 기록을 켠 뒤 늘어난 서버는 기록하지 않는다.
 
 set -euo pipefail
 
@@ -18,12 +19,14 @@ main() {
 	[[ "$1" =~ $RUN_ID_PATTERN ]] || die "RUN_ID는 영문, 숫자, _, - 로 64자 이하여야 한다: $1"
 
 	# 개발 서버도 compose 프로젝트 이름이 같아 대상은 test-storage 상태 파일로만 고른다.
-	local sut_instance_id
-	sut_instance_id=$(tf_out sut_instance_id)
-	require_ec2_started "$sut_instance_id"
-	wait_ssm_online "$sut_instance_id"
-	log "SUT $sut_instance_id 에서 $1 CPU와 메모리 기록을 켠다. ${RECORD_SECONDS}초 뒤 스스로 멈춘다"
-	run_remote_script "$sut_instance_id" "start-resource-recording" "$REMOTE_SCRIPT_FILE" "$1" "$RECORD_SECONDS"
+	local asg_name instances sut_instance_id
+	asg_name=$(tf_out asg_name)
+	instances=$(require_in_service_instances "$asg_name") || exit 1
+	for sut_instance_id in $instances; do
+		wait_ssm_online "$sut_instance_id"
+		log "SUT $sut_instance_id 에서 $1 CPU와 메모리 기록을 켠다. ${RECORD_SECONDS}초 뒤 스스로 멈춘다"
+		run_remote_script "$sut_instance_id" "start-resource-recording" "$REMOTE_SCRIPT_FILE" "$1" "$RECORD_SECONDS"
+	done
 	log "끝났다"
 }
 

@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[2]
 MODULE = ROOT / "deploy/terraform/modules/app_fleet"
 TEMPLATE = MODULE / "templates/app-user-data.sh.tftpl"
 ASG = MODULE / "asg.tf"
+TEST_STORAGE = ROOT / "measurements/test-storage/sut/terraform"
 
 # 부팅 계약. 측정 환경처럼 이 템플릿을 부르는 곳도 같은 키를 넘긴다.
 BOOT_TEMPLATE_VARS = {"environment", "parameter_path", "app_version_parameter_name", "aws_region", "repository_url"}
@@ -25,8 +26,8 @@ def template_references():
     return set(TEMPLATE_REFERENCE.findall(TEMPLATE.read_text()))
 
 
-def boot_template_keys():
-    block = re.search(r"^  boot_template_vars = \{\n(.*?)^  \}", ASG.read_text(), re.M | re.S).group(1)
+def boot_template_keys(path):
+    block = re.search(r"^  boot_template_vars = \{\n(.*?)^  \}", path.read_text(), re.M | re.S).group(1)
     return set(re.findall(r"^\s+(\w+)\s+=", block, re.M))
 
 
@@ -40,7 +41,14 @@ class BootTemplateTest(unittest.TestCase):
         self.assertEqual(template_references(), BOOT_TEMPLATE_VARS)
 
     def test_module_passes_exactly_the_contract_variables(self):
-        self.assertEqual(boot_template_keys(), BOOT_TEMPLATE_VARS)
+        self.assertEqual(boot_template_keys(ASG), BOOT_TEMPLATE_VARS)
+
+    def test_test_storage_passes_exactly_the_contract_variables(self):
+        self.assertEqual(boot_template_keys(TEST_STORAGE / "locals.tf"), BOOT_TEMPLATE_VARS)
+
+    def test_test_storage_reads_this_template(self):
+        relative = re.search(r'^  boot_template_path = "\$\{path\.root\}/([^"]+)"$', (TEST_STORAGE / "locals.tf").read_text(), re.M).group(1)
+        self.assertEqual((TEST_STORAGE / relative).resolve(), TEMPLATE)
 
     def test_template_has_no_directives(self):
         self.assertNotRegex(TEMPLATE.read_text(), r"(?<!%)%\{")

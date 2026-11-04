@@ -17,7 +17,7 @@ variable "owner" {
 }
 
 variable "sut_instance_type" {
-  description = "SUT EC2 인스턴스 유형"
+  description = "앱 서버 인스턴스 유형"
   type        = string
   default     = "m7g.large"
 }
@@ -40,7 +40,7 @@ variable "db_instance_class" {
 }
 
 variable "ami_id" {
-  description = "SUT EC2 AMI. 개발 서버와 같은 Amazon Linux 2023 arm64"
+  description = "앱 서버 기본 이미지. staging, production과 같은 Amazon Linux 2023 arm64"
   type        = string
   default     = "ami-0f4109eb491b0476f"
 }
@@ -58,7 +58,7 @@ variable "db_multi_az" {
 }
 
 variable "auto_stop_state" {
-  description = "매일 04:00(Asia/Seoul) RDS와 EC2 자동 중지, ASG 0대 예약 상태. 밤새 측정할 때 DISABLED"
+  description = "매일 04:00(Asia/Seoul) RDS 자동 중지와 ASG 0대 예약 상태. 밤새 측정할 때 DISABLED"
   type        = string
   default     = "ENABLED"
 

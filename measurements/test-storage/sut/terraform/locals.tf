@@ -22,4 +22,14 @@ locals {
     node     = 9100
     cadvisor = 9101
   }
+
+  # staging, production과 같은 부팅 템플릿을 사본 없이 읽는다. 경로와 키는 deploy/tests의 시험이 템플릿과 대조한다.
+  boot_template_path = "${path.root}/../../../../deploy/terraform/modules/app_fleet/templates/app-user-data.sh.tftpl"
+  boot_template_vars = {
+    environment                = var.sut_name
+    parameter_path             = local.param_path
+    app_version_parameter_name = aws_ssm_parameter.app_version.name
+    aws_region                 = local.region
+    repository_url             = "https://github.com/asm17-ms2/meterengine.git"
+  }
 }
