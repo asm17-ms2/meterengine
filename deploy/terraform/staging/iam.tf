@@ -15,6 +15,7 @@ locals {
     Action      = ["ssm:GetParameter", "ssm:GetParameters", "ssm:GetParametersByPath", "ssm:GetParameterHistory"]
     NotResource = local.runtime_path
   }
+  app_version_parameter_arn = "${local.ssm_arn}:parameter${module.app_fleet.app_version_parameter_name}"
 }
 resource "aws_iam_role" "runtime" {
   name = "meterengine-staging-ec2"
@@ -54,6 +55,11 @@ resource "aws_iam_role_policy" "github_deploy" {
     { Effect = "Allow", Action = ["ssm:GetCommandInvocation"], Resource = "*" },
     { Effect = "Allow", Action = ["ecr:GetAuthorizationToken"], Resource = "*" },
     { Effect = "Allow", Action = ["ecr:BatchCheckLayerAvailability", "ecr:InitiateLayerUpload", "ecr:UploadLayerPart", "ecr:CompleteLayerUpload", "ecr:PutImage", "ecr:BatchGetImage", "ecr:DescribeImages"], Resource = local.ecr_repositories },
-    { Effect = "Deny", Action = ["ssm:GetParameter", "ssm:GetParameters", "ssm:GetParametersByPath", "ssm:GetParameterHistory", "ssm:StartSession"], Resource = "*" }
+    # 롤링 배포: 버전 파라미터에 SHA를 쓰고 오토스케일링 그룹을 새로 고친다.
+    { Effect = "Allow", Action = ["autoscaling:StartInstanceRefresh", "autoscaling:CancelInstanceRefresh"], Resource = module.app_fleet.autoscaling_group_arn },
+    { Effect = "Allow", Action = ["autoscaling:DescribeAutoScalingGroups", "autoscaling:DescribeInstanceRefreshes", "autoscaling:DescribeScalingActivities"], Resource = "*" },
+    { Effect = "Allow", Action = ["elasticloadbalancing:DescribeLoadBalancers", "elasticloadbalancing:DescribeTargetGroups", "elasticloadbalancing:DescribeTargetHealth"], Resource = "*" },
+    { Effect = "Allow", Action = ["ssm:GetParameter", "ssm:PutParameter"], Resource = local.app_version_parameter_arn },
+    { Effect = "Deny", Action = ["ssm:GetParameter", "ssm:GetParameters", "ssm:GetParametersByPath", "ssm:GetParameterHistory", "ssm:StartSession"], NotResource = [local.app_version_parameter_arn] }
   ] })
 }

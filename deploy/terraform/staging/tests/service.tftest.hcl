@@ -5,6 +5,32 @@ mock_provider "aws" {
   mock_data "aws_region" {
     defaults = { region = "ap-northeast-2" }
   }
+  mock_resource "aws_acm_certificate" {
+    defaults = {
+      arn = "arn:aws:acm:ap-northeast-2:928618307647:certificate/00000000-0000-0000-0000-000000000000"
+      domain_validation_options = [{
+        domain_name           = "staging.meterengine.com"
+        resource_record_name  = "_test.staging.meterengine.com."
+        resource_record_type  = "CNAME"
+        resource_record_value = "_test.acm-validations.aws."
+      }]
+    }
+  }
+  mock_resource "aws_lb" {
+    defaults = { arn = "arn:aws:elasticloadbalancing:ap-northeast-2:928618307647:loadbalancer/app/meterengine-staging-alb/0000000000000000" }
+  }
+  mock_resource "aws_lb_listener" {
+    defaults = { arn = "arn:aws:elasticloadbalancing:ap-northeast-2:928618307647:listener/app/meterengine-staging-alb/0000000000000000/0000000000000000" }
+  }
+  mock_resource "aws_lb_target_group" {
+    defaults = { arn = "arn:aws:elasticloadbalancing:ap-northeast-2:928618307647:targetgroup/test/0000000000000000" }
+  }
+  mock_resource "aws_launch_template" {
+    defaults = { id = "lt-00000000000000000", latest_version = 1 }
+  }
+  mock_resource "aws_autoscaling_group" {
+    defaults = { arn = "arn:aws:autoscaling:ap-northeast-2:928618307647:autoScalingGroup:00000000-0000-0000-0000-000000000000:autoScalingGroupName/meterengine-staging-app" }
+  }
 }
 
 
@@ -116,6 +142,18 @@ run "staging_state_excludes_secrets" {
     error_message = "Write-only secrets must not be retained in mock state."
   }
   assert {
+    condition     = aws_ssm_parameter.db_exporter_password.type == "SecureString" && aws_ssm_parameter.db_exporter_password.value_wo == null && aws_ssm_parameter.db_exporter_password.value_wo_version == 1
+    error_message = "The exporter password is a write-only placeholder that apply never resets."
+  }
+  assert {
+    condition = (
+      contains(jsondecode(file("${path.module}/../../monitoring/parameters.json")).environments, "staging") &&
+      contains(jsondecode(file("${path.module}/../../monitoring/parameters.json")).environment_parameters, "db-exporter-password") &&
+      aws_ssm_parameter.db_exporter_password.name == "${jsondecode(file("${path.module}/../../monitoring/parameters.json")).path_prefix}/staging/db-exporter-password"
+    )
+    error_message = "The shared monitoring server must be allowed to read the staging exporter password under the same name."
+  }
+  assert {
     condition = jsondecode(aws_iam_role_policy.github_deploy.policy).Statement[0].Resource == [
       "arn:aws:ec2:ap-northeast-2:928618307647:instance/${module.service.instance_id}",
       "arn:aws:ssm:ap-northeast-2::document/AWS-RunShellScript"
@@ -186,5 +224,125 @@ run "images_are_separate_from_production" {
   assert {
     condition     = !strcontains(aws_iam_role_policy.runtime.policy, "repository/meterengine-backend") && !strcontains(aws_iam_role_policy.runtime.policy, "repository/meterengine-frontend")
     error_message = "The staging server must not read production repositories."
+  }
+}
+
+run "deploy_role_rolls_the_fleet" {
+  command = apply
+
+  assert {
+    condition = anytrue([
+      for statement in jsondecode(aws_iam_role_policy.github_deploy.policy).Statement :
+      statement.Effect == "Allow" && toset(statement.Action) == toset(["autoscaling:StartInstanceRefresh", "autoscaling:CancelInstanceRefresh"]) && statement.Resource == module.app_fleet.autoscaling_group_arn
+    ])
+    error_message = "The deploy role starts and cancels refreshes of the staging fleet only."
+  }
+  assert {
+    condition = anytrue([
+      for statement in jsondecode(aws_iam_role_policy.github_deploy.policy).Statement :
+      statement.Effect == "Allow" && toset(statement.Action) == toset(["ssm:GetParameter", "ssm:PutParameter"]) && statement.Resource == "${local.ssm_arn}:parameter/meterengine/staging/app-version"
+    ])
+    error_message = "The deploy role reads and writes the version parameter only."
+  }
+  assert {
+    condition = alltrue([
+      for statement in jsondecode(aws_iam_role_policy.github_deploy.policy).Statement :
+      statement.NotResource == ["${local.ssm_arn}:parameter/meterengine/staging/app-version"] && !can(statement.Resource) if statement.Effect == "Deny"
+    ])
+    error_message = "Every other parameter and sessions stay denied."
+  }
+  assert {
+    condition     = output.app_fleet.autoscaling_group_name == "meterengine-staging-app" && output.app_fleet.app_version_parameter_name == "/meterengine/staging/app-version"
+    error_message = "Rollout reads the fleet and version parameter names from these outputs."
+  }
+}
+
+run "fleet_starts_empty_beside_the_old_server" {
+  command = plan
+  module {
+    source = "../modules/app_fleet"
+  }
+  variables {
+    environment                        = "staging"
+    parameter_path                     = "/meterengine/staging"
+    site_domain                        = "staging.meterengine.com"
+    vpc_id                             = "vpc-07498f0672b7f3c9e"
+    public_subnet_ids                  = ["subnet-0348a18c1d399c193", "subnet-0e375e82d415767a3"]
+    route53_zone_id                    = "Z08728621CQ5R1K37A7N1"
+    database_security_group_id         = "sg-22222222222222222"
+    ecr_repository_names               = ["meterengine-staging-backend", "meterengine-staging-frontend"]
+    ami_id                             = "ami-0f4109eb491b0476f"
+    min_size                           = 0
+    scaling_target_requests_per_second = 450
+    alb_deletion_protection            = false
+    monitoring_security_group_id       = "sg-33333333333333333"
+  }
+
+  assert {
+    condition     = aws_autoscaling_group.app.name == "meterengine-staging-app" && aws_autoscaling_group.app.min_size == 0 && aws_autoscaling_group.app.max_size == 3 && aws_autoscaling_group.app.health_check_type == "ELB" && aws_autoscaling_group.app.health_check_grace_period == 600
+    error_message = "The fleet starts at zero servers with ALB health checks."
+  }
+  assert {
+    condition     = aws_autoscaling_group.app.instance_refresh[0].preferences[0].min_healthy_percentage == 100 && aws_autoscaling_group.app.instance_maintenance_policy[0].min_healthy_percentage == 100 && aws_autoscaling_group.app.instance_maintenance_policy[0].max_healthy_percentage == 200
+    error_message = "Replacements bring a healthy server up before taking one down."
+  }
+  assert {
+    condition     = { for tag in aws_autoscaling_group.app.tag : tag.key => tag.value if tag.propagate_at_launch } == { Name = "meterengine-staging-app", Role = "app", Environment = "staging" }
+    error_message = "Monitoring finds servers by Role and labels them by Environment."
+  }
+  assert {
+    condition     = aws_launch_template.app.instance_type == "t4g.medium" && aws_launch_template.app.metadata_options[0].http_tokens == "required" && aws_launch_template.app.metadata_options[0].instance_metadata_tags == "enabled" && aws_launch_template.app.network_interfaces[0].associate_public_ip_address == "true"
+    error_message = "Servers need IMDSv2, readable tags and a public IP without NAT."
+  }
+  assert {
+    condition     = aws_launch_template.app.block_device_mappings[0].ebs[0].encrypted == "true" && aws_launch_template.app.block_device_mappings[0].ebs[0].volume_size == 30
+    error_message = "Root volumes are encrypted 30GB gp3."
+  }
+  assert {
+    condition     = strcontains(base64decode(aws_launch_template.app.user_data), "--name '/meterengine/staging/app-version'") && strcontains(base64decode(aws_launch_template.app.user_data), "./deploy/deploy.sh 'staging' \"$version\"")
+    error_message = "Boot reads the staging version parameter and deploys staging."
+  }
+  assert {
+    condition = (
+      aws_autoscaling_policy.ingest_requests.target_tracking_configuration[0].target_value == 450 &&
+      aws_autoscaling_policy.ingest_requests.target_tracking_configuration[0].customized_metric_specification[0].period == 10 &&
+      aws_autoscaling_policy.ingest_requests.target_tracking_configuration[0].customized_metric_specification[0].statistic == "Sum"
+    )
+    error_message = "Scaling sums the ten second per-desired metric against the target."
+  }
+  assert {
+    condition     = aws_lb.app.idle_timeout == 130 && aws_lb.app.xff_header_processing_mode == "append" && !aws_lb.app.enable_deletion_protection && length(aws_lb.app.access_logs) == 0
+    error_message = "The ALB keeps long payment calls, appends client IPs and writes no access logs."
+  }
+  assert {
+    condition     = aws_lb_listener.https.ssl_policy == "ELBSecurityPolicy-TLS13-1-2-2021-06" && aws_lb_listener.https.default_action[0].fixed_response[0].status_code == "404"
+    error_message = "HTTPS offers TLS 1.3 and rejects unknown hosts."
+  }
+  assert {
+    condition     = aws_lb_target_group.frontend.name_prefix == "front-" && aws_lb_target_group.frontend.health_check[0].path == "/health" && aws_lb_target_group.backend.name_prefix == "back-" && aws_lb_target_group.backend.health_check[0].path == "/actuator/health/readiness"
+    error_message = "Target groups use prefixes so replacements do not collide."
+  }
+  assert {
+    condition     = length(aws_lb_listener_rule.alias_to_site) == 0 && toset(flatten([for condition in aws_lb_listener_rule.api_to_backend.condition : [for pattern in condition.path_pattern : tolist(pattern.values)]])) == toset(["/v1/*"]) && toset(keys(aws_route53_record.certificate_validation)) == toset(["staging.meterengine.com"])
+    error_message = "Staging has no alias and sends only the API to the backend."
+  }
+  assert {
+    condition     = aws_security_group.alb.name == "meterengine-staging-alb" && aws_security_group.asg.name == "meterengine-staging-asg" && toset(keys(aws_vpc_security_group_egress_rule.app_internet)) == toset(["443"])
+    error_message = "New groups must not collide with the old staging groups."
+  }
+  assert {
+    condition     = toset(keys(aws_vpc_security_group_ingress_rule.app_from_monitoring)) == toset(["8080", "9100", "9101"]) && aws_vpc_security_group_ingress_rule.database_from_monitoring.referenced_security_group_id == "sg-33333333333333333"
+    error_message = "Shared monitoring scrapes the app servers and the database."
+  }
+  assert {
+    condition = anytrue([
+      for statement in jsondecode(aws_iam_role_policy.app.policy).Statement :
+      statement.Effect == "Allow" && statement.Action == ["cloudwatch:PutMetricData"] && statement.Condition.StringEquals["cloudwatch:namespace"] == "MeterEngine/Scaling"
+    ]) && jsondecode(aws_iam_role_policy.app.policy).Statement[1].Effect == "Deny" && toset(jsondecode(aws_iam_role_policy.app.policy).Statement[1].NotResource) == toset(local.runtime_path)
+    error_message = "App servers read only their path and put only scaling metrics."
+  }
+  assert {
+    condition     = aws_ssm_parameter.app_version.name == "/meterengine/staging/app-version" && aws_ssm_parameter.app_version.type == "String" && aws_ssm_parameter.app_version.value == "unset"
+    error_message = "The version parameter starts unset."
   }
 }

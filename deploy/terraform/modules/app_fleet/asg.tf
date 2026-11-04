@@ -1,0 +1,129 @@
+locals {
+  app_version_parameter_name = "${var.parameter_path}/app-version"
+  # 부팅 템플릿이 받는 값의 전부다. 키는 deploy/tests의 시험이 템플릿과 대조한다.
+  boot_template_vars = {
+    environment                = var.environment
+    parameter_path             = var.parameter_path
+    app_version_parameter_name = local.app_version_parameter_name
+    aws_region                 = data.aws_region.current.region
+    repository_url             = "https://github.com/asm17-ms2/meterengine.git"
+  }
+}
+
+resource "aws_launch_template" "app" {
+  name_prefix            = "${local.name}-app-"
+  image_id               = var.ami_id
+  instance_type          = "t4g.medium"
+  update_default_version = true
+  user_data              = base64encode(templatefile("${path.module}/templates/app-user-data.sh.tftpl", local.boot_template_vars))
+
+  iam_instance_profile {
+    name = aws_iam_instance_profile.app.name
+  }
+
+  # NAT가 없어 나가는 길에 공인 IP가 필요하다.
+  network_interfaces {
+    associate_public_ip_address = true
+    security_groups             = [aws_security_group.asg.id]
+    delete_on_termination       = true
+  }
+
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 2
+    # 10초 지표 스크립트가 태그로 자기 ASG 이름을 읽는다.
+    instance_metadata_tags = "enabled"
+  }
+
+  block_device_mappings {
+    device_name = "/dev/xvda"
+    ebs {
+      volume_size           = 30
+      volume_type           = "gp3"
+      encrypted             = true
+      delete_on_termination = true
+    }
+  }
+
+  tags = local.tags
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_autoscaling_group" "app" {
+  name                = "${local.name}-app"
+  min_size            = var.min_size
+  max_size            = 3
+  vpc_zone_identifier = var.public_subnet_ids
+  target_group_arns   = [aws_lb_target_group.frontend.arn, aws_lb_target_group.backend.arn]
+
+  # 기본 이미지에 설치부터 하는 부팅이라 이미지를 복제한 측정 환경(약 2분)보다 넉넉히 기다린다.
+  health_check_type         = "ELB"
+  health_check_grace_period = 600
+  default_instance_warmup   = 180
+
+  # $Latest로 두면 템플릿이 바뀌어도 Terraform이 아래 롤링을 시작하지 않는다.
+  launch_template {
+    id      = aws_launch_template.app.id
+    version = aws_launch_template.app.latest_version
+  }
+
+  instance_refresh {
+    strategy = "Rolling"
+    preferences {
+      min_healthy_percentage = 100
+      max_healthy_percentage = 200
+      instance_warmup        = 180
+    }
+  }
+
+  # 상태 확인으로 바꿀 때도 새 서버가 healthy가 된 뒤 옛 서버를 뺀다. 한 대뿐인 서버를 먼저 끄지 않는다.
+  instance_maintenance_policy {
+    min_healthy_percentage = 100
+    max_healthy_percentage = 200
+  }
+
+  tag {
+    key                 = "Name"
+    value               = "${local.name}-app"
+    propagate_at_launch = true
+  }
+  # 공용 모니터링이 Role로 긁을 서버를 고르고 Environment를 env 라벨로 옮긴다.
+  tag {
+    key                 = "Role"
+    value               = "app"
+    propagate_at_launch = true
+  }
+  tag {
+    key                 = "Environment"
+    value               = var.environment
+    propagate_at_launch = true
+  }
+
+  # 원하는 대수는 확장 정책이 정한다.
+  lifecycle {
+    ignore_changes = [desired_capacity]
+  }
+}
+
+# 서버마다 (초당 수집 요청 / 원하는 대수)를 올리고 그 합을 본다. 계산식은 공급자가 period를 못 보내 60초로 가서 쓰지 않는다.
+resource "aws_autoscaling_policy" "ingest_requests" {
+  name                   = "${local.name}-ingest-requests-per-server"
+  autoscaling_group_name = aws_autoscaling_group.app.name
+  policy_type            = "TargetTrackingScaling"
+  target_tracking_configuration {
+    customized_metric_specification {
+      namespace   = "MeterEngine/Scaling"
+      metric_name = "IngestRequestsPerSecondPerDesiredInstance"
+      statistic   = "Sum"
+      period      = 10
+      metric_dimension {
+        name  = "AutoScalingGroupName"
+        value = aws_autoscaling_group.app.name
+      }
+    }
+    target_value = var.scaling_target_requests_per_second
+  }
+}
