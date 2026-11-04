@@ -16,17 +16,20 @@ import java.util.List;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.web.firewall.RequestRejectedException;
 import org.springframework.stereotype.Service;
 
 @Service
 public class AuthRequestRateLimitService {
   public static final String CLIENT_IP_HEADER = "X-MeterEngine-Client-IP";
+  private static final String FORWARDED_FOR_HEADER = "X-Forwarded-For";
   private static final Logger logger = LoggerFactory.getLogger(AuthRequestRateLimitService.class);
   // 로그인 계정 한도는 계정과 IP 쌍으로 세고, 여러 IP에 나눈 시도는 이 배수의 계정 전체 상한으로 막는다.
   static final int LOGIN_ACCOUNT_TOTAL_MULTIPLIER = 10;
   private final AuthRequestRateLimitRepository authRequestRateLimitRepository;
   private final AuthRateLimitProperties authRateLimitProperties;
   private final List<Network> trustedProxies;
+  private final List<Network> loadBalancers;
 
   public AuthRequestRateLimitService(
       AuthRequestRateLimitRepository authRequestRateLimitRepository,
@@ -35,6 +38,8 @@ public class AuthRequestRateLimitService {
     this.authRateLimitProperties = authRateLimitProperties;
     this.trustedProxies =
         authRateLimitProperties.trustedProxies().stream().map(Network::parse).toList();
+    this.loadBalancers =
+        authRateLimitProperties.loadBalancers().stream().map(Network::parse).toList();
   }
 
   public void login(String email, HttpServletRequest request) {
@@ -103,14 +108,32 @@ public class AuthRequestRateLimitService {
   String clientAddress(HttpServletRequest request) {
     byte[] peer = numericAddress(request.getRemoteAddr());
     if (peer == null) return "unknown-peer";
-    if (trustedProxies.stream().anyMatch(network -> network.contains(peer))) {
-      List<String> values = Collections.list(request.getHeaders(CLIENT_IP_HEADER));
-      if (values.size() == 1) {
-        byte[] forwarded = numericAddress(values.getFirst().strip());
-        if (forwarded != null) return canonicalAddress(forwarded);
-      }
+    byte[] forwarded = null;
+    if (contains(loadBalancers, peer)) forwarded = rightmostForwardedFor(request);
+    else if (contains(trustedProxies, peer)) forwarded = singleClientIpHeader(request);
+    return canonicalAddress(forwarded == null ? peer : forwarded);
+  }
+
+  private static boolean contains(List<Network> networks, byte[] address) {
+    return networks.stream().anyMatch(network -> network.contains(address));
+  }
+
+  // 부하 분산기는 받은 값 뒤에 접속 주소를 붙이므로 맨 오른쪽 값만 믿는다. 줄이 여러 개면 어느 줄에 붙였는지 알 수 없다.
+  private static byte[] rightmostForwardedFor(HttpServletRequest request) {
+    List<String> values;
+    try {
+      values = Collections.list(request.getHeaders(FORWARDED_FOR_HEADER));
+    } catch (RequestRejectedException exception) {
+      return null;
     }
-    return canonicalAddress(peer);
+    if (values.size() != 1) return null;
+    String[] addresses = values.getFirst().split(",", -1);
+    return numericAddress(addresses[addresses.length - 1].strip());
+  }
+
+  private static byte[] singleClientIpHeader(HttpServletRequest request) {
+    List<String> values = Collections.list(request.getHeaders(CLIENT_IP_HEADER));
+    return values.size() == 1 ? numericAddress(values.getFirst().strip()) : null;
   }
 
   private static byte[] numericAddress(String value) {

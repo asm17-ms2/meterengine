@@ -26,6 +26,7 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.security.web.firewall.StrictHttpFirewall;
 
 @ExtendWith(OutputCaptureExtension.class)
 class AuthRequestRateLimitServiceTest {
@@ -93,11 +94,55 @@ class AuthRequestRateLimitServiceTest {
   }
 
   @Test
+  void 부하_분산기_대역의_peer는_X_Forwarded_For_맨_오른쪽_값을_쓰고_IP_헤더는_무시한다() {
+    var service = service(List.of("10.0.0.0/20"), List.of("10.0.0.0/20"));
+    var request = request("10.0.3.4");
+    request.addHeader("X-Forwarded-For", "203.0.113.9, 198.51.100.20");
+    request.addHeader(AuthRequestRateLimitService.CLIENT_IP_HEADER, "203.0.113.10");
+    assertThat(service.clientAddress(request)).isEqualTo("198.51.100.20");
+  }
+
+  @Test
+  void 부하_분산기가_넘긴_X_Forwarded_For가_없거나_여러_줄이거나_숫자가_아니면_peer로_돌린다() {
+    var service = service(List.of(), List.of("10.0.0.0/20"));
+    assertThat(service.clientAddress(request("10.0.3.4"))).isEqualTo("10.0.3.4");
+    for (String value : List.of("203.0.113.9, localhost", "203.0.113.9,", "198.51.100.20:443")) {
+      var request = request("10.0.3.4");
+      request.addHeader("X-Forwarded-For", value);
+      assertThat(service.clientAddress(request)).as(value).isEqualTo("10.0.3.4");
+    }
+    var duplicate = request("10.0.3.4");
+    duplicate.addHeader("X-Forwarded-For", "198.51.100.20");
+    duplicate.addHeader("X-Forwarded-For", "198.51.100.21");
+    assertThat(service.clientAddress(duplicate)).isEqualTo("10.0.3.4");
+  }
+
+  @Test
+  void 방화벽이_거절하는_X_Forwarded_For는_peer로_돌린다() {
+    var service = service(List.of(), List.of("10.0.0.0/20"));
+    var request = request("10.0.3.4");
+    request.setMethod("POST");
+    request.addHeader("X-Forwarded-For", "198.51.100.20\u0085");
+    assertThat(service.clientAddress(new StrictHttpFirewall().getFirewalledRequest(request)))
+        .isEqualTo("10.0.3.4");
+  }
+
+  @Test
+  void 부하_분산기_대역_밖의_peer가_보낸_X_Forwarded_For는_믿지_않는다() {
+    var service = service(List.of(), List.of("10.0.0.0/20"));
+    var request = request("10.0.16.4");
+    request.addHeader("X-Forwarded-For", "198.51.100.20");
+    assertThat(service.clientAddress(request)).isEqualTo("10.0.16.4");
+  }
+
+  @Test
   void 전체_인터넷_CIDR와_호스트명_설정은_기동시_거절한다() {
     for (String value :
         List.of(
             "0.0.0.0/0", "::/0", "localhost", "10.0.0.1/33", "::1/129", "10.0.0.1/not-a-prefix")) {
       assertThatThrownBy(() -> service(List.of(value)))
+          .isInstanceOf(IllegalArgumentException.class);
+      assertThatThrownBy(() -> service(List.of(), List.of(value)))
           .isInstanceOf(IllegalArgumentException.class);
     }
   }
@@ -165,16 +210,37 @@ class AuthRequestRateLimitServiceTest {
   void 비활성_설정은_데이터베이스를_부르지_않는다() {
     var properties =
         new AuthRateLimitProperties(
-            false, 100, 10, Duration.ofMinutes(5), 20, 3, Duration.ofMinutes(30), List.of());
+            false,
+            100,
+            10,
+            Duration.ofMinutes(5),
+            20,
+            3,
+            Duration.ofMinutes(30),
+            List.of(),
+            List.of());
     var service = new AuthRequestRateLimitService(repository, properties);
     service.login("user@example.com", request("203.0.113.10"));
     verifyNoInteractions(repository);
   }
 
   private AuthRequestRateLimitService service(List<String> trustedProxies) {
+    return service(trustedProxies, List.of());
+  }
+
+  private AuthRequestRateLimitService service(
+      List<String> trustedProxies, List<String> loadBalancers) {
     var properties =
         new AuthRateLimitProperties(
-            true, 100, 10, Duration.ofMinutes(5), 20, 3, Duration.ofMinutes(30), trustedProxies);
+            true,
+            100,
+            10,
+            Duration.ofMinutes(5),
+            20,
+            3,
+            Duration.ofMinutes(30),
+            trustedProxies,
+            loadBalancers);
     return new AuthRequestRateLimitService(repository, properties);
   }
 
