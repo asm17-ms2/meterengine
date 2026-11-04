@@ -390,6 +390,34 @@ groups:
               conditions:
                 - evaluator: { type: gt, params: [0] }
 
+      # 자동 확정이 서버 쪽 오류로 확정하지 못한 고객과 달이 남았다. 다음 정시가 다시 시도하지만 같은 오류면 계속 남는다.
+      # 보류는 도입사가 수동 확정으로 끝낼 일이라 청구 예정액 화면이 알리고 여기서는 울리지 않는다. test 환경도 뺀다.
+      - uid: invoice-unfinalized-failed
+        title: 인보이스 자동 확정 실패 남음
+        condition: C
+        for: 0m
+        noDataState: OK
+        execErrState: Error
+        annotations:
+          summary: 자동 확정에 실패한 고객과 달이 남았다 (environment {{ $labels.environment }}). invoice_finalization_attempt의 reason과 백엔드 로그를 본다.
+        data:
+          - refId: A
+            relativeTimeRange: { from: 300, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: max by (environment) (meterengine_invoice_unfinalized{result="failed",environment!="test"})
+              instant: true
+          - refId: C
+            relativeTimeRange: { from: 0, to: 0 }
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
       # 실패로 끝나 더는 보내지 않는 웹훅이 생겼다(재시도 상한, 선점 만료, 막힌 주소). 도입사가 이벤트를 받지 못했다.
       # 예약 작업 실패와 같은 이유로 15분 안에 새로 생긴 시계열도 센다.
       - uid: webhook-delivery-failed

@@ -1,5 +1,7 @@
 import { test, expect, type APIRequestContext, type Locator, type Page } from "@playwright/test";
 
+import { formatKstMonth, shiftMonth } from "../src/lib/month";
+
 const FIXTURE_URL = "http://127.0.0.1:38150";
 const INVOICE_ID = "11111111-1111-4111-8111-111111111111";
 const ENDPOINT_ID = "33333333-3333-4333-8333-333333333333";
@@ -449,4 +451,74 @@ test("격리 계약: 청구 예정액을 불러오지 못하면 월 전체 확�
   const button = page.getByRole("button", { name: "월 전체 확정", exact: true });
   await expect(button).toBeDisabled();
   await expect(button).toHaveAccessibleDescription("청구 예정액을 불러오지 못해 확정할 수 없습니다.");
+});
+
+test("격리 계약: 자동 확정이 켜진 이번 달은 다음 자동 확정 시각과 단가 없는 사용량으로 보류될 고객의 단가 화면 링크를 보인다", async ({ page, request }) => {
+  await control(request, "auto-finalize");
+  const month = formatKstMonth();
+  await page.goto(`/billing?month=${month}&environment=legacy`);
+  await expect(page.getByText(`다음 자동 확정 ${shiftMonth(month, 1)}-01 14:00 KST`, { exact: true })).toBeVisible();
+  const held = page.getByRole("link", { name: "자동 확정 보류: 단가 없는 사용량", exact: true }).filter({ visible: true });
+  await expect(held).toHaveCount(1);
+  await expect(page.getByRole("row").filter({ has: held })).toContainText("단가 없는 사용량 고객");
+  await expect(page.getByRole("row").filter({ hasText: "단가 있는 고객" }).getByText(/자동 확정 보류/)).toHaveCount(0);
+  await expect(held).toHaveAccessibleDescription(/이 달이 끝나기 전에 단가를 등록하세요/);
+  await expect(page.getByRole("row").filter({ has: held }).getByText(/이 달이 끝나기 전에 단가를 등록하세요/)).toBeVisible();
+  const destination = new URL((await held.getAttribute("href"))!, "http://localhost:33150");
+  expect(destination.pathname).toBe("/pricing");
+  expect(destination.searchParams.get("month")).toBe(month);
+  expect(destination.searchParams.get("customer_id")).toBe("17171717-1717-4717-8717-171717171717");
+  expect(destination.searchParams.get("environment")).toBe("legacy");
+});
+
+test("격리 계약: 미터 조건으로 다른 미터의 단가 없는 사용량이 가려져도 서버가 정한 자동 확정 보류를 보인다", async ({ page, request }) => {
+  await control(request, "auto-finalize");
+  await page.goto(`/billing?month=${formatKstMonth()}&billable_metric_code=tokens&environment=legacy`);
+  await expect(page.getByRole("row").filter({ hasText: "단가 없는 사용량 고객" })).toBeVisible();
+  await expect(page.getByText("기타 (단가 없음)").filter({ visible: true })).toHaveCount(0);
+  const held = page.getByRole("link", { name: "자동 확정 보류: 단가 없는 사용량", exact: true }).filter({ visible: true });
+  await expect(held).toHaveCount(1);
+  await expect(page.getByRole("row").filter({ has: held })).toContainText("단가 없는 사용량 고객");
+});
+
+test("격리 계약: 확정 시각이 지난 달을 자동 확정하는 중이면 다음 시각 대신 진행 중을 보인다", async ({ page, request }) => {
+  await control(request, "auto-finalize");
+  await page.goto(`/billing?month=${shiftMonth(formatKstMonth(), -1)}&environment=legacy`);
+  await expect(page.getByText("자동 확정 진행 중", { exact: true })).toBeVisible();
+  await expect(page.getByText(/^다음 자동 확정/)).toHaveCount(0);
+});
+
+test("격리 계약: 끝난 달의 보류 표시는 단가 화면 대신 수동 확정을 안내하고 다 훑은 달은 시각을 보이지 않는다", async ({ page, request }) => {
+  await control(request, "auto-finalize");
+  await page.goto(`/billing?month=${shiftMonth(formatKstMonth(), -2)}&environment=legacy`);
+  const held = page.getByText("자동 확정 보류: 수동 확정 필요", { exact: true }).filter({ visible: true });
+  await expect(held).toHaveCount(1);
+  await expect(held).toHaveAccessibleDescription(/월 전체 확정으로 단가 있는 사용량만 청구하세요/);
+  await expect(page.getByRole("row").filter({ has: held }).getByText(/월 전체 확정으로 단가 있는 사용량만 청구하세요/)).toBeVisible();
+  await expect(page.getByRole("row").filter({ has: held })).toContainText("단가 없는 사용량 고객");
+  await expect(page.getByRole("link", { name: /자동 확정 보류/ })).toHaveCount(0);
+  await expect(page.getByText(/^다음 자동 확정|^자동 확정 진행 중$/)).toHaveCount(0);
+});
+
+test("격리 계약: 자동 확정이 꺼져 있으면 단가 없는 사용량이 있어도 보류 표시와 다음 자동 확정 시각을 보이지 않는다", async ({ page, request }) => {
+  await control(request, "auto-finalize");
+  await page.goto(`/billing?month=${shiftMonth(formatKstMonth(), -3)}&environment=legacy`);
+  await expect(page.getByRole("row").filter({ hasText: "단가 없는 사용량 고객" })).toBeVisible();
+  await expect(page.getByText(/자동 확정 보류/)).toHaveCount(0);
+  await expect(page.getByText(/^다음 자동 확정|^자동 확정 진행 중$/)).toHaveCount(0);
+});
+
+test("격리 계약: 모바일 카드는 보류 표시 아래에 이번 달의 단가 등록 기한과 끝난 달의 수동 확정 안내를 보인다", async ({ page, request }) => {
+  await control(request, "auto-finalize");
+  await page.setViewportSize({ width: 390, height: 844 });
+  const month = formatKstMonth();
+  await page.goto(`/billing?month=${month}&environment=legacy`);
+  const card = page.getByRole("article").filter({ hasText: "단가 없는 사용량 고객" });
+  await expect(card.getByText(/이 달이 끝나기 전에 단가를 등록하세요/)).toBeVisible();
+  await expect(card.getByRole("link", { name: "자동 확정 보류: 단가 없는 사용량", exact: true })).toHaveAccessibleDescription(/이 달이 끝나기 전에 단가를 등록하세요/);
+  await expect(page.getByRole("article").filter({ hasText: "단가 있는 고객" }).getByText(/자동 확정/)).toHaveCount(0);
+  await page.goto(`/billing?month=${shiftMonth(month, -2)}&environment=legacy`);
+  await expect(card.getByText("자동 확정 보류: 수동 확정 필요", { exact: true })).toBeVisible();
+  await expect(card.getByText(/끝난 달은 단가를 등록할 수 없어 다시 시도하지 않습니다/)).toBeVisible();
+  await expect(card.getByText("자동 확정 보류: 수동 확정 필요", { exact: true })).toHaveAccessibleDescription(/월 전체 확정으로 단가 있는 사용량만 청구하세요/);
 });

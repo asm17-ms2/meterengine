@@ -58,6 +58,7 @@ public class InvoiceAutoFinalizationService {
   private final InvoiceFinalizationService invoiceFinalizationService;
   private final InvoiceFinalizationAttemptRepository invoiceFinalizationAttemptRepository;
   private final ScheduledJobRunService scheduledJobRunService;
+  private final InvoiceFinalizationMetrics invoiceFinalizationMetrics;
   private final TransactionTemplate transactionTemplate;
   private final JsonMapper jsonMapper;
   private final Clock clock;
@@ -70,6 +71,7 @@ public class InvoiceAutoFinalizationService {
       InvoiceFinalizationService invoiceFinalizationService,
       InvoiceFinalizationAttemptRepository invoiceFinalizationAttemptRepository,
       ScheduledJobRunService scheduledJobRunService,
+      InvoiceFinalizationMetrics invoiceFinalizationMetrics,
       TransactionTemplate transactionTemplate,
       JsonMapper jsonMapper,
       Clock clock) {
@@ -80,6 +82,7 @@ public class InvoiceAutoFinalizationService {
     this.invoiceFinalizationService = invoiceFinalizationService;
     this.invoiceFinalizationAttemptRepository = invoiceFinalizationAttemptRepository;
     this.scheduledJobRunService = scheduledJobRunService;
+    this.invoiceFinalizationMetrics = invoiceFinalizationMetrics;
     this.transactionTemplate = transactionTemplate;
     this.jsonMapper = jsonMapper;
     this.clock = clock;
@@ -109,7 +112,11 @@ public class InvoiceAutoFinalizationService {
     }
     OffsetDateTime now =
         OffsetDateTime.now(clock.withZone(BillableMetricUsageService.BILLING_ZONE));
-    scheduledJobRunService.run(JOB_NAME, now.truncatedTo(ChronoUnit.HOURS), () -> finalize(now));
+    try {
+      scheduledJobRunService.run(JOB_NAME, now.truncatedTo(ChronoUnit.HOURS), () -> finalize(now));
+    } finally {
+      invoiceFinalizationMetrics.refresh();
+    }
   }
 
   // 확정 시각이 지난 달 중 끝난 결과가 없는 (고객, 달)을 활성 도입사마다 시도하고 결과를 남긴다.
