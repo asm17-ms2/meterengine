@@ -28,12 +28,13 @@ resource "aws_instance" "sut" {
     Name = "${local.prefix}-server"
   }
 
-  # 다시 만들면 Caddy가 인증서를 새로 받아 Let's Encrypt 발급 횟수 제한에 걸릴 수 있다.
+  # 오토스케일링 이미지의 원본이라 다시 만들지 않는다. 바꾼 user_data와 AMI는 새 서버에만 쓴다.
   lifecycle {
     ignore_changes = [user_data, ami]
   }
 }
 
+# 탄력적 IP는 들어오는 길에서 빠졌지만 NAT가 없어 이미지 받기 같은 나가는 길에 계속 쓴다.
 resource "aws_eip" "sut" {
   domain   = "vpc"
   instance = aws_instance.sut.id
@@ -47,6 +48,10 @@ resource "aws_route53_record" "sut" {
   zone_id = data.aws_route53_zone.main.zone_id
   name    = local.domain
   type    = "A"
-  ttl     = 60
-  records = [aws_eip.sut.public_ip]
+
+  alias {
+    name                   = aws_lb.sut.dns_name
+    zone_id                = aws_lb.sut.zone_id
+    evaluate_target_health = false
+  }
 }

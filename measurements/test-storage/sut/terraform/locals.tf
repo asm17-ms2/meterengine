@@ -15,4 +15,11 @@ locals {
   db_name               = "meterengine"
   db_username           = "meterengine"
   db_port               = 5432
+
+  # 공용 모니터링 서버가 앱 서버에서 긁는 포트. 키는 Prometheus job 이름과 같다.
+  app_scrape_ports = {
+    backend  = 8080
+    node     = 9100
+    cadvisor = 9101
+  }
 }

@@ -22,6 +22,17 @@ variable "sut_instance_type" {
   default     = "m7g.large"
 }
 
+variable "asg_min_size" {
+  description = "ASG 최소 대수. 04:00 예약이 0으로 내리므로 평소 0이고, 측정할 때만 -var로 올린다"
+  type        = number
+  default     = 0
+
+  validation {
+    condition     = var.asg_min_size >= 0 && var.asg_min_size <= 3
+    error_message = "asg_min_size는 0에서 3 사이여야 한다. 최대 대수가 3이다."
+  }
+}
+
 variable "db_instance_class" {
   description = "SUT RDS 인스턴스 클래스"
   type        = string
@@ -47,7 +58,7 @@ variable "db_multi_az" {
 }
 
 variable "auto_stop_state" {
-  description = "매일 04:00(Asia/Seoul) RDS와 EC2 자동 중지 스케줄 상태. 밤새 측정할 때 DISABLED"
+  description = "매일 04:00(Asia/Seoul) RDS와 EC2 자동 중지, ASG 0대 예약 상태. 밤새 측정할 때 DISABLED"
   type        = string
   default     = "ENABLED"
 
