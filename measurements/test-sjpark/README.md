@@ -10,7 +10,7 @@
 
 | 경로 | 내용 |
 | --- | --- |
-| `sut/terraform/` | EC2 m7g.large, RDS db.m7g.large(PostgreSQL 18.4, Single-AZ), 보안 그룹, IAM 역할, 파라미터, 도메인, 자동 중지 |
+| `sut/terraform/` | EC2 m7g.large, RDS db.m7g.large(PostgreSQL 18.4, Single-AZ), 보안 그룹, 공용 모니터링 수집 규칙, IAM 역할, 파라미터, 도메인, 자동 중지 |
 | `sut/scripts/` | 배포, exporter 사용자 만들기, 켜고 끄기 |
 | `lib/common.sh` | 스크립트가 같이 쓰는 함수 |
 | [`loadgen/`](loadgen/README.md) | 부하 발생기 |
@@ -20,7 +20,7 @@
 - 자원 이름 접두는 `meterengine-test-sjpark`, 도메인은 `test-sjpark.meterengine.com`, 파라미터 경로는 `/meterengine/test-sjpark`다.
 - EC2 역할은 Parameter Store에서 자기 경로만 읽는다. `/meterengine/prod`와 `/meterengine/production`은 Deny로 막혀 있다.
 - VPC, 서브넷, RDS 서브넷 그룹, 호스티드 존, ECR 이미지는 개발 서버와 같이 쓴다. 호스티드 존에는 SUT 도메인 레코드를 더하고, 나머지는 읽기만 한다.
-- Slack 웹훅은 아무도 받지 않는 주소라 SUT 경보가 팀 채널로 가지 않는다.
+- 감시는 공용 모니터링 서버가 한다. 서버에는 태그 `Role=app`, `Environment=test-sjpark`이 붙고, 공용 모니터링 보안 그룹에서 오는 9100(node exporter), 9101(cAdvisor)과 DB 5432만 들인다. 측정 환경이라 공용 Grafana 경보에서 빠진다. 보는 법은 "Grafana".
 - 자원에는 `Project=meterengine`, `Owner=sjparkx1129`, `Purpose=sut` 태그가 붙는다. 자동 중지 스케줄(EventBridge Scheduler)은 태그를 붙일 수 없다.
 - 자원 ID는 `terraform -chdir=measurements/test-sjpark/sut/terraform output`으로 본다.
 
@@ -49,7 +49,7 @@ terraform -chdir=measurements/test-sjpark/sut/terraform output
 measurements/test-sjpark/sut/scripts/sut-deploy.sh
 ```
 
-- SHA를 빼면 ECR `meterengine-backend`와 `meterengine-frontend` 둘 다에 이미지가 있는 main 커밋 가운데, `deploy/caddy/Caddyfile`과 `deploy/environments/test-sjpark.json`이 둘 다 있는 가장 최근 커밋을 배포한다. 고르는 법은 "다시 배포".
+- SHA를 빼면 ECR `meterengine-backend`와 `meterengine-frontend` 둘 다에 이미지가 있는 main 커밋 가운데, `deploy/caddy/Caddyfile`과 `deploy/environments/test-sjpark.json`이 있고 `deploy/compose.prod.yml`이 호스트 9100을 여는 가장 최근 커밋을 배포한다. 고르는 법은 "다시 배포".
 - 배포 전에 ECR 이미지, DNS, RDS 상태, EC2 상태를 확인하고 하나라도 틀리면 멈춘다. 서버의 `deploy.sh`도 DB 식별자를 `deploy/environments/test-sjpark.json`과 대조한다. 환경 파일이 없는 옛 커밋은 `deploy.conf`를 대조한다. EC2 준비가 끝나기 전이면 원격 명령이 실패하니 몇 분 뒤 다시 돌린다.
 - 성공하면 아래 줄이 나온다. 첫 배포는 Caddy가 인증서를 받는다(같은 도메인 주 5회 제한).
 
@@ -78,9 +78,12 @@ measurements/test-sjpark/sut/scripts/sut-deploy.sh <SHA 40자>
 
 - 배포 로그의 `파라미터 경로:` 줄이 `/meterengine/test-sjpark`인지 본다. `DB:` 줄은 스크립트가 `meterengine-test-sjpark-db`인지 확인하고 다르면 멈춘다.
 - SUT에는 CD가 없다. main이 바뀌어도 직접 배포할 때까지 그대로다.
-- 이 SUT는 HTTPS를 서버의 Caddy가 맡는다. 운영 배포에서 Caddy가 빠진 뒤의 커밋은 이 서버에서 뜨지 못해 스크립트가 고르지 않는다.
-  - SHA를 빼면 최신 커밋부터 보며 Caddyfile이나 환경 파일이 없는 커밋을 건너뛰고, 건너뛴 이유를 로그에 남긴다.
-  - SHA를 주면 서버에 명령을 보내기 전에 운영자 체크아웃에서 같은 두 파일을 확인하고, 없으면 멈춘다. 서버의 저장소는 바뀌지 않는다.
+- 이 SUT는 HTTPS를 서버의 Caddy가 맡는다. 운영 배포에서 Caddy를 걷어낸 커밋 이후는 이 서버에서 뜨지 못해 스크립트가 고르지 않는다. 그래서 이 서버는 Caddy가 남은 마지막 운영 릴리스에 고정된다.
+  - 공용 모니터링이 긁는 호스트 9100, 9101이 없는 옛 커밋도 고르지 않는다.
+  - SHA를 빼면 최신 커밋부터 보며 Caddyfile, 환경 파일, 9100 포트 가운데 하나라도 없는 커밋을 건너뛰고, 건너뛴 이유를 로그에 남긴다.
+  - SHA를 주면 서버에 명령을 보내기 전에 운영자 체크아웃에서 같은 조건을 확인하고, 맞지 않으면 멈춘다. 서버의 저장소는 바뀌지 않는다.
+- Caddy가 남은 커밋의 환경 파일은 서버 안 Prometheus와 Grafana(`monitoring` 프로필)를 켠다. 스크립트는 배포 때 서버 사본의 프로필을 `agents`로 바꿔 띄우지 않고, 배포가 끝나면 남은 서버 안 감시 컨테이너를 따로 내린다. 볼륨(`prometheus-data`, `grafana-data`)은 지우지 않는다.
+- `deploy.sh`를 스크립트 없이 직접 돌리면 그 커밋의 환경 파일대로 서버 안 감시가 다시 뜬다. 되돌릴 때가 아니면 `sut-deploy.sh`로만 배포한다.
 - ECR은 태그 이미지를 최근 10개만 남긴다. 같은 SHA로 다시 재려면 이미지가 남아 있는지 먼저 본다.
 
 ```bash
@@ -92,7 +95,73 @@ aws ecr describe-images --region ap-northeast-2 --repository-name meterengine-fr
 
 ### 보존 이미지
 
-- Caddy가 있는 마지막 운영 릴리스의 두 이미지는 ECR에 `keep-test-sjpark-<SHA 7자>` 태그를 더 붙여 수명 주기 정책이 지우지 않게 둔다. 고를 커밋이 없다고 멈추면 이 태그의 이미지를 찾는다.
+- Caddy가 있는 마지막 운영 릴리스의 두 이미지를 ECR에 남겨 둔다.
+- 태그만 더 붙여서는 남지 않는다. 두 저장소(`meterengine-backend`, `meterengine-frontend`)의 수명 주기 규칙 1은 태그 이름과 상관없이(`tagPatternList ["*"]`) 태그 있는 이미지를 최근 10개만 남긴다.
+- 그래서 `keep-`으로 시작하는 태그를 먼저 잡는 규칙을 우선순위 1로 넣고, 지금 두 규칙은 우선순위를 하나씩 뒤로 민다. 앞 규칙이 잡은 이미지는 뒤 규칙이 지우지 못한다. 정책을 다시 쓸 때 이 규칙을 빼지 않는다.
+- 운영 ECR은 Terraform 밖이라 손으로 한다. 아래 순서를 두 저장소에 한 번씩 한다.
+
+남길 커밋은 다음을 모두 맞아야 한다. 맞는 커밋 가운데 가장 최근 것을 고른다.
+
+- main에 있는 운영 릴리스다. CD는 main 커밋 SHA로만 이미지를 올린다.
+- `deploy/compose.prod.yml`에 공용 감시 포트 9100이 있다. 공용 모니터링 서버를 세운 커밋 이후다.
+- `deploy/caddy/Caddyfile`이 있다. Caddy를 걷어낸 커밋 이전이다.
+
+```bash
+SHA=<SHA 40자>
+git fetch --quiet origin
+git merge-base --is-ancestor "$SHA" origin/main && echo "main에 있음"
+git grep -q -F '"9100:9100"' "$SHA" -- deploy/compose.prod.yml && echo "9100 있음"
+git cat-file -e "$SHA:deploy/caddy/Caddyfile" && echo "Caddyfile 있음"
+```
+
+- 세 줄이 다 나와야 한다. 두 저장소에 이 SHA 이미지가 아직 있는지는 위 `describe-images`로 본다.
+
+규칙을 넣는다. 먼저 지금 정책이 위 두 규칙 그대로인지 보고, 다르면 아래 파일의 2번과 3번 규칙을 지금 값에 맞춘다.
+
+```bash
+REPOSITORY=meterengine-backend  # 두 번째는 meterengine-frontend
+aws ecr get-lifecycle-policy --region ap-northeast-2 --repository-name "$REPOSITORY" \
+  --query lifecyclePolicyText --output text
+cat > /tmp/keep-lifecycle.json <<'EOF'
+{"rules": [
+  {"rulePriority": 1, "description": "keep- 태그 이미지는 지우지 않는다 (test-sjpark 보존)",
+   "selection": {"tagStatus": "tagged", "tagPrefixList": ["keep-"], "countType": "imageCountMoreThan", "countNumber": 100},
+   "action": {"type": "expire"}},
+  {"rulePriority": 2, "description": "태그 있는 이미지는 최근 10개만 남긴다 (배포 10회분)",
+   "selection": {"tagStatus": "tagged", "tagPatternList": ["*"], "countType": "imageCountMoreThan", "countNumber": 10},
+   "action": {"type": "expire"}},
+  {"rulePriority": 3, "description": "참조되지 않는 매니페스트를 14일 후 정리",
+   "selection": {"tagStatus": "untagged", "countType": "sinceImagePushed", "countUnit": "days", "countNumber": 14},
+   "action": {"type": "expire"}}
+]}
+EOF
+aws ecr start-lifecycle-policy-preview --region ap-northeast-2 --repository-name "$REPOSITORY" \
+  --lifecycle-policy-text file:///tmp/keep-lifecycle.json --query status --output text
+aws ecr get-lifecycle-policy-preview --region ap-northeast-2 --repository-name "$REPOSITORY" --query status --output text
+```
+
+- 마지막 명령이 `COMPLETE`를 낼 때까지 다시 돌린다. 오류 없이 끝나면 정책을 넣는다.
+
+```bash
+aws ecr put-lifecycle-policy --region ap-northeast-2 --repository-name "$REPOSITORY" \
+  --lifecycle-policy-text file:///tmp/keep-lifecycle.json --query repositoryName --output text
+```
+
+태그를 붙이고, 수명 주기 미리보기에서 그 이미지가 지울 목록에 없는지 본다.
+
+```bash
+aws ecr batch-get-image --region ap-northeast-2 --repository-name "$REPOSITORY" --image-ids imageTag="$SHA" \
+  --query 'images[0].imageManifest' --output text > /tmp/manifest.json
+aws ecr put-image --region ap-northeast-2 --repository-name "$REPOSITORY" --image-tag "keep-test-sjpark-${SHA:0:7}" \
+  --image-manifest file:///tmp/manifest.json --query 'image.imageId.imageTag' --output text
+aws ecr start-lifecycle-policy-preview --region ap-northeast-2 --repository-name "$REPOSITORY" --query status --output text
+aws ecr get-lifecycle-policy-preview --region ap-northeast-2 --repository-name "$REPOSITORY" \
+  --query "[status, length(previewResults[?imageTags && contains(join(',', imageTags), 'keep-')])]" --output text
+```
+
+- `COMPLETE`와 `0`이 나와야 한다. 0이 아니면 정책에 1번 규칙이 들어갔는지 다시 본다.
+
+고를 커밋이 없다고 스크립트가 멈추면 이 태그의 이미지를 찾는다.
 
 ```bash
 aws ecr describe-images --region ap-northeast-2 --repository-name meterengine-backend \
@@ -151,16 +220,22 @@ aws ssm start-session --region ap-northeast-2 \
 
 ## Grafana
 
-SUT 안 `127.0.0.1:3001`에만 열려 있어 포트 포워딩으로 본다. 들어가는 법은 [`test-storage/README.md`](../test-storage/README.md) "Grafana"를 따르되 test-storage를 test-sjpark로 바꾼다.
+공용 Grafana https://grafana.meterengine.com 에서 대시보드 맨 위 `환경`을 `test-sjpark`으로 고른다. 도메인으로 열리기 전에는 [`deploy/README.md`](../../deploy/README.md) "공용 모니터링 서버"대로 9090을 포트 포워딩해 Prometheus에서 `env="test-sjpark"`로 조회한다.
+
+- 보이는 것: 서버(node exporter), 컨테이너(cAdvisor), PostgreSQL(postgres exporter), RDS(CloudWatch) 지표.
+- 보이지 않는 것: 백엔드 앱 지표와 Caddy 지표. 백엔드가 블루그린이라 호스트에 8080이 없어 공용 모니터링이 긁지 않는다.
+- **서버 안 감시를 내린 뒤의 측정은 그 전과 기준선이 다르다.** 서버 안 Prometheus, Grafana, exporter가 쓰던 CPU와 메모리가 빠진다. 앞뒤 결과를 비교할 때 적어 둔다.
+
+### 서버 안 감시로 되돌리기
+
+Caddy가 남은 마지막 릴리스 SHA로 `deploy.sh`를 직접 돌리면 그 커밋의 환경 파일대로 서버 안 감시가 남은 볼륨의 옛 기록과 함께 다시 뜬다. "서버에 들어가기"로 붙어 root로 [`deploy/README.md`](../../deploy/README.md) "수동 배포"의 잠금 형식으로 부른다.
 
 ```bash
-aws ssm get-parameter --region ap-northeast-2 --name /meterengine/test-sjpark/grafana-admin-password \
-  --with-decryption --query Parameter.Value --output text
-aws ssm start-session --region ap-northeast-2 \
-  --target "$(terraform -chdir=measurements/test-sjpark/sut/terraform output -raw sut_instance_id)" \
-  --document-name AWS-StartPortForwardingSession \
-  --parameters '{"portNumber":["3001"],"localPortNumber":["3001"]}'
+(exec 8>/etc/meterengine/deploy-command.lock && flock -n 8 && cd /opt/meterengine && git fetch --quiet origin 8>&- 9>&- && git checkout --quiet --force <SHA> 8>&- 9>&- && ./deploy/deploy.sh test-sjpark <SHA>)
 ```
+
+- SUT 안 `127.0.0.1:3001`에만 열리고, 들어가는 법은 [`test-storage/README.md`](../test-storage/README.md) "Grafana"를 따르되 test-storage를 test-sjpark로 바꾼다. 비밀번호는 `/meterengine/test-sjpark/grafana-admin-password`다.
+- 다음 `sut-deploy.sh`가 다시 내린다. 계속 쓰려면 이 감시 분리를 되돌리는 PR을 올린다.
 
 ## 비밀번호
 

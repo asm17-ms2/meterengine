@@ -24,8 +24,11 @@ resource "aws_instance" "sut" {
     domain     = local.domain
   })
 
+  # 공용 모니터링 서버가 Role로 찾고 Environment를 env 라벨로 붙인다.
   tags = {
-    Name = "${local.prefix}-server"
+    Name        = "${local.prefix}-server"
+    Role        = "app"
+    Environment = var.sut_name
   }
 
   # 다시 만들면 Caddy가 인증서를 새로 받아 Let's Encrypt 발급 횟수 제한에 걸릴 수 있다.
