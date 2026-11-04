@@ -7,8 +7,10 @@ import com.meterengine.TestEvents;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.invoice.repository.InvoiceFinalizationAttemptRepository;
 import com.meterengine.invoice.service.InvoiceAutoFinalizationService;
+import com.meterengine.invoice.service.InvoiceFinalizationMetrics;
 import com.meterengine.invoice.service.InvoiceFinalizationService;
 import com.meterengine.scheduling.dto.ScheduledJobResult;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
@@ -36,10 +38,10 @@ class InvoiceAutoFinalizeIntegrationTest {
 
   @Autowired private InvoiceAutoFinalizationService invoiceAutoFinalizationService;
   @Autowired private InvoiceFinalizationService invoiceFinalizationService;
-
   @Autowired private InvoiceFinalizationAttemptRepository invoiceFinalizationAttemptRepository;
-
+  @Autowired private InvoiceFinalizationMetrics invoiceFinalizationMetrics;
   @Autowired private JdbcTemplate jdbcTemplate;
+  @Autowired private MeterRegistry meterRegistry;
 
   @Test
   void 확정_시각이_지난_달은_보류_조건이_없는_고객만_마감_전에_받은_이벤트로_확정하고_고객마다_결과를_남긴다() {
@@ -281,6 +283,108 @@ class InvoiceAutoFinalizeIntegrationTest {
   }
 
   @Test
+  void 실패한_고객과_달은_다시_확정될_때까지_미확정_지표에_실패로_잡힌다() {
+    UUID organizationId = organizationWithTokenBillableMetric();
+    UUID failing = insertCustomer(organizationId, "가");
+    insertSeptemberEvent(
+        organizationId,
+        "tx-1",
+        failing,
+        "{\"token\": 2000000000000000000}",
+        "2026-09-30T10:00:00+09:00");
+    double before = unfinalized("legacy", "failed");
+
+    invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_1_AT_14);
+    double afterFailure = unfinalized("legacy", "failed");
+    jdbcTemplate.update(
+        "UPDATE price_rate SET unit_price = 0.000001 WHERE organization_id = ?", organizationId);
+    invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_1_AT_15);
+
+    assertThat(afterFailure).isEqualTo(before + 1);
+    assertThat(unfinalized("legacy", "failed")).isEqualTo(before);
+  }
+
+  @Test
+  void 보류된_고객을_수동으로_확정하면_미확정_지표의_보류에서_빠지고_0원으로_끝난_고객은_보류로_세지_않는다() {
+    UUID organizationId = organizationWithTokenBillableMetric();
+    UUID mixed = insertCustomer(organizationId, "가");
+    UUID unpricedOnly = insertCustomer(organizationId, "나");
+    insertSeptemberEvent(
+        organizationId, "tx-1", mixed, "{\"token\": 1000}", "2026-09-30T10:00:00+09:00");
+    insertSeptemberEvent(
+        organizationId,
+        "tx-2",
+        mixed,
+        "{\"token\": 500, \"model\": \"new\"}",
+        "2026-09-30T10:00:00+09:00");
+    insertSeptemberEvent(
+        organizationId,
+        "tx-3",
+        unpricedOnly,
+        "{\"token\": 500, \"model\": \"new\"}",
+        "2026-09-30T10:00:00+09:00");
+    double before = unfinalized("legacy", "held");
+
+    invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_1_AT_14);
+    double afterHeld = unfinalized("legacy", "held");
+    invoiceFinalizationService.finalize(organizationId, YearMonth.of(2026, 9));
+
+    assertThat(afterHeld).isEqualTo(before + 1);
+    assertThat(unfinalized("legacy", "held")).isEqualTo(before);
+  }
+
+  @Test
+  void 실패한_고객이_다음_정시에_0원으로_끝나면_미확정_지표의_실패에서_빠진다() {
+    UUID organizationId = organizationWithTokenBillableMetric();
+    UUID failing = insertCustomer(organizationId, "가");
+    insertSeptemberEvent(
+        organizationId,
+        "tx-1",
+        failing,
+        "{\"token\": 2000000000000000000}",
+        "2026-09-30T10:00:00+09:00");
+    double before = unfinalized("legacy", "failed");
+
+    invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_1_AT_14);
+    double afterFailure = unfinalized("legacy", "failed");
+    jdbcTemplate.update(
+        "UPDATE price_rate SET unit_price = 0 WHERE organization_id = ?", organizationId);
+    invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_1_AT_15);
+
+    assertThat(afterFailure).isEqualTo(before + 1);
+    assertThat(attempts(organizationId, SEPTEMBER))
+        .extracting(attempt -> attempt.get("result"))
+        .containsExactly("failed", "zero_amount");
+    assertThat(unfinalized("legacy", "failed")).isEqualTo(before);
+  }
+
+  @Test
+  void test_환경에서_실패한_고객과_달은_미확정_지표에_test_환경으로만_잡힌다() {
+    UUID organizationId = organizationWithTokenBillableMetric();
+    UUID testEnvironmentId = environmentId(organizationId, "test");
+    insertBillableMetric(organizationId, testEnvironmentId);
+    insertPrice(organizationId, testEnvironmentId, null, "{\"model\": null}", "0.5", "2000-01");
+    UUID failing = insertCustomer(organizationId, testEnvironmentId, "가", REGISTERED_AT);
+    insertEvent(
+        organizationId,
+        testEnvironmentId,
+        "tx-1",
+        failing,
+        "{\"token\": 2000000000000000000}",
+        "2026-09-30T10:00:00+09:00",
+        "2026-09-30T10:00:00+09:00");
+    double testBefore = unfinalized("test", "failed");
+    double legacyBefore = unfinalized("legacy", "failed");
+    double liveBefore = unfinalized("live", "failed");
+
+    invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_1_AT_14);
+
+    assertThat(unfinalized("test", "failed")).isEqualTo(testBefore + 1);
+    assertThat(unfinalized("legacy", "failed")).isEqualTo(legacyBefore);
+    assertThat(unfinalized("live", "failed")).isEqualTo(liveBefore);
+  }
+
+  @Test
   void 수동으로_먼저_확정한_고객은_건너뛰고_인보이스는_한_장이다() {
     UUID organizationId = organizationWithTokenBillableMetric();
     UUID acme = insertCustomer(organizationId, "아크메");
@@ -448,6 +552,16 @@ class InvoiceAutoFinalizeIntegrationTest {
     invoiceAutoFinalizationService.run();
 
     assertThat(jobRunCount()).isEqualTo(before);
+  }
+
+  private double unfinalized(String environment, String result) {
+    invoiceFinalizationMetrics.refresh();
+    return meterRegistry
+        .get("meterengine.invoice.unfinalized")
+        .tag("environment", environment)
+        .tag("result", result)
+        .gauge()
+        .value();
   }
 
   private int jobRunCount() {

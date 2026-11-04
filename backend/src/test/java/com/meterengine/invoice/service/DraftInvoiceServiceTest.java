@@ -1,6 +1,7 @@
 package com.meterengine.invoice.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
@@ -204,6 +205,38 @@ class DraftInvoiceServiceTest {
   }
 
   @Test
+  void 자동_확정이_켜져_있으면_단가_없는_사용량이_있고_0원이_아닌_고객만_보류로_표시한다() {
+    DraftInvoiceService enabled = draftInvoiceServiceAt("2026-10-26T10:00:00+09:00");
+    Customer priced = customer("가");
+    Customer unpriced = customer("나");
+    Customer zeroAmount = customer("다");
+    stubCustomers(priced, unpriced, zeroAmount);
+    stubCustomerCharges(
+        Map.of(
+            priced.getId(),
+            customerCharge(priced, 100),
+            unpriced.getId(),
+            unpricedCustomerCharge(unpriced, 100),
+            zeroAmount.getId(),
+            unpricedCustomerCharge(zeroAmount, 0)));
+
+    assertThat(enabled.preview(ORGANIZATION_ID, AUGUST).customers())
+        .extracting(DraftInvoiceCustomer::customerName, DraftInvoiceCustomer::autoFinalizeHeld)
+        .containsExactly(tuple("가", false), tuple("나", true), tuple("다", false));
+  }
+
+  @Test
+  void 자동_확정이_꺼져_있으면_단가_없는_사용량이_있어도_보류로_표시하지_않는다() {
+    Customer unpriced = customer("나");
+    stubCustomers(unpriced);
+    stubCustomerCharges(Map.of(unpriced.getId(), unpricedCustomerCharge(unpriced, 100)));
+
+    assertThat(draftInvoiceService.preview(ORGANIZATION_ID, AUGUST).customers())
+        .singleElement()
+        .satisfies(customer -> assertThat(customer.autoFinalizeHeld()).isFalse());
+  }
+
+  @Test
   void 계산_시각은_주입한_시계의_지금을_KST로_나타낸_것이다() {
     Customer acme = customer("아크메");
     stubCustomers(acme);
@@ -385,6 +418,24 @@ class DraftInvoiceServiceTest {
             new DimensionCharge(
                 "token-usage", "token", Map.of(), new BigDecimal("1"), BigDecimal.ONE, amount)),
         List.of(),
+        List.of());
+  }
+
+  private static CustomerCharge unpricedCustomerCharge(Customer customer, long pricedAmount) {
+    return new CustomerCharge(
+        customer.getId(),
+        pricedAmount,
+        pricedAmount == 0
+            ? List.of()
+            : List.of(
+                new DimensionCharge(
+                    "token-usage",
+                    "token",
+                    Map.of(),
+                    new BigDecimal("1"),
+                    BigDecimal.ONE,
+                    pricedAmount)),
+        List.of(new UnpricedUsage("api-calls", "count", Map.of(), new BigDecimal("3"))),
         List.of());
   }
 

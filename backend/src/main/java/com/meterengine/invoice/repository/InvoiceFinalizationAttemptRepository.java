@@ -65,6 +65,38 @@ public interface InvoiceFinalizationAttemptRepository
       nativeQuery = true)
   List<OpenAttempt> findOpenAttempts(UUID organizationId, UUID environmentId);
 
+  // 모든 도입사의 열린 시도를 환경(legacy, test, live)과 마지막 결과마다 센다.
+  @Query(
+      value =
+          """
+          SELECT latest.environment AS environment, latest.result AS result, count(*) AS count
+          FROM (
+            SELECT DISTINCT ON (a.organization_id, a.environment_scope_id, a.customer_id, a.period)
+                   COALESCE(e.mode, 'legacy') AS environment, a.result
+            FROM invoice_finalization_attempt a
+            LEFT JOIN organization_environment e ON e.id = a.environment_id
+            WHERE a.result IN ('held', 'failed')
+              AND NOT EXISTS (
+                SELECT 1 FROM invoice_finalization_attempt f
+                WHERE f.organization_id = a.organization_id
+                  AND f.environment_scope_id = a.environment_scope_id
+                  AND f.period = a.period
+                  AND f.customer_id = a.customer_id
+                  AND f.result IN ('finalized', 'no_events', 'skipped', 'zero_amount'))
+              AND NOT EXISTS (
+                SELECT 1 FROM invoice i
+                WHERE i.organization_id = a.organization_id
+                  AND i.environment_scope_id = a.environment_scope_id
+                  AND i.customer_id = a.customer_id
+                  AND i.period = a.period)
+            ORDER BY a.organization_id, a.environment_scope_id, a.customer_id, a.period,
+                     a.attempted_at DESC
+          ) latest
+          GROUP BY latest.environment, latest.result
+          """,
+      nativeQuery = true)
+  List<OpenCount> countOpen();
+
   @Query(
       value =
           """
@@ -146,5 +178,14 @@ public interface InvoiceFinalizationAttemptRepository
     String getPeriod();
 
     String getResult();
+  }
+
+  interface OpenCount {
+
+    String getEnvironment();
+
+    String getResult();
+
+    long getCount();
   }
 }

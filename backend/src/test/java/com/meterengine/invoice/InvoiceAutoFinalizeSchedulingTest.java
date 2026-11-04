@@ -5,7 +5,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.meterengine.TestClock;
 import com.meterengine.TestEvents;
 import com.meterengine.TestcontainersConfiguration;
+import com.meterengine.invoice.repository.InvoiceFinalizationAttemptRepository;
 import com.meterengine.invoice.service.InvoiceAutoFinalizationService;
+import com.meterengine.invoice.service.InvoiceFinalizationMetrics;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
@@ -22,7 +25,10 @@ import org.springframework.jdbc.core.JdbcTemplate;
 class InvoiceAutoFinalizeSchedulingTest {
 
   @Autowired private InvoiceAutoFinalizationService invoiceAutoFinalizationService;
+  @Autowired private InvoiceFinalizationMetrics invoiceFinalizationMetrics;
+  @Autowired private InvoiceFinalizationAttemptRepository invoiceFinalizationAttemptRepository;
   @Autowired private JdbcTemplate jdbcTemplate;
+  @Autowired private MeterRegistry meterRegistry;
   @Autowired private TestClock testClock;
 
   @AfterEach
@@ -59,13 +65,54 @@ class InvoiceAutoFinalizeSchedulingTest {
     assertThat(invoiceCount(suspended)).isZero();
   }
 
+  @Test
+  void 정시_실행이_끝나면_수집_때_DB를_읽지_않는_미확정_지표를_다시_센다() {
+    UUID organizationId = organizationWithBilledCustomer("active", "2000000000000000000");
+    invoiceFinalizationMetrics.refresh();
+    testClock.fix(OffsetDateTime.parse("2026-10-01T16:00:10+09:00"));
+
+    invoiceAutoFinalizationService.run();
+
+    assertThat(
+            jdbcTemplate.queryForObject(
+                """
+                SELECT result FROM invoice_finalization_attempt
+                WHERE organization_id = ? AND period = '2026-09'
+                """,
+                String.class,
+                organizationId))
+        .isEqualTo("failed");
+    assertThat(
+            meterRegistry
+                .get("meterengine.invoice.unfinalized")
+                .tag("environment", "legacy")
+                .tag("result", "failed")
+                .gauge()
+                .value())
+        .isEqualTo(legacyFailedCount());
+  }
+
+  private double legacyFailedCount() {
+    return invoiceFinalizationAttemptRepository.countOpen().stream()
+        .filter(
+            openCount ->
+                openCount.getEnvironment().equals("legacy")
+                    && openCount.getResult().equals("failed"))
+        .mapToLong(InvoiceFinalizationAttemptRepository.OpenCount::getCount)
+        .sum();
+  }
+
   private int invoiceCount(UUID organizationId) {
     return jdbcTemplate.queryForObject(
         "SELECT count(*) FROM invoice WHERE organization_id = ?", Integer.class, organizationId);
   }
 
-  // 9월에 단가가 있는 사용량을 낸 고객 하나를 가진 도입사를 만든다.
   private UUID organizationWithBilledCustomer(String status) {
+    return organizationWithBilledCustomer(status, "1000");
+  }
+
+  // 9월에 단가가 있는 사용량을 낸 고객 하나를 가진 도입사를 만든다.
+  private UUID organizationWithBilledCustomer(String status, String token) {
     UUID organizationId =
         jdbcTemplate.queryForObject(
             "INSERT INTO organization (name, status) VALUES ('정시 도입사', ?) RETURNING id",
@@ -93,14 +140,15 @@ class InvoiceAutoFinalizeSchedulingTest {
             """,
             UUID.class,
             organizationId);
-    TestEvents.insertToken(
+    TestEvents.insert(
         jdbcTemplate,
         organizationId,
         "tx-1",
         customerId,
-        1000,
-        "2026-09-30T10:00:00+09:00",
-        "2026-09-30T10:00:00+09:00");
+        "chat_completion",
+        "{\"token\": %s}".formatted(token),
+        OffsetDateTime.parse("2026-09-30T10:00:00+09:00"),
+        OffsetDateTime.parse("2026-09-30T10:00:00+09:00"));
     return organizationId;
   }
 }
