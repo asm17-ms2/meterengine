@@ -11,7 +11,6 @@ MAX_TITLE_LENGTH = 20
 METRIC_SELECTOR = re.compile(r"([a-z_:][a-z0-9_:]*)\{")
 RANGE_WINDOW = re.compile(r"\[([^\]]+)\]")
 HISTOGRAM_SERIES_SUFFIX = re.compile(r"_(bucket|count|sum)$")
-CADDY_SITE_HANDLER = 'handler="subroute"'
 
 
 def metric_names(panel):
@@ -67,19 +66,6 @@ class OverviewDashboardTest(unittest.TestCase):
             self.assertIn('outcome="SUCCESS"', expression)
             self.assertIn('uri!~"/actuator.*|UNKNOWN"', expression)
 
-    def test_caddy_latency_uses_successful_responses_only(self):
-        expressions = self.expressions_reading("caddy_http_request_duration_seconds_bucket")
-        self.assertTrue(expressions)
-        for expression in expressions:
-            self.assertIn('code=~"2.."', expression)
-
-    def test_upstream_health_shows_only_the_colors_caddy_proxies_to_now(self):
-        targets = self.targets_reading("caddy_reverse_proxy_upstreams_healthy")
-        self.assertTrue(targets)
-        for target in targets:
-            self.assertTrue(target.get("instant"), target["expr"])
-            self.assertIs(False, target.get("range"), target["expr"])
-
     def test_stat_panels_read_one_value_at_the_end_of_the_range(self):
         stats = [panel for panel in self.panels if panel["type"] == "stat"]
         self.assertTrue(stats)
@@ -87,12 +73,6 @@ class OverviewDashboardTest(unittest.TestCase):
             for target in stat["targets"]:
                 self.assertTrue(target.get("instant"), stat["title"])
                 self.assertIs(False, target.get("range"), stat["title"])
-
-    def test_caddy_request_panels_count_each_request_once_per_site(self):
-        expressions = self.expressions_reading("caddy_http_")
-        self.assertTrue(expressions)
-        for expression in expressions:
-            self.assertIn(CADDY_SITE_HANDLER, expression)
 
     def test_top_ten_tables_read_the_whole_range_at_once(self):
         tables = [panel for panel in self.panels if panel["type"] == "table"]

@@ -52,12 +52,22 @@ resource "aws_launch_template" "app" {
   }
 }
 
+# 서버를 켤 때만 읽는다. 0대인 새 환경은 파라미터가 생기기 전에도 plan이 된다.
+data "aws_ssm_parameter" "app_version" {
+  count = var.min_size > 0 ? 1 : 0
+  name  = local.app_version_parameter_name
+}
+
 resource "aws_autoscaling_group" "app" {
   name                = "${local.name}-app"
   min_size            = var.min_size
   max_size            = 3
   vpc_zone_identifier = var.public_subnet_ids
   target_group_arns   = [aws_lb_target_group.frontend.arn, aws_lb_target_group.backend.arn]
+
+  # 최소 대수를 바꾸는 apply가 두 대상 그룹에서 그만큼 healthy가 될 때까지 기다려, 도메인 전환이 빈 대상 그룹으로 가지 않는다.
+  wait_for_elb_capacity     = var.min_size > 0 ? var.min_size : null
+  wait_for_capacity_timeout = "20m"
 
   # 기본 이미지에 설치부터 하는 부팅이라 이미지를 복제한 측정 환경(약 2분)보다 넉넉히 기다린다.
   health_check_type         = "ELB"
@@ -105,6 +115,11 @@ resource "aws_autoscaling_group" "app" {
   # 원하는 대수는 확장 정책이 정한다.
   lifecycle {
     ignore_changes = [desired_capacity]
+    # 자리 값이나 빈 값으로 서버를 띄우면 부팅이 실패해 교체만 되풀이한다.
+    precondition {
+      condition     = var.min_size == 0 || can(regex("^[0-9a-f]{40}$", one(data.aws_ssm_parameter.app_version[*].insecure_value)))
+      error_message = "Record a 40-character commit SHA in the app-version parameter before keeping servers running."
+    }
   }
 }
 

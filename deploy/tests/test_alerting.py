@@ -40,6 +40,12 @@ class AlertingTest(unittest.TestCase):
         self.assertIn("deleteRules:\n  - orgId: 1\n    uid: backend-both-colors-up\n", source)
         self.assertNotIn("backend-both-colors-up", [uid for uid, _, _ in rules()])
 
+    def test_empty_fleet_counts_zero_for_each_service_environment(self):
+        expr = dict((uid, expr) for uid, expr, _ in rules())["app-fleet-empty"]
+        self.assertIn('count by (env) (up{env!~"test-.*", job="backend"})', expr)
+        for env in ("staging", "production"):
+            self.assertIn(f'or label_replace(vector(0), "env", "{env}", "", "")', expr)
+
     def test_every_summary_names_the_environment(self):
         for uid, _, summary in rules():
             self.assertIn("{{ $labels.env }}", summary, uid)
