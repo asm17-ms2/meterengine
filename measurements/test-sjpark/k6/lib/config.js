@@ -1,4 +1,4 @@
-const DEFAULT_BASE_URL = 'https://test-slo.meterengine.com';
+const DEFAULT_BASE_URL = 'https://test-sjpark.meterengine.com';
 const RUN_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 
 function invalid(name, value) {

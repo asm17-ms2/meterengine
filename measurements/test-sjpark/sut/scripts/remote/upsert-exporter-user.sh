@@ -28,7 +28,7 @@ db_exporter_password=""
 
 require_sut_param_path() {
 	local param_path="$1"
-	[ -n "$param_path" ] || die "파라미터 경로를 인자로 줘야 한다. 예: /meterengine/test-slo"
+	[ -n "$param_path" ] || die "파라미터 경로를 인자로 줘야 한다. 예: /meterengine/test-sjpark"
 	case "$param_path" in
 	"$DEV_SERVER_PARAM_PATH" | "$DEV_SERVER_PARAM_PATH"/* | "$PRODUCTION_PARAM_PATH" | "$PRODUCTION_PARAM_PATH"/*) die "production 경로 $param_path 는 쓰지 않는다" ;;
 	esac

@@ -10,7 +10,7 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
 | --- | --- | --- | --- |
 | staging | develop 머지 | staging.meterengine.com | agents |
 | production | main 머지 | meterengine.com | agents, monitoring |
-| test-slo, test-storage | `sut-deploy.sh` | `<환경>.meterengine.com` | agents, monitoring |
+| test-sjpark, test-storage | `sut-deploy.sh` | `<환경>.meterengine.com` | agents, monitoring |
 
 | 프로필 | 서비스 |
 | --- | --- |
@@ -120,7 +120,7 @@ mkdir -p /etc/meterengine && chmod 700 /etc/meterengine
   - `image_repository_prefix`: ECR 저장소 이름 앞부분. `<값>-backend`, `<값>-frontend`에서 이미지를 받는다.
   - `backend_mem_limit`: 백엔드 컨테이너의 메모리 한도. `backend_max_ram_percentage`: 그 한도 중 JVM 힙의 최대 비율(%).
 - `/etc/meterengine/deploy.conf`에는 측정용 값(`DEPLOY_TIMING`, `CADDY_ACCESS_LOG`)만 둔다. 환경 파일과 같은 이름의 값을 적어도 환경 파일이 앞선다.
-- 배포 중 실패를 재는 서버에만 `DEPLOY_TIMING=on`을 더한다. `deploy.sh`가 맨 앞과 맨 끝에 아래 두 줄을 더 찍는다. 재는 법은 [`measurements/test-slo/k6/README.md`](../measurements/test-slo/k6/README.md).
+- 배포 중 실패를 재는 서버에만 `DEPLOY_TIMING=on`을 더한다. `deploy.sh`가 맨 앞과 맨 끝에 아래 두 줄을 더 찍는다. 재는 법은 [`measurements/test-sjpark/k6/README.md`](../measurements/test-sjpark/k6/README.md).
 
 ```
 [deploy] 측정 시작 <epoch ms> backend=legacy:<ID 또는 없음>,blue:<ID 또는 없음>,green:<ID 또는 없음>
@@ -129,7 +129,7 @@ mkdir -p /etc/meterengine && chmod 700 /etc/meterengine
 
 - ID는 그 순간 실행 중인 컨테이너만 적는다. `legacy`는 블루그린 이전의 `backend` 서비스다.
 
-- 배포 중 실패의 원인을 찾는 서버에만 `CADDY_ACCESS_LOG`를 적는다. 값은 공개 사이트 요청 로그를 보낼 Caddy `output`이고, 기본 `discard`는 남기지 않는다. 쓰는 법은 [`measurements/test-slo/k6/README.md`](../measurements/test-slo/k6/README.md).
+- 배포 중 실패의 원인을 찾는 서버에만 `CADDY_ACCESS_LOG`를 적는다. 값은 공개 사이트 요청 로그를 보낼 Caddy `output`이고, 기본 `discard`는 남기지 않는다. 쓰는 법은 [`measurements/test-sjpark/k6/README.md`](../measurements/test-sjpark/k6/README.md).
   - `deploy.sh`가 배포마다 이 값을 `deploy/caddy/access-log.caddy`(git이 무시하는 파일)에 쓰고 Caddyfile이 그 파일을 import한다. 이 파일이 없으면 Caddy가 설정을 읽지 못한다.
   - 접속 로그와 기본 오류 로그는 카드 등록과 도입사 초대 URL의 토큰과 query를 가린다. 같은 URL이 담긴 `Referer`, `Location`도 가리며, 경로에 퍼센트 인코딩, 세미콜론, 점 세그먼트가 있으면 경로 전체를 가린다. 규칙은 Caddyfile의 `redacted_path` 한 곳에 있다. `Authorization`, `Cookie` 등 민감 헤더의 기본 마스킹은 유지한다. 로컬 검증: `python3 -m unittest discover -s deploy/tests -p test_logging.py -v` (Docker와 `caddy:2.11.7-alpine` 이미지 필요).
 - 환경 파일의 `sso_sites`는 `grafana.`, `prometheus.` SSO 사이트를 켜고 끈다.
@@ -484,7 +484,7 @@ aws ssm put-parameter --name /meterengine/production/oauth2-proxy-cookie-secret 
 aws ssm get-parameter --name /meterengine/production/operator-password --with-decryption --query Parameter.Value --output text
 ```
 
-- test-slo와 test-storage는 각자의 `sut/terraform/parameters.tf`가 같은 이름의 파라미터를 만든다.
+- test-sjpark와 test-storage는 각자의 `sut/terraform/parameters.tf`가 같은 이름의 파라미터를 만든다.
 
 - 값을 고쳤으면 재배포해야 반영된다. 같은 SHA로 `deploy.sh`를 다시 돌리면 된다.
 - **값에 개행이 섞이면 `deploy.sh`가 배포를 멈춘다.** 콘솔에서 복사할 때 줄바꿈이 딸려 오지 않았는지 본다.

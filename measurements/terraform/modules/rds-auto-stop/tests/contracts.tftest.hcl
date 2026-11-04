@@ -3,11 +3,11 @@ mock_provider "aws" {
 }
 
 variables {
-  name_prefix   = "meterengine-test-slo"
+  name_prefix   = "meterengine-test-sjpark"
   account_id    = "928618307647"
   region        = "ap-northeast-2"
-  db_identifier = "meterengine-test-slo-db"
-  db_arn        = "arn:aws:rds:ap-northeast-2:928618307647:db:meterengine-test-slo-db"
+  db_identifier = "meterengine-test-sjpark-db"
+  db_arn        = "arn:aws:rds:ap-northeast-2:928618307647:db:meterengine-test-sjpark-db"
 }
 
 run "scoped_automatic_restart" {

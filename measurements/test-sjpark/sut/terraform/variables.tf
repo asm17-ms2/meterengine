@@ -1,7 +1,7 @@
 variable "sut_name" {
   description = "이름 접두, 서브도메인, 파라미터 경로를 정하는 SUT 이름"
   type        = string
-  default     = "test-slo"
+  default     = "test-sjpark"
 
   # prod로 두면 파라미터 경로가 개발 서버의 /meterengine/prod와 겹친다.
   validation {

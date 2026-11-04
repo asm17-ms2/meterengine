@@ -61,7 +61,7 @@ class DeploymentLockTest(unittest.TestCase):
     def entrypoints(self):
         entries = {}
         for relative in (".github/workflows/deploy.yml", "deploy/README.md",
-                         "measurements/test-slo/k6/README.md"):
+                         "measurements/test-sjpark/k6/README.md"):
             source = (ROOT / relative).read_text()
             for index, command in enumerate(re.findall(r'--parameters commands="([^"\n]+)"', source)):
                 entries[f"{relative}:{index}"] = command
@@ -70,7 +70,7 @@ class DeploymentLockTest(unittest.TestCase):
                                                source, re.M).group()
         config = self.root / "deploy.conf"
         config.write_text("PARAM_PATH=/meterengine/test\nSITE_DOMAIN=test.example\n")
-        for target in ("test-slo", "test-storage"):
+        for target in ("test-sjpark", "test-storage"):
             source = (ROOT / f"measurements/{target}/sut/scripts/sut-deploy.sh").read_text()
             generate = ('REMOTE_DEPLOY_CONFIG=' + shlex.quote(str(config)) + '\n'
                         'REMOTE_REPO_DIR=/opt/meterengine\n'
