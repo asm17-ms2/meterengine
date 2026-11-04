@@ -78,12 +78,12 @@ run "service_is_protected" {
   variables {
     name                      = "meterengine-staging"
     ami_id                    = "ami-0f4109eb491b0476f"
-    instance_type             = "m7g.large"
+    instance_type             = "t4g.medium"
     subnet_id                 = "subnet-0348a18c1d399c193"
     ec2_security_group_ids    = ["sg-11111111111111111"]
     iam_instance_profile_name = "meterengine-staging-ec2"
     db_identifier             = "meterengine-staging-db"
-    db_instance_class         = "db.m7g.large"
+    db_instance_class         = "db.t4g.small"
     db_subnet_group_name      = "meterengine-rds-subnet-private"
     rds_security_group_ids    = ["sg-22222222222222222"]
     rds_initial_database_name = "meterengine_app"
@@ -96,11 +96,11 @@ run "service_is_protected" {
     user_data                 = "#!/bin/bash\ntrue\n"
   }
   assert {
-    condition     = aws_instance.app.instance_type == "m7g.large" && aws_db_instance.app.instance_class == "db.m7g.large"
-    error_message = "Staging capacity must use the approved m7g classes."
+    condition     = aws_instance.app[0].instance_type == "t4g.medium" && aws_db_instance.app.instance_class == "db.t4g.small"
+    error_message = "Staging capacity must use the approved t4g classes."
   }
   assert {
-    condition     = !aws_db_instance.app.publicly_accessible && aws_db_instance.app.storage_encrypted && aws_instance.app.metadata_options[0].http_tokens == "required"
+    condition     = !aws_db_instance.app.publicly_accessible && aws_db_instance.app.storage_encrypted && aws_instance.app[0].metadata_options[0].http_tokens == "required"
     error_message = "RDS must be private/encrypted and EC2 must require IMDSv2."
   }
   assert {
