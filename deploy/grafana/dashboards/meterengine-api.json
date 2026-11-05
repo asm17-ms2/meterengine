@@ -27,6 +27,35 @@
   "templating": {
     "list": [
       {
+        "name": "env",
+        "label": "환경",
+        "description": "공용 모니터링 서버가 붙이는 env 라벨로 환경을 고른다. env 라벨이 없는 서버 안 Prometheus에서는 All만 보이고 모든 값을 그린다. 관측 시스템과 Caddy 패널에는 걸리지 않는다.",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "label_values(up, env)",
+          "refId": "env"
+        },
+        "definition": "label_values(up, env)",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "sort": 1,
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        }
+      },
+      {
         "name": "uri",
         "label": "uri",
         "description": "API 행 패널에만 걸린다. 인증 행은 UNKNOWN과 경로 uri를 함께 세야 해서 이 변수를 쓰지 않는다. UNKNOWN은 보안 필터가 막은 응답이라 지연 패널에서는 빠진다.",
@@ -36,10 +65,10 @@
           "uid": "prometheus"
         },
         "query": {
-          "query": "label_values(http_server_requests_seconds_count{job=\"backend\", uri!~\"/actuator.*\"}, uri)",
+          "query": "label_values(http_server_requests_seconds_count{env=~\"$env\", job=\"backend\", uri!~\"/actuator.*\"}, uri)",
           "refId": "uri"
         },
-        "definition": "label_values(http_server_requests_seconds_count{job=\"backend\", uri!~\"/actuator.*\"}, uri)",
+        "definition": "label_values(http_server_requests_seconds_count{env=~\"$env\", job=\"backend\", uri!~\"/actuator.*\"}, uri)",
         "refresh": 2,
         "includeAll": true,
         "allValue": ".*",
@@ -65,10 +94,10 @@
           "uid": "prometheus"
         },
         "query": {
-          "query": "label_values(http_server_requests_seconds_count{job=\"backend\", uri=~\"$uri\", uri!~\"/actuator.*\"}, method)",
+          "query": "label_values(http_server_requests_seconds_count{env=~\"$env\", job=\"backend\", uri=~\"$uri\", uri!~\"/actuator.*\"}, method)",
           "refId": "method"
         },
-        "definition": "label_values(http_server_requests_seconds_count{job=\"backend\", uri=~\"$uri\", uri!~\"/actuator.*\"}, method)",
+        "definition": "label_values(http_server_requests_seconds_count{env=~\"$env\", job=\"backend\", uri=~\"$uri\", uri!~\"/actuator.*\"}, method)",
         "refresh": 2,
         "includeAll": true,
         "allValue": ".*",
@@ -118,7 +147,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.5, sum by (le, method, uri) (rate(http_server_requests_seconds_bucket{job=\"backend\", outcome=\"SUCCESS\", uri=~\"$uri\", method=~\"$method\", uri!~\"/actuator.*|UNKNOWN\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.5, sum by (le, method, uri) (rate(http_server_requests_seconds_bucket{env=~\"$env\", job=\"backend\", outcome=\"SUCCESS\", uri=~\"$uri\", method=~\"$method\", uri!~\"/actuator.*|UNKNOWN\"}[$__rate_interval])))",
           "legendFormat": "{{method}} {{uri}}"
         }
       ],
@@ -164,7 +193,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.99, sum by (le, method, uri) (rate(http_server_requests_seconds_bucket{job=\"backend\", outcome=\"SUCCESS\", uri=~\"$uri\", method=~\"$method\", uri!~\"/actuator.*|UNKNOWN\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.99, sum by (le, method, uri) (rate(http_server_requests_seconds_bucket{env=~\"$env\", job=\"backend\", outcome=\"SUCCESS\", uri=~\"$uri\", method=~\"$method\", uri!~\"/actuator.*|UNKNOWN\"}[$__rate_interval])))",
           "legendFormat": "{{method}} {{uri}}"
         }
       ],
@@ -210,7 +239,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (method, uri) (rate(http_server_requests_seconds_count{job=\"backend\", uri=~\"$uri\", method=~\"$method\", uri!~\"/actuator.*\"}[$__rate_interval]))",
+          "expr": "sum by (method, uri) (rate(http_server_requests_seconds_count{env=~\"$env\", job=\"backend\", uri=~\"$uri\", method=~\"$method\", uri!~\"/actuator.*\"}[$__rate_interval]))",
           "legendFormat": "{{method}} {{uri}}"
         }
       ],
@@ -256,7 +285,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "100 * (sum by (method, uri) (rate(http_server_requests_seconds_count{job=\"backend\", uri=~\"$uri\", method=~\"$method\", uri!~\"/actuator.*\", status=~\"5..\"}[$__rate_interval])) or sum by (method, uri) (rate(http_server_requests_seconds_count{job=\"backend\", uri=~\"$uri\", method=~\"$method\", uri!~\"/actuator.*\"}[$__rate_interval])) * 0) / sum by (method, uri) (rate(http_server_requests_seconds_count{job=\"backend\", uri=~\"$uri\", method=~\"$method\", uri!~\"/actuator.*\"}[$__rate_interval]))",
+          "expr": "100 * (sum by (method, uri) (rate(http_server_requests_seconds_count{env=~\"$env\", job=\"backend\", uri=~\"$uri\", method=~\"$method\", uri!~\"/actuator.*\", status=~\"5..\"}[$__rate_interval])) or sum by (method, uri) (rate(http_server_requests_seconds_count{env=~\"$env\", job=\"backend\", uri=~\"$uri\", method=~\"$method\", uri!~\"/actuator.*\"}[$__rate_interval])) * 0) / sum by (method, uri) (rate(http_server_requests_seconds_count{env=~\"$env\", job=\"backend\", uri=~\"$uri\", method=~\"$method\", uri!~\"/actuator.*\"}[$__rate_interval]))",
           "legendFormat": "{{method}} {{uri}}"
         }
       ],
@@ -302,7 +331,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (le) (rate(http_server_requests_seconds_bucket{job=\"backend\", outcome=\"SUCCESS\", uri=~\"$uri\", method=~\"$method\", uri!~\"/actuator.*|UNKNOWN\"}[$__rate_interval]))",
+          "expr": "sum by (le) (rate(http_server_requests_seconds_bucket{env=~\"$env\", job=\"backend\", outcome=\"SUCCESS\", uri=~\"$uri\", method=~\"$method\", uri!~\"/actuator.*|UNKNOWN\"}[$__rate_interval]))",
           "format": "heatmap",
           "legendFormat": "{{le}}"
         }
@@ -359,7 +388,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (status) (rate(http_server_requests_seconds_count{job=\"backend\", uri=~\"$uri\", method=~\"$method\", uri!~\"/actuator.*\"}[$__rate_interval]))",
+          "expr": "sum by (status) (rate(http_server_requests_seconds_count{env=~\"$env\", job=\"backend\", uri=~\"$uri\", method=~\"$method\", uri!~\"/actuator.*\"}[$__rate_interval]))",
           "legendFormat": "{{status}}"
         }
       ],
@@ -413,7 +442,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (status) (increase(http_server_requests_seconds_count{job=\"backend\", status=~\"401|403|429\"}[$__interval]))",
+          "expr": "sum by (status) (increase(http_server_requests_seconds_count{env=~\"$env\", job=\"backend\", status=~\"401|403|429\"}[$__interval]))",
           "legendFormat": "{{status}}"
         }
       ],
@@ -454,7 +483,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (status) (increase(http_server_requests_seconds_count{job=\"backend\", method=\"POST\", uri=\"/v1/sessions\"}[$__interval]))",
+          "expr": "sum by (status) (increase(http_server_requests_seconds_count{env=~\"$env\", job=\"backend\", method=\"POST\", uri=\"/v1/sessions\"}[$__interval]))",
           "legendFormat": "{{status}}"
         }
       ],
@@ -495,17 +524,17 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum (increase(meterengine_api_key_rate_limit_rejections_total{job=\"backend\"}[$__interval]))",
+          "expr": "sum (increase(meterengine_api_key_rate_limit_rejections_total{env=~\"$env\", job=\"backend\"}[$__interval]))",
           "legendFormat": "API 키"
         },
         {
           "refId": "B",
-          "expr": "sum (increase(http_server_requests_seconds_count{job=\"backend\", method=\"POST\", uri=\"/v1/sessions\", status=\"429\"}[$__interval]))",
+          "expr": "sum (increase(http_server_requests_seconds_count{env=~\"$env\", job=\"backend\", method=\"POST\", uri=\"/v1/sessions\", status=\"429\"}[$__interval]))",
           "legendFormat": "로그인"
         },
         {
           "refId": "C",
-          "expr": "sum (increase(http_server_requests_seconds_count{job=\"backend\", method=\"POST\", uri=\"/v1/signups\", status=\"429\"}[$__interval]))",
+          "expr": "sum (increase(http_server_requests_seconds_count{env=~\"$env\", job=\"backend\", method=\"POST\", uri=\"/v1/signups\", status=\"429\"}[$__interval]))",
           "legendFormat": "가입"
         }
       ],
@@ -546,7 +575,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum (increase(meterengine_request_audit_failures_total{job=\"backend\"}[$__interval]))",
+          "expr": "sum (increase(meterengine_request_audit_failures_total{env=~\"$env\", job=\"backend\"}[$__interval]))",
           "legendFormat": "실패"
         }
       ],

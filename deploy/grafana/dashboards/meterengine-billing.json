@@ -27,6 +27,35 @@
   "templating": {
     "list": [
       {
+        "name": "env",
+        "label": "환경",
+        "description": "공용 모니터링 서버가 붙이는 env 라벨로 환경을 고른다. env 라벨이 없는 서버 안 Prometheus에서는 All만 보이고 모든 값을 그린다. 관측 시스템과 Caddy 패널에는 걸리지 않는다.",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "label_values(up, env)",
+          "refId": "env"
+        },
+        "definition": "label_values(up, env)",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "sort": 1,
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        }
+      },
+      {
         "name": "mode",
         "label": "mode",
         "type": "custom",
@@ -86,7 +115,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (status) ((http_server_requests_seconds_count{job=\"backend\", method=\"POST\", uri=\"/v1/invoices\"} unless http_server_requests_seconds_count{job=\"backend\", method=\"POST\", uri=\"/v1/invoices\"} offset 1h) or increase(http_server_requests_seconds_count{job=\"backend\", method=\"POST\", uri=\"/v1/invoices\"}[1h]))",
+          "expr": "sum by (status) ((http_server_requests_seconds_count{env=~\"$env\", job=\"backend\", method=\"POST\", uri=\"/v1/invoices\"} unless http_server_requests_seconds_count{env=~\"$env\", job=\"backend\", method=\"POST\", uri=\"/v1/invoices\"} offset 1h) or increase(http_server_requests_seconds_count{env=~\"$env\", job=\"backend\", method=\"POST\", uri=\"/v1/invoices\"}[1h]))",
           "legendFormat": "{{status}}"
         }
       ],
@@ -125,17 +154,17 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "last_over_time(max by (environment) (meterengine_invoice_finalization_backlog)[26h:5m])",
+          "expr": "last_over_time(max by (environment) (meterengine_invoice_finalization_backlog{env=~\"$env\"})[26h:5m])",
           "legendFormat": "{{environment}} 대기 건수"
         },
         {
           "refId": "B",
-          "expr": "time() - (last_over_time(max by (environment) (meterengine_invoice_finalization_backlog_oldest_cutoff_seconds)[26h:5m]) > 0)",
+          "expr": "time() - (last_over_time(max by (environment) (meterengine_invoice_finalization_backlog_oldest_cutoff_seconds{env=~\"$env\"})[26h:5m]) > 0)",
           "legendFormat": "{{environment}} 최장 경과"
         },
         {
           "refId": "C",
-          "expr": "sum((meterengine_scheduled_job_items_total{job_name=\"invoice_finalization_backlog\", result=\"failed\"} unless meterengine_scheduled_job_items_total{job_name=\"invoice_finalization_backlog\", result=\"failed\"} offset 1d) or increase(meterengine_scheduled_job_items_total{job_name=\"invoice_finalization_backlog\", result=\"failed\"}[1d]))",
+          "expr": "sum((meterengine_scheduled_job_items_total{env=~\"$env\", job_name=\"invoice_finalization_backlog\", result=\"failed\"} unless meterengine_scheduled_job_items_total{env=~\"$env\", job_name=\"invoice_finalization_backlog\", result=\"failed\"} offset 1d) or increase(meterengine_scheduled_job_items_total{env=~\"$env\", job_name=\"invoice_finalization_backlog\", result=\"failed\"}[1d]))",
           "legendFormat": "계산 실패 건수 (1일)"
         }
       ],
@@ -204,12 +233,12 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (mode) (increase(meterengine_payment_attempt_total{mode=\"$mode\", result=\"done\"}[1h])) / ((sum by (mode) (increase(meterengine_payment_attempt_total{mode=\"$mode\", result=\"done\"}[1h])) + sum by (mode) (increase(meterengine_payment_attempt_total{mode=\"$mode\", result=\"failed\"}[1h]))) > 0)",
+          "expr": "sum by (mode) (increase(meterengine_payment_attempt_total{env=~\"$env\", mode=\"$mode\", result=\"done\"}[1h])) / ((sum by (mode) (increase(meterengine_payment_attempt_total{env=~\"$env\", mode=\"$mode\", result=\"done\"}[1h])) + sum by (mode) (increase(meterengine_payment_attempt_total{env=~\"$env\", mode=\"$mode\", result=\"failed\"}[1h]))) > 0)",
           "legendFormat": "{{mode}}"
         },
         {
           "refId": "B",
-          "expr": "sum by (mode) (increase(meterengine_payment_attempt_total{mode=\"$mode\", result=\"done\"}[1h])) + sum by (mode) (increase(meterengine_payment_attempt_total{mode=\"$mode\", result=\"failed\"}[1h]))",
+          "expr": "sum by (mode) (increase(meterengine_payment_attempt_total{env=~\"$env\", mode=\"$mode\", result=\"done\"}[1h])) + sum by (mode) (increase(meterengine_payment_attempt_total{env=~\"$env\", mode=\"$mode\", result=\"failed\"}[1h]))",
           "legendFormat": "{{mode}} 건수 (1시간)"
         }
       ],
@@ -277,7 +306,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (mode, reason) (increase(meterengine_payment_attempt_total{mode=\"$mode\", result=\"failed\"}[1h]))",
+          "expr": "sum by (mode, reason) (increase(meterengine_payment_attempt_total{env=~\"$env\", mode=\"$mode\", result=\"failed\"}[1h]))",
           "legendFormat": "{{mode}} {{reason}}"
         }
       ],
@@ -317,14 +346,14 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "clamp_max(sum by (mode) (increase(meterengine_payment_attempt_total{mode=\"$mode\", attempt=\"retry\", result=\"done\"}[$__range])) / (sum by (mode) (increase(meterengine_payment_attempt_total{mode=\"$mode\", attempt=\"first\", result=\"failed\"}[$__range])) > 0), 1)",
+          "expr": "clamp_max(sum by (mode) (increase(meterengine_payment_attempt_total{env=~\"$env\", mode=\"$mode\", attempt=\"retry\", result=\"done\"}[$__range])) / (sum by (mode) (increase(meterengine_payment_attempt_total{env=~\"$env\", mode=\"$mode\", attempt=\"first\", result=\"failed\"}[$__range])) > 0), 1)",
           "legendFormat": "{{mode}} 재시도 회복률",
           "instant": true,
           "range": false
         },
         {
           "refId": "B",
-          "expr": "sum by (mode) (increase(meterengine_payment_attempt_total{mode=\"$mode\", attempt=\"first\", result=\"done\"}[$__range])) / ((sum by (mode) (increase(meterengine_payment_attempt_total{mode=\"$mode\", attempt=\"first\", result=\"done\"}[$__range])) + sum by (mode) (increase(meterengine_payment_attempt_total{mode=\"$mode\", attempt=\"first\", result=\"failed\"}[$__range]))) > 0)",
+          "expr": "sum by (mode) (increase(meterengine_payment_attempt_total{env=~\"$env\", mode=\"$mode\", attempt=\"first\", result=\"done\"}[$__range])) / ((sum by (mode) (increase(meterengine_payment_attempt_total{env=~\"$env\", mode=\"$mode\", attempt=\"first\", result=\"done\"}[$__range])) + sum by (mode) (increase(meterengine_payment_attempt_total{env=~\"$env\", mode=\"$mode\", attempt=\"first\", result=\"failed\"}[$__range]))) > 0)",
           "legendFormat": "{{mode}} 첫 시도 성공률",
           "instant": true,
           "range": false
@@ -368,7 +397,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (mode) (increase(meterengine_payment_retry_exhausted_total{mode=\"$mode\"}[1d]))",
+          "expr": "sum by (mode) (increase(meterengine_payment_retry_exhausted_total{env=~\"$env\", mode=\"$mode\"}[1d]))",
           "legendFormat": "{{mode}}"
         }
       ],
@@ -407,7 +436,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max by (mode) (meterengine_payment_stale_pending{mode=\"$mode\"})",
+          "expr": "max by (mode) (meterengine_payment_stale_pending{env=~\"$env\", mode=\"$mode\"})",
           "legendFormat": "{{mode}}"
         }
       ],
@@ -446,7 +475,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "time() - (max by (mode) (meterengine_payment_stale_pending_oldest_requested_seconds{mode=\"$mode\"}) > 0)",
+          "expr": "time() - (max by (mode) (meterengine_payment_stale_pending_oldest_requested_seconds{env=~\"$env\", mode=\"$mode\"}) > 0)",
           "legendFormat": "{{mode}}"
         }
       ],
@@ -485,7 +514,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (mode, result) (increase(meterengine_payment_cancellation_total{mode=\"$mode\"}[1h]))",
+          "expr": "sum by (mode, result) (increase(meterengine_payment_cancellation_total{env=~\"$env\", mode=\"$mode\"}[1h]))",
           "legendFormat": "{{mode}} {{result}}"
         }
       ],
@@ -524,7 +553,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (mode, kind) (increase(meterengine_payment_reconciliation_mismatch_total{mode=\"$mode\"}[1d]))",
+          "expr": "sum by (mode, kind) (increase(meterengine_payment_reconciliation_mismatch_total{env=~\"$env\", mode=\"$mode\"}[1d]))",
           "legendFormat": "{{mode}} {{kind}}"
         }
       ],
@@ -576,7 +605,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (event_type, outcome) (increase(meterengine_toss_payments_webhook_total[1h]))",
+          "expr": "sum by (event_type, outcome) (increase(meterengine_toss_payments_webhook_total{env=~\"$env\"}[1h]))",
           "legendFormat": "{{event_type}} {{outcome}}"
         }
       ],
@@ -615,17 +644,17 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{job=\"backend\", method=\"POST\", uri=\"/v1/toss-payments-webhooks/{organization_id}\", outcome=\"SUCCESS\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_requests_seconds_bucket{env=~\"$env\", job=\"backend\", method=\"POST\", uri=\"/v1/toss-payments-webhooks/{organization_id}\", outcome=\"SUCCESS\"}[$__rate_interval])))",
           "legendFormat": "p99"
         },
         {
           "refId": "B",
-          "expr": "sum((http_server_requests_seconds_count{job=\"backend\", method=\"POST\", uri=\"/v1/toss-payments-webhooks/{organization_id}\", outcome=\"SERVER_ERROR\"} unless http_server_requests_seconds_count{job=\"backend\", method=\"POST\", uri=\"/v1/toss-payments-webhooks/{organization_id}\", outcome=\"SERVER_ERROR\"} offset 1h) or increase(http_server_requests_seconds_count{job=\"backend\", method=\"POST\", uri=\"/v1/toss-payments-webhooks/{organization_id}\", outcome=\"SERVER_ERROR\"}[1h])) or vector(0)",
+          "expr": "sum((http_server_requests_seconds_count{env=~\"$env\", job=\"backend\", method=\"POST\", uri=\"/v1/toss-payments-webhooks/{organization_id}\", outcome=\"SERVER_ERROR\"} unless http_server_requests_seconds_count{env=~\"$env\", job=\"backend\", method=\"POST\", uri=\"/v1/toss-payments-webhooks/{organization_id}\", outcome=\"SERVER_ERROR\"} offset 1h) or increase(http_server_requests_seconds_count{env=~\"$env\", job=\"backend\", method=\"POST\", uri=\"/v1/toss-payments-webhooks/{organization_id}\", outcome=\"SERVER_ERROR\"}[1h])) or vector(0)",
           "legendFormat": "5xx (1시간)"
         },
         {
           "refId": "C",
-          "expr": "sum(increase(http_server_requests_seconds_count{job=\"backend\", method=\"POST\", uri=\"/v1/toss-payments-webhooks/{organization_id}\", outcome=\"SUCCESS\"}[$__rate_interval]))",
+          "expr": "sum(increase(http_server_requests_seconds_count{env=~\"$env\", job=\"backend\", method=\"POST\", uri=\"/v1/toss-payments-webhooks/{organization_id}\", outcome=\"SUCCESS\"}[$__rate_interval]))",
           "legendFormat": "성공 (p99 창)"
         }
       ],
@@ -697,7 +726,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (operation, outcome) (increase(meterengine_toss_payments_request_seconds_count[1h]))",
+          "expr": "sum by (operation, outcome) (increase(meterengine_toss_payments_request_seconds_count{env=~\"$env\"}[1h]))",
           "legendFormat": "{{operation}} {{outcome}}"
         }
       ],
@@ -736,12 +765,12 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.99, sum by (le, operation) (rate(meterengine_toss_payments_request_seconds_bucket{outcome=\"success\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.99, sum by (le, operation) (rate(meterengine_toss_payments_request_seconds_bucket{env=~\"$env\", outcome=\"success\"}[$__rate_interval])))",
           "legendFormat": "{{operation}}"
         },
         {
           "refId": "B",
-          "expr": "sum by (operation) (increase(meterengine_toss_payments_request_seconds_count{outcome=\"success\"}[$__rate_interval]))",
+          "expr": "sum by (operation) (increase(meterengine_toss_payments_request_seconds_count{env=~\"$env\", outcome=\"success\"}[$__rate_interval]))",
           "legendFormat": "{{operation}} 성공 (p99 창)"
         }
       ],

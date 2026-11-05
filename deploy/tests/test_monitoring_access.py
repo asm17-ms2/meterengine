@@ -21,6 +21,9 @@ DUMMY_ENV["BACKEND_MEM_LIMIT"] = "768m"
 DUMMY_ENV["COMPOSE_PROFILES"] = "agents,monitoring"
 MONITORING_ONLY = ("grafana", "node-exporter", "cadvisor", "postgres-exporter", "cloudwatch-exporter")
 APPS = ("frontend", "backend-blue", "backend-green")
+# 에이전트 포트는 서버 밖의 공용 모니터링 서버가 긁는다. 보안 그룹이 그 서버만 들인다.
+PUBLIC_PORTS = {"caddy": {("80", 80), ("443", 443)},
+                "node-exporter": {("9100", 9100)}, "cadvisor": {("9101", 8080)}}
 WRITE_FLAGS = ("--web.enable-admin-api", "--web.enable-lifecycle",
                "--web.enable-remote-write-receiver", "--web.enable-otlp-receiver")
 
@@ -60,14 +63,16 @@ class MonitoringNetworkTest(unittest.TestCase):
     def test_prometheus_reaches_every_scrape_target(self):
         self.assertEqual(set(self.config["services"]["prometheus"]["networks"]), {"default", "proxy", "monitoring"})
 
-    def test_only_caddy_publishes_ports_beyond_loopback(self):
+    def test_only_caddy_and_agents_publish_ports_beyond_loopback(self):
         loopback = set()
         for name, service in self.config["services"].items():
             for port in service.get("ports", []):
-                if name != "caddy":
+                if name not in PUBLIC_PORTS:
                     self.assertEqual(port.get("host_ip"), "127.0.0.1", f"{name} {port}")
                     loopback.add(port["published"])
-        self.assertEqual({p["published"] for p in self.config["services"]["caddy"]["ports"]}, {"80", "443"})
+        for name, ports in PUBLIC_PORTS.items():
+            published = {(p.get("host_ip"), p["published"], p["target"]) for p in self.config["services"][name]["ports"]}
+            self.assertEqual(published, {(None, host, target) for host, target in ports}, name)
         self.assertEqual(loopback, {"3000", "3001"})
 
     def test_prometheus_keeps_write_endpoints_off(self):
