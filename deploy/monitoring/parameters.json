@@ -1,0 +1,6 @@
+{
+  "path_prefix": "/meterengine",
+  "monitoring": ["grafana-admin-password", "grafana-github-client-id", "grafana-github-client-secret", "slack-webhook-url"],
+  "environments": ["production", "staging", "test-storage", "test-sjpark"],
+  "environment_parameters": ["db-host", "db-port", "db-name", "db-exporter-password"]
+}

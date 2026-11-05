@@ -130,9 +130,11 @@ public class RequestLogFilter extends OncePerRequestFilter {
     }
     String address = request.getRemoteAddr();
     if (forwardedFor != null) {
-      String firstForwardedFor = forwardedFor.split(",", 2)[0].strip();
-      if (!firstForwardedFor.isEmpty()) {
-        address = firstForwardedFor;
+      // ALB는 받은 값 뒤에 접속 주소를 붙이므로 사용자가 꾸밀 수 없는 맨 오른쪽 값을 남긴다.
+      String rightmostForwardedFor =
+          forwardedFor.substring(forwardedFor.lastIndexOf(',') + 1).strip();
+      if (!rightmostForwardedFor.isEmpty()) {
+        address = rightmostForwardedFor;
       }
     }
     return address == null

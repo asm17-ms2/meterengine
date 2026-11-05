@@ -9,7 +9,7 @@
 
 | 경로 | 내용 |
 | --- | --- |
-| `sut/terraform/` | EC2 m7g.large, RDS db.m7g.large(PostgreSQL 18.4, Single-AZ), 보안 그룹, IAM 역할, 파라미터, 도메인, 자동 중지 |
+| `sut/terraform/` | ALB(ACM 인증서), 오토스케일링 그룹(m7g.large, 최소 0, 최대 3), 이미지 원본 EC2, RDS db.m7g.large(PostgreSQL 18.4, Single-AZ), 보안 그룹, IAM 역할, 파라미터, 도메인, 자동 중지 |
 | `sut/scripts/` | 배포, exporter 사용자 만들기, 켜고 끄기, 부하 실험 중 CPU와 메모리 기록 켜기 |
 | `load-generator/terraform/` | 부하 발생기 EC2 m7g.large, 보안 그룹, IAM 역할, 자동 중지 |
 | `load-generator/k6/` | k6 스크립트 |
@@ -19,13 +19,15 @@
 | `lib/common.sh` | 스크립트가 같이 쓰는 함수 |
 
 - 자원 이름 접두는 `meterengine-test-storage`, 도메인은 `test-storage.meterengine.com`, 파라미터 경로는 `/meterengine/test-storage`다.
-- SUT에는 [`deploy/compose.prod.yml`](../../deploy/compose.prod.yml) 스택을 개발 서버와 똑같이 올린다. 경보는 아무도 받지 않는 Slack 주소로 간다.
-- 매일 04:00(서울)에 EC2와 RDS가 자동으로 꺼진다.
+- 도메인은 ALB를 가리킨다. 앱 서버는 오토스케일링 그룹이 server-1(`sut_instance_id`)을 뜬 이미지로 띄우고, 앱과 수집 에이전트(node-exporter, cAdvisor)만 돈다. server-1은 이미지 원본으로만 남아 꺼 둔다.
+- 이 환경에는 모니터링 서버가 없다. 공용 모니터링 서버가 앱 서버와 DB를 긁는다("Grafana" 참고).
+- `sut/scripts/`의 `sut-deploy.sh`, `sut-start.sh`, `sut-stop.sh`, `create-exporter-user.sh`, `start-resource-recording.sh`는 server-1과 DNS 대조를 써서 오토스케일링 그룹 구조에서는 쓸 수 없다. 앱 서버가 기본 이미지로 부팅해 스스로 배포하게 바뀌면 다시 쓴다.
+- 매일 04:00(서울)에 server-1과 RDS가 꺼지고 오토스케일링 그룹은 0대로 내려간다.
 - VPC, 서브넷, 호스티드 존, ECR 이미지는 개발 서버와 같이 쓰고 읽기만 한다. 역할은 `/meterengine/prod`와 `/meterengine/production`을 읽지 못한다.
 
 ## 사전 준비
 
-- Terraform 1.16, AWS CLI, `session-manager-plugin`, `jq`, `git`, `curl`, `dig`.
+- Terraform 1.17.1, AWS CLI, `session-manager-plugin`, `jq`, `git`, `curl`, `dig`. 상태 파일을 한 번 1.17.1로 쓰면 1.16으로는 읽지 못한다.
 - `ap-northeast-2`에 자원을 만들 수 있는 AWS 자격.
 
 ```bash
@@ -77,6 +79,7 @@ measurements/test-storage/sut/scripts/create-exporter-user.sh
 measurements/test-storage/sut/scripts/sut-deploy.sh <SHA 40자>
 ```
 
+- 지금 구조에서는 쓸 수 없다("구성" 참고).
 - SUT에는 CD가 없다. main이 바뀌어도 직접 배포할 때까지 그대로다.
 - ECR은 태그 이미지를 최근 10개만 남긴다. 같은 SHA로 다시 재려면 이미지가 남아 있는지 먼저 본다.
 
@@ -99,29 +102,35 @@ aws stepfunctions list-executions --region ap-northeast-2 \
 
 "환경 빼기"로 이 환경의 감지를 뺀 뒤라면 상태 머신이 없어 0 대신 `StateMachineDoesNotExist` 오류가 난다. 이때는 DB를 끌 흐름이 없으니 기다리지 않고 켠다.
 
+앱 서버는 오토스케일링 그룹이 띄운다. 04:00 예약이 최소와 원하는 대수를 0으로 내려 평소에는 0대다. 켤 때는 RDS를 먼저 켜고 쓸 수 있게 된 뒤 최소를 1로 올린다. 두 대상 그룹이 모두 `healthy`면 쓸 수 있다.
+
 ```bash
-measurements/test-storage/sut/scripts/sut-start.sh
-measurements/test-storage/sut/scripts/sut-stop.sh
+aws rds start-db-instance --region ap-northeast-2 --db-instance-identifier meterengine-test-storage-db
+aws rds wait db-instance-available --region ap-northeast-2 --db-instance-identifier meterengine-test-storage-db
+terraform -chdir=measurements/test-storage/sut/terraform apply -var asg_min_size=1
+for tg in backend frontend; do
+  aws elbv2 describe-target-health --region ap-northeast-2 \
+    --target-group-arn "arn:aws:elasticloadbalancing:ap-northeast-2:928618307647:$(terraform -chdir=measurements/test-storage/sut/terraform output -raw ${tg}_target_group_arn_suffix)" \
+    --query 'TargetHealthDescriptions[].TargetHealth.State' --output text
+done
 ```
 
-- 켤 때는 RDS를 먼저 켜고 쓸 수 있게 된 뒤 EC2를 켠다. 끝에 `/usage`가 리다이렉트를 따라가 200이 될 때까지 기다린다.
-- 끌 때는 EC2를 멈춘 뒤 RDS를 멈춘다. 지우지는 않는다.
-- 꺼졌는지 확인한다. 둘 다 `stopped`면 꺼진 것이다.
+- 켜 둔 동안의 apply에는 모두 `-var asg_min_size=1`을 붙인다. 빼면 최소가 0으로 돌아간다.
+- 끌 때는 `-var` 없이 apply 해 최소를 0으로 되돌리고, 원하는 대수를 0으로 내린 뒤 RDS를 멈춘다. 지우지는 않는다.
 
 ```bash
-aws ec2 describe-instances --region ap-northeast-2 \
-  --instance-ids "$(terraform -chdir=measurements/test-storage/sut/terraform output -raw sut_instance_id)" \
-  --query 'Reservations[0].Instances[0].State.Name' --output text
-aws rds describe-db-instances --region ap-northeast-2 --db-instance-identifier meterengine-test-storage-db \
-  --query 'DBInstances[0].DBInstanceStatus' --output text
+terraform -chdir=measurements/test-storage/sut/terraform apply
+aws autoscaling set-desired-capacity --region ap-northeast-2 \
+  --auto-scaling-group-name "$(terraform -chdir=measurements/test-storage/sut/terraform output -raw asg_name)" --desired-capacity 0
+aws rds stop-db-instance --region ap-northeast-2 --db-instance-identifier meterengine-test-storage-db \
+  --query 'DBInstance.DBInstanceStatus' --output text
 ```
 
 - RDS는 꺼 둔 지 7일 뒤 저절로 켜진다. [RDS 자동 재기동 중지](../terraform/modules/rds-auto-stop/README.md)가 이를 감지해 바로 다시 끈다. 이 흐름이 실패해도 다음 04:00 자동 중지가 끈다.
-- 04:00를 넘겨 측정하는 날에는 자동 중지를 끄고, 끝나면 `-var` 없이 apply 해 다시 켠다. plan에서 바뀌는 것은 스케줄 state뿐이어야 한다.
+- 04:00를 넘겨 측정하는 날에는 자동 중지를 끄고, 측정이 끝나면 위 끄기 순서의 `-var` 없는 apply로 다시 켠다. 자동 중지를 끌 때 plan에서 바뀌는 것은 스케줄 state와 ASG 0대 예약 삭제뿐이어야 한다.
 
 ```bash
-terraform -chdir=measurements/test-storage/sut/terraform apply -var auto_stop_state=DISABLED
-terraform -chdir=measurements/test-storage/sut/terraform apply
+terraform -chdir=measurements/test-storage/sut/terraform apply -var auto_stop_state=DISABLED -var asg_min_size=1
 ```
 
 ### RDS Multi-AZ
@@ -156,7 +165,22 @@ aws ssm start-session --region ap-northeast-2 \
 
 ## Grafana
 
-Grafana는 SUT 안 `127.0.0.1:3001`에만 열려 있어 포트 포워딩으로 본다. 포워딩 세션은 켜 둔 채로 브라우저를 쓴다.
+공용 모니터링 서버가 앱 서버와 DB를 긁는다. 공용 Grafana에서 `env`를 `test-storage`로 골라 본다.
+
+공용 Grafana가 도메인으로 열리기 전에는 공용 서버의 Prometheus만 포트 포워딩으로 본다. http://localhost:9090 에서 `up{env="test-storage"}`가 1인지 본다. 앱 서버가 0대면 대상이 없다.
+
+```bash
+aws ssm start-session --region ap-northeast-2 \
+  --target "$(aws ec2 describe-instances --region ap-northeast-2 \
+    --filters Name=tag:Name,Values=meterengine-monitoring Name=instance-state-name,Values=running \
+    --query 'Reservations[0].Instances[0].InstanceId' --output text)" \
+  --document-name AWS-StartPortForwardingSession \
+  --parameters '{"portNumber":["9090"],"localPortNumber":["9090"]}'
+```
+
+### 서버 안 Grafana
+
+서버 안에 Grafana를 띄우는 다른 측정 환경은 이 절차를 따른다. Grafana는 서버 안 `127.0.0.1:3001`에만 열려 있어 포트 포워딩으로 본다. 포워딩 세션은 켜 둔 채로 브라우저를 쓴다.
 
 ```bash
 aws ssm get-parameter --region ap-northeast-2 --name /meterengine/test-storage/grafana-admin-password \
@@ -196,6 +220,7 @@ measurements/test-storage/sut/scripts/sut-deploy.sh <지금 SHA>
 ```
 
 - 지금 SHA는 SUT 안에서 `sudo git -C /opt/meterengine rev-parse HEAD`로 본다.
+- exporter 비밀번호를 바꾸면 공용 모니터링 서버의 `start.sh`를 다시 돌려야 공용 postgres-exporter가 새 값을 읽는다([`deploy/README.md`](../../deploy/README.md) "모니터링").
 - Grafana는 데이터 볼륨을 처음 만들 때만 admin 비밀번호를 받는다. 바꿀 때는 `grafana_admin_password_version`을 올려 apply 하고 다시 배포한 뒤, SUT 안에서 아래를 실행한다.
 
 ```bash
@@ -438,7 +463,8 @@ curl -fo work/<RUN_ID>/<RUN_ID>-backend.log http://localhost:8000/<RUN_ID>-backe
 
 - 상태 파일은 apply한 컴퓨터에만 있고 커밋하지 않는다. 잃으면 Terraform으로 지울 수 없으니 지우지 않는다.
 - 다른 컴퓨터에서 apply 하지 않는다. 이름이 겹쳐 실패한다.
-- 평소에는 지우지 않고 끈다. 다시 만들면 인증서를 새로 받는다. RDS는 최종 스냅숏 없이 지워진다.
+- 평소에는 지우지 않고 끈다. 인증서는 ACM이 DNS로 검증해 다시 만들어도 발급 횟수 제한에 걸리지 않는다. RDS는 최종 스냅숏 없이 지워진다.
+- 공용 모니터링 보안 그룹(`meterengine-monitoring`)을 이름으로 찾는다. 그 그룹이 없으면 plan과 destroy가 멈추므로, 공용 모니터링을 지우기 전에 이 환경을 먼저 지운다.
 
 지우기 전에 [`rds-auto-stop` README](../terraform/rds-auto-stop/README.md) "환경 빼기"로 test-storage의 자동 재기동 감지를 먼저 뺀다.
 
@@ -453,7 +479,7 @@ terraform -chdir=measurements/test-storage/sut/terraform destroy
 
 서울 온디맨드, 2026-10 기준이다.
 
-- 켜 둔 동안 시간당 약 $0.34(EC2 $0.10, RDS $0.23, 탄력적 IP $0.005). RDS Multi-AZ를 켠 동안은 RDS 몫이 약 두 배다.
-- 꺼 둔 동안 월 약 $8(EBS, RDS 스토리지, 탄력적 IP).
+- 켜 둔 동안 시간당 약 $0.34(앱 서버 한 대 $0.10, RDS $0.23, 탄력적 IP $0.005). 앱 서버가 늘면 한 대에 약 $0.10씩 더 든다. RDS Multi-AZ를 켠 동안은 RDS 몫이 약 두 배다.
+- 꺼 둔 동안 월 약 $8(EBS, RDS 스토리지, 탄력적 IP)에 ALB 고정비 월 약 $16(시간당 $0.0225)이 더 든다. ALB는 끌 수 없어 켜고 끄기와 상관없이 나간다.
 - 부하 발생기는 켜 둔 동안 시간당 약 $0.11(EC2 $0.10, 공인 IP $0.005), 꺼 둔 동안 월 약 $2(EBS).
 - SUT RDS가 있는 동안 cloudwatch exporter의 CloudWatch API 호출이 RDS 한 대 몫만큼 늘어 월 약 $17이 더 든다. exporter 설정([`deploy/cloudwatch/config.yml`](../../deploy/cloudwatch/config.yml))이 계정의 RDS를 모두 읽기 때문이다.

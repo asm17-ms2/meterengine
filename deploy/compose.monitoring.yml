@@ -1,0 +1,109 @@
+name: meterengine-monitoring
+
+# 공용 모니터링 서버 한 대에서 돈다. 앱 서버는 EC2 태그로 찾고, DB와 RDS는 환경마다 따로 긁는다.
+# 값은 monitoring/start.sh가 monitoring/parameters.json의 이름으로 Parameter Store에서 읽어 env 파일로 넘긴다.
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+# 파라미터가 없는 환경의 exporter는 start.sh가 띄우지 않으므로 빈 값을 허용한다.
+x-postgres-exporter: &postgres-exporter
+  image: quay.io/prometheuscommunity/postgres-exporter:v0.18.1
+  restart: unless-stopped
+  command:
+    - --collector.stat_checkpointer
+    - --collector.stat_user_tables
+    - --collector.statio_user_tables
+  logging: *default-logging
+
+services:
+  prometheus:
+    image: prom/prometheus:v3.15.1
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --storage.tsdb.retention.size=20GB
+    volumes:
+      # 파일이 아니라 디렉터리를 마운트해야 git checkout으로 바뀐 설정이 컨테이너에 보인다.
+      - ./monitoring/prometheus:/etc/prometheus:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    logging: *default-logging
+
+  grafana:
+    image: grafana/grafana:13.1.9
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD가 없다}
+      GF_SERVER_ROOT_URL: https://grafana.meterengine.com/
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_USERS_AUTO_ASSIGN_ORG_ROLE: Editor
+      GF_AUTH_GITHUB_ENABLED: "true"
+      GF_AUTH_GITHUB_CLIENT_ID: ${GRAFANA_GITHUB_CLIENT_ID:?GRAFANA_GITHUB_CLIENT_ID가 없다}
+      GF_AUTH_GITHUB_CLIENT_SECRET: ${GRAFANA_GITHUB_CLIENT_SECRET:?GRAFANA_GITHUB_CLIENT_SECRET가 없다}
+      # 조직 멤버인지 보려면 read:org가 있어야 한다.
+      GF_AUTH_GITHUB_SCOPES: user:email,read:org
+      GF_AUTH_GITHUB_ALLOWED_ORGANIZATIONS: asm17-ms2
+      GF_AUTH_GITHUB_ALLOW_SIGN_UP: "true"
+      # GitHub 로그인만 남긴다. 로그인 폼을 닫아도 API의 기본 인증은 따로 꺼야 한다.
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      GF_AUTH_BASIC_ENABLED: "false"
+      GF_SECURITY_COOKIE_SECURE: "true"
+      # 경보 provisioning이 이 변수를 읽는다.
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:?SLACK_WEBHOOK_URL이 없다}
+    # 보안 그룹이 들이는 쪽만 닿는다.
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    logging: *default-logging
+
+  # RDS 인스턴스 지표를 CloudWatch에서 읽는다. 자격은 EC2 역할이다.
+  cloudwatch-exporter:
+    image: prom/cloudwatch-exporter:v0.16.0
+    restart: unless-stopped
+    volumes:
+      - ./cloudwatch:/config:ro
+    logging: *default-logging
+
+  postgres-exporter-production:
+    <<: *postgres-exporter
+    environment:
+      DATA_SOURCE_URI: ${PRODUCTION_DB_HOST:-}:${PRODUCTION_DB_PORT:-}/${PRODUCTION_DB_NAME:-}?sslmode=require
+      DATA_SOURCE_USER: meterengine_exporter
+      DATA_SOURCE_PASS: ${PRODUCTION_DB_EXPORTER_PASSWORD:-}
+
+  postgres-exporter-staging:
+    <<: *postgres-exporter
+    environment:
+      DATA_SOURCE_URI: ${STAGING_DB_HOST:-}:${STAGING_DB_PORT:-}/${STAGING_DB_NAME:-}?sslmode=require
+      DATA_SOURCE_USER: meterengine_exporter
+      DATA_SOURCE_PASS: ${STAGING_DB_EXPORTER_PASSWORD:-}
+
+  postgres-exporter-test-storage:
+    <<: *postgres-exporter
+    environment:
+      DATA_SOURCE_URI: ${TEST_STORAGE_DB_HOST:-}:${TEST_STORAGE_DB_PORT:-}/${TEST_STORAGE_DB_NAME:-}?sslmode=require
+      DATA_SOURCE_USER: meterengine_exporter
+      DATA_SOURCE_PASS: ${TEST_STORAGE_DB_EXPORTER_PASSWORD:-}
+
+  postgres-exporter-test-sjpark:
+    <<: *postgres-exporter
+    environment:
+      DATA_SOURCE_URI: ${TEST_SJPARK_DB_HOST:-}:${TEST_SJPARK_DB_PORT:-}/${TEST_SJPARK_DB_NAME:-}?sslmode=require
+      DATA_SOURCE_USER: meterengine_exporter
+      DATA_SOURCE_PASS: ${TEST_SJPARK_DB_EXPORTER_PASSWORD:-}
+
+volumes:
+  prometheus-data:
+  grafana-data:

@@ -197,7 +197,7 @@ class DeployEnvironmentTest(unittest.TestCase):
 
 
 class SutDeployTest(unittest.TestCase):
-    SUTS = ("test-slo", "test-storage")
+    SUTS = ("test-sjpark", "test-storage")
 
     def setUp(self):
         temp = tempfile.TemporaryDirectory(prefix="meterengine-sut-")
@@ -253,7 +253,7 @@ case "$1" in cat-file) exit "$HAS_ENVIRONMENT_FILE" ;; esac
             self.assertNotIn("git checkout", self.trace.read_text())
 
     def test_sut_db_check_compares_identifiers(self):
-        source = (MEASUREMENTS / "test-slo/sut/scripts/sut-deploy.sh").read_text()
+        source = (MEASUREMENTS / "test-sjpark/sut/scripts/sut-deploy.sh").read_text()
         functions = re.search(r"^deployed_db_host\(\) \{.*?^require_sut_db\(\) \{.*?^\}", source, re.M | re.S).group()
         script = f"die() {{ echo \"$1\" >&2; exit 1; }}\nlog() {{ :; }}\nDEPLOY_DB_LINE_PREFIX='[deploy] DB: '\n{functions}\nrequire_sut_db \"$1\" sut-db.abc.example.invalid\n"
         for line, code in (("sut-db", 0), ("sut-db.abc.example.invalid", 0), ("other-db", 1)):

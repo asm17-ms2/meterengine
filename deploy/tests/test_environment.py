@@ -50,10 +50,10 @@ class LoadTargetTest(unittest.TestCase):
             environment.load_target("staging", self.directory)
 
     def test_load_rejects_instance_id_for_sut(self):
-        target = write_target(self.directory, "test-slo", parameter_path="/meterengine/test-slo")
-        (self.directory / "test-slo.json").write_text(json.dumps({**target, "instance_id": "i-0123456789abcdef0"}))
+        target = write_target(self.directory, "test-sjpark", parameter_path="/meterengine/test-sjpark")
+        (self.directory / "test-sjpark.json").write_text(json.dumps({**target, "instance_id": "i-0123456789abcdef0"}))
         with self.assertRaisesRegex(ValueError, "필드"):
-            environment.load_target("test-slo", self.directory)
+            environment.load_target("test-sjpark", self.directory)
 
     def test_load_rejects_unknown_profile(self):
         write_target(self.directory, "staging", compose_profiles=["agents", "everything"])
@@ -62,12 +62,12 @@ class LoadTargetTest(unittest.TestCase):
 
     def test_load_rejects_service_path_for_sut(self):
         for path in ("/meterengine/prod", "/meterengine/production", "/meterengine/staging"):
-            write_target(self.directory, "test-slo", parameter_path=path)
+            write_target(self.directory, "test-sjpark", parameter_path=path)
             with self.assertRaisesRegex(ValueError, "parameter_path"):
-                environment.load_target("test-slo", self.directory)
+                environment.load_target("test-sjpark", self.directory)
 
     def test_every_environment_file_loads(self):
-        for name in ("staging", "production", "test-slo", "test-storage"):
+        for name in ("staging", "production", "test-sjpark", "test-storage"):
             self.assertEqual(environment.load_target(name, ENVIRONMENTS)["parameter_path"], f"/meterengine/{name}")
 
     def test_database_identifier_rejects_full_address(self):
@@ -82,8 +82,8 @@ class LoadTargetTest(unittest.TestCase):
 
     def test_only_staging_has_its_own_image_repositories(self):
         prefixes = {name: environment.load_target(name, ENVIRONMENTS)["image_repository_prefix"]
-                    for name in ("staging", "production", "test-slo", "test-storage")}
-        self.assertEqual(prefixes, {"staging": "meterengine-staging", "production": "meterengine", "test-slo": "meterengine", "test-storage": "meterengine"})
+                    for name in ("staging", "production", "test-sjpark", "test-storage")}
+        self.assertEqual(prefixes, {"staging": "meterengine-staging", "production": "meterengine", "test-sjpark": "meterengine", "test-storage": "meterengine"})
 
     def test_production_memory_fits_the_current_server(self):
         # 서버 메모리에 맞춘 값이다. 사양을 바꾸면 같이 바꾼다.
@@ -166,7 +166,7 @@ class PreflightTest(unittest.TestCase):
     def test_preflight_prints_shell_quoted_values(self):
         result = self.preflight('printf "%s|%s|%s|%s|%s|%s" "$PARAM_PATH" "$SITE_ALIASES" "$COMPOSE_PROFILES" "$CADDY_SSO_SITES" "$BACKEND_MEM_LIMIT" "$EXPECTED_DB_IDENTIFIER"')
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(result.stdout, "|".join(["/meterengine/staging", "www.one.example www.two.example", "agents", "off", "2g", self.target["database_identifier"]]))
+        self.assertEqual(result.stdout, "|".join(["/meterengine/staging", "www.one.example www.two.example", "agents", "off", "768m", self.target["database_identifier"]]))
 
     def test_preflight_prints_image_repository_prefix(self):
         result = self.preflight('printf "%s" "$IMAGE_REPOSITORY_PREFIX"')

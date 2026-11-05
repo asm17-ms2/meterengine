@@ -6,12 +6,12 @@ import jsonata from 'jsonata';
 const template = JSON.parse(await readFile(new URL('../workflow.asl.json', import.meta.url)));
 const account = '928618307647';
 const region = 'ap-northeast-2';
-const db = 'meterengine-test-slo-db';
+const db = 'meterengine-test-sjpark-db';
 const arn = `arn:aws:rds:${region}:${account}:db:${db}`;
 const now = '2026-10-26T12:00:00.000Z';
 const config = {
   account_id: account, region, db_identifier: db, db_arn: arn,
-  claim_table: 'meterengine-test-slo-rds-auto-stop-claims',
+  claim_table: 'meterengine-test-sjpark-rds-auto-stop-claims',
 };
 const event = {
   version: '0', id: '11111111-2222-3333-4444-555555555555',

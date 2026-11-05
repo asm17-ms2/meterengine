@@ -125,6 +125,8 @@ docker build -t meterengine-backend .
 
 `METERENGINE_AUTH_RATE_LIMIT_TRUSTED_PROXIES`에는 실제 역방향 프록시의 IP/CIDR만 쉼표로 지정한다. 기본값은 비어 있으며, 신뢰한 직접 연결에서만 숫자 IP인 `X-MeterEngine-Client-IP`를 사용한다. 그 외에는 접속 상대 IP를 쓴다. 임의의 `X-Forwarded-For`나 전체 사설망을 신뢰하지 않는다. 프록시를 신뢰하지 않으면 프록시 뒤 사용자들이 같은 IP 한도를 공유한다.
 
+`METERENGINE_AUTH_RATE_LIMIT_LOAD_BALANCERS`에는 앞단 부하 분산기(ALB)가 접속하는 IP/CIDR만 쉼표로 지정한다. 기본값은 비어 있다. 이 대역에서 온 연결은 `X-Forwarded-For`가 한 줄이고 맨 오른쪽 값이 숫자 IP일 때 그 값을 쓰고 `X-MeterEngine-Client-IP`는 읽지 않는다. 줄이 여러 개이거나 숫자 IP가 아니면 접속 상대 IP를 쓴다.
+
 ### 서버 조회
 
 고객, 미터, 가격, 사용량, 청구 예정액과 인보이스는 기존 목록 API 외에 `/search`, `/export`를 제공한다. 새 검색 페이지는 1부터 시작하며, CSV는 같은 조건의 전체 결과를 최대 10,000행까지 제공한다. 선택지와 조회 가능한 월도 서버에서 조회한다. 이벤트도 `/v1/events/export`에서 같은 기간과 필터로 내보내며 `include_properties=true`일 때 원본 JSON 열을 포함한다. CSV는 UTF-8 BOM을 포함한다. 세부 조건과 응답은 `openapi.yaml`을 따른다.

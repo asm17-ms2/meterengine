@@ -44,7 +44,8 @@ import org.springframework.web.context.WebApplicationContext;
       "meterengine.auth-rate-limit.signup-ip-limit=3",
       "meterengine.auth-rate-limit.signup-account-limit=2",
       "meterengine.auth-rate-limit.signup-window=30m",
-      "meterengine.auth-rate-limit.trusted-proxies=10.8.0.0/16"
+      "meterengine.auth-rate-limit.trusted-proxies=10.8.0.0/16",
+      "meterengine.auth-rate-limit.load-balancers=10.9.0.0/16"
     })
 @ExtendWith(OutputCaptureExtension.class)
 class AuthRequestRateLimitIntegrationTest {
@@ -212,6 +213,19 @@ class AuthRequestRateLimitIntegrationTest {
   }
 
   @Test
+  void 부하_분산기를_거친_로그인은_앞에_끼운_값이_달라도_맨_오른쪽_IP_한도를_나눠_쓴다() {
+    for (int index = 0; index < 3; index++) {
+      String spoofed = "198.51.100." + (index + 1);
+      assertThat(loginThroughLoadBalancer(spoofed + ", 203.0.113.60", spoofed)).hasStatus(401);
+    }
+    assertLimited(loginThroughLoadBalancer("198.51.100.200, 203.0.113.60", "198.51.100.200"));
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM auth_request_rate_limit WHERE scope='login_ip'", Long.class))
+        .isEqualTo(1);
+  }
+
+  @Test
   void 가입_IP_한도를_넘으면_새_사용자나_도입사를_만들지_않는다() {
     for (int index = 0; index < 3; index++) {
       assertThat(signup(email(), "203.0.113.5")).hasStatus(201);
@@ -303,7 +317,7 @@ class AuthRequestRateLimitIntegrationTest {
   void 두_서비스_인스턴스의_동시_요청도_같은_DB_한도만큼만_통과한다() throws Exception {
     var properties =
         new AuthRateLimitProperties(
-            true, 5, 5, Duration.ofMinutes(5), 3, 2, Duration.ofMinutes(30), List.of());
+            true, 5, 5, Duration.ofMinutes(5), 3, 2, Duration.ofMinutes(30), List.of(), List.of());
     var nodes =
         List.of(
             new AuthRequestRateLimitService(repository, properties),
@@ -360,6 +374,21 @@ class AuthRequestRateLimitIntegrationTest {
           .header(AuthRequestRateLimitService.CLIENT_IP_HEADER, forwarded)
           .header("X-Forwarded-For", forwarded);
     return request.exchange();
+  }
+
+  private MvcTestResult loginThroughLoadBalancer(String forwardedFor, String clientIpHeader) {
+    return mvc.post()
+        .uri("/v1/sessions")
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("{\"email\":\"" + email() + "\",\"password\":\"wrong-password\"}")
+        .header("X-Forwarded-For", forwardedFor)
+        .header(AuthRequestRateLimitService.CLIENT_IP_HEADER, clientIpHeader)
+        .with(
+            request -> {
+              request.setRemoteAddr("10.9.1.1");
+              return request;
+            })
+        .exchange();
   }
 
   private MvcTestResult signup(String email, String peer) {

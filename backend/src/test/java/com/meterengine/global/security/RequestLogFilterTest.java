@@ -102,20 +102,22 @@ class RequestLogFilterTest {
   }
 
   @Test
-  void 클라이언트_주소는_X_Forwarded_For의_첫_값이다(CapturedOutput output) {
+  void 클라이언트_주소는_X_Forwarded_For의_맨_오른쪽_값이다(CapturedOutput output) {
     String authorization = TestCredentials.issueApiKey(jdbcTemplate, UUID.randomUUID());
 
     mvc.get()
         .uri("/v1/customers")
         .header(AUTHORIZATION, authorization)
-        .header("X-Forwarded-For", "203.0.113.7, 10.0.0.1")
+        .header("X-Forwarded-For", "198.51.100.9, 203.0.113.7")
         .exchange();
 
     assertThat(requestLogLines(output))
         .singleElement()
         .satisfies(
             line ->
-                assertThat(line).contains("client_address=203.0.113.7").doesNotContain("10.0.0.1"));
+                assertThat(line)
+                    .contains("client_address=203.0.113.7")
+                    .doesNotContain("198.51.100.9"));
   }
 
   @Test

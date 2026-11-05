@@ -14,10 +14,12 @@ public record AuthRateLimitProperties(
     @DefaultValue("20") int signupIpLimit,
     @DefaultValue("3") int signupAccountLimit,
     @DefaultValue("30m") Duration signupWindow,
-    List<String> trustedProxies) {
+    List<String> trustedProxies,
+    List<String> loadBalancers) {
 
   public AuthRateLimitProperties {
     trustedProxies = trustedProxies == null ? List.of() : List.copyOf(trustedProxies);
+    loadBalancers = loadBalancers == null ? List.of() : List.copyOf(loadBalancers);
     if (loginIpLimit < 1
         || loginAccountLimit < 1
         || signupIpLimit < 1

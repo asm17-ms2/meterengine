@@ -13,7 +13,7 @@ import sys
 
 AWS_REGION = "ap-northeast-2"
 SERVICE_ENVIRONMENTS = ("staging", "production")
-SUT_ENVIRONMENTS = ("test-slo", "test-storage")
+SUT_ENVIRONMENTS = ("test-sjpark", "test-storage")
 PROFILES = {"agents", "monitoring"}
 FIELDS = {"instance_id", "database_identifier", "parameter_path", "site_domain", "site_aliases", "compose_profiles",
           "sso_sites", "image_repository_prefix", "backend_mem_limit", "backend_max_ram_percentage"}

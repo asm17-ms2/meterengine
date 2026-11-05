@@ -27,19 +27,48 @@
   "templating": {
     "list": [
       {
-        "name": "db",
-        "label": "RDS 인스턴스",
-        "description": "CloudWatch에서 온 RDS 행 패널에만 걸린다. PostgreSQL 행은 postgres-exporter가 붙은 DB 하나를 그린다.",
+        "name": "env",
+        "label": "환경",
+        "description": "공용 모니터링 서버가 붙이는 env 라벨로 환경을 고른다. env 라벨이 없는 서버 안 Prometheus에서는 All만 보이고 모든 값을 그린다. 관측 시스템과 Caddy 패널에는 걸리지 않는다.",
         "type": "query",
         "datasource": {
           "type": "prometheus",
           "uid": "prometheus"
         },
         "query": {
-          "query": "label_values(aws_rds_cpuutilization_average, dbinstance_identifier)",
+          "query": "label_values(up, env)",
+          "refId": "env"
+        },
+        "definition": "label_values(up, env)",
+        "refresh": 2,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "sort": 1,
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        }
+      },
+      {
+        "name": "db",
+        "label": "RDS 인스턴스",
+        "description": "CloudWatch에서 온 RDS 행 패널에만 걸린다. PostgreSQL 행은 env 변수로 고른 환경의 postgres-exporter 값을 그린다.",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "query": {
+          "query": "label_values(aws_rds_cpuutilization_average{env=~\"$env\"}, dbinstance_identifier)",
           "refId": "db"
         },
-        "definition": "label_values(aws_rds_cpuutilization_average, dbinstance_identifier)",
+        "definition": "label_values(aws_rds_cpuutilization_average{env=~\"$env\"}, dbinstance_identifier)",
         "refresh": 1,
         "includeAll": false,
         "multi": false,
@@ -84,22 +113,22 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max(up{job=\"postgres\"})",
+          "expr": "max(up{env=~\"$env\", job=\"postgres\"})",
           "legendFormat": "수출기 응답"
         },
         {
           "refId": "B",
-          "expr": "max(pg_up)",
+          "expr": "max(pg_up{env=~\"$env\"})",
           "legendFormat": "pg_up"
         },
         {
           "refId": "C",
-          "expr": "max(pg_exporter_last_scrape_error)",
+          "expr": "max(pg_exporter_last_scrape_error{env=~\"$env\"})",
           "legendFormat": "수집 오류"
         },
         {
           "refId": "D",
-          "expr": "max by (collector) (1 - pg_scrape_collector_success)",
+          "expr": "max by (collector) (1 - pg_scrape_collector_success{env=~\"$env\"})",
           "legendFormat": "{{collector}}"
         }
       ],
@@ -139,7 +168,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max by (state) (pg_stat_activity_max_tx_duration{datname!~\"template.*|postgres|rdsadmin\", backend_type=\"client backend\"})",
+          "expr": "max by (state) (pg_stat_activity_max_tx_duration{env=~\"$env\", datname!~\"template.*|postgres|rdsadmin\", backend_type=\"client backend\"})",
           "legendFormat": "{{state}}"
         }
       ],
@@ -178,12 +207,12 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(pg_stat_database_xact_commit{datname!~\"template.*|postgres|rdsadmin\"}[$__rate_interval]))",
+          "expr": "sum(rate(pg_stat_database_xact_commit{env=~\"$env\", datname!~\"template.*|postgres|rdsadmin\"}[$__rate_interval]))",
           "legendFormat": "커밋"
         },
         {
           "refId": "B",
-          "expr": "sum(rate(pg_stat_database_xact_rollback{datname!~\"template.*|postgres|rdsadmin\"}[$__rate_interval]))",
+          "expr": "sum(rate(pg_stat_database_xact_rollback{env=~\"$env\", datname!~\"template.*|postgres|rdsadmin\"}[$__rate_interval]))",
           "legendFormat": "롤백"
         }
       ],
@@ -222,7 +251,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(pg_stat_database_blks_hit{datname!~\"template.*|postgres|rdsadmin\"}[$__rate_interval])) / (sum(rate(pg_stat_database_blks_hit{datname!~\"template.*|postgres|rdsadmin\"}[$__rate_interval])) + sum(rate(pg_stat_database_blks_read{datname!~\"template.*|postgres|rdsadmin\"}[$__rate_interval])))",
+          "expr": "sum(rate(pg_stat_database_blks_hit{env=~\"$env\", datname!~\"template.*|postgres|rdsadmin\"}[$__rate_interval])) / (sum(rate(pg_stat_database_blks_hit{env=~\"$env\", datname!~\"template.*|postgres|rdsadmin\"}[$__rate_interval])) + sum(rate(pg_stat_database_blks_read{env=~\"$env\", datname!~\"template.*|postgres|rdsadmin\"}[$__rate_interval])))",
           "legendFormat": "적중률"
         }
       ],
@@ -261,7 +290,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(pg_stat_database_blks_read{datname!~\"template.*|postgres|rdsadmin\"}[$__rate_interval]))",
+          "expr": "sum(rate(pg_stat_database_blks_read{env=~\"$env\", datname!~\"template.*|postgres|rdsadmin\"}[$__rate_interval]))",
           "legendFormat": "blks_read"
         }
       ],
@@ -300,7 +329,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(rate(pg_stat_database_deadlocks{datname!~\"template.*|postgres|rdsadmin\"}[$__rate_interval])) * 60",
+          "expr": "sum(rate(pg_stat_database_deadlocks{env=~\"$env\", datname!~\"template.*|postgres|rdsadmin\"}[$__rate_interval])) * 60",
           "legendFormat": "분당 교착"
         }
       ],
@@ -339,7 +368,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "topk(10, max by (relname) (pg_stat_user_tables_n_dead_tup))",
+          "expr": "topk(10, max by (relname) (pg_stat_user_tables_n_dead_tup{env=~\"$env\"}))",
           "legendFormat": "{{relname}}"
         }
       ],
@@ -378,7 +407,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(time() - max by (relname) (pg_stat_user_tables_last_autovacuum > 0)) and on (relname) topk(10, max by (relname) (pg_stat_user_tables_n_dead_tup))",
+          "expr": "(time() - max by (relname) (pg_stat_user_tables_last_autovacuum{env=~\"$env\"} > 0)) and on (relname) topk(10, max by (relname) (pg_stat_user_tables_n_dead_tup{env=~\"$env\"}))",
           "legendFormat": "{{relname}}"
         }
       ],
@@ -417,7 +446,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (mode) (pg_locks_count{datname!~\"template.*|postgres|rdsadmin\"})",
+          "expr": "sum by (mode) (pg_locks_count{env=~\"$env\", datname!~\"template.*|postgres|rdsadmin\"})",
           "legendFormat": "{{mode}}"
         }
       ],
@@ -456,7 +485,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "900 / clamp_min(sum(increase(pg_stat_checkpointer_num_timed_total[15m])) + sum(increase(pg_stat_checkpointer_num_requested_total[15m])), 1)",
+          "expr": "900 / clamp_min(sum(increase(pg_stat_checkpointer_num_timed_total{env=~\"$env\"}[15m])) + sum(increase(pg_stat_checkpointer_num_requested_total{env=~\"$env\"}[15m])), 1)",
           "legendFormat": "평균 간격"
         }
       ],
@@ -495,12 +524,12 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(increase(pg_stat_checkpointer_num_timed_total[15m]))",
+          "expr": "sum(increase(pg_stat_checkpointer_num_timed_total{env=~\"$env\"}[15m]))",
           "legendFormat": "시간형"
         },
         {
           "refId": "B",
-          "expr": "sum(increase(pg_stat_checkpointer_num_requested_total[15m]))",
+          "expr": "sum(increase(pg_stat_checkpointer_num_requested_total{env=~\"$env\"}[15m]))",
           "legendFormat": "요청형"
         }
       ],
@@ -539,12 +568,12 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max(pg_wal_size_bytes)",
+          "expr": "max(pg_wal_size_bytes{env=~\"$env\"})",
           "legendFormat": "pg_wal"
         },
         {
           "refId": "B",
-          "expr": "max(pg_settings_max_wal_size_bytes)",
+          "expr": "max(pg_settings_max_wal_size_bytes{env=~\"$env\"})",
           "legendFormat": "max_wal_size"
         }
       ],
@@ -583,17 +612,17 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(pg_stat_user_tables_table_size_bytes{relname=\"event\"})",
+          "expr": "sum(pg_stat_user_tables_table_size_bytes{env=~\"$env\", relname=\"event\"})",
           "legendFormat": "테이블"
         },
         {
           "refId": "B",
-          "expr": "sum(pg_stat_user_tables_index_size_bytes{relname=\"event\"})",
+          "expr": "sum(pg_stat_user_tables_index_size_bytes{env=~\"$env\", relname=\"event\"})",
           "legendFormat": "인덱스"
         },
         {
           "refId": "C",
-          "expr": "sum(pg_stat_user_tables_table_size_bytes{relname=\"event\"}) + sum(pg_stat_user_tables_index_size_bytes{relname=\"event\"})",
+          "expr": "sum(pg_stat_user_tables_table_size_bytes{env=~\"$env\", relname=\"event\"}) + sum(pg_stat_user_tables_index_size_bytes{env=~\"$env\", relname=\"event\"})",
           "legendFormat": "합"
         }
       ],
@@ -645,7 +674,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "aws_rds_database_connections_average{dbinstance_identifier=\"$db\"} / scalar(max(pg_settings_max_connections))",
+          "expr": "aws_rds_database_connections_average{env=~\"$env\", dbinstance_identifier=\"$db\"} / scalar(max(pg_settings_max_connections{env=~\"$env\"}))",
           "legendFormat": "연결 사용률"
         }
       ],
@@ -685,7 +714,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "aws_rds_dbload_average{dbinstance_identifier=\"$db\"}",
+          "expr": "aws_rds_dbload_average{env=~\"$env\", dbinstance_identifier=\"$db\"}",
           "legendFormat": "DBLoad"
         }
       ],
@@ -724,7 +753,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "aws_rds_cpuutilization_average{dbinstance_identifier=\"$db\"}",
+          "expr": "aws_rds_cpuutilization_average{env=~\"$env\", dbinstance_identifier=\"$db\"}",
           "legendFormat": "CPU"
         }
       ],
@@ -764,7 +793,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "aws_rds_cpucredit_balance_average{dbinstance_identifier=\"$db\"}",
+          "expr": "aws_rds_cpucredit_balance_average{env=~\"$env\", dbinstance_identifier=\"$db\"}",
           "legendFormat": "CPUCreditBalance"
         }
       ],
@@ -803,7 +832,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "aws_rds_freeable_memory_average{dbinstance_identifier=\"$db\"}",
+          "expr": "aws_rds_freeable_memory_average{env=~\"$env\", dbinstance_identifier=\"$db\"}",
           "legendFormat": "FreeableMemory"
         }
       ],
@@ -842,7 +871,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "aws_rds_swap_usage_average{dbinstance_identifier=\"$db\"}",
+          "expr": "aws_rds_swap_usage_average{env=~\"$env\", dbinstance_identifier=\"$db\"}",
           "legendFormat": "SwapUsage"
         }
       ],
@@ -881,7 +910,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "aws_rds_write_latency_p90{dbinstance_identifier=\"$db\"}",
+          "expr": "aws_rds_write_latency_p90{env=~\"$env\", dbinstance_identifier=\"$db\"}",
           "legendFormat": "WriteLatency p90"
         }
       ],
@@ -920,7 +949,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "aws_rds_read_latency_p90{dbinstance_identifier=\"$db\"}",
+          "expr": "aws_rds_read_latency_p90{env=~\"$env\", dbinstance_identifier=\"$db\"}",
           "legendFormat": "ReadLatency p90"
         }
       ],
@@ -959,7 +988,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "aws_rds_disk_queue_depth_average{dbinstance_identifier=\"$db\"}",
+          "expr": "aws_rds_disk_queue_depth_average{env=~\"$env\", dbinstance_identifier=\"$db\"}",
           "legendFormat": "DiskQueueDepth"
         }
       ],
@@ -998,7 +1027,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "aws_rds_write_iops_average{dbinstance_identifier=\"$db\"}",
+          "expr": "aws_rds_write_iops_average{env=~\"$env\", dbinstance_identifier=\"$db\"}",
           "legendFormat": "WriteIOPS"
         }
       ],
@@ -1037,7 +1066,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "aws_rds_read_iops_average{dbinstance_identifier=\"$db\"}",
+          "expr": "aws_rds_read_iops_average{env=~\"$env\", dbinstance_identifier=\"$db\"}",
           "legendFormat": "ReadIOPS"
         }
       ],
@@ -1076,12 +1105,12 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "aws_rds_ebsiobalance__average{dbinstance_identifier=\"$db\"}",
+          "expr": "aws_rds_ebsiobalance__average{env=~\"$env\", dbinstance_identifier=\"$db\"}",
           "legendFormat": "IO balance"
         },
         {
           "refId": "B",
-          "expr": "aws_rds_ebsbyte_balance__average{dbinstance_identifier=\"$db\"}",
+          "expr": "aws_rds_ebsbyte_balance__average{env=~\"$env\", dbinstance_identifier=\"$db\"}",
           "legendFormat": "Byte balance"
         }
       ],
@@ -1121,7 +1150,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "aws_rds_write_throughput_average{dbinstance_identifier=\"$db\"}",
+          "expr": "aws_rds_write_throughput_average{env=~\"$env\", dbinstance_identifier=\"$db\"}",
           "legendFormat": "WriteThroughput"
         }
       ],
@@ -1160,7 +1189,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "aws_rds_read_throughput_average{dbinstance_identifier=\"$db\"}",
+          "expr": "aws_rds_read_throughput_average{env=~\"$env\", dbinstance_identifier=\"$db\"}",
           "legendFormat": "ReadThroughput"
         }
       ],
@@ -1199,7 +1228,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "aws_rds_transaction_logs_generation_average{dbinstance_identifier=\"$db\"}",
+          "expr": "aws_rds_transaction_logs_generation_average{env=~\"$env\", dbinstance_identifier=\"$db\"}",
           "legendFormat": "WAL"
         }
       ],
@@ -1238,7 +1267,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "aws_rds_free_storage_space_minimum{dbinstance_identifier=\"$db\"}",
+          "expr": "aws_rds_free_storage_space_minimum{env=~\"$env\", dbinstance_identifier=\"$db\"}",
           "legendFormat": "FreeStorageSpace"
         }
       ],
@@ -1277,7 +1306,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "aws_rds_free_storage_space_minimum{dbinstance_identifier=\"$db\"} / clamp_min(-delta(aws_rds_free_storage_space_minimum{dbinstance_identifier=\"$db\"}[1d]), 1)",
+          "expr": "aws_rds_free_storage_space_minimum{env=~\"$env\", dbinstance_identifier=\"$db\"} / clamp_min(-delta(aws_rds_free_storage_space_minimum{env=~\"$env\", dbinstance_identifier=\"$db\"}[1d]), 1)",
           "legendFormat": "남은 일수"
         }
       ],
@@ -1316,7 +1345,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "aws_rds_maximum_used_transaction_ids_average{dbinstance_identifier=\"$db\"}",
+          "expr": "aws_rds_maximum_used_transaction_ids_average{env=~\"$env\", dbinstance_identifier=\"$db\"}",
           "legendFormat": "MaximumUsedTransactionIDs"
         }
       ],

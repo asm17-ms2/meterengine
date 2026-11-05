@@ -88,7 +88,7 @@ test("signup sends displayed consent versions without stale Bearer or a password
   expect(await page.evaluate(() => localStorage.length + sessionStorage.length)).toBe(0);
   expect(await page.content()).not.toContain(LOGIN_PASSWORD);
   const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
-  expect(calls).toEqual([{ path: "/v1/signups", method: "POST", hasAuthorization: false, hasOrganizationHeader: false, consents: [{ document: "terms_of_service", document_version: "2026-10-26-preview" }, { document: "privacy_policy", document_version: "2026-10-26-preview" }] }]);
+  expect(calls).toEqual([{ path: "/v1/signups", method: "POST", hasAuthorization: false, hasOrganizationHeader: false, clientIp: "127.0.0.1", consents: [{ document: "terms_of_service", document_version: "2026-10-26-preview" }, { document: "privacy_policy", document_version: "2026-10-26-preview" }] }]);
 });
 
 test("safe relative return targets and member admin denial", async ({ page }) => {
@@ -542,8 +542,8 @@ test("accepting an invitation as a new account does not send a stale session", a
   expect(accept.hasAuthorization).toBe(false);
 });
 
-test("the automatic login after accepting an invitation sends the visitor's client address", async ({ page, request }) => {
-  await page.setExtraHTTPHeaders({ "x-meterengine-client-ip": "198.51.100.77" });
+test("the automatic login after accepting an invitation sends the rightmost forwarded address, not one the visitor set", async ({ page, request }) => {
+  await page.setExtraHTTPHeaders({ "x-forwarded-for": "203.0.113.9, 198.51.100.77", "x-meterengine-client-ip": "203.0.113.10" });
   await page.goto("/organization-invitations/me_invite_ContractInvitation00000000000001");
   await page.getByLabel(/^이름/).fill("초대 받은 사용자");
   await page.getByLabel(/^비밀번호/).fill("invited-password");
@@ -553,6 +553,24 @@ test("the automatic login after accepting an invitation sends the visitor's clie
   const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
   const login = calls.findLast((call: { path: string; method: string }) => call.path === "/v1/sessions" && call.method === "POST");
   expect(login.clientIp).toBe("198.51.100.77");
+});
+
+test("a login sends the rightmost forwarded address, not one the visitor set", async ({ page, request }) => {
+  await page.setExtraHTTPHeaders({ "x-forwarded-for": "203.0.113.9, 198.51.100.78", "x-meterengine-client-ip": "203.0.113.10" });
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
+  const session = calls.findLast((call: { path: string; method: string }) => call.path === "/v1/sessions" && call.method === "POST");
+  expect(session.clientIp).toBe("198.51.100.78");
+});
+
+test("a client address the visitor set is dropped when no forwarded address can be trusted", async ({ page, request }) => {
+  await page.setExtraHTTPHeaders({ "x-forwarded-for": "203.0.113.9, unknown", "x-meterengine-client-ip": "203.0.113.10" });
+  await login(page);
+  await expectTenantUrl(page, "/customers");
+  const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
+  const session = calls.findLast((call: { path: string; method: string }) => call.path === "/v1/sessions" && call.method === "POST");
+  expect(session.clientIp).toBeUndefined();
 });
 
 test("every page refuses framing and MIME sniffing without naming the framework, and invoice links keep their own policy", async ({ request }) => {

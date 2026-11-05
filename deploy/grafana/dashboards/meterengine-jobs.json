@@ -20,14 +20,29 @@
   "templating": {
     "list": [
       {
+        "name": "env",
+        "label": "환경",
+        "description": "공용 모니터링 서버가 붙이는 env 라벨로 환경을 고른다. env 라벨이 없는 서버 안 Prometheus에서는 All만 보이고 모든 값을 그린다. 관측 시스템과 Caddy 패널에는 걸리지 않는다.",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "definition": "label_values(up, env)",
+        "query": { "query": "label_values(up, env)", "refId": "env" },
+        "refresh": 2,
+        "sort": 1,
+        "multi": true,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": { "text": ["All"], "value": ["$__all"] }
+      },
+      {
         "name": "job_name",
         "label": "작업",
         "description": "예약 작업 이름이다. meterengine_scheduled_job_ 지표 패널에만 걸린다. 작업 실행 시간과 실행 중 작업은 code_function 라벨이고, 웹훅 지표에는 작업 라벨이 없어 늘 전체를 그린다.",
         "type": "query",
         "datasource": { "type": "prometheus", "uid": "prometheus" },
-        "definition": "label_values({__name__=~\"meterengine_scheduled_job_.*\"}, job_name)",
+        "definition": "label_values({env=~\"$env\", __name__=~\"meterengine_scheduled_job_.*\"}, job_name)",
         "query": {
-          "query": "label_values({__name__=~\"meterengine_scheduled_job_.*\"}, job_name)",
+          "query": "label_values({env=~\"$env\", __name__=~\"meterengine_scheduled_job_.*\"}, job_name)",
           "refId": "JobNames"
         },
         "refresh": 2,
@@ -58,7 +73,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "time() - max by (job_name) (max_over_time(meterengine_scheduled_job_last_success_seconds{job_name=~\"$job_name\"}[26h]))",
+          "expr": "time() - max by (job_name) (max_over_time(meterengine_scheduled_job_last_success_seconds{env=~\"$env\", job_name=~\"$job_name\"}[26h]))",
           "legendFormat": "{{job_name}}"
         }
       ],
@@ -78,7 +93,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "time() - max by (job_name) (max_over_time(meterengine_scheduled_job_last_completion_seconds{job_name=~\"$job_name\"}[26h]))",
+          "expr": "time() - max by (job_name) (max_over_time(meterengine_scheduled_job_last_completion_seconds{env=~\"$env\", job_name=~\"$job_name\"}[26h]))",
           "legendFormat": "{{job_name}}"
         }
       ],
@@ -98,7 +113,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (job_name, result) (rate(meterengine_scheduled_job_run_total{job_name=~\"$job_name\"}[$__rate_interval])) * 60",
+          "expr": "sum by (job_name, result) (rate(meterengine_scheduled_job_run_total{env=~\"$env\", job_name=~\"$job_name\"}[$__rate_interval])) * 60",
           "legendFormat": "{{job_name}} {{result}}"
         }
       ],
@@ -118,7 +133,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (job_name, result) (rate(meterengine_scheduled_job_items_total{job_name=~\"$job_name\"}[$__rate_interval])) * 60",
+          "expr": "sum by (job_name, result) (rate(meterengine_scheduled_job_items_total{env=~\"$env\", job_name=~\"$job_name\"}[$__rate_interval])) * 60",
           "legendFormat": "{{job_name}} {{result}}"
         }
       ],
@@ -138,7 +153,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (code_function) (rate(tasks_scheduled_execution_seconds_sum[$__rate_interval])) / sum by (code_function) (rate(tasks_scheduled_execution_seconds_count[$__rate_interval]))",
+          "expr": "sum by (code_function) (rate(tasks_scheduled_execution_seconds_sum{env=~\"$env\"}[$__rate_interval])) / sum by (code_function) (rate(tasks_scheduled_execution_seconds_count{env=~\"$env\"}[$__rate_interval]))",
           "legendFormat": "{{code_function}}"
         }
       ],
@@ -161,7 +176,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max by (code_function) (tasks_scheduled_execution_seconds_max)",
+          "expr": "max by (code_function) (tasks_scheduled_execution_seconds_max{env=~\"$env\"})",
           "legendFormat": "{{code_function}}"
         }
       ],
@@ -175,13 +190,13 @@
       "id": 8,
       "type": "timeseries",
       "title": "실행 중 작업 수",
-      "description": "지금 실행 중인 예약 작업 수를 메서드 이름(code_function)별로 블루와 그린을 합쳐 센다. 1보다 큰 값이 이어지면 실행이 겹치고, 0으로 내려오지 않으면 작업이 멈춰 끝나지 않는 것이다. 지표: `tasks_scheduled_execution_active_seconds_count`",
+      "description": "지금 실행 중인 예약 작업 수를 메서드 이름(code_function)별로 모든 백엔드를 합쳐 센다. 1보다 큰 값이 이어지면 실행이 겹치고, 0으로 내려오지 않으면 작업이 멈춰 끝나지 않는 것이다. 지표: `tasks_scheduled_execution_active_seconds_count`",
       "gridPos": { "h": 8, "w": 12, "x": 0, "y": 17 },
       "datasource": { "type": "prometheus", "uid": "prometheus" },
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (code_function) (tasks_scheduled_execution_active_seconds_count)",
+          "expr": "sum by (code_function) (tasks_scheduled_execution_active_seconds_count{env=~\"$env\"})",
           "legendFormat": "{{code_function}}"
         }
       ],
@@ -201,7 +216,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max by (code_function) (tasks_scheduled_execution_active_seconds_max)",
+          "expr": "max by (code_function) (tasks_scheduled_execution_active_seconds_max{env=~\"$env\"})",
           "legendFormat": "{{code_function}}"
         }
       ],
@@ -229,7 +244,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (environment, result, reason) (rate(meterengine_webhook_delivery_total[$__rate_interval])) * 60",
+          "expr": "sum by (environment, result, reason) (rate(meterengine_webhook_delivery_total{env=~\"$env\"}[$__rate_interval])) * 60",
           "legendFormat": "{{environment}} {{result}} {{reason}}"
         }
       ],
@@ -249,7 +264,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (environment) (rate(meterengine_webhook_delivery_total{result=\"done\"}[$__rate_interval])) / sum by (environment) (rate(meterengine_webhook_delivery_total{reason!=\"endpoint_disabled\"}[$__rate_interval]))",
+          "expr": "sum by (environment) (rate(meterengine_webhook_delivery_total{env=~\"$env\", result=\"done\"}[$__rate_interval])) / sum by (environment) (rate(meterengine_webhook_delivery_total{env=~\"$env\", reason!=\"endpoint_disabled\"}[$__rate_interval]))",
           "legendFormat": "{{environment}}"
         }
       ],
@@ -269,7 +284,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (environment, status_group) (rate(meterengine_webhook_delivery_total{reason=\"unexpected_status\"}[$__rate_interval])) * 60",
+          "expr": "sum by (environment, status_group) (rate(meterengine_webhook_delivery_total{env=~\"$env\", reason=\"unexpected_status\"}[$__rate_interval])) * 60",
           "legendFormat": "{{environment}} {{status_group}}"
         }
       ],
@@ -289,7 +304,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max by (environment) (meterengine_webhook_delivery_backlog)",
+          "expr": "max by (environment) (meterengine_webhook_delivery_backlog{env=~\"$env\"})",
           "legendFormat": "{{environment}}"
         }
       ],
@@ -309,7 +324,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max by (environment) (meterengine_webhook_delivery_backlog_age_seconds)",
+          "expr": "max by (environment) (meterengine_webhook_delivery_backlog_age_seconds{env=~\"$env\"})",
           "legendFormat": "{{environment}}"
         }
       ],
@@ -329,7 +344,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max by (environment) (meterengine_webhook_delivery_pending_oldest_age_seconds)",
+          "expr": "max by (environment) (meterengine_webhook_delivery_pending_oldest_age_seconds{env=~\"$env\"})",
           "legendFormat": "{{environment}}"
         }
       ],
@@ -349,7 +364,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "max by (environment) (meterengine_webhook_delivery_retry_waiting)",
+          "expr": "max by (environment) (meterengine_webhook_delivery_retry_waiting{env=~\"$env\"})",
           "legendFormat": "{{environment}}"
         }
       ],
@@ -369,12 +384,12 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.5, sum by (le, environment) (rate(meterengine_webhook_receiver_response_seconds_bucket[$__rate_interval])))",
+          "expr": "histogram_quantile(0.5, sum by (le, environment) (rate(meterengine_webhook_receiver_response_seconds_bucket{env=~\"$env\"}[$__rate_interval])))",
           "legendFormat": "{{environment}} p50"
         },
         {
           "refId": "B",
-          "expr": "histogram_quantile(0.99, sum by (le, environment) (rate(meterengine_webhook_receiver_response_seconds_bucket[$__rate_interval])))",
+          "expr": "histogram_quantile(0.99, sum by (le, environment) (rate(meterengine_webhook_receiver_response_seconds_bucket{env=~\"$env\"}[$__rate_interval])))",
           "legendFormat": "{{environment}} p99"
         }
       ],
@@ -394,12 +409,12 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.5, sum by (le, environment) (rate(meterengine_webhook_delivery_latency_seconds_bucket[$__rate_interval])))",
+          "expr": "histogram_quantile(0.5, sum by (le, environment) (rate(meterengine_webhook_delivery_latency_seconds_bucket{env=~\"$env\"}[$__rate_interval])))",
           "legendFormat": "{{environment}} p50"
         },
         {
           "refId": "B",
-          "expr": "histogram_quantile(0.99, sum by (le, environment) (rate(meterengine_webhook_delivery_latency_seconds_bucket[$__rate_interval])))",
+          "expr": "histogram_quantile(0.99, sum by (le, environment) (rate(meterengine_webhook_delivery_latency_seconds_bucket{env=~\"$env\"}[$__rate_interval])))",
           "legendFormat": "{{environment}} p99"
         }
       ],
@@ -419,7 +434,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum by (environment) (rate(meterengine_webhook_delivery_total{first_attempt=\"true\", result=\"done\"}[$__rate_interval])) / sum by (environment) (rate(meterengine_webhook_delivery_total{first_attempt=\"true\", reason!=\"endpoint_disabled\"}[$__rate_interval]))",
+          "expr": "sum by (environment) (rate(meterengine_webhook_delivery_total{env=~\"$env\", first_attempt=\"true\", result=\"done\"}[$__rate_interval])) / sum by (environment) (rate(meterengine_webhook_delivery_total{env=~\"$env\", first_attempt=\"true\", reason!=\"endpoint_disabled\"}[$__rate_interval]))",
           "legendFormat": "{{environment}}"
         }
       ],

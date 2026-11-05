@@ -32,6 +32,7 @@ pnpm dev
 - 다른 기계에서 이 dev 서버를 볼 수 있다 (`next.config.ts`의 `allowedDevOrigins`).
 - 개발 모드에서는 기존 목록의 상태를 `?state=empty`, `?state=loading`, `?state=error`로 바꿔 본다. 프로덕션 빌드에서는 무시된다.
 - 로그인 세션이 없으면 `src/proxy.ts`가 공개 화면(서비스 소개, 로그인, 가입, 고객 조회 링크 등) 밖의 경로를 로그인 화면으로 보낸다.
+- `src/proxy.ts`는 사용자가 보낸 `X-MeterEngine-Client-IP`를 버리고 `X-Forwarded-For`의 맨 오른쪽 값으로 다시 쓴다. 로그인과 가입은 이 값을 백엔드 인증 요청 한도에 넘긴다.
 
 조회 조건은 다음 쿼리스트링으로 받는다.
 
@@ -123,7 +124,7 @@ docker run -p 3000:3000 \
 | `src/app/account/` | 첫 로그인 때 계정 이용 안내 확인 |
 | `src/app/organization-invitations/` | 초대 링크 확인과 수락 |
 | `src/app/admin/` | 플랫폼 운영자 화면 |
-| `src/proxy.ts` | 세션 쿠키가 없으면 공개 화면 밖의 경로를 로그인으로 보내고, 현재 경로와 화면의 도입사를 서버에 넘긴다 |
+| `src/proxy.ts` | 세션 쿠키가 없으면 공개 화면 밖의 경로를 로그인으로 보내고, 현재 경로와 화면의 도입사, `X-Forwarded-For` 맨 오른쪽의 사용자 IP를 서버에 넘긴다 |
 | `src/lib/auth/` | 세션 확인, 권한, 로그인 뒤 이동 경로 |
 | `src/app/health/` | `deploy.sh`가 서버 안에서 부르는 준비 확인. 백엔드를 부르지 않고 `ok`만 돌려준다. Caddy가 바깥에서는 404로 막는다 |
 | `src/components/` | 화면별 컴포넌트 |

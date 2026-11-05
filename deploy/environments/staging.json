@@ -7,6 +7,6 @@
   "compose_profiles": ["agents"],
   "sso_sites": false,
   "image_repository_prefix": "meterengine-staging",
-  "backend_mem_limit": "2g",
-  "backend_max_ram_percentage": 70
+  "backend_mem_limit": "768m",
+  "backend_max_ram_percentage": 50
 }

@@ -29,3 +29,25 @@ module "service" {
   final_snapshot_identifier  = "meterengine-production-final"
   user_data                  = null
 }
+
+module "app_fleet" {
+  source                     = "../modules/app_fleet"
+  environment                = "production"
+  parameter_path             = "/meterengine/production"
+  site_domain                = "meterengine.com"
+  site_aliases               = ["www.meterengine.com"]
+  vpc_id                     = "vpc-07498f0672b7f3c9e"
+  public_subnet_ids          = ["subnet-0348a18c1d399c193", "subnet-0e375e82d415767a3"]
+  route53_zone_id            = "Z08728621CQ5R1K37A7N1"
+  database_security_group_id = "sg-068a54ab4cfa91730"
+  ecr_repository_names       = ["meterengine-backend", "meterengine-frontend"]
+  ami_id                     = "ami-0f4109eb491b0476f"
+  # Caddy 없는 배포의 SHA가 버전 파라미터에 기록되기 전에는 서버가 떠도 헬스를 통과하지 못해 교체만 반복한다.
+  min_size = 0
+  # 측정 환경 숫자로 잡은 추정값이다.
+  scaling_target_requests_per_second = 450
+  # main 체크아웃에서 잘못 apply해도 운영 ALB가 지워지지 않게 한다.
+  alb_deletion_protection      = true
+  app_egress_ports             = [443]
+  monitoring_security_group_id = data.aws_security_group.monitoring.id
+}

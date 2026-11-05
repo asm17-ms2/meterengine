@@ -15,3 +15,12 @@ output "deployment_target" {
     error_message = "Production account or region differs from the verified target."
   }
 }
+output "app_fleet" {
+  value = {
+    alb_dns_name               = module.app_fleet.alb_dns_name
+    alb_zone_id                = module.app_fleet.alb_zone_id
+    autoscaling_group_name     = module.app_fleet.autoscaling_group_name
+    autoscaling_group_arn      = module.app_fleet.autoscaling_group_arn
+    app_version_parameter_name = module.app_fleet.app_version_parameter_name
+  }
+}
