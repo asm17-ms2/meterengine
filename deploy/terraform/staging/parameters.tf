@@ -19,3 +19,11 @@ resource "aws_ssm_parameter" "runtime" {
   value_wo         = contains(local.runtime_secret_names, each.key) ? local.runtime_secret_values[each.key] : null
   value_wo_version = contains(local.runtime_secret_names, each.key) ? local.runtime_secret_versions[each.key] : null
 }
+
+# 공용 모니터링의 postgres exporter가 읽는다. 자리만 만들고 실제 값은 사람이 넣어, apply가 그 값을 되돌리지 않는다.
+resource "aws_ssm_parameter" "db_exporter_password" {
+  name             = "/meterengine/staging/db-exporter-password"
+  type             = "SecureString"
+  value_wo         = "unset"
+  value_wo_version = 1
+}

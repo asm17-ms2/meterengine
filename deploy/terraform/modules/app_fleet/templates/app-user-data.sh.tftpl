@@ -1,0 +1,38 @@
+#!/bin/bash
+# 기본 이미지에 부팅마다 설치하고 버전 파라미터의 커밋으로 배포한다.
+# 미리 구운 이미지로 옮기면 시작 템플릿의 image_id와 이 파일만 바뀐다. 롤링, 버전 파라미터, 확장 정책은 그대로다.
+set -euo pipefail
+
+export AWS_REGION='${aws_region}'
+
+# 서버 안 스크립트가 환경을 태그 대신 이 파일에서 읽는다.
+install -d -m 0755 /etc/meterengine
+cat >/etc/meterengine/instance.env <<'ENV'
+ENVIRONMENT=${environment}
+PARAMETER_PATH=${parameter_path}
+APP_VERSION_PARAMETER=${app_version_parameter_name}
+AWS_REGION=${aws_region}
+ENV
+
+# 아직 배포된 적 없는 환경(unset)이면 설치 전에 실패로 끝낸다. 헬스 체크가 실패해 ASG가 서버를 바꾼다.
+version=$(aws ssm get-parameter --name '${app_version_parameter_name}' --query Parameter.Value --output text)
+if ! [[ "$version" =~ ^[0-9a-f]{40}$ ]]; then
+  echo "버전 파라미터 값이 40자 커밋 SHA가 아니다: $version" >&2
+  exit 1
+fi
+
+dnf install -y docker git python3 openssl
+systemctl enable --now docker
+
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
+  https://github.com/docker/compose/releases/download/v5.5.0/docker-compose-linux-aarch64 \
+  --output "$work/docker-compose"
+printf '%s  %s\n' ff42489f5a9b879d5d117c5ffea6defc27390b3286da8ad52cbc9c6ab5df590e "$work/docker-compose" | sha256sum --check
+install -D -m 0755 "$work/docker-compose" /usr/libexec/docker/cli-plugins/docker-compose
+
+git clone '${repository_url}' /opt/meterengine
+git -C /opt/meterengine checkout --quiet --detach "$version"
+cd /opt/meterengine
+./deploy/deploy.sh '${environment}' "$version"

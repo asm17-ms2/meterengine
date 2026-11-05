@@ -50,6 +50,7 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
 - DB: RDS `meterengine-db` (db.t4g.small, PostgreSQL 18, 단일 AZ).
 - staging은 서버 `meterengine-staging`(t4g.medium)과 DB `meterengine-staging-db`(db.t4g.small)를 따로 쓴다.
 - production과 staging은 실사용자가 없는 흐름 확인용이다. t4g 계열은 CPU 크레딧을 넘겨 쓰면 요금이 붙어, 부하 시험은 측정 환경(test-sjpark, test-storage)에서만 한다.
+- 두 환경 모두 옛 서버 옆에 ALB와 최소 0대 오토스케일링 그룹이 비어 있는 채로 서 있다. 도메인과 배포는 아직 옛 서버로 간다. "앱 서버 오토스케일링 그룹" 참조.
 - 이미지: ECR `meterengine-backend`, `meterengine-frontend`(staging은 `meterengine-staging-backend`, `meterengine-staging-frontend`). 태그는 배포한 커밋의 git SHA 40자.
   - 레지스트리 `928618307647.dkr.ecr.ap-northeast-2.amazonaws.com`.
 - 설정과 비밀값: SSM Parameter Store `/meterengine/<환경>/*`.
@@ -516,6 +517,63 @@ aws ssm get-parameter --name /meterengine/production/operator-password --with-de
   - `aws_db_instance`에서 클래스 말고 AWS 쪽 속성의 변경. `password_wo_version` 변경도 포함한다
   - `aws_ssm_parameter.runtime`의 값이나 비밀 버전 변경
 - plan 전문은 PR이나 이슈 같은 공개 기록에 붙이지 않는다. 바뀌는 수와 주소만 적는다.
+
+## 앱 서버 오토스케일링 그룹
+
+옛 서버를 대신할 구조다. `deploy/terraform/modules/app_fleet`이 두 환경에 같은 모양으로 만든다.
+
+| 자원 | 이름 |
+| --- | --- |
+| ALB | `meterengine-<환경>-alb` |
+| 오토스케일링 그룹 | `meterengine-<환경>-app` |
+| 보안 그룹 | `meterengine-<환경>-alb`, `meterengine-<환경>-asg` |
+| 앱 서버 역할 | `meterengine-<환경>-app` |
+| 버전 파라미터 | `/meterengine/<환경>/app-version` |
+
+- ALB는 `/v1/*`를 backend(8080)로, 나머지를 frontend(3000)로 보낸다. 도메인이 아닌 Host는 404, http는 https로 301, production의 www는 apex로 301이다.
+  - idle 130초, X-Forwarded-For는 append, 접속 로그는 끈다(토큰이 실린 URL이 남는다). production ALB는 삭제 보호가 켜져 있다.
+- 서버는 기본 이미지로 뜨고 부팅 스크립트(`modules/app_fleet/templates/app-user-data.sh.tftpl`)가 배포까지 한다.
+  1. 버전 파라미터를 읽는다. 40자 커밋 SHA가 아니면 설치 전에 실패한다.
+  2. docker, git, compose를 설치하고 저장소를 그 커밋으로 받는다.
+  3. `deploy/deploy.sh <환경> <SHA>`를 부른다.
+- 부팅이 느리거나 설치 실패가 잦으면 릴리스마다 이미지를 미리 굽는 방식으로 옮긴다. 그때는 시작 템플릿의 image_id와 부팅 스크립트만 바뀌고 롤링, 버전 파라미터, 확장 정책은 그대로다.
+- 최소 대수는 0이다. 지금 배포 스크립트는 Caddy가 있는 구성이라, 이 상태로 서버가 뜨면 ALB 헬스 체크를 통과하지 못하고 ASG가 서버를 계속 바꾼다.
+  - Caddy 없는 배포의 SHA가 버전 파라미터에 기록된 뒤에 최소 대수를 1로 올린다. 그 전에 원하는 대수를 손으로 올리지 않는다.
+- 확장: 서버마다 `deploy/server/ingest-rate.sh`가 10초마다 (초당 수집 요청 / 원하는 대수)를 `MeterEngine/Scaling`에 올리고, 확장 정책은 그 10초 합을 서버당 초당 450건에 맞춘다. 450은 측정 환경 숫자로 잡은 추정값이다.
+- 배포 역할이 버전 파라미터를 쓰고 롤링을 시작한다. Terraform은 버전 값과 원하는 대수를 되돌리지 않는다.
+- CD가 도는 동안 apply하지 않는다. 시작 템플릿이 바뀌는 apply는 롤링을 시작해, 배포가 시작한 롤링과 겹치면 실패한다.
+
+### 대상 그룹 교체 주의
+
+- 대상 그룹의 port, protocol, name_prefix, vpc_id, target_type을 바꾸면 그룹이 교체된다. 새 그룹이 먼저 생기고 리스너 규칙이 그쪽으로 옮겨진 뒤 옛 그룹이 지워진다.
+- 서버가 있는 환경에서는 새 그룹의 대상이 healthy가 될 때까지 수십 초 동안 503이 난다.
+- plan에 `aws_lb_target_group` 교체가 보이면 멈춘다. 꼭 바꿔야 하면 두 단계로 나눈다.
+  1. 새 그룹을 만들어 ASG에 같이 붙이고 대상이 healthy인지 본다.
+  2. 리스너 규칙을 새 그룹으로 옮기고 옛 그룹을 뗀다.
+
+### production의 Terraform 밖 자원
+
+- 옛 서버의 보안 그룹 `meterengine-ec2-sg`와 역할 `meterengine-ec2-role`, DB 보안 그룹 `meterengine-rds-sg`, ECR `meterengine-backend`, `meterengine-frontend`는 Terraform이 만들지 않는다. DB 보안 그룹에는 새 앱 서버와 공용 모니터링에서 오는 5432 규칙만 Terraform이 더한다.
+- 배포 역할 `meterengine-github-actions-role`도 Terraform 밖이다. 롤링에 필요한 권한은 인라인 정책 `meterengine-production-rollout`으로 손으로 더한다.
+  - `meterengine-production-app` 그룹의 새로 고침 시작과 취소, 오토스케일링 그룹과 ALB 조회, `/meterengine/production/app-version` 읽기와 쓰기.
+- 새 운영 서버의 송신은 443과 DB 5432만 열린다. 옛 운영 서버는 송신이 모두 열려 있다. 다른 포트가 필요하면 `production/main.tf`의 `app_egress_ports`에 더한다.
+
+### 공용 모니터링 연결
+
+- 두 루트가 보안 그룹 `meterengine-monitoring`을 이름으로 찾아, 그 그룹에서 앱 서버로 오는 8080, 9100, 9101과 DB로 오는 5432를 연다. 이 그룹이 없으면 plan이 멈춘다.
+- staging은 exporter 비밀번호 파라미터 `/meterengine/staging/db-exporter-password`를 Terraform이 자리 값으로 만든다. 실제 값과 DB 사용자는 사람이 넣는다.
+
+```bash
+aws ssm put-parameter --name /meterengine/staging/db-exporter-password \
+  --type SecureString --overwrite --value "$(openssl rand -hex 24)"
+aws ssm start-session --target <staging 서버 ID>
+```
+
+- 세션 안에서 exporter 사용자를 만들거나 비밀번호를 맞춘다.
+
+```bash
+sudo bash /opt/meterengine/measurements/test-storage/sut/scripts/remote/upsert-exporter-user.sh /meterengine/staging
+```
 
 ## 모니터링
 
