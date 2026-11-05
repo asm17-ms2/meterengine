@@ -60,8 +60,7 @@ class DeploymentLockTest(unittest.TestCase):
 
     def entrypoints(self):
         entries = {}
-        for relative in (".github/workflows/deploy.yml", "deploy/README.md",
-                         "measurements/test-sjpark/k6/README.md"):
+        for relative in ("deploy/README.md", "measurements/test-sjpark/k6/README.md"):
             source = (ROOT / relative).read_text()
             for index, command in enumerate(re.findall(r'--parameters commands="([^"\n]+)"', source)):
                 entries[f"{relative}:{index}"] = command

@@ -49,7 +49,7 @@ terraform -chdir=measurements/test-sjpark/sut/terraform output
 measurements/test-sjpark/sut/scripts/sut-deploy.sh
 ```
 
-- SHA를 빼면 ECR `meterengine-backend`와 `meterengine-frontend` 둘 다에 이미지가 있는 가장 최근 main 커밋을 배포한다.
+- SHA를 빼면 ECR `meterengine-backend`와 `meterengine-frontend` 둘 다에 이미지가 있는 main 커밋 가운데, `deploy/caddy/Caddyfile`과 `deploy/environments/test-sjpark.json`이 둘 다 있는 가장 최근 커밋을 배포한다. 고르는 법은 "다시 배포".
 - 배포 전에 ECR 이미지, DNS, RDS 상태, EC2 상태를 확인하고 하나라도 틀리면 멈춘다. 서버의 `deploy.sh`도 DB 식별자를 `deploy/environments/test-sjpark.json`과 대조한다. 환경 파일이 없는 옛 커밋은 `deploy.conf`를 대조한다. EC2 준비가 끝나기 전이면 원격 명령이 실패하니 몇 분 뒤 다시 돌린다.
 - 성공하면 아래 줄이 나온다. 첫 배포는 Caddy가 인증서를 받는다(같은 도메인 주 5회 제한).
 
@@ -78,6 +78,9 @@ measurements/test-sjpark/sut/scripts/sut-deploy.sh <SHA 40자>
 
 - 배포 로그의 `파라미터 경로:` 줄이 `/meterengine/test-sjpark`인지 본다. `DB:` 줄은 스크립트가 `meterengine-test-sjpark-db`인지 확인하고 다르면 멈춘다.
 - SUT에는 CD가 없다. main이 바뀌어도 직접 배포할 때까지 그대로다.
+- 이 SUT는 HTTPS를 서버의 Caddy가 맡는다. 운영 배포에서 Caddy가 빠진 뒤의 커밋은 이 서버에서 뜨지 못해 스크립트가 고르지 않는다.
+  - SHA를 빼면 최신 커밋부터 보며 Caddyfile이나 환경 파일이 없는 커밋을 건너뛰고, 건너뛴 이유를 로그에 남긴다.
+  - SHA를 주면 서버에 명령을 보내기 전에 운영자 체크아웃에서 같은 두 파일을 확인하고, 없으면 멈춘다. 서버의 저장소는 바뀌지 않는다.
 - ECR은 태그 이미지를 최근 10개만 남긴다. 같은 SHA로 다시 재려면 이미지가 남아 있는지 먼저 본다.
 
 ```bash
@@ -86,6 +89,17 @@ aws ecr describe-images --region ap-northeast-2 --repository-name meterengine-fr
 ```
 
 - a4bdf42 이전 커밋은 `deploy.conf`를 읽지 않아 스크립트가 거절한다.
+
+### 보존 이미지
+
+- Caddy가 있는 마지막 운영 릴리스의 두 이미지는 ECR에 `keep-test-sjpark-<SHA 7자>` 태그를 더 붙여 수명 주기 정책이 지우지 않게 둔다. 고를 커밋이 없다고 멈추면 이 태그의 이미지를 찾는다.
+
+```bash
+aws ecr describe-images --region ap-northeast-2 --repository-name meterengine-backend \
+  --query "imageDetails[?imageTags && contains(join(',', imageTags), 'keep-test-sjpark-')].imageTags" --output text
+```
+
+- 나온 40자 SHA를 `sut-deploy.sh <SHA 40자>`로 준다.
 
 ## 켜고 끄기
 

@@ -7,124 +7,68 @@ x-logging: &default-logging
     max-size: "10m"
     max-file: "3"
 
-# 블루와 그린이 함께 쓰는 설정. 두 색이 한 호스트 포트를 나눠 쓸 수 없어 포트를 열지 않는다.
-# 실행 이미지에 curl과 wget이 없어 healthcheck를 두지 않는다.
-x-backend: &backend
-  restart: unless-stopped
-  environment:
-    SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST:?DB_HOST가 없다}:${DB_PORT:?DB_PORT가 없다}/${DB_NAME:?DB_NAME이 없다}
-    SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:?DB_USERNAME이 없다}
-    SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD가 없다}
-    # 값을 바꾸면 이미 저장한 암호문을 풀지 못한다.
-    CRYPTO_ENCRYPTION_KEY: ${CRYPTO_ENCRYPTION_KEY:?CRYPTO_ENCRYPTION_KEY가 없다}
-    METERENGINE_AUTH_RATE_LIMIT_ENABLED: ${METERENGINE_AUTH_RATE_LIMIT_ENABLED:-true}
-    METERENGINE_AUTH_RATE_LIMIT_LOGIN_IP_LIMIT: ${METERENGINE_AUTH_RATE_LIMIT_LOGIN_IP_LIMIT:-100}
-    METERENGINE_AUTH_RATE_LIMIT_LOGIN_ACCOUNT_LIMIT: ${METERENGINE_AUTH_RATE_LIMIT_LOGIN_ACCOUNT_LIMIT:-10}
-    METERENGINE_AUTH_RATE_LIMIT_LOGIN_WINDOW: ${METERENGINE_AUTH_RATE_LIMIT_LOGIN_WINDOW:-5m}
-    METERENGINE_AUTH_RATE_LIMIT_SIGNUP_IP_LIMIT: ${METERENGINE_AUTH_RATE_LIMIT_SIGNUP_IP_LIMIT:-20}
-    METERENGINE_AUTH_RATE_LIMIT_SIGNUP_ACCOUNT_LIMIT: ${METERENGINE_AUTH_RATE_LIMIT_SIGNUP_ACCOUNT_LIMIT:-3}
-    METERENGINE_AUTH_RATE_LIMIT_SIGNUP_WINDOW: ${METERENGINE_AUTH_RATE_LIMIT_SIGNUP_WINDOW:-30m}
-    METERENGINE_AUTH_RATE_LIMIT_TRUSTED_PROXIES: ${METERENGINE_AUTH_RATE_LIMIT_TRUSTED_PROXIES:-172.30.0.8/29}
-    METERENGINE_AUTH_RATE_LIMIT_LOAD_BALANCERS: ${METERENGINE_AUTH_RATE_LIMIT_LOAD_BALANCERS:-10.0.0.0/20,10.0.16.0/20}
-    OPERATOR_EMAIL: ${OPERATOR_EMAIL:?OPERATOR_EMAIL이 없다}
-    OPERATOR_PASSWORD: ${OPERATOR_PASSWORD:?OPERATOR_PASSWORD가 없다}
-    # SSM에 invoice-auto-finalize-enabled가 없으면 자동 확정은 꺼진 채로 뜬다.
-    INVOICE_AUTO_FINALIZE_ENABLED: ${INVOICE_AUTO_FINALIZE_ENABLED:-false}
-    # 메모리 한도가 1792MB보다 작으면 JVM이 SerialGC를 고르므로, 한도가 없던 때와 같은 G1을 지정한다.
-    JAVA_TOOL_OPTIONS: -XX:+UseG1GC -XX:MaxRAMPercentage=${BACKEND_MAX_RAM_PERCENTAGE:?BACKEND_MAX_RAM_PERCENTAGE가 없다}
-  mem_limit: ${BACKEND_MEM_LIMIT:?BACKEND_MEM_LIMIT가 없다}
-  # Spring의 종료 단계 한도(30s)보다 길어야 처리 중 요청을 마치기 전에 SIGKILL되지 않는다.
-  stop_grace_period: 35s
-  # default에도 붙으면 Caddy가 어느 쪽 주소로 붙을지 정해지지 않아 proxy에만 둔다.
-  networks:
-    - proxy
-  logging: *default-logging
-
-# Caddy와 프론트만 고정 주소 대역(172.30.0.8/29)을 받아 백엔드가 그 대역만 신뢰한다. 나머지는 ip_range에서 받는다.
+# 프론트만 고정 주소 대역(172.30.0.8/29) 안의 주소를 받아 백엔드가 그 대역에서 온 사용자 IP 헤더만 믿는다. 나머지는 ip_range에서 받는다.
 networks:
   proxy:
     ipam:
       config:
         - subnet: 172.30.0.0/24
           ip_range: 172.30.0.128/25
-  # Caddy만 고정 주소를 받아 Grafana와 oauth2-proxy가 그 주소만 신뢰한다.
-  monitoring:
-    ipam:
-      config:
-        - subnet: 172.30.1.0/24
-          ip_range: 172.30.1.128/25
 
-# 프로필이 없으면 앱만 뜬다. agents는 서버별 수집 대상, monitoring은 관제다. 어느 환경에서 켤지는 deploy/environments가 정한다.
-# compose는 꺼진 프로필의 필수 값도 검사해 전체가 실패하므로 monitoring 값은 빈 값을 허용하고, 빠진 값은 deploy.sh가 잡는다.
+# 서버마다 백엔드와 프론트 하나씩이다. ALB가 두 포트로 바로 보내고, 보안 그룹이 ALB와 공용 모니터링 서버만 들인다.
+# 프로필이 없으면 앱만 뜬다. agents는 공용 모니터링 서버가 긁는 서버별 수집 대상이다. 켤지는 deploy/environments가 정한다.
 services:
-  caddy:
-    image: caddy:2-alpine
+  backend:
+    image: ${ECR_REGISTRY:?ECR_REGISTRY가 없다}/${IMAGE_REPOSITORY_PREFIX:?IMAGE_REPOSITORY_PREFIX가 없다}-backend:${IMAGE_TAG:?IMAGE_TAG가 없다}
     restart: unless-stopped
     environment:
-      SITE_DOMAIN: ${SITE_DOMAIN:?SITE_DOMAIN이 없다}
-      SITE_ALIASES: ${SITE_ALIASES?SITE_ALIASES가 없다}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://${DB_HOST:?DB_HOST가 없다}:${DB_PORT:?DB_PORT가 없다}/${DB_NAME:?DB_NAME이 없다}
+      SPRING_DATASOURCE_USERNAME: ${DB_USERNAME:?DB_USERNAME이 없다}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD가 없다}
+      # 값을 바꾸면 이미 저장한 암호문을 풀지 못한다.
+      CRYPTO_ENCRYPTION_KEY: ${CRYPTO_ENCRYPTION_KEY:?CRYPTO_ENCRYPTION_KEY가 없다}
+      METERENGINE_AUTH_RATE_LIMIT_ENABLED: ${METERENGINE_AUTH_RATE_LIMIT_ENABLED:-true}
+      METERENGINE_AUTH_RATE_LIMIT_LOGIN_IP_LIMIT: ${METERENGINE_AUTH_RATE_LIMIT_LOGIN_IP_LIMIT:-100}
+      METERENGINE_AUTH_RATE_LIMIT_LOGIN_ACCOUNT_LIMIT: ${METERENGINE_AUTH_RATE_LIMIT_LOGIN_ACCOUNT_LIMIT:-10}
+      METERENGINE_AUTH_RATE_LIMIT_LOGIN_WINDOW: ${METERENGINE_AUTH_RATE_LIMIT_LOGIN_WINDOW:-5m}
+      METERENGINE_AUTH_RATE_LIMIT_SIGNUP_IP_LIMIT: ${METERENGINE_AUTH_RATE_LIMIT_SIGNUP_IP_LIMIT:-20}
+      METERENGINE_AUTH_RATE_LIMIT_SIGNUP_ACCOUNT_LIMIT: ${METERENGINE_AUTH_RATE_LIMIT_SIGNUP_ACCOUNT_LIMIT:-3}
+      METERENGINE_AUTH_RATE_LIMIT_SIGNUP_WINDOW: ${METERENGINE_AUTH_RATE_LIMIT_SIGNUP_WINDOW:-30m}
+      METERENGINE_AUTH_RATE_LIMIT_TRUSTED_PROXIES: ${METERENGINE_AUTH_RATE_LIMIT_TRUSTED_PROXIES:-172.30.0.8/29}
+      METERENGINE_AUTH_RATE_LIMIT_LOAD_BALANCERS: ${METERENGINE_AUTH_RATE_LIMIT_LOAD_BALANCERS:-10.0.0.0/20,10.0.16.0/20}
+      OPERATOR_EMAIL: ${OPERATOR_EMAIL:?OPERATOR_EMAIL이 없다}
+      OPERATOR_PASSWORD: ${OPERATOR_PASSWORD:?OPERATOR_PASSWORD가 없다}
+      # SSM에 invoice-auto-finalize-enabled가 없으면 자동 확정은 꺼진 채로 뜬다.
+      INVOICE_AUTO_FINALIZE_ENABLED: ${INVOICE_AUTO_FINALIZE_ENABLED:-false}
+      # 메모리 한도가 1792MB보다 작으면 JVM이 SerialGC를 고르므로, 한도가 없던 때와 같은 G1을 지정한다.
+      JAVA_TOOL_OPTIONS: -XX:+UseG1GC -XX:MaxRAMPercentage=${BACKEND_MAX_RAM_PERCENTAGE:?BACKEND_MAX_RAM_PERCENTAGE가 없다}
+      # ALB idle(130초)보다 길어야 ALB가 재사용하려던 연결을 서버가 먼저 닫아 생기는 502가 없다.
+      SERVER_TOMCAT_KEEPALIVETIMEOUT: 140s
+    mem_limit: ${BACKEND_MEM_LIMIT:?BACKEND_MEM_LIMIT가 없다}
+    # Spring의 종료 단계 한도(30s)보다 길어야 처리 중 요청을 마치기 전에 SIGKILL되지 않는다.
+    stop_grace_period: 35s
+    # 실행 이미지에 curl과 wget이 없어 healthcheck를 두지 않는다. ALB와 deploy.sh가 컨테이너 밖에서 본다.
     ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      # 파일이 아니라 디렉터리를 마운트해야 git checkout으로 바뀐 Caddyfile이 컨테이너에 보인다.
-      - ./caddy:/etc/caddy:ro
-      # 지우면 인증서를 새로 발급받아 발급 횟수 제한에 걸릴 수 있다.
-      - caddy-data:/data
-      - caddy-config:/config
-    # default는 proxy가 없던 때 뜬 색에 닿도록 남긴다.
+      - "8080:8080"
     networks:
-      default:
-      proxy:
-        ipv4_address: 172.30.0.10
-      monitoring:
-        ipv4_address: 172.30.1.10
-    # 백엔드를 넣으면 caddy를 올릴 때 두 색이 함께 뜬다.
-    depends_on:
-      - frontend
+      - proxy
     logging: *default-logging
-
-  # 살아 있는 색을 새 이미지로 다시 만들지 않도록 색마다 태그를 따로 받는다.
-  backend-blue:
-    <<: *backend
-    image: ${ECR_REGISTRY:?ECR_REGISTRY가 없다}/${IMAGE_REPOSITORY_PREFIX:?IMAGE_REPOSITORY_PREFIX가 없다}-backend:${BACKEND_BLUE_TAG:?BACKEND_BLUE_TAG가 없다}
-
-  backend-green:
-    <<: *backend
-    image: ${ECR_REGISTRY:?ECR_REGISTRY가 없다}/${IMAGE_REPOSITORY_PREFIX:?IMAGE_REPOSITORY_PREFIX가 없다}-backend:${BACKEND_GREEN_TAG:?BACKEND_GREEN_TAG가 없다}
 
   frontend:
     image: ${ECR_REGISTRY:?ECR_REGISTRY가 없다}/${IMAGE_REPOSITORY_PREFIX:?IMAGE_REPOSITORY_PREFIX가 없다}-frontend:${IMAGE_TAG:?IMAGE_TAG가 없다}
     restart: unless-stopped
     environment:
-      # 브라우저가 아니라 프론트 서버가 백엔드를 부른다. 살아 있는 색에 닿도록 Caddy를 거친다.
-      METERENGINE_API_BASE_URL: http://caddy:8081
-      # 공개 인보이스 조회는 이 origin에서 온 요청만 받는다. 별칭은 Caddy가 SITE_DOMAIN으로 리다이렉트한다.
+      # 브라우저가 아니라 프론트 서버가 같은 서버의 백엔드를 부른다.
+      METERENGINE_API_BASE_URL: http://backend:8080
+      # 공개 인보이스 조회는 이 origin에서 온 요청만 받는다. 별칭은 ALB가 SITE_DOMAIN으로 리다이렉트한다.
       METERENGINE_PUBLIC_ORIGIN: https://${SITE_DOMAIN:?SITE_DOMAIN이 없다}
+      # Node 기본 5초는 ALB idle(130초)보다 짧아, ALB가 닫힌 연결을 재사용하면 502가 난다.
+      KEEP_ALIVE_TIMEOUT: "140000"
     ports:
-      - "127.0.0.1:3000:3000"
+      - "3000:3000"
     networks:
       proxy:
         ipv4_address: 172.30.0.11
-    logging: *default-logging
-
-  prometheus:
-    profiles: [monitoring]
-    image: prom/prometheus:v3
-    restart: unless-stopped
-    # command를 주면 이미지 기본 인자가 사라져 config 경로도 같이 준다.
-    command:
-      - --config.file=/etc/prometheus/prometheus.yml
-      - --storage.tsdb.path=/prometheus
-      - --storage.tsdb.retention.time=15d
-      - --storage.tsdb.retention.size=2GB
-    volumes:
-      - ./prometheus:/etc/prometheus:ro
-      - prometheus-data:/prometheus
-    networks:
-      - default
-      - proxy
-      - monitoring
     logging: *default-logging
 
   node-exporter:
@@ -142,16 +86,14 @@ services:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/host/root:ro
-    networks:
-      - monitoring
     logging: *default-logging
 
-  # 컨테이너별 CPU와 메모리, 서버 전체 네트워크를 낸다. 서버 안 Prometheus는 monitoring 네트워크로, 공용 모니터링 서버는 9101로 긁는다.
+  # 컨테이너별 CPU와 메모리, 서버 전체 네트워크를 낸다. 공용 모니터링 서버가 9101로 긁는다.
   cadvisor:
     profiles: [agents]
     image: ghcr.io/google/cadvisor:v0.60.6
     restart: unless-stopped
-    # 호스트 8080은 공용 모니터링 서버가 백엔드를 긁는 포트라 비워 둔다.
+    # 호스트 8080은 백엔드가 쓴다.
     ports:
       - "9101:8080"
     command:
@@ -167,99 +109,4 @@ services:
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
     mem_limit: 256m
-    networks:
-      - monitoring
     logging: *default-logging
-
-  # RDS 안의 PostgreSQL 통계 뷰를 읽는다. 읽기 전용 사용자(meterengine_exporter)로 붙는다.
-  postgres-exporter:
-    profiles: [monitoring]
-    image: quay.io/prometheuscommunity/postgres-exporter:v0.18.1
-    restart: unless-stopped
-    environment:
-      DATA_SOURCE_URI: ${DB_HOST:?DB_HOST가 없다}:${DB_PORT:?DB_PORT가 없다}/${DB_NAME:?DB_NAME이 없다}?sslmode=require
-      DATA_SOURCE_USER: meterengine_exporter
-      DATA_SOURCE_PASS: ${DB_EXPORTER_PASSWORD:-}
-    command:
-      - --collector.stat_checkpointer
-      - --collector.stat_user_tables
-      - --collector.statio_user_tables
-    networks:
-      - monitoring
-    logging: *default-logging
-
-  # RDS 인스턴스 지표(CPU, 디스크, 크레딧)를 CloudWatch에서 읽는다. 자격은 EC2 역할이다.
-  cloudwatch-exporter:
-    profiles: [monitoring]
-    image: prom/cloudwatch-exporter:v0.16.0
-    restart: unless-stopped
-    volumes:
-      - ./cloudwatch:/config:ro
-    networks:
-      - monitoring
-    logging: *default-logging
-
-  oauth2-proxy:
-    profiles: [monitoring]
-    image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.5
-    restart: unless-stopped
-    command:
-      - --provider=github
-      - --github-org=asm17-ms2
-      - --email-domain=*
-      - --http-address=0.0.0.0:4180
-      - --reverse-proxy=true
-      - --trusted-proxy-ip=172.30.1.10
-      - --set-xauthrequest=true
-      - --upstream=static://202
-      - --redirect-url=https://grafana.${SITE_DOMAIN:?SITE_DOMAIN이 없다}/oauth2/callback
-      - --cookie-domain=.${SITE_DOMAIN:?SITE_DOMAIN이 없다}
-      - --whitelist-domain=.${SITE_DOMAIN:?SITE_DOMAIN이 없다}
-      - --cookie-secure=true
-      # 조직 멤버인지는 로그인 때만 보므로 쿠키를 짧게 둔다.
-      - --cookie-expire=24h
-      # 요청 로그에 콜백의 OAuth 코드가 찍히지 않게 한다.
-      - --exclude-logging-path=/oauth2/callback
-    environment:
-      OAUTH2_PROXY_CLIENT_ID: ${OAUTH2_PROXY_CLIENT_ID:-}
-      OAUTH2_PROXY_CLIENT_SECRET: ${OAUTH2_PROXY_CLIENT_SECRET:-}
-      OAUTH2_PROXY_COOKIE_SECRET: ${OAUTH2_PROXY_COOKIE_SECRET:-}
-    networks:
-      - monitoring
-    logging: *default-logging
-
-  grafana:
-    profiles: [monitoring]
-    image: grafana/grafana:13.1
-    restart: unless-stopped
-    environment:
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-}
-      GF_USERS_ALLOW_SIGN_UP: "false"
-      GF_SERVER_ROOT_URL: https://grafana.${SITE_DOMAIN:?SITE_DOMAIN이 없다}/
-      GF_AUTH_PROXY_ENABLED: "true"
-      GF_AUTH_PROXY_HEADER_NAME: X-WEBAUTH-USER
-      GF_AUTH_PROXY_HEADER_PROPERTY: username
-      GF_AUTH_PROXY_AUTO_SIGN_UP: "true"
-      # Caddy의 monitoring 주소. 이 주소에서 온 헤더만 믿는다.
-      GF_AUTH_PROXY_WHITELIST: 172.30.1.10
-      GF_USERS_AUTO_ASSIGN_ORG_ROLE: Editor
-      # 경보 provisioning이 이 변수를 읽는다.
-      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
-    ports:
-      # 3000은 frontend가 쓴다.
-      - "127.0.0.1:3001:3000"
-    volumes:
-      - ./grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
-      - grafana-data:/var/lib/grafana
-    networks:
-      - monitoring
-    depends_on:
-      - prometheus
-    logging: *default-logging
-
-volumes:
-  caddy-data:
-  caddy-config:
-  prometheus-data:
-  grafana-data:

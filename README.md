@@ -9,7 +9,7 @@
 | `backend/` | 미터링 엔진 API 서버. Java 25 + Spring Boot 4 + Gradle |
 | `frontend/` | 관리자 화면. Next.js + TypeScript |
 | `demo/` | 데모와 검증 CLI, Claude Code 사용량 브리지(Python 3.9+, 표준 라이브러리), TypeScript SDK와 테스트 웹, Lumen LLM 서비스 예제(Node 24, pnpm) |
-| `deploy/` | 배포 구성. compose, Caddy, 배포 스크립트 |
+| `deploy/` | 배포 구성. compose, 배포 스크립트, Terraform, 공용 모니터링 |
 | `measurements/` | 측정과 측정에 쓰는 SUT |
 
 ## 시작하기

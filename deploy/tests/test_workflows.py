@@ -37,14 +37,44 @@ class WorkflowTest(unittest.TestCase):
     def test_jobs_run_in_the_github_environment(self):
         self.assertEqual(DEPLOY.read_text().count("environment: ${{ inputs.environment }}\n"), 2)
 
-    def test_old_commit_uses_old_call(self):
+    def test_deploy_rolls_the_group_named_by_the_deployed_commit(self):
         source = DEPLOY.read_text()
-        self.assertIn("if test -f deploy/environments/$DEPLOY_ENV.json; then ./deploy/deploy.sh $DEPLOY_ENV $SHA", source)
-        self.assertIn("./deploy/deploy.sh $SHA", source)
+        self.assertIn('target=$(git show "$SHA:deploy/environments/$DEPLOY_ENV.json")', source)
+        self.assertIn('jq -er .autoscaling_group_name <<<"$target"', source)
+        self.assertIn('echo "VERSION_PARAMETER=$(jq -er .parameter_path <<<"$target")/app-version"', source)
+        self.assertIn('./deploy/rollout.sh "$AUTOSCALING_GROUP" "$VERSION_PARAMETER" "$SHA" | tee -a "$GITHUB_OUTPUT"', source)
 
-    def test_old_call_is_production_only(self):
-        # 옛 deploy.sh의 기본값은 production이라 다른 서버에서 부르면 production 값으로 배포를 시작한다.
-        self.assertIn("elif test $DEPLOY_ENV = production; then ./deploy/deploy.sh $SHA; else", DEPLOY.read_text())
+    def test_deploy_no_longer_sends_commands_to_servers(self):
+        source = DEPLOY.read_text()
+        for word in ("send-command", "get-command-invocation", "deploy/deploy.sh"):
+            self.assertNotIn(word, source)
+
+    def test_deploy_rejects_commits_that_still_run_caddy(self):
+        source = DEPLOY.read_text()
+        self.assertIn('if git cat-file -e "$SHA:deploy/caddy/Caddyfile" 2>/dev/null; then', source)
+        self.assertLess(source.index("deploy/caddy/Caddyfile"), source.index("./deploy/rollout.sh"))
+
+    def test_deploy_checks_both_images_before_recording_the_version(self):
+        source = DEPLOY.read_text()
+        self.assertIn('for component in backend frontend; do', source)
+        self.assertLess(source.index('--image-ids imageTag="$SHA"'), source.index("./deploy/rollout.sh"))
+
+    def test_external_check_goes_through_the_alb_only_after_a_real_rollout(self):
+        source = DEPLOY.read_text()
+        self.assertIn("if: steps.rollout.outputs.recorded_only == 'false'\n", source)
+        self.assertIn('--connect-to "$SITE_DOMAIN:443:$ALB_DNS_NAME:443"', source)
+
+    def test_deploy_job_outlasts_rollout_and_recovery(self):
+        self.assertIn("timeout-minutes: 50\n", DEPLOY.read_text())
+
+    def test_cd_skips_merges_the_app_servers_do_not_read(self):
+        excluded = ["deploy/terraform/**", "deploy/tests/**", "deploy/**/*.md", "deploy/monitoring/**",
+                    "deploy/compose.monitoring.yml", "deploy/grafana/**", "deploy/cloudwatch/**"]
+        for path in (PRODUCTION, STAGING):
+            source = path.read_text()
+            for pattern in excluded:
+                self.assertIn(f"      - '!{pattern}'\n", source, path.name)
+                self.assertLess(source.index("- 'deploy/**'"), source.index(f"- '!{pattern}'"), path.name)
 
     def test_concurrency_is_per_environment(self):
         self.assertIn("group: cd-production\n", PRODUCTION.read_text())
@@ -60,9 +90,9 @@ class WorkflowTest(unittest.TestCase):
                         "measurements/*/sut/scripts/remote/upsert-exporter-user.sh", "measurements/*/README.md"):
             self.assertIn(f"- '{pattern}'", source)
 
-    def test_readme_rollback_handles_commits_without_environment_file(self):
-        section = README.read_text().split("### 서버에서 롤백")[1].split("## DB 백업과 복구")[0]
-        self.assertIn("if test -f deploy/environments/production.json; then ./deploy/deploy.sh production <SHA>; else ./deploy/deploy.sh <SHA>; fi", section)
+    def test_readme_manual_rollout_matches_the_cd_call(self):
+        section = README.read_text().split("### 수동 배포")[1].split("## 롤백")[0]
+        self.assertIn("deploy/rollout.sh meterengine-<환경>-app /meterengine/<환경>/app-version <git-sha>", section)
 
     def test_images_go_to_the_repository_of_the_environment(self):
         source = DEPLOY.read_text()
@@ -76,8 +106,14 @@ class WorkflowTest(unittest.TestCase):
 
     def test_readme_restore_uses_recovery_value_then_updates_environment_file(self):
         section = README.read_text().split("### 복원")[1].split("### 암호화 키 맞추기")[0]
-        self.assertIn("RECOVERY_DB_IDENTIFIER=$RESTORED_ID ./deploy/deploy.sh production <SHA>", section)
+        self.assertIn("RECOVERY_DB_IDENTIFIER=meterengine-db-restore-<YYYYMMDD> ./deploy/deploy.sh production <SHA>)", section)
+        self.assertIn("aws autoscaling suspend-processes --auto-scaling-group-name meterengine-production-app", section)
+        self.assertIn("aws autoscaling resume-processes --auto-scaling-group-name meterengine-production-app", section)
         self.assertIn("production.json", section)
+
+    def test_readme_restore_keeps_the_old_server_procedure_until_the_switch(self):
+        section = README.read_text().split("#### 운영 전환 전")[1].split("### 암호화 키 맞추기")[0]
+        self.assertIn("RECOVERY_DB_IDENTIFIER=$RESTORED_ID ./deploy/deploy.sh production <SHA>", section)
 
 
 class AwsParsingTest(unittest.TestCase):

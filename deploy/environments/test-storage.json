@@ -3,8 +3,7 @@
   "parameter_path": "/meterengine/test-storage",
   "site_domain": "test-storage.meterengine.com",
   "site_aliases": [],
-  "compose_profiles": ["agents", "monitoring"],
-  "sso_sites": false,
+  "compose_profiles": ["agents"],
   "image_repository_prefix": "meterengine",
   "backend_mem_limit": "768m",
   "backend_max_ram_percentage": 50

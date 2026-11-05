@@ -1,7 +1,7 @@
 name: 배포
 
-# cd-production.yml(main -> production)과 cd-staging.yml(develop -> staging)이 부른다. 이미지를 굽고 ECR에 올린 뒤, SSM으로 서버의 배포 스크립트를 부른다.
-# job의 environment가 OIDC subject를 정하고, GitHub Environment가 허용 브랜치를 막는다. 인스턴스 ID와 도메인은 deploy/environments에서 읽는다.
+# cd-production.yml(main -> production)과 cd-staging.yml(develop -> staging)이 부른다. 이미지를 굽고 ECR에 올린 뒤, 버전을 기록하고 오토스케일링 그룹 서버를 바꾼다.
+# job의 environment가 OIDC subject를 정하고, GitHub Environment가 허용 브랜치를 막는다. 그룹 이름과 도메인은 deploy/environments에서 읽는다.
 
 on:
   workflow_call:
@@ -91,87 +91,68 @@ jobs:
     if: always() && (needs.build.result == 'success' || needs.build.result == 'skipped')
     environment: ${{ inputs.environment }}
     runs-on: ubuntu-latest
+    # 새로 고침 15분, 대상 그룹 확인 5분, 실패 때 복구 새로 고침 20분을 담는다.
+    timeout-minutes: 50
     env:
       DEPLOY_ENV: ${{ inputs.environment }}
+      # 수동 실행에서 태그를 줬으면 그것, 아니면 방금 빌드한 커밋.
+      SHA: ${{ inputs.image_tag || github.sha }}
     steps:
       - uses: actions/checkout@v7
 
+      # 그룹 이름과 파라미터 경로는 배포할 커밋의 환경 파일에서 읽는다. 그 커밋의 compose가 서버에서 돌기 때문이다.
       - name: 배포 대상 읽기
         run: |
           set -euo pipefail
-          target="deploy/environments/$DEPLOY_ENV.json"
-          echo "INSTANCE_ID=$(jq -er .instance_id "$target")" >> "$GITHUB_ENV"
-          echo "SITE_DOMAIN=$(jq -er .site_domain "$target")" >> "$GITHUB_ENV"
+          if ! [[ "$SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "이미지 태그가 커밋 SHA(소문자 16진수 40자)가 아니다: $SHA"
+            exit 1
+          fi
+          git fetch --quiet --depth=1 origin "$SHA"
+          if git cat-file -e "$SHA:deploy/caddy/Caddyfile" 2>/dev/null; then
+            echo "$SHA 는 Caddy와 블루그린으로 도는 커밋이라 오토스케일링 그룹 서버에서 뜨지 않는다. 그 뒤 커밋을 배포한다"
+            exit 1
+          fi
+          target=$(git show "$SHA:deploy/environments/$DEPLOY_ENV.json")
+          {
+            echo "AUTOSCALING_GROUP=$(jq -er .autoscaling_group_name <<<"$target")"
+            echo "VERSION_PARAMETER=$(jq -er .parameter_path <<<"$target")/app-version"
+            echo "IMAGE_REPOSITORY_PREFIX=$(jq -er .image_repository_prefix <<<"$target")"
+            echo "SITE_DOMAIN=$(jq -er .site_domain <<<"$target")"
+          } >> "$GITHUB_ENV"
 
       - uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ inputs.aws_role }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: 배포
-        env:
-          # 수동 실행에서 태그를 줬으면 그것, 아니면 방금 빌드한 커밋.
-          SHA: ${{ inputs.image_tag || github.sha }}
+      # 서버는 부팅 때 두 이미지를 받으므로, 없는 태그를 기록하면 새 서버가 모두 뜨지 못한다.
+      - name: 이미지 확인
         run: |
           set -euo pipefail
-
-          if ! [[ "$SHA" =~ ^[0-9a-f]{40}$ ]]; then
-            echo "이미지 태그가 커밋 SHA(소문자 16진수 40자)가 아니다: $SHA"
-            exit 1
-          fi
-
-          echo "배포 대상: $DEPLOY_ENV $INSTANCE_ID $SHA"
-
-          # 롤백이 그 시점의 compose와 Caddyfile을 쓰도록 checkout을 같은 명령에 넣는다. 환경 파일이 없는 옛 커밋은 옛 deploy.sh의 기본값이 production이라 production에서만 부른다.
-          # commands= 값은 AWS CLI shorthand로 읽혀 대괄호와 쉼표를 쓸 수 없다.
-          CMD_ID=$(aws ssm send-command \
-            --instance-ids "$INSTANCE_ID" \
-            --document-name AWS-RunShellScript \
-            --comment "CD $DEPLOY_ENV ${SHA:0:7}" \
-            --timeout-seconds 600 \
-            --parameters commands="exec 8>/etc/meterengine/deploy-command.lock && flock -n 8 && cd /opt/meterengine && git fetch --quiet origin 8>&- 9>&- && git checkout --quiet --force $SHA 8>&- 9>&- && if test -f deploy/environments/$DEPLOY_ENV.json; then ./deploy/deploy.sh $DEPLOY_ENV $SHA; elif test $DEPLOY_ENV = production; then ./deploy/deploy.sh $SHA; else echo $SHA 에 환경 파일이 없다 >&2; exit 1; fi" \
-            --query 'Command.CommandId' --output text)
-
-          echo "SSM CommandId=$CMD_ID"
-
-          # aws ssm wait는 100초에서 포기해 그보다 긴 배포의 결과를 놓치므로 상태를 직접 묻는다.
-          # 실패해도 여기서 끝내지 않는다. 아래에서 로그를 찍어야 원인을 볼 수 있다.
-          for _ in $(seq 180); do
-            STATUS=$(aws ssm get-command-invocation \
-              --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" \
-              --query 'Status' --output text) || STATUS=Pending
-            case "$STATUS" in
-              Pending|InProgress|Delayed|Cancelling) sleep 5 ;;
-              *) break ;;
-            esac
+          for component in backend frontend; do
+            aws ecr describe-images --repository-name "$IMAGE_REPOSITORY_PREFIX-$component" \
+              --image-ids imageTag="$SHA" >/dev/null || { echo "ECR $IMAGE_REPOSITORY_PREFIX-$component 에 $SHA 이미지가 없다"; exit 1; }
           done
 
-          STATUS=$(aws ssm get-command-invocation \
-            --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" \
-            --query 'Status' --output text)
+      # 버전 파라미터에 SHA를 쓰고 서버를 하나씩 새로 바꾼다. 최소 대수가 0이면 기록만 한다.
+      - name: 배포
+        id: rollout
+        run: |
+          set -euo pipefail
+          ./deploy/rollout.sh "$AUTOSCALING_GROUP" "$VERSION_PARAMETER" "$SHA" | tee -a "$GITHUB_OUTPUT"
 
-          echo "----- 서버 출력 -----"
-          aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" \
-            --query 'StandardOutputContent' --output text
-          echo "----- 서버 오류 출력 -----"
-          aws ssm get-command-invocation --command-id "$CMD_ID" --instance-id "$INSTANCE_ID" \
-            --query 'StandardErrorContent' --output text
-          echo "---------------------"
-
-          # SSM 응답의 출력은 2500자에서 잘린다. 여기서 원인이 안 보이면 서버에 붙어서 본다:
-          #   aws ssm start-session --target <인스턴스> 후 docker compose -p meterengine-prod logs
-          [ "$STATUS" = "Success" ] || { echo "배포 실패 (SSM Status=$STATUS)"; exit 1; }
-
-          echo "배포 성공: $SHA"
-
-      # 인터넷에서 보이는지 본다. Caddy나 DNS 문제는 이 단계에서만 드러난다.
+      # 인터넷에서 ALB를 거쳐 보이는지 본다. 도메인이 아직 옛 서버를 가리켜도 ALB 주소로 붙어 확인한다.
       # 로그인하지 않은 요청은 로그인 화면으로 리다이렉트되므로 따라가서 마지막 응답을 본다.
       - name: 외부에서 확인
-        if: ${{ !cancelled() }}
+        if: steps.rollout.outputs.recorded_only == 'false'
+        env:
+          ALB_DNS_NAME: ${{ steps.rollout.outputs.alb_dns_name }}
         run: |
           set -euo pipefail
           url="https://$SITE_DOMAIN/usage"
-          result=$(curl -sS -L --max-redirs 5 --max-time 20 -o /dev/null -w '%{http_code} %{url_effective}' "$url")
+          result=$(curl -sS -L --max-redirs 5 --max-time 20 --connect-to "$SITE_DOMAIN:443:$ALB_DNS_NAME:443" \
+            -o /dev/null -w '%{http_code} %{url_effective}' "$url")
           code=${result%% *}
-          echo "$url -> ${result#* } ($code)"
+          echo "$url (ALB $ALB_DNS_NAME) -> ${result#* } ($code)"
           [ "$code" = "200" ] || exit 1

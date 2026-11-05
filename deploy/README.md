@@ -9,76 +9,64 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
 | 환경 | 언제 | 도메인 | 프로필 |
 | --- | --- | --- | --- |
 | staging | develop 머지 | staging.meterengine.com | agents |
-| production | main 머지 | meterengine.com | agents, monitoring |
-| test-sjpark, test-storage | `sut-deploy.sh` | `<환경>.meterengine.com` | agents, monitoring |
+| production | main 머지 | meterengine.com | agents |
+| test-storage | `sut-deploy.sh` | test-storage.meterengine.com | agents |
 
 | 프로필 | 서비스 |
 | --- | --- |
-| 없음(항상) | Caddy, frontend, backend-blue, backend-green |
+| 없음(항상) | backend, frontend |
 | agents | node-exporter, cAdvisor |
-| monitoring | Prometheus, Grafana, oauth2-proxy, postgres-exporter, cloudwatch-exporter |
 
-- `deploy.sh`는 env 파일과 Caddy 설정, 컨테이너를 건드리기 전에 Parameter Store `db-host`의 RDS 식별자를 환경 파일과 대조하고, staging과 production은 이 서버의 인스턴스 ID도 대조한다. 다르면 멈춘다.
-- staging이나 production 서버를 새로 만들면 인스턴스 ID가 바뀌어, 환경 파일을 고치는 PR이 머지되어야 배포된다.
+- test-sjpark는 HTTPS를 서버의 Caddy가 맡아 이 구성으로는 뜨지 않는다. `environment.py`가 이유와 함께 거절하고, `sut-deploy.sh`는 Caddy가 있는 커밋만 고른다([`measurements/test-sjpark/README.md`](../measurements/test-sjpark/README.md) "다시 배포").
+- `deploy.sh`는 env 파일과 컨테이너를 건드리기 전에 Parameter Store `db-host`의 RDS 식별자를 환경 파일과 대조하고, staging과 production은 이 서버가 환경 파일의 오토스케일링 그룹(`autoscaling_group_name`) 서버인지도 인스턴스 메타데이터 태그로 대조한다. 다르면 멈춘다.
 
 아래 그림과 항목은 production 기준이다.
 
 ```
-인터넷 --443--> [Caddy] --/v1/*----> [backend-blue:8080 | backend-green:8080] --> RDS PostgreSQL
-                 |   ^ \              (deploy.sh가 정한 색으로 보낸다)
-                 |   |  \--그 외--> [frontend:3000]
-                 |   |                     |
-                 |   \------:8081---------/  (서버사이드 호출도 Caddy를 거쳐 백엔드로)
-                 |
-                 +--grafana., prometheus.--> [oauth2-proxy] 확인 뒤 --> [Grafana:3000], [Prometheus:9090]
-                 |                           (asm17-ms2 GitHub 로그인)   (monitoring 네트워크)
-            인증서 자동 발급
+인터넷 --443--> [ALB meterengine-production-alb] --/v1/*--> [backend:8080] --> RDS PostgreSQL
+                  (인증서, http는 https로 301,     \               ^
+                   www는 apex로 301)                \--그 외--> [frontend:3000] (서버사이드 호출은 같은 서버의 backend로)
 
-[Prometheus] --scrape--> backend-blue:8080, backend-green:8080의
-             /actuator/prometheus, caddy:2020 (Caddy 지표), node-exporter:9100, cadvisor:8080 (컨테이너),
-             postgres-exporter:9187 (RDS 통계 뷰), cloudwatch-exporter:9106 (RDS CloudWatch),
-             grafana:3000 (경보 평가와 알림 전송)
-     ^
-[Grafana:3001(127.0.0.1)] --경보--> Slack
-  (deploy.sh 경보 재적재와 SSO 장애 때 비상 접근)
+[오토스케일링 그룹 meterengine-production-app]  서버마다 backend, frontend, node-exporter:9100, cadvisor:9101
+                                                부팅 때 버전 파라미터의 커밋으로 배포한다
+
+[공용 모니터링 서버 meterengine-monitoring] --scrape--> 서버마다 8080, 9100, 9101과 환경별 DB --경보--> Slack
 ```
 
-- 도메인: https://meterengine.com (Route 53 호스티드 존, A 레코드가 EC2 탄력적 IP를 가리킨다).
-  - `www.meterengine.com`도 같은 IP를 가리키고 Caddy가 `https://meterengine.com`으로 301 리다이렉트한다.
-- 서버: EC2 `meterengine-server` (t4g.medium, arm64, Amazon Linux 2023, ap-northeast-2).
-  - 인스턴스 ID `i-0f47bb1f028cd29a9`.
+- 도메인: https://meterengine.com (Route 53 호스티드 존).
+  - 지금은 A 레코드가 옛 서버의 탄력적 IP를 가리킨다. 아래 "전환 중인 옛 서버" 참조.
+- 앱 서버: 오토스케일링 그룹 `meterengine-production-app`(t4g.medium, arm64, Amazon Linux 2023, ap-northeast-2). "앱 서버 오토스케일링 그룹" 참조.
 - DB: RDS `meterengine-db` (db.t4g.small, PostgreSQL 18, 단일 AZ).
-- staging은 서버 `meterengine-staging`(t4g.medium)과 DB `meterengine-staging-db`(db.t4g.small)를 따로 쓴다.
+- staging은 ALB, 오토스케일링 그룹 `meterengine-staging-app`, DB `meterengine-staging-db`(db.t4g.small)를 따로 쓴다.
 - production과 staging은 실사용자가 없는 흐름 확인용이다. t4g 계열은 CPU 크레딧을 넘겨 쓰면 요금이 붙어, 부하 시험은 측정 환경(test-sjpark, test-storage)에서만 한다.
-- 두 환경 모두 옛 서버 옆에 ALB와 최소 0대 오토스케일링 그룹이 비어 있는 채로 서 있다. 도메인과 배포는 아직 옛 서버로 간다. "앱 서버 오토스케일링 그룹" 참조.
 - 이미지: ECR `meterengine-backend`, `meterengine-frontend`(staging은 `meterengine-staging-backend`, `meterengine-staging-frontend`). 태그는 배포한 커밋의 git SHA 40자.
   - 레지스트리 `928618307647.dkr.ecr.ap-northeast-2.amazonaws.com`.
 - 설정과 비밀값: SSM Parameter Store `/meterengine/<환경>/*`.
-- 인터넷에 열린 포트는 80과 443이다. SSH 포트는 열려 있지 않고 접속은 SSM으로 한다.
-- agents 프로필의 node exporter `9100`과 cAdvisor `9101`은 서버의 모든 주소에 열려 공용 모니터링 서버가 긁는다. 보안 그룹이 들이지 않으면 밖에서 닿지 않는다.
-- `3000`, `3001`은 서버의 127.0.0.1에만 열려 있다. 백엔드의 `8080`, Caddy 내부 사이트 `8081`과 지표 사이트 `2020`은 compose 네트워크 안에서만 닿는다.
-- 백엔드 두 색과 프론트는 고정 대역의 `proxy` 네트워크에만 붙고, Caddy와 Prometheus는 `default`와 `proxy`에 모두 붙는다. 이유는 "공개 인증의 실제 IP" 참조.
-- Grafana, oauth2-proxy, exporter들은 `monitoring` 네트워크(`172.30.1.0/24`)에만 붙어 프론트와 백엔드에서 닿지 않는다. Caddy는 이 네트워크에서 `172.30.1.10`으로 주소를 고정하고, Grafana는 이 주소에서 온 사용자 헤더만 믿는다. Prometheus는 `default`, `proxy`, `monitoring`에 모두 붙는다.
-  - 서버에 `172.30.1.0/24`와 겹치는 docker 네트워크가 있으면 배포가 실패한다.
-  - `monitoring` 네트워크가 생기는 첫 배포에서 Caddy, Grafana, Prometheus, exporter들이 다시 만들어진다. Caddy가 다시 만들어지는 몇 초 동안 공개 접속이 끊긴다. 이 배포에서는 배포 중 실패 측정을 돌리지 않는다.
+- 인터넷에 열린 포트는 ALB의 80과 443이다. 앱 서버 보안 그룹은 ALB에서 오는 3000, 8080과 공용 모니터링 서버에서 오는 8080, 9100, 9101만 들인다. SSH 포트는 열려 있지 않고 접속은 SSM으로 한다.
+- 백엔드와 프론트는 고정 대역의 `proxy` 네트워크에 붙는다. 이유는 "공개 인증의 실제 IP" 참조.
 - compose 프로젝트 이름은 `meterengine-prod`다.
-- 백엔드는 `backend-blue`와 `backend-green` 두 서비스다. 배포 사이에는 한 색만 돈다. 다른 색은 보통 멈춘 컨테이너로 남지만, 첫 전환 배포 직후와 실패한 배포가 지운 뒤에는 없다.
-- 마지막으로 성공한 배포의 색과 SHA는 `/etc/meterengine/deploy-state`에 `LIVE_COLOR`, `LIVE_SHA`로 남는다.
-- Caddy가 보낼 백엔드 목록은 `deploy.sh`가 배포마다 `deploy/caddy/upstreams.caddy`(git이 무시하는 파일)에 쓰고 Caddyfile이 그 파일을 import한다. 이 파일이 없으면 Caddy가 설정을 읽지 못한다.
 
 | 파일 | 내용 |
 | --- | --- |
-| `compose.prod.yml` | 배포 스택 정의. Caddy, backend-blue, backend-green, frontend, Prometheus, node exporter, cAdvisor, postgres exporter, cloudwatch exporter, Grafana, oauth2-proxy |
-| `caddy/Caddyfile` | 경로 분배와 HTTPS. `/v1/*`는 `upstreams.caddy`의 백엔드 중 헬스체크를 통과한 쪽, 나머지는 프론트엔드. `:8081`은 프론트엔드와 `deploy.sh`가 쓰는 내부 사이트, `:2020`은 Prometheus가 긁는 지표 사이트 |
-| `caddy/sso-sites.caddy` | `grafana.`, `prometheus.` 사이트. oauth2-proxy 확인을 거친다. `CADDY_SSO_SITES`가 `on`일 때만 Caddyfile에 들어간다 |
-| `deploy.sh` | 배포 절차 전체. 서버에서 root로 돈다 |
-| `prometheus/prometheus.yml` | 서버 안 Prometheus 수집 대상 |
+| `compose.prod.yml` | 앱 서버의 스택. backend, frontend와 agents 프로필의 node exporter, cAdvisor |
+| `deploy.sh` | 서버 한 대에 커밋 하나를 띄운다. 부팅 스크립트와 사람이 서버 안에서 root로 부른다 |
+| `rollout.sh` | 버전 파라미터에 SHA를 쓰고 오토스케일링 그룹 서버를 새로 바꾼다. CD와 사람이 서버 밖에서 부른다 |
+| `environment.py`, `environments/` | 환경별 값과 이 서버가 그 환경의 서버인지 확인 |
+| `server/` | 서버마다 systemd로 도는 10초 수집량 지표 스크립트와 유닛 |
 | `compose.monitoring.yml`, `monitoring/` | 공용 모니터링 서버의 스택, 수집 설정, 기동 스크립트, 읽을 파라미터 이름 목록. "공용 모니터링 서버" 참조 |
-| `cloudwatch/config.yml` | cloudwatch exporter가 읽을 RDS 지표 목록 |
+| `cloudwatch/config.yml` | 공용 모니터링 서버의 cloudwatch exporter가 읽을 RDS 지표 목록 |
 | `grafana/provisioning/`, `grafana/dashboards/` | Grafana 데이터 소스, 대시보드, 경보의 정본 |
+| `terraform/` | staging, production, 공용 모니터링의 Terraform 루트와 모듈 |
 
 - 루트의 `docker-compose.yml`은 로컬 개발용이고 배포 스택과 무관하다.
-- Grafana의 데이터 소스, 대시보드, 경보는 파일이 정본이다. 대시보드 파일은 Grafana가 스스로 다시 읽고, 경보 파일은 `deploy.sh`가 배포마다 다시 읽게 한다. 데이터 소스 파일은 Grafana를 다시 시작해야 반영된다.
+- Grafana의 데이터 소스, 대시보드, 경보는 파일이 정본이다. 공용 모니터링 서버의 `start.sh`가 반영한다.
+
+### 전환 중인 옛 서버
+
+- 두 환경의 도메인은 아직 옛 서버(production `meterengine-server` `i-0f47bb1f028cd29a9`, staging `meterengine-staging`)를 가리킨다. 오토스케일링 그룹은 최소 0대로 비어 있다.
+- 옛 서버는 Caddy가 HTTPS와 경로 분배를, 블루그린 백엔드 두 색이 API를 맡는 구성으로 돈다. 옛 운영 서버는 서버 안 Prometheus, Grafana, exporter와 oauth2-proxy도 띄워 `grafana.meterengine.com`, `prometheus.meterengine.com`을 받는다.
+- CD는 더 이상 옛 서버에 배포하지 않는다. 옛 서버는 Caddy와 블루그린으로 도는 마지막 커밋에 머물고, 그 구성은 그 커밋의 이 문서가 설명한다.
+- 이 저장소 지금 커밋의 `deploy.sh`는 오토스케일링 그룹 밖 서버에서 환경 확인을 통과하지 못해 옛 서버를 건드리지 않는다.
 
 ## 사전 준비
 
@@ -86,62 +74,23 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
 
 - 로컬에 AWS CLI와 `session-manager-plugin`을 설치하고 `ap-northeast-2` 자격을 설정한다.
 - `/meterengine/production/*` 파라미터가 먼저 등록되어 있어야 한다.
-  - **compose나 `deploy.sh`가 값이 없으면 배포를 멈추므로, 값을 쓰는 구성이 파라미터 없이 머지되면 그 즉시 CD 배포가 실패한다.** monitoring 서비스의 값은 꺼진 환경에서도 compose가 검사하지 않도록 `deploy.sh`가 본다(`environment.py`의 목록). 등록 명령은 "설정값" 참조.
-- Grafana, Prometheus의 GitHub 로그인에는 아래가 있어야 한다. oauth2-proxy가 든 구성을 머지하기 전에 순서대로 만든다.
-  1. Route 53에 `grafana.meterengine.com`, `prometheus.meterengine.com` A 레코드. `meterengine.com`과 같은 EC2 탄력적 IP를 가리킨다. 없으면 Caddy가 두 주소의 인증서를 받지 못한다.
-  2. GitHub OAuth App. 개인 계정이 아니라 조직 `asm17-ms2` 소유로 만든다. 만드는 사람은 조직의 organization owner여야 한다. 콜백 URL은 `https://grafana.meterengine.com/oauth2/callback`이다.
-  3. 파라미터 `oauth2-proxy-client-id`, `oauth2-proxy-client-secret`, `oauth2-proxy-cookie-secret`. 앞의 둘은 OAuth App 화면의 값이다. 없으면 `deploy.sh`가 배포를 멈춘다.
+  - **compose나 `deploy.sh`가 값이 없으면 배포를 멈추므로, 값을 쓰는 구성이 파라미터 없이 머지되면 그 뒤로 뜨는 서버가 모두 실패한다.** 필수 값 목록은 `environment.py`에 있다. 등록 명령은 "설정값" 참조.
+- Grafana의 GitHub 로그인은 공용 모니터링 서버의 Grafana가 직접 한다. 준비는 "공용 모니터링 서버" 참조.
+  - 옛 운영 서버의 `grafana.`, `prometheus.` 사이트는 아직 그 서버의 Caddy와 oauth2-proxy가 같은 OAuth 앱으로 GitHub 로그인을 받는다.
 
-### 서버 1회 셋업
+### 서버 준비
 
-새 서버를 만들었을 때만 한다.
+앱 서버는 손으로 셋업하지 않는다. 부팅 스크립트가 설치부터 배포까지 한다("앱 서버 오토스케일링 그룹").
 
-1. SSM 세션으로 서버에 붙는다 ("서버 접속" 참조).
-2. root로 아래를 실행한다.
-
-```bash
-sudo -i
-
-dnf install -y docker git python3
-systemctl enable --now docker
-
-docker compose version 2>/dev/null || {
-	mkdir -p /usr/libexec/docker/cli-plugins
-	curl -fsSL https://github.com/docker/compose/releases/download/v5.5.0/docker-compose-linux-aarch64 \
-		-o /usr/libexec/docker/cli-plugins/docker-compose
-	chmod +x /usr/libexec/docker/cli-plugins/docker-compose
-}
-
-git clone https://github.com/asm17-ms2/meterengine.git /opt/meterengine
-mkdir -p /etc/meterengine && chmod 700 /etc/meterengine
-```
-
-- 이 서버는 arm64라 compose 플러그인도 `aarch64` 파일을 받는다.
-- `/etc/meterengine/prod.env`는 만들지 않는다. 배포할 때마다 `deploy.sh`가 Parameter Store 값으로 새로 쓴다.
-- `deploy/environments/<환경>.json`에 이 서버의 값을 적어 PR로 머지한다.
-  - `instance_id`는 staging과 production에만 적는다. 측정 서버는 다시 만들거나 ASG로 늘리면 ID가 바뀐다.
-  - `site_aliases`에 적은 주소는 `site_domain`으로 리다이렉트되고, 비우면 `site_domain` 하나만 받는다.
+- 부팅 스크립트가 `/etc/meterengine/instance.env`에 `ENVIRONMENT`, `PARAMETER_PATH`, `APP_VERSION_PARAMETER`, `AWS_REGION`을 적는다.
+- `/etc/meterengine/prod.env`는 배포할 때마다 `deploy.sh`가 Parameter Store 값으로 새로 쓴다.
+- `deploy/environments/<환경>.json`의 값이다.
+  - `autoscaling_group_name`은 staging과 production에만 적고, `meterengine-<환경>-app`이어야 한다.
   - 프론트는 `https://<site_domain>`에서 온 공개 인보이스 조회와 결제 재시도만 받는다. compose가 이 값을 `METERENGINE_PUBLIC_ORIGIN`으로 넣는다.
-  - Caddy가 인증서를 받으려면 `site_domain`과 `site_aliases`의 주소마다 Route 53 레코드가 이 서버를 가리켜야 한다.
+  - `site_aliases`는 지금 배포에서 쓰지 않는다. 별칭 리다이렉트는 ALB 규칙(Terraform)이 정한다.
   - `image_repository_prefix`: ECR 저장소 이름 앞부분. `<값>-backend`, `<값>-frontend`에서 이미지를 받는다.
   - `backend_mem_limit`: 백엔드 컨테이너의 메모리 한도. `backend_max_ram_percentage`: 그 한도 중 JVM 힙의 최대 비율(%).
-- `/etc/meterengine/deploy.conf`에는 측정용 값(`DEPLOY_TIMING`, `CADDY_ACCESS_LOG`)만 둔다. 환경 파일과 같은 이름의 값을 적어도 환경 파일이 앞선다.
-- 배포 중 실패를 재는 서버에만 `DEPLOY_TIMING=on`을 더한다. `deploy.sh`가 맨 앞과 맨 끝에 아래 두 줄을 더 찍는다. 재는 법은 [`measurements/test-sjpark/k6/README.md`](../measurements/test-sjpark/k6/README.md).
-
-```
-[deploy] 측정 시작 <epoch ms> backend=legacy:<ID 또는 없음>,blue:<ID 또는 없음>,green:<ID 또는 없음>
-[deploy] 측정 끝 <epoch ms> backend=legacy:<ID 또는 없음>,blue:<ID 또는 없음>,green:<ID 또는 없음> 종료=<종료 코드>
-```
-
-- ID는 그 순간 실행 중인 컨테이너만 적는다. `legacy`는 블루그린 이전의 `backend` 서비스다.
-
-- 배포 중 실패의 원인을 찾는 서버에만 `CADDY_ACCESS_LOG`를 적는다. 값은 공개 사이트 요청 로그를 보낼 Caddy `output`이고, 기본 `discard`는 남기지 않는다. 쓰는 법은 [`measurements/test-sjpark/k6/README.md`](../measurements/test-sjpark/k6/README.md).
-  - `deploy.sh`가 배포마다 이 값을 `deploy/caddy/access-log.caddy`(git이 무시하는 파일)에 쓰고 Caddyfile이 그 파일을 import한다. 이 파일이 없으면 Caddy가 설정을 읽지 못한다.
-  - 접속 로그와 기본 오류 로그는 카드 등록과 도입사 초대 URL의 토큰과 query를 가린다. 같은 URL이 담긴 `Referer`, `Location`도 가리며, 경로에 퍼센트 인코딩, 세미콜론, 점 세그먼트가 있으면 경로 전체를 가린다. 규칙은 Caddyfile의 `redacted_path` 한 곳에 있다. `Authorization`, `Cookie` 등 민감 헤더의 기본 마스킹은 유지한다. 로컬 검증: `python3 -m unittest discover -s deploy/tests -p test_logging.py -v` (Docker와 `caddy:2.11.7-alpine` 이미지 필요).
-- 환경 파일의 `sso_sites`는 `grafana.`, `prometheus.` SSO 사이트를 켜고 끈다.
-  - SUT에는 두 이름의 DNS 레코드가 없어, 켜면 Caddy가 받을 수 없는 인증서 발급을 계속 재시도한다. 그 실패가 운영과 함께 쓰는 `meterengine.com` 발급 한도에 잡히는지 확인하지 못했다.
-  - `deploy.sh`가 배포마다 이 값으로 `deploy/caddy/sso.caddy`(git이 무시하는 파일)를 쓰고 Caddyfile이 그 파일을 import한다. 
-  - 꺼도 monitoring 프로필이 켜진 환경은 oauth2-proxy 컨테이너가 뜨므로 `oauth2-proxy-*` 파라미터는 있어야 한다.
+  - `compose_profiles`: 비우거나 `agents`.
 
 ## 배포
 
@@ -149,92 +98,62 @@ mkdir -p /etc/meterengine && chmod 700 /etc/meterengine
 
 - develop에 머지되면 `.github/workflows/cd-staging.yml`이 staging에, main에 머지되면 `cd-production.yml`이 production에 배포까지 끝낸다. 따로 할 일은 없다. 내용은 둘 다 `deploy.yml`에 있다.
   - `backend/`, `frontend/`, `deploy/`, 그 워크플로 파일 중 하나라도 바뀐 머지만 배포한다. 문서나 demo만 바뀐 머지는 배포하지 않는다.
+  - 배포 한 번이 서버 교체라, `deploy/` 안에서도 앱 서버가 읽지 않는 파일(Terraform, 시험, 문서, 공용 모니터링의 `monitoring/`, `compose.monitoring.yml`, `grafana/`, `cloudwatch/`)만 바뀐 머지는 배포하지 않는다.
 
 ```
 머지    -> build (backend) | build (frontend)   ubuntu-24.04-arm 러너에서 병렬
         -> ECR push (태그 = 커밋 SHA)
-        -> deploy: SSM SendCommand -> 서버에서 deploy.sh <환경> <SHA>
-        -> https://<site_domain>/usage 를 리다이렉트까지 따라가 마지막 응답이 200인지 외부에서 확인
+        -> deploy: 그 커밋의 환경 파일에서 오토스케일링 그룹과 파라미터 경로를 읽고, 두 이미지가 ECR에 있는지 본다
+        -> rollout.sh <그룹> <파라미터 경로>/app-version <SHA>: 버전 파라미터에 SHA를 쓰고 서버를 새로 바꾼다
+        -> ALB 주소로 붙어 https://<site_domain>/usage 를 리다이렉트까지 따라가 마지막 응답이 200인지 외부에서 확인
 ```
 
+- 최소 대수가 0인 그룹은 버전만 기록하고(`recorded_only=true`) 외부 확인을 건너뛴다. 새 서버가 뜰 때 이 값을 읽는다.
+- Caddy와 블루그린으로 도는 커밋(`deploy/caddy/Caddyfile`이 있는 커밋)은 오토스케일링 그룹 서버에서 뜨지 않아 거절한다.
 - **AWS 역할의 신뢰 정책은 GitHub Environment(`production`, `staging`) 한정이고, 각 Environment는 자기 브랜치에서만 돈다. 다른 브랜치에서 실행하면 막힌다.** PR 단계에서는 CD를 시험할 수 없다.
 - 같은 SHA의 이미지가 ECR에 이미 있으면 빌드를 건너뛴다.
-- 배포가 실패하면 Actions 로그에 서버 출력이 찍힌다. SSM 응답은 2500자에서 잘리므로 원인이 안 보이면 서버에 붙어 로그를 본다 ("문제 해결" 참조).
+- `rollout.sh`는 진행 중인 새로 고침이 있으면 쓰기 전에 멈춘다. 이 배포가 실패하면 버전 파라미터를 이전 SHA로 되돌리고 서버를 다시 바꾼 뒤 실패로 끝난다. 다른 새로 고침이 끼어들면 파라미터를 그대로 두고 실패로 끝난다.
+- Actions 로그에는 새로 고침 사유와 최근 오토스케일링 활동만 찍힌다. 서버 안 배포 로그는 서버에 붙어 본다 ("문제 해결" 참조).
+- CD가 도는 동안 Terraform apply하지 않는다. 시작 템플릿이 바뀌는 apply는 진행 중인 새로 고침을 취소할 수 있다.
 
 ### 수동 배포
 
-- checkout 전에 잠금을 잡고 대상 커밋의 `deploy.sh`를 실행한다. 다른 배포가 돌고 있으면 checkout 전에 종료한다.
+- 관리자 자격으로 로컬에서 CD와 같은 스크립트를 부른다. 두 이미지가 ECR에 먼저 있어야 한다. CD가 돌고 있지 않을 때 한다.
+
+```bash
+deploy/rollout.sh meterengine-<환경>-app /meterengine/<환경>/app-version <git-sha>
+```
+
+- 서버 한 대만 같은 버전으로 다시 띄울 때(파라미터 값을 고친 뒤 등)는 그 서버에 SSM 세션으로 붙어 root로 아래를 실행한다. checkout 전에 잠금을 잡아, 다른 배포가 돌고 있으면 checkout 전에 종료한다.
+  - `<git-sha>`는 버전 파라미터의 값을 쓴다. 다른 값을 주면 그 서버만 다른 버전이 되고, 다음 교체 때 버전 파라미터의 값으로 돌아간다.
 
 ```bash
 (exec 8>/etc/meterengine/deploy-command.lock && flock -n 8 && cd /opt/meterengine && git fetch --quiet origin 8>&- 9>&- && git checkout --quiet --force <git-sha> 8>&- 9>&- && ./deploy/deploy.sh <환경> <git-sha>)
 ```
 
-- 환경 파일이 없는 옛 커밋에는 쓸 수 없다. 옛 `deploy.sh`는 첫 인자를 SHA로 읽는다. 그런 커밋으로 되돌릴 때는 "서버에서 롤백"의 명령을 쓴다.
 - 세 번째 인자로 체크아웃할 git ref를 따로 줄 수 있다. 그때는 앞의 `git checkout`에도 그 ref를 준다. 주지 않으면 이미지와 같은 SHA로 맞춘다.
 
-- 서버 밖에서 한 번에 실행한다.
-
-```bash
-aws ssm send-command \
-  --instance-ids <environments/<환경>.json의 instance_id> \
-  --document-name AWS-RunShellScript \
-  --parameters commands="exec 8>/etc/meterengine/deploy-command.lock && flock -n 8 && cd /opt/meterengine && git fetch --quiet origin 8>&- 9>&- && git checkout --quiet --force <git-sha> 8>&- 9>&- && ./deploy/deploy.sh <환경> <git-sha>" \
-  --query 'Command.CommandId' --output text
-```
+- 서버 안에서 다시 띄우면 그 서버는 컨테이너를 바꾸는 동안 요청을 받지 못한다. 서버가 한 대면 그동안 끊긴다.
 
 - `deploy.sh`가 하는 일의 순서다. 먼저 환경 파일을 서버와 대조하고, 틀리면 아무것도 바꾸지 않고 멈춘다.
 
-1. Caddy 컨테이너 안에서 도는 색의 `/actuator/health/readiness`를 1초 간격으로 세 번까지 묻고 대상 색을 정한다.
-   - 한 색만 돌면 반대 색이 대상이다. 도는 색이 UP이 아니어도 다시 만들지 않고 경고만 남긴다.
-   - 두 색이 다 돌면 UP이 아닌 색이 대상이다. 둘 다 UP이면 Caddy 내부 사이트 `:8081` 응답의 `X-Upstream`이 가리키는 색을 살리고, 그 색을 알 수 없으면 기록 파일의 색(파일이 없으면 블루)을 살린다. 둘 다 UP이 아니면 블루가 대상이다.
-   - 둘 다 돌지 않으면 블루가 대상이다.
-2. `/opt/meterengine`을 그 커밋(세 번째 인자를 주면 그 ref)으로 맞추고, 곧바로 Caddy 요청 로그 설정 `deploy/caddy/access-log.caddy`, SSO 사이트 설정 `deploy/caddy/sso.caddy`, 백엔드 목록 `deploy/caddy/upstreams.caddy`를 쓴다.
-   - 목록은 돌고 있는 반대 색과 블루그린 이전 `backend`다. 그중 UP인 색도 `backend`도 없으면 대상 색을 더한다.
-3. Parameter Store `/meterengine/<환경>/*`를 읽어 `/etc/meterengine/prod.env`를 새로 만든다 (권한 600). 환경의 프로필에 필요한 값이 빠져 있으면 기존 파일을 두고 멈춘다. 대상 색의 태그는 새 SHA, 돌고 있는 반대 색의 태그는 지금 이미지의 태그다.
-4. ECR에 로그인하고 백엔드가 아닌 서비스와 대상 색의 이미지만 받은 뒤, 백엔드가 아닌 서비스를 `up -d`로 올리고(orphan은 지우지 않는다) 대상 색을 띄운다. 이어 Caddy 설정을 reload 한다.
-   - 돌고 있는 반대 색은 받지도 다시 만들지도 않는다. 그 태그가 ECR에서 지워졌어도 배포가 막히지 않는다.
-   - Caddyfile은 bind mount라 `deploy.sh`를 거치지 않고 compose만 올리면 반영되지 않는다. `docker compose -p meterengine-prod exec caddy caddy reload --config /etc/caddy/Caddyfile`을 직접 실행한다.
-5. 대상 색의 `/actuator/health`(DB 포함)가 UP인지 최대 90초 기다리고, 그 컨테이너의 이미지가 새 SHA인지 확인한다.
-6. monitoring이 켜진 환경은 Prometheus와 cloudwatch exporter 설정을 다시 읽게 한다.
-   - prometheus.yml도 Caddyfile과 같다. `docker compose -p meterengine-prod exec prometheus kill -HUP 1`로 다시 읽게 한다. `docker compose kill`로 보내면 Docker가 수동으로 멈춘 컨테이너로 기록해 다시 켜지 않는다.
-   - cloudwatch/config.yml도 같다. `docker compose -p meterengine-prod exec cloudwatch-exporter kill -HUP 1`로 다시 읽게 한다. 이것이 실패해도 배포는 멈추지 않는다.
-7. 백엔드 목록을 대상 색 하나로 바꾸고 Caddy를 reload 한다. 새 요청은 대상 색으로 가고, 반대 색이 받던 요청은 마저 끝난다. 이어 내부 사이트 `:8081`의 응답 헤더 `X-Upstream`이 대상 색인지 최대 60초 확인한다.
-8. 5초(Caddyfile의 `lb_try_duration`) 기다린 뒤 돌고 있던 반대 색을 `stop`으로 멈춘다. 지우지 않아 그 이미지가 정리되지 않는다. 블루그린 이전 `backend` 컨테이너가 있으면 이때 지운다.
-9. 프론트 `/health`가 ok를 돌려주는지 최대 90초 기다린다.
-10. 336시간보다 오래된 이미지를 정리한다.
-11. monitoring이 켜진 환경은 Grafana 경보 설정을 다시 읽게 한다. 앱 확인은 이미 끝난 상태다. 401이면 관리자 비밀번호와 `grafana-admin-password`가 일치하는지 확인하고, 다른 오류면 `alerting.yml`과 Grafana 로그를 본다. 이 단계가 실패해도 새 백엔드는 남고 CD의 외부 확인은 실행된다.
-12. 마지막으로 배포 기록 파일을 쓴다.
+1. `/opt/meterengine`을 그 커밋(세 번째 인자를 주면 그 ref)으로 맞춘다.
+2. Parameter Store `/meterengine/<환경>/*`를 읽어 `/etc/meterengine/prod.env`를 새로 만든다 (권한 600). 필요한 값이 빠져 있으면 기존 파일을 두고 멈춘다.
+3. `db-host`의 RDS 식별자를 환경 파일과 대조하고 `DB:` 줄로 남긴다.
+4. ECR에 로그인해 backend와 frontend 이미지를 받고 `up -d --remove-orphans`로 띄운다.
+5. 백엔드 `/actuator/health`(DB 포함)가 UP인지 최대 180초 기다리고, 그 컨테이너의 이미지가 새 SHA인지 확인한다.
+6. 프론트 `/health`가 ok를 돌려주는지 최대 90초 기다린다.
+7. agents 프로필이 켜진 환경은 node exporter와 cAdvisor를 띄운다. 실패해도 경고만 남기고 앱은 그대로 둔다.
+8. `deploy/server/ingest-rate.service`를 `meterengine-ingest-rate.service`로 설치하고 enable과 restart를 한다. checkout으로 바뀐 스크립트를 읽게 하려고 매번 다시 띄운다. 실패해도 경고만 남긴다.
+9. 336시간보다 오래된 이미지를 정리한다.
 
-- 어느 단계든 실패하면 컨테이너 로그나 실패 줄을 찍고 0이 아닌 코드로 끝난다.
-- 실패 정리에서는 기존 백엔드의 현재 readiness와 Caddy 경유 응답을 확인한 뒤 대상 색을 지운다. 기존 백엔드가 응답하지 않거나 복귀를 확인하지 못하면 새 색을 남기고, 새 색이 정상이면 Caddy도 새 색으로 돌린다. 8단계부터는 대상 색을 지우지 않는다.
-- 대상 색은 7단계부터 요청을 받는다. 받고 있는 백엔드가 없던 배포만 2단계 목록에 대상 색이 들어가, readiness를 통과한 순간부터 받는다.
-- `deploy.sh`는 한 번에 하나만 돈다. 앞 배포가 돌고 있으면(`/etc/meterengine/deploy-command.lock`) 바로 실패한다. CD가 기다리다 포기해도 서버의 앞 배포는 끝까지 돈다.
-
-### 첫 전환 배포
-
-블루그린 이전 구성(백엔드 서비스 이름 `backend`)인 서버에 이 구성을 처음 배포할 때다.
-
-- `deploy.sh`는 `backend`를 둔 채 블루를 띄우고, Caddy 백엔드 목록을 `backend:8080`에서 블루로 바꿔 Caddy가 블루로 보내는 것을 확인한 뒤 `backend`를 지운다. Prometheus는 `backend`를 긁지 않아 전환 중 그 지표는 남지 않는다. 이 배포에서 Prometheus는 정의가 바뀌어 다시 만들어지므로 블루가 뜰 때까지 백엔드 헬스체크 실패 경보가 한 번 울릴 수 있다.
-- 프론트엔드는 이 배포에서 백엔드 주소가 `http://caddy:8081`로 바뀌어 다시 만들어진다. 곧이어 Caddy가 reload 될 때까지 몇 초 동안 화면이 백엔드를 부르지 못할 수 있다. 수집 API는 영향이 없다.
-- 개발 서버의 첫 전환 배포는 머지 직전부터 CD가 끝날 때까지 로컬 터미널에서 아래 루프를 돌려 200이 아닌 응답을 센다. 조회 권한이 있는 API 키를 사용한다.
-
-```bash
-URL=https://meterengine.com/v1/billable-metric-prices
-API_KEY='<조회용 API 키>'
-while :; do
-	code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 -H "Authorization: Bearer $API_KEY" "$URL")
-	printf '%s %s\n' "$(date +%T)" "$code"
-	sleep 0.2
-done | tee first-switch.log
-```
-
-- CD가 끝나면 Ctrl-C로 멈추고 `grep -vc ' 200$' first-switch.log`로 센다. 0이 아니면 그 시각의 `deploy.sh` 로그와 Caddy 로그를 본다.
+- 어느 단계든 실패하면 컨테이너 로그나 실패 줄을 찍고 0이 아닌 코드로 끝난다. 부팅 중이면 서버가 healthy가 되지 못해 오토스케일링 그룹이 서버를 바꾼다.
+- `deploy.sh`는 한 번에 하나만 돈다. 앞 배포가 돌고 있으면(`/etc/meterengine/deploy-command.lock`) 바로 실패한다.
 
 ## 롤백
 
-- 이미지 태그가 커밋 SHA라 롤백은 이전 SHA로 다시 배포하는 것이다. 그 이미지는 ECR에 이미 있어 빌드가 필요 없다.
-- 롤백도 배포와 같은 블루그린 순서로 돈다. 멈춰 둔 색이 그 SHA의 이미지를 쥐고 있으면 서버에 남아 있고, 없으면 ECR에서 받는다.
-- **블루그린 이전 SHA로 되돌리면 그 시점의 `deploy.sh`가 돌아 한 번 끊긴다.** 옛 스크립트가 블루와 그린을 orphan으로 지우고 `backend`를 띄운다. 그 뒤의 블루그린 배포는 첫 전환 배포처럼 다시 시작한다.
+- 이미지 태그가 커밋 SHA라 롤백은 이전 SHA로 다시 배포하는 것이다. 그 이미지는 ECR에 이미 있어 빌드가 필요 없다. 배포와 같이 서버를 그 SHA로 새로 바꾼다.
+- **Caddy와 블루그린으로 도는 커밋으로는 되돌릴 수 없다.** 오토스케일링 그룹 서버에서 뜨지 않아 CD가 거절한다.
 - **DB 마이그레이션은 되돌아가지 않는다. Flyway는 앞으로만 간다.** 스키마를 바꾼 배포를 되돌리면 옛 코드가 새 스키마 위에서 도는 상태가 된다.
 
 ### 되돌릴 SHA 찾기
@@ -251,19 +170,11 @@ aws ecr describe-images --repository-name meterengine-backend \
 3. `image_tag`에 되돌릴 커밋 SHA 40자를 넣고 실행한다.
 
 - 빌드 job은 건너뛰고 배포만 다시 돈다.
-- 환경 파일이 없는 옛 커밋은 production에서만 옛 호출(`deploy.sh <SHA>`)로 돈다. staging은 멈춘다.
-- 서버 레포도 그 커밋으로 맞춰지므로 compose 파일과 Caddyfile까지 그 시점 상태로 돌아간다.
+- 새 서버는 그 커밋의 저장소로 뜨므로 compose 파일까지 그 시점 상태로 돌아간다.
 
-### 서버에서 롤백
+### 손으로 롤백
 
-Actions에 들어갈 수 없을 때 쓴다.
-
-```bash
-aws ssm send-command \
-  --instance-ids i-0f47bb1f028cd29a9 \
-  --document-name AWS-RunShellScript \
-  --parameters commands="exec 8>/etc/meterengine/deploy-command.lock && flock -n 8 && cd /opt/meterengine && git fetch --quiet origin 8>&- 9>&- && git checkout --quiet --force <SHA> 8>&- 9>&- && if test -f deploy/environments/production.json; then ./deploy/deploy.sh production <SHA>; else ./deploy/deploy.sh <SHA>; fi"
-```
+Actions에 들어갈 수 없을 때 관리자 자격으로 "수동 배포"의 `rollout.sh`를 되돌릴 SHA로 부른다.
 
 ## DB 백업과 복구
 
@@ -306,8 +217,9 @@ aws rds wait db-snapshot-available --db-snapshot-identifier meterengine-db-befor
 ### 복원
 
 - **복원본에는 복원 시각 뒤에 원본에 쓰인 데이터가 없다.** 복원 시각부터 5의 배포로 백엔드가 복원본에 붙을 때까지 원본에 들어온 이벤트, 인보이스, 결제 시도가 복원본에서 빠진다.
+- 도메인이 아직 옛 서버를 가리키면 5는 아래 "운영 전환 전" 절차로 한다.
 - 먼저 main 머지를 멈추고 Actions에서 CD가 돌고 있지 않은지 본다. CD는 main HEAD를 그때의 `db-host`로 배포해서, 전환 전이면 백엔드가 원본 DB로 다시 뜨고 전환 뒤면 3에서 피한 마이그레이션이 복원본에 적용된다. 5를 마칠 때까지 멈추고, 6의 PR만 넣는다.
-- 원본이 살아 있는 채로 되돌린다면 1 전에 서버에 붙어 `sudo -i` 한 뒤 백엔드를 멈춘다. 그러면 빠지는 구간이 멈춘 시각에서 끝난다. 그동안 API는 응답하지 않고, 5의 배포가 다시 띄운다.
+- 원본이 살아 있는 채로 되돌린다면 1 전에 앱 서버마다 붙어 `sudo -i` 한 뒤 백엔드를 멈춘다. 그러면 빠지는 구간이 멈춘 시각에서 끝난다. 그동안 API는 응답하지 않고, 5의 배포가 다시 띄운다.
 
 ```bash
 for service in backend backend-blue backend-green; do
@@ -371,8 +283,38 @@ docker run --rm -e PGPASSWORD postgres:18 psql \
 
 3. 배포할 SHA를 정한다. 지금 SHA를 다시 배포하면 복원본보다 새 마이그레이션이 기동 때 다시 적용된다. 그 마이그레이션 때문에 복원했다면 복원본의 마지막 버전까지만 가진 이전 SHA를 배포한다.
 4. 복원 시각 뒤에 암호화 키를 바꿨으면 그 시각의 키로 되돌린다("암호화 키 맞추기").
-5. `db-host`를 복원본으로 바꾸고 3에서 정한 SHA로 서버에서 다시 배포한다. 환경 파일의 식별자가 아직 원본이라 `RECOVERY_DB_IDENTIFIER`를 주는 아래 명령만 통과하고, Actions로는 안 된다. 배포 로그의 `DB:` 줄이 복원본인지 본다.
+5. 오토스케일링 그룹이 서버를 새로 띄우지 않게 멈추고, `db-host`를 복원본으로 바꾼 뒤 3에서 정한 SHA를 앱 서버마다 다시 띄운다. 환경 파일의 식별자가 아직 원본이라 새로 뜨는 서버는 환경 확인에서 멈추고, `RECOVERY_DB_IDENTIFIER`를 주는 아래 명령만 통과한다. Actions로는 안 된다. 배포 로그의 `DB:` 줄이 복원본인지 본다.
    - 복원본에 삭제 방지, 자동 확장 상한, Performance Insights를 원본과 같게 켠다. 복원으로는 켜지지 않고, 켜도 DB가 멈추지 않는다.
+
+```bash
+aws autoscaling suspend-processes --auto-scaling-group-name meterengine-production-app
+aws ssm put-parameter --name /meterengine/production/db-host --type String --overwrite --value <복원본 엔드포인트>
+aws rds modify-db-instance --db-instance-identifier meterengine-db-restore-<YYYYMMDD> \
+  --deletion-protection --max-allocated-storage 50 \
+  --enable-performance-insights --performance-insights-retention-period 7
+aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names meterengine-production-app \
+  --query 'AutoScalingGroups[0].Instances[].InstanceId' --output text
+```
+
+   - 위에서 나온 서버마다 SSM 세션으로 붙어 root로 아래를 실행한다.
+
+```bash
+(exec 8>/etc/meterengine/deploy-command.lock && flock -n 8 && cd /opt/meterengine && git fetch --quiet origin 8>&- 9>&- && git checkout --quiet --force <SHA> 8>&- 9>&- && RECOVERY_DB_IDENTIFIER=meterengine-db-restore-<YYYYMMDD> ./deploy/deploy.sh production <SHA>)
+```
+
+6. `deploy/environments/production.json`의 `database_identifier`를 복원본으로 고쳐 main에 넣는다. 3에서 이전 SHA를 골랐다면 그 마이그레이션을 되돌리는 변경도 같이 넣는다.
+   - 머지 직전에 `aws autoscaling resume-processes --auto-scaling-group-name meterengine-production-app`로 그룹을 되살린다. 멈춘 채로는 CD의 새로 고침이 서버를 띄우지 못한다. 머지되면 CD가 main HEAD로 서버를 새로 바꾼다.
+   - 되살린 뒤 머지 전까지 새로 뜨는 서버는 환경 확인에서 멈춰 교체가 되풀이된다. 일하는 서버는 남아 있어 서비스는 영향이 없다.
+   - 이 뒤로 그 PR 이전 커밋으로 되돌릴 때도 `RECOVERY_DB_IDENTIFIER`가 필요하다. 그 커밋의 환경 파일에는 원본 식별자가 있다.
+
+- 원본 인스턴스는 바로 지우지 않는다. 복원 시각과 멈춘 시각(멈추지 못했으면 전환한 시각) 사이에 들어온 행은 원본과 복원본을 대조해 찾는다. 삭제 방지가 켜져 있어 먼저 꺼야 지워진다.
+
+#### 운영 전환 전
+
+도메인이 아직 옛 서버 `meterengine-server`를 가리키는 동안은 5와 6을 아래처럼 한다.
+
+- `<SHA>`는 Caddy와 블루그린으로 도는 마지막 운영 커밋을 쓴다. 그 뒤 커밋의 `deploy.sh`는 오토스케일링 그룹 밖 서버에서 멈춘다.
+- 5. `db-host`를 복원본으로 바꾸고 옛 서버에서 다시 배포한다. 오토스케일링 그룹은 멈추지 않아도 된다.
 
 ```bash
 aws ssm put-parameter --name /meterengine/production/db-host --type String --overwrite --value <복원본 엔드포인트>
@@ -386,10 +328,7 @@ aws ssm send-command \
   --parameters commands="exec 8>/etc/meterengine/deploy-command.lock && flock -n 8 && cd /opt/meterengine && git fetch --quiet origin 8>&- 9>&- && git checkout --quiet --force <SHA> 8>&- 9>&- && if test -f deploy/environments/production.json; then RECOVERY_DB_IDENTIFIER=$RESTORED_ID ./deploy/deploy.sh production <SHA>; else ./deploy/deploy.sh <SHA>; fi"
 ```
 
-6. `deploy/environments/production.json`의 `database_identifier`를 복원본으로 고쳐 main에 넣는다. 그 전에는 CD가 환경 확인에서 멈춘다. 돌고 있는 서비스는 영향이 없다. 3에서 이전 SHA를 골랐다면 그 마이그레이션을 되돌리는 변경도 같이 넣는다. main에 들어가면 CD가 main HEAD를 배포한다.
-   - 이 뒤로 그 PR 이전 커밋으로 되돌릴 때도 `RECOVERY_DB_IDENTIFIER`가 필요하다. 그 커밋의 환경 파일에는 원본 식별자가 있다.
-
-- 원본 인스턴스는 바로 지우지 않는다. 복원 시각과 멈춘 시각(멈추지 못했으면 전환한 시각) 사이에 들어온 행은 원본과 복원본을 대조해 찾는다. 삭제 방지가 켜져 있어 먼저 꺼야 지워진다.
+- 6. `production.json`을 고쳐 main에 넣는다. CD는 버전만 기록하고 옛 서버를 건드리지 않는다.
 
 ### 암호화 키 맞추기
 
@@ -411,37 +350,37 @@ aws ssm put-parameter --name /meterengine/production/crypto-encryption-key --typ
 
 SSH 키와 22번 포트가 없어 SSM으로만 붙는다.
 
-- 콘솔: EC2 > 인스턴스 > `meterengine-server` > 연결 > Session Manager 탭.
-- 로컬 터미널.
+- 앱 서버 ID는 오토스케일링 그룹에서 찾는다. 서버는 교체될 때마다 ID가 바뀐다.
 
 ```bash
-aws ssm start-session --target i-0f47bb1f028cd29a9
+aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names meterengine-production-app \
+  --query 'AutoScalingGroups[0].Instances[].[InstanceId,LifecycleState,HealthStatus]' --output text
+aws ssm start-session --target <서버 ID>
 ```
 
 - 서버 포트를 로컬로 끌어오기.
 
 ```bash
-aws ssm start-session --target i-0f47bb1f028cd29a9 \
+aws ssm start-session --target <서버 ID> \
   --document-name AWS-StartPortForwardingSession \
   --parameters '{"portNumber":["3000"],"localPortNumber":["3000"]}'
 ```
 
+- 옛 운영 서버는 `i-0f47bb1f028cd29a9`다. 콘솔에서는 EC2 > 인스턴스 > `meterengine-server` > 연결 > Session Manager 탭.
+
 ## 공개 인증의 실제 IP
 
-공개 Caddy는 `X-MeterEngine-Client-IP`를 접속 IP로 덮어쓴다. 내부 8081 사이트는 프론트 고정 주소(172.30.0.11)에서 온 값만 유지하고, 다른 연결이 보낸 값은 접속 IP로 덮어쓴다. 프론트 주소를 바꾸면 Caddyfile의 `FRONTEND_ADDRESS` 기본값도 같이 바꾼다. 백엔드는 `METERENGINE_AUTH_RATE_LIMIT_TRUSTED_PROXIES`에 든 직접 연결에서 온 헤더만 믿는다. 한도와 429 응답은 [백엔드 인증](../backend/README.md#공개-인증-요청-제한)을 따른다.
+ALB는 받은 `X-Forwarded-For` 뒤에 접속 주소를 붙이므로 맨 오른쪽 값을 사용자 IP로 쓴다. 그 앞의 값은 사용자가 꾸밀 수 있다. 한도와 429 응답은 [백엔드 인증](../backend/README.md#공개-인증-요청-제한)을 따른다.
 
-- 백엔드 두 색은 compose의 `proxy` 네트워크(`172.30.0.0/24`)에만 붙는다. Caddy는 `172.30.0.10`, 프론트는 `172.30.0.11`로 주소를 고정한다.
-- compose가 이 값의 기본값을 고정 주소 대역 `172.30.0.8/29`로 넣어 Parameter Store 파라미터가 따로 필요 없다. 다른 컨테이너는 `172.30.0.128/25`에서 주소를 받아 이 대역에 들지 않는다.
-- 주소나 대역을 바꾸면 compose의 고정 주소, `ip_range`, 이 기본값을 같이 바꾼다. 비우면 모든 사용자가 Caddy IP 하나의 한도를 나눠 쓴다. 전체 사설망을 일괄 신뢰하지 않는다.
-- 서버에 `172.30.0.0/24`와 겹치는 docker 네트워크가 있으면 compose가 `proxy` 네트워크를 만들지 못해 배포가 실패한다.
-- `proxy` 네트워크가 생기는 첫 배포에서 Caddy, 프론트, Prometheus가 다시 만들어진다. Caddy가 다시 만들어지는 몇 초 동안 80과 443이 닫혀 공개 접속이 끊긴다. 다시 뜬 Caddy는 `default`에도 붙어 있어 그때까지 받던 색에 계속 보낸다. 이 배포에서는 배포 중 실패 측정을 돌리지 않는다.
-- `proxy` 네트워크가 없던 SHA로 롤백하면 Caddy가 `default`에만 붙어, 새 색이 뜰 때까지 `proxy`에만 있는 받던 색에 보내지 못한다.
-
-ALB가 프론트와 백엔드에 바로 붙는 경로에서는 `X-Forwarded-For`의 맨 오른쪽 값을 사용자 IP로 쓴다. ALB는 받은 값 뒤에 접속 주소를 붙이므로 그 앞의 값은 사용자가 꾸밀 수 있다.
-
-- 프론트는 사용자가 보낸 `X-MeterEngine-Client-IP`를 늘 지우고 맨 오른쪽 값으로 다시 써서 백엔드에 넘긴다. Caddy 뒤에서는 Caddy가 `X-Forwarded-For`를 접속 IP 하나로 넘겨 동작이 그대로다.
-- 백엔드는 `METERENGINE_AUTH_RATE_LIMIT_LOAD_BALANCERS`에 든 직접 연결에서만 맨 오른쪽 값을 읽는다. compose 기본값은 ALB가 놓인 공용 서브넷 `10.0.0.0/20`, `10.0.16.0/20`이다. 서브넷을 바꾸면 이 기본값도 같이 바꾼다.
+- 프론트는 사용자가 보낸 `X-MeterEngine-Client-IP`를 늘 지우고 맨 오른쪽 값으로 다시 써서 같은 서버의 백엔드에 넘긴다.
+- 백엔드는 `METERENGINE_AUTH_RATE_LIMIT_TRUSTED_PROXIES`에 든 직접 연결에서 온 `X-MeterEngine-Client-IP`만 믿는다.
+  - 백엔드와 프론트는 compose의 `proxy` 네트워크(`172.30.0.0/24`)에 붙고, 프론트는 `172.30.0.11`로 주소를 고정한다.
+  - compose가 이 값의 기본값을 고정 주소 대역 `172.30.0.8/29`로 넣어 Parameter Store 파라미터가 따로 필요 없다. 다른 컨테이너는 `172.30.0.128/25`에서 주소를 받아 이 대역에 들지 않는다.
+  - 주소나 대역을 바꾸면 compose의 고정 주소, `ip_range`, 이 기본값을 같이 바꾼다. 비우면 모든 사용자가 프론트 주소 하나의 한도를 나눠 쓴다. 전체 사설망을 일괄 신뢰하지 않는다.
+  - 서버에 `172.30.0.0/24`와 겹치는 docker 네트워크가 있으면 compose가 `proxy` 네트워크를 만들지 못해 배포가 실패한다.
+- 백엔드는 `METERENGINE_AUTH_RATE_LIMIT_LOAD_BALANCERS`에 든 직접 연결(ALB)에서만 맨 오른쪽 값을 읽는다. compose 기본값은 ALB가 놓인 공용 서브넷 `10.0.0.0/20`, `10.0.16.0/20`이다. 서브넷을 바꾸면 이 기본값도 같이 바꾼다.
 - `X-Forwarded-For`가 여러 줄이거나 맨 오른쪽 값이 숫자 IP가 아니면 백엔드는 접속 상대 IP를 쓴다. 이때는 ALB 뒤 사용자들이 한도를 나눠 쓴다.
+- 옛 서버에서는 Caddy가 `X-MeterEngine-Client-IP`를 접속 IP로 덮어쓰고 `X-Forwarded-For`를 접속 IP 하나로 넘겨 결과가 같다.
 
 ## 설정값
 
@@ -455,20 +394,18 @@ ALB가 프론트와 백엔드에 바로 붙는 경로에서는 `X-Forwarded-For`
 | `db-name` | String | 백엔드 datasource URL |
 | `db-username` | String | 백엔드 datasource |
 | `db-password` | SecureString | 백엔드 datasource. 배포 때 KMS로 복호화한다 |
-| `db-exporter-password` | SecureString | postgres exporter가 RDS에 붙을 읽기 전용 사용자 `meterengine_exporter`의 비밀번호 |
+| `db-exporter-password` | SecureString | 공용 모니터링 서버의 postgres exporter가 RDS에 붙을 읽기 전용 사용자 `meterengine_exporter`의 비밀번호 |
 | `organization-id` | String | 이 버전의 compose는 읽지 않는다. 옛 프론트가 조회하던 도입사이고, 옛 버전으로 되돌리는 배포가 요구해 남긴다 |
 | `organization-name` | String | 이 버전의 compose는 읽지 않는다. 옛 프론트 상단 바의 이름이고, 옛 버전으로 되돌리는 배포가 요구해 남긴다 |
-| `grafana-admin-password` | SecureString | Grafana admin 로그인 |
-| `oauth2-proxy-client-id` | SecureString | oauth2-proxy GitHub 로그인. GitHub OAuth App의 Client ID |
-| `oauth2-proxy-client-secret` | SecureString | oauth2-proxy GitHub 로그인. GitHub OAuth App의 Client secret |
-| `oauth2-proxy-cookie-secret` | SecureString | oauth2-proxy 로그인 쿠키 암호화. 바꾸면 모두 다시 로그인한다 |
-| `slack-webhook-url` | SecureString | 경보가 갈 Slack incoming webhook |
+| `grafana-admin-password`, `slack-webhook-url` | SecureString | 옛 운영 서버 안 Grafana만 읽는다. 앱 서버는 읽지 않는다. 공용 모니터링 서버는 `/meterengine/monitoring/` 아래 같은 이름의 값을 쓴다 |
+| `oauth2-proxy-client-id`, `oauth2-proxy-client-secret`, `oauth2-proxy-cookie-secret` | SecureString | 옛 운영 서버의 oauth2-proxy만 읽는다. 앱 서버는 읽지 않는다. 앞의 둘은 공용 모니터링 Grafana 로그인 값으로 옮겨 쓴다("공용 모니터링 서버") |
 | `crypto-encryption-key` | SecureString | 백엔드가 토스페이먼츠 키, 빌링키, 웹훅 비밀값을 암호화하는 키. **값을 바꾸면 이미 저장한 암호문을 풀지 못한다** |
 | `operator-email` | String | 백엔드가 기동할 때 없으면 만드는 첫 운영자의 이메일 |
 | `operator-password` | SecureString | 첫 운영자 비밀번호. 값을 바꾸고 재배포하면 새 비밀번호가 된다 |
 | `meterengine-auth-rate-limit-login-ip-limit`, `-login-account-limit`, `-login-window`, `-signup-ip-limit`, `-signup-account-limit`, `-signup-window` | String | 선택. 로그인과 가입 한도와 구간. 없으면 compose가 백엔드 기본값(100, 10, 5m, 20, 3, 30m)을 넣는다 |
 | `invoice-auto-finalize-enabled` | String | 선택. `true`면 인보이스 자동 확정이 매시 정각에 돈다. 없으면 compose가 `false`를 넣는다. 켜면 첫 정시가 확정 시각이 지난 과거 달을 모두 확정하므로 켜기 전에 팀에 알린다 |
 | `frontend-api-key` | SecureString | 이 버전의 compose는 읽지 않는다. 옛 프론트가 백엔드를 부르던 API 키 원문이고, 옛 버전으로 되돌리는 배포가 요구해 남긴다 |
+| `app-version` | String | 앱 서버가 띄울 커밋 SHA 40자. CD와 `rollout.sh`가 쓰고 서버가 부팅 때 읽는다. Terraform은 자리 값 `unset`만 만들고 되돌리지 않는다. `prod.env`에는 들어가지 않는다 |
 
 - 새 파라미터를 등록한다.
 
@@ -486,8 +423,6 @@ aws ssm put-parameter --name /meterengine/production/operator-password --type Se
   --value "$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 32)"
 aws ssm put-parameter --name /meterengine/production/frontend-api-key --type SecureString \
   --value "me_live_$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 32)"
-aws ssm put-parameter --name /meterengine/production/oauth2-proxy-cookie-secret --type SecureString \
-  --value "$(openssl rand -base64 32 | tr -- '+/' '-_')"
 ```
 
 - 운영자로 로그인할 때 비밀번호는 Parameter Store에서 본다.
@@ -498,7 +433,7 @@ aws ssm get-parameter --name /meterengine/production/operator-password --with-de
 
 - test-sjpark와 test-storage는 각자의 `sut/terraform/parameters.tf`가 같은 이름의 파라미터를 만든다.
 
-- 값을 고쳤으면 재배포해야 반영된다. 같은 SHA로 `deploy.sh`를 다시 돌리면 된다.
+- 값을 고쳤으면 서버를 다시 띄워야 반영된다. 같은 SHA로 `rollout.sh`를 다시 부르면 서버를 새로 바꾼다("수동 배포").
 - **값에 개행이 섞이면 `deploy.sh`가 배포를 멈춘다.** 콘솔에서 복사할 때 줄바꿈이 딸려 오지 않았는지 본다.
 
 ## Terraform
@@ -520,7 +455,7 @@ aws ssm get-parameter --name /meterengine/production/operator-password --with-de
 
 ## 앱 서버 오토스케일링 그룹
 
-옛 서버를 대신할 구조다. `deploy/terraform/modules/app_fleet`이 두 환경에 같은 모양으로 만든다.
+`deploy/terraform/modules/app_fleet`이 두 환경에 같은 모양으로 만든다.
 
 | 자원 | 이름 |
 | --- | --- |
@@ -535,10 +470,11 @@ aws ssm get-parameter --name /meterengine/production/operator-password --with-de
 - 서버는 기본 이미지로 뜨고 부팅 스크립트(`modules/app_fleet/templates/app-user-data.sh.tftpl`)가 배포까지 한다.
   1. 버전 파라미터를 읽는다. 40자 커밋 SHA가 아니면 설치 전에 실패한다.
   2. docker, git, compose를 설치하고 저장소를 그 커밋으로 받는다.
-  3. `deploy/deploy.sh <환경> <SHA>`를 부른다.
+  3. `deploy/deploy.sh <환경> <SHA>`를 부른다. 앱과 감시 에이전트를 띄우고 수집량 지표 유닛 `meterengine-ingest-rate.service`를 설치한다.
+- 배포는 `rollout.sh`가 버전 파라미터에 SHA를 쓰고 새로 고침(최소 건강 100%, 최대 200%)을 시작하는 것이다. 새 서버가 대상 그룹에서 healthy가 된 뒤 옛 서버가 빠진다.
 - 부팅이 느리거나 설치 실패가 잦으면 릴리스마다 이미지를 미리 굽는 방식으로 옮긴다. 그때는 시작 템플릿의 image_id와 부팅 스크립트만 바뀌고 롤링, 버전 파라미터, 확장 정책은 그대로다.
-- 최소 대수는 0이다. 지금 배포 스크립트는 Caddy가 있는 구성이라, 이 상태로 서버가 뜨면 ALB 헬스 체크를 통과하지 못하고 ASG가 서버를 계속 바꾼다.
-  - Caddy 없는 배포의 SHA가 버전 파라미터에 기록된 뒤에 최소 대수를 1로 올린다. 그 전에 원하는 대수를 손으로 올리지 않는다.
+- 최소 대수는 0이다. 그동안 CD는 버전만 기록한다(`recorded_only=true`).
+  - Caddy 없는 커밋의 SHA가 버전 파라미터에 기록된 뒤에 최소 대수를 1로 올린다. 버전 파라미터가 `unset`이거나 Caddy가 있는 커밋이면 서버가 ALB 헬스 체크를 통과하지 못해 교체만 되풀이한다. 그 전에 원하는 대수를 손으로 올리지 않는다.
 - 확장: 서버마다 `deploy/server/ingest-rate.sh`가 10초마다 (초당 수집 요청 / 원하는 대수)를 `MeterEngine/Scaling`에 올리고, 확장 정책은 그 10초 합을 서버당 초당 450건에 맞춘다. 450은 측정 환경 숫자로 잡은 추정값이다.
 - 배포 역할이 버전 파라미터를 쓰고 롤링을 시작한다. Terraform은 버전 값과 원하는 대수를 되돌리지 않는다.
 - CD가 도는 동안 apply하지 않는다. 시작 템플릿이 바뀌는 apply는 롤링을 시작해, 배포가 시작한 롤링과 겹치면 실패한다.
@@ -577,18 +513,14 @@ sudo bash /opt/meterengine/measurements/test-storage/sut/scripts/remote/upsert-e
 
 ## 모니터링
 
-- 서버 안 감시(monitoring 프로필)와 모든 환경을 한 곳에서 긁는 공용 모니터링 서버가 있다. 대시보드와 경보 파일은 둘이 같이 쓴다.
-- 서버 안 Prometheus가 백엔드 `/actuator/prometheus`와 Caddy `:2020/metrics`, node exporter, cAdvisor, postgres exporter, Grafana를 15초마다, cloudwatch exporter를 1분마다 수집하고, Grafana가 대시보드와 경보로 만든다.
+- 모든 환경의 앱 서버와 DB를 공용 모니터링 서버 한 대가 긁는다. 앱 서버에는 agents 프로필의 node exporter와 cAdvisor만 뜬다.
+- 옛 운영 서버는 아직 서버 안 Prometheus, Grafana, oauth2-proxy, postgres exporter, cloudwatch exporter로 자기 자신을 본다. 대시보드와 경보 파일은 공용 서버와 같이 쓴다.
 - postgres exporter는 RDS에 `pg_monitor` 권한의 읽기 전용 사용자 `meterengine_exporter`로 붙는다. 새 RDS에는 이 사용자를 먼저 만든다.
 
 ```sql
 CREATE USER meterengine_exporter WITH PASSWORD '<db-exporter-password>';
 GRANT pg_monitor TO meterengine_exporter;
 ```
-
-- cloudwatch exporter는 EC2 역할로 CloudWatch를 읽는다. 역할 정책에 `cloudwatch:GetMetricData`와 `cloudwatch:ListMetrics`가 있어야 한다.
-- 지표 보관은 15일 또는 2GB 중 먼저 닿는 쪽에서 오래된 것부터 지운다.
-- 모니터링 컨테이너는 서비스 트래픽을 받지 않는다.
 
 ### 공용 모니터링 서버
 
@@ -607,13 +539,20 @@ EC2 `meterengine-monitoring` 한 대가 모든 환경의 앱 서버와 DB를 긁
 | 파라미터 | 처음 값 | 할 일 |
 | --- | --- | --- |
 | `grafana-admin-password` | 난수 | 없음 |
-| `grafana-github-client-id`, `grafana-github-client-secret` | `unset` | Grafana용 GitHub OAuth App(콜백 `https://grafana.meterengine.com/login/github`)의 값을 넣는다. `unset`이 남아 있으면 `start.sh`가 멈춘다 |
+| `grafana-github-client-id`, `grafana-github-client-secret` | `unset` | #526의 조직 `asm17-ms2` 소유 OAuth 앱 값을 그대로 쓴다. 운영 `/meterengine/production/oauth2-proxy-client-id`, `-client-secret` 값을 아래 명령으로 옮긴다. `unset`이 남아 있으면 `start.sh`가 멈춘다 |
 | `slack-webhook-url` | 받는 곳 없는 자리 주소 | 공용 Grafana를 열 때 실제 주소를 넣는다. 그 전에는 공용 서버의 경보가 아무 데도 가지 않는다 |
 
+- 값을 화면에 찍지 않고 옮긴다.
+
 ```bash
-aws ssm put-parameter --overwrite --type SecureString \
-  --name /meterengine/monitoring/grafana-github-client-id --value '<Client ID>'
+for name in client-id client-secret; do
+  aws ssm put-parameter --overwrite --type SecureString --name "/meterengine/monitoring/grafana-github-$name" \
+    --value "$(aws ssm get-parameter --name "/meterengine/production/oauth2-proxy-$name" --with-decryption --query Parameter.Value --output text)" >/dev/null
+done
 ```
+
+- 그 앱의 콜백 URL은 경로 없는 `https://grafana.meterengine.com`으로 바꿔 Grafana의 `/login/github`가 통하게 한다. 조직 owner가 바꾸고, Grafana를 도메인으로 공개하는 apply 전에 바꾼다.
+  - GitHub는 콜백 URL 아래 경로를 모두 받으므로, 경로를 비우면 옛 운영 서버 oauth2-proxy의 `/oauth2/callback`도 그대로 통한다.
 
 띄우거나 설정을 바꿀 때는 서버에 붙어 저장소를 원하는 SHA로 바꾼 뒤 `start.sh`를 부른다. `start.sh`는 스스로 체크아웃하지 않고 저장소 HEAD가 인자와 같은지만 본다.
 
@@ -639,7 +578,7 @@ aws ssm start-session --target <서버 ID> \
 
 ### 대시보드 보기
 
-- https://grafana.meterengine.com, https://prometheus.meterengine.com 에 GitHub로 로그인한다. `asm17-ms2` 조직 멤버만 들어온다.
+- 지금 https://grafana.meterengine.com, https://prometheus.meterengine.com 은 옛 운영 서버 안의 Grafana와 Prometheus다. 그 서버의 oauth2-proxy를 거쳐 GitHub로 로그인한다. `asm17-ms2` 조직 멤버만 들어온다.
   - 로그인은 24시간 유지된다. 조직 멤버인지는 로그인할 때만 보므로, 조직에서 뺀 사람도 그동안은 들어온다.
 - Grafana의 MeterEngine 폴더에서 대시보드를 연다.
   - 대시보드마다 맨 위 `환경` 변수로 `env`를 고른다. 서버 안 Grafana에는 `env` 라벨이 없어 All만 보인다. 관측 시스템과 Caddy 패널은 환경을 가리지 않는다.
@@ -655,7 +594,7 @@ aws ssm start-session --target <서버 ID> \
   - 파일로 관리하는 대시보드와 경보 규칙은 화면에서 저장되지 않는다. 바꾸려면 파일을 고쳐 배포한다.
   - 화면에서 새로 만든 대시보드는 Grafana 볼륨에만 남는다. 오래 쓸 것은 JSON으로 내보내 `grafana/dashboards/`에 넣고 PR로 올린다.
 
-GitHub 로그인이 안 되면 서버의 127.0.0.1:3001로 들어간다.
+GitHub 로그인이 안 되면 옛 운영 서버의 127.0.0.1:3001로 들어간다.
 
 1. 포트 포워딩 세션을 켠다.
 
@@ -676,8 +615,7 @@ aws ssm start-session --target i-0f47bb1f028cd29a9 \
 
 | 경보 | 조건 | 뜻 |
 | --- | --- | --- |
-| 백엔드 헬스체크 실패 | `max by (env) (up{job="backend"}) < 1` 1분 지속 | 어느 색도 scrape에 응답하지 않는다. 프로세스 다운이나 응답 불능 |
-| 백엔드 두 색이 함께 떠 있음 | `sum by (env) (up{job="backend"}) > 1` 15분 지속 | 배포가 옛 색을 멈추기 전에 중단됐다 |
+| 백엔드 헬스체크 실패 | `max by (env) (up{job="backend"}) < 1` 1분 지속 | 그 환경의 어느 백엔드 서버도 scrape에 응답하지 않는다. 프로세스 다운이나 응답 불능 |
 | 5xx 응답 비율 초과 | 5분 창 5xx 비율 > 5%, 5분 지속 | 요청이 실패로 새고 있다 |
 | CPU 사용률 초과 | 서버마다 5분 평균 > 80%, 10분 지속 | 처리량 한계이거나 폭주 프로세스 |
 | 예약 작업 실패 | 15분 안에 실행이 예외로 끝나거나 대상 일부가 실패 | 작업이 일을 다 끝내지 못했다. 작업 이름별로 울린다 |
@@ -696,30 +634,42 @@ aws ssm start-session --target i-0f47bb1f028cd29a9 \
 
 - 임계값과 수신처를 바꾸려면 UI가 아니라 `grafana/provisioning/alerting/alerting.yml`을 고쳐 배포한다.
 - 새 경보를 만들었으면 임계값을 낮춰 한 번 발화시켜 Slack 수신을 확인하고 원복한다.
-- 지금 경보는 서버 안에서 백엔드를 보는 것이라 Caddy가 죽거나 인증서가 만료된 상황은 잡지 못한다.
+- 경보는 백엔드를 직접 긁어 보는 것이라, 그 앞의 ALB(옛 서버는 Caddy)가 죽거나 인증서가 만료된 상황은 잡지 못한다.
 
 ## 문제 해결
+
+- 서버는 부팅 때 배포까지 끝낸다. 부팅 배포의 출력은 서버의 `/var/log/cloud-init-output.log`에 남는다.
+- CD가 실패하면 먼저 서버 밖에서 새로 고침과 대상 그룹 상태를 본다.
+
+```bash
+aws autoscaling describe-instance-refreshes --auto-scaling-group-name meterengine-production-app --max-records 3
+aws autoscaling describe-scaling-activities --auto-scaling-group-name meterengine-production-app --max-items 5
+aws elbv2 describe-target-groups --load-balancer-arn "$(aws elbv2 describe-load-balancers --names meterengine-production-alb \
+  --query 'LoadBalancers[0].LoadBalancerArn' --output text)" --query 'TargetGroups[].TargetGroupArn' --output text
+aws elbv2 describe-target-health --target-group-arn <대상 그룹 ARN>
+```
+
+- 서버 안에서는 root로 아래를 본다.
 
 ```bash
 # 지금 뭐가 도는지
 docker compose -p meterengine-prod ps
 
 # 로그 (컨테이너당 30MB까지만 보관한다)
-docker compose -p meterengine-prod logs -f backend-blue backend-green
-docker compose -p meterengine-prod logs --tail 100 caddy
+docker compose -p meterengine-prod logs -f backend frontend
 
-# 마지막으로 성공한 배포의 색과 지금 Caddy가 보내는 백엔드 목록
-cat /etc/meterengine/deploy-state
-cat /opt/meterengine/deploy/caddy/upstreams.caddy
+# 이 서버가 띄운 커밋과 버전 파라미터
+git -C /opt/meterengine rev-parse HEAD
+. /etc/meterengine/instance.env && aws ssm get-parameter --name "$APP_VERSION_PARAMETER" --query Parameter.Value --output text
 
-# 서버 안에서 직접 두드리기. /actuator/*는 Caddy가 노출하지 않아 인터넷에서는 404다
-docker compose -p meterengine-prod exec caddy wget -qO- http://backend-blue:8080/actuator/health
-docker compose -p meterengine-prod exec caddy wget -qO- http://backend-green:8080/actuator/health
-curl -sI http://127.0.0.1:3000/usage
+# 서버 안에서 직접 두드리기. ALB는 /v1/* 밖의 백엔드 경로를 보내지 않아 /actuator/*는 인터넷에서 닿지 않는다
+curl -s http://127.0.0.1:8080/actuator/health
+curl -s http://127.0.0.1:3000/health
+
+# 10초 수집량 지표
+systemctl status meterengine-ingest-rate.service
+journalctl -u meterengine-ingest-rate.service --since -10min
 ```
-
-- 배포가 돌고 있지 않은데 블루와 그린이 함께 떠 있으면 Caddy가 보내지 않는 색을 멈춘다. 보내는 색은 `docker compose -p meterengine-prod exec caddy wget -S -qO /dev/null -T 3 http://localhost:8081/actuator/health/readiness 2>&1 | grep X-Upstream`으로 보고, 다른 색을 `docker compose -p meterengine-prod stop backend-<색>`으로 멈춘다.
-  - 멈출 색이 `upstreams.caddy`에 있으면 먼저 그 색을 뺀 목록(예: `to backend-blue:8080`)을 쓰고 Caddy를 reload 하고 5초 기다린 뒤 멈춘다. 목록에 둔 채 멈추면 그 색으로 가던 요청 일부가 실패한다.
 
 - compose 명령을 파일 경로로 직접 부를 때는 `--env-file`이 반드시 필요하다.
 
@@ -727,8 +677,5 @@ curl -sI http://127.0.0.1:3000/usage
 docker compose --env-file /etc/meterengine/prod.env -f /opt/meterengine/deploy/compose.prod.yml ps
 ```
 
-- 인증서가 발급되지 않으면 Caddy 로그를 본다.
-  - 도메인 A 레코드가 이 서버를 가리키는지, 80번 포트가 열려 있는지 확인한다.
-  - **같은 도메인에 대한 발급 시도는 주 5회로 제한되니 반복해서 재시도하지 않는다**.
-  - `caddy-data` 볼륨을 지우면 인증서를 새로 발급받는다.
+- 인증서는 ACM이 DNS 검증으로 발급하고 갱신한다. 검증 레코드는 Terraform이 만든다.
 - 배포가 백엔드 기동 실패로 끝나면 `deploy.sh` 로그의 `DB:` 줄에서 어느 DB에 붙었는지 확인한다.
