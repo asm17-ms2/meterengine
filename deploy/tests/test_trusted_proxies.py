@@ -13,6 +13,9 @@ APPLICATION_PROPERTIES = (Path(__file__).resolve().parents[2]
                           / "backend/src/main/resources/application.properties")
 AUTH_RATE_LIMIT_SETTING = re.compile(r"\$\{(METERENGINE_AUTH_RATE_LIMIT_[A-Z_]+):([^}]*)\}")
 BACKENDS = ("backend-blue", "backend-green")
+# 배포 주소 대역은 서버 구성에 따라 정해져 application.properties 기본값(빈 값)과 다르다.
+DEPLOYMENT_SPECIFIC_SETTINGS = ("METERENGINE_AUTH_RATE_LIMIT_TRUSTED_PROXIES",
+                                "METERENGINE_AUTH_RATE_LIMIT_LOAD_BALANCERS")
 DUMMY_ENV = {
     name: "dummy" for name in (
         "DB_HOST", "DB_PORT", "DB_NAME", "DB_USERNAME", "DB_PASSWORD", "DB_EXPORTER_PASSWORD",
@@ -65,6 +68,19 @@ class TrustedProxyDefaultTest(unittest.TestCase):
                     self.assertFalse(any(band.overlaps(pool) for pool in dynamic),
                                      f"{network} hands out trusted addresses {band} to other containers")
 
+    def test_load_balancer_band_stays_outside_every_compose_network(self):
+        subnets = [ipaddress.ip_network(pool["subnet"])
+                   for network in self.config["networks"].values()
+                   for pool in network.get("ipam", {}).get("config", [])]
+        self.assertTrue(subnets)
+        for backend in BACKENDS:
+            value = self.config["services"][backend]["environment"]["METERENGINE_AUTH_RATE_LIMIT_LOAD_BALANCERS"]
+            bands = [ipaddress.ip_network(item.strip()) for item in value.split(",") if item.strip()]
+            self.assertTrue(bands, f"{backend} needs the load balancer band")
+            for band in bands:
+                self.assertFalse(any(band.overlaps(subnet) for subnet in subnets),
+                                 f"{backend} would read X-Forwarded-For from containers in {band}")
+
     def test_every_auth_rate_limit_setting_reaches_backends_with_the_application_default(self):
         defaults = dict(AUTH_RATE_LIMIT_SETTING.findall(APPLICATION_PROPERTIES.read_text()))
         self.assertGreaterEqual(len(defaults), 8)
@@ -72,7 +88,7 @@ class TrustedProxyDefaultTest(unittest.TestCase):
             environment = self.config["services"][backend]["environment"]
             for name, default in defaults.items():
                 self.assertIn(name, environment, f"{backend} drops {name}")
-                if name != "METERENGINE_AUTH_RATE_LIMIT_TRUSTED_PROXIES":
+                if name not in DEPLOYMENT_SPECIFIC_SETTINGS:
                     self.assertEqual(environment[name], default, f"{backend} {name}")
 
 

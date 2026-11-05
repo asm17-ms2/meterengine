@@ -434,6 +434,12 @@ aws ssm start-session --target i-0f47bb1f028cd29a9 \
 - `proxy` 네트워크가 생기는 첫 배포에서 Caddy, 프론트, Prometheus가 다시 만들어진다. Caddy가 다시 만들어지는 몇 초 동안 80과 443이 닫혀 공개 접속이 끊긴다. 다시 뜬 Caddy는 `default`에도 붙어 있어 그때까지 받던 색에 계속 보낸다. 이 배포에서는 배포 중 실패 측정을 돌리지 않는다.
 - `proxy` 네트워크가 없던 SHA로 롤백하면 Caddy가 `default`에만 붙어, 새 색이 뜰 때까지 `proxy`에만 있는 받던 색에 보내지 못한다.
 
+ALB가 프론트와 백엔드에 바로 붙는 경로에서는 `X-Forwarded-For`의 맨 오른쪽 값을 사용자 IP로 쓴다. ALB는 받은 값 뒤에 접속 주소를 붙이므로 그 앞의 값은 사용자가 꾸밀 수 있다.
+
+- 프론트는 사용자가 보낸 `X-MeterEngine-Client-IP`를 늘 지우고 맨 오른쪽 값으로 다시 써서 백엔드에 넘긴다. Caddy 뒤에서는 Caddy가 `X-Forwarded-For`를 접속 IP 하나로 넘겨 동작이 그대로다.
+- 백엔드는 `METERENGINE_AUTH_RATE_LIMIT_LOAD_BALANCERS`에 든 직접 연결에서만 맨 오른쪽 값을 읽는다. compose 기본값은 ALB가 놓인 공용 서브넷 `10.0.0.0/20`, `10.0.16.0/20`이다. 서브넷을 바꾸면 이 기본값도 같이 바꾼다.
+- `X-Forwarded-For`가 여러 줄이거나 맨 오른쪽 값이 숫자 IP가 아니면 백엔드는 접속 상대 IP를 쓴다. 이때는 ALB 뒤 사용자들이 한도를 나눠 쓴다.
+
 ## 설정값
 
 - 전부 Parameter Store `/meterengine/<환경>/` 아래에 있다. 아래 명령은 production 기준이다.
