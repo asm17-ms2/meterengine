@@ -2,6 +2,11 @@ variable "name" {
   type = string
 }
 
+variable "create_instance" {
+  type    = bool
+  default = true
+}
+
 variable "ami_id" {
   type = string
 }

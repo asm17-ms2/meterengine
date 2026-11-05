@@ -166,7 +166,7 @@ class PreflightTest(unittest.TestCase):
     def test_preflight_prints_shell_quoted_values(self):
         result = self.preflight('printf "%s|%s|%s|%s|%s|%s" "$PARAM_PATH" "$SITE_ALIASES" "$COMPOSE_PROFILES" "$CADDY_SSO_SITES" "$BACKEND_MEM_LIMIT" "$EXPECTED_DB_IDENTIFIER"')
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(result.stdout, "|".join(["/meterengine/staging", "www.one.example www.two.example", "agents", "off", "2g", self.target["database_identifier"]]))
+        self.assertEqual(result.stdout, "|".join(["/meterengine/staging", "www.one.example www.two.example", "agents", "off", "768m", self.target["database_identifier"]]))
 
     def test_preflight_prints_image_repository_prefix(self):
         result = self.preflight('printf "%s" "$IMAGE_REPOSITORY_PREFIX"')

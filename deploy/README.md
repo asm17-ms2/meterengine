@@ -47,6 +47,9 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
   - `www.meterengine.com`도 같은 IP를 가리키고 Caddy가 `https://meterengine.com`으로 301 리다이렉트한다.
 - 서버: EC2 `meterengine-server` (t4g.medium, arm64, Amazon Linux 2023, ap-northeast-2).
   - 인스턴스 ID `i-0f47bb1f028cd29a9`.
+- DB: RDS `meterengine-db` (db.t4g.small, PostgreSQL 18, 단일 AZ).
+- staging은 서버 `meterengine-staging`(t4g.medium)과 DB `meterengine-staging-db`(db.t4g.small)를 따로 쓴다.
+- production과 staging은 실사용자가 없는 흐름 확인용이다. t4g 계열은 CPU 크레딧을 넘겨 쓰면 요금이 붙어, 부하 시험은 측정 환경(test-sjpark, test-storage)에서만 한다.
 - 이미지: ECR `meterengine-backend`, `meterengine-frontend`(staging은 `meterengine-staging-backend`, `meterengine-staging-frontend`). 태그는 배포한 커밋의 git SHA 40자.
   - 레지스트리 `928618307647.dkr.ecr.ap-northeast-2.amazonaws.com`.
 - 설정과 비밀값: SSM Parameter Store `/meterengine/<환경>/*`.
@@ -488,6 +491,23 @@ aws ssm get-parameter --name /meterengine/production/operator-password --with-de
 
 - 값을 고쳤으면 재배포해야 반영된다. 같은 SHA로 `deploy.sh`를 다시 돌리면 된다.
 - **값에 개행이 섞이면 `deploy.sh`가 배포를 멈춘다.** 콘솔에서 복사할 때 줄바꿈이 딸려 오지 않았는지 본다.
+
+## Terraform
+
+- staging과 production의 서버, DB, 권한은 `deploy/terraform/<환경>`이 정하고, 상태는 S3에 있다.
+- `versions.tf`가 고정한 Terraform 1.17.1로만 돌린다. 다른 버전은 init에서 멈추고, 더 새 버전이 한 번 쓴 상태는 1.17.1이 읽지 못한다.
+- apply는 develop 최신 커밋에서만 한다. PR 브랜치의 plan은 미리 보기로만 쓴다.
+  - main이나 릴리스 체크아웃에서는 plan도 apply도 하지 않는다. main은 릴리스 전까지 develop의 Terraform을 갖지 않아, 거기서 apply하면 사양이 되돌아가거나 develop에만 있는 자원이 지워진다.
+- CD가 돌지 않을 때 apply한다. DB 클래스나 서버 사양을 바꾸면 몇 분 끊겨 겹친 배포의 헬스 확인이 실패한다.
+- production plan은 입력이 없다. staging plan은 기본값 없는 입력 다섯 개를 `TF_VAR_` 환경 변수로 넣고, 값을 화면에 찍지 않는다.
+  - `db_password_version`, `runtime_secret_versions`: 상태에 기록된 지금 버전을 그대로 쓴다. 버전이 같으면 write-only 값은 비교하지 않는다.
+  - `db_password_wo`, `runtime_secrets`: Parameter Store의 지금 값을 `--with-decryption`으로 읽어 쓴다.
+  - `operator_email`: Parameter Store `/meterengine/staging/operator-email`의 지금 값을 쓴다.
+- plan에 아래가 하나라도 보이면 apply하지 않고 멈춘다.
+  - 삭제나 교체
+  - `aws_db_instance`에서 클래스 말고 AWS 쪽 속성의 변경. `password_wo_version` 변경도 포함한다
+  - `aws_ssm_parameter.runtime`의 값이나 비밀 버전 변경
+- plan 전문은 PR이나 이슈 같은 공개 기록에 붙이지 않는다. 바뀌는 수와 주소만 적는다.
 
 ## 모니터링
 
