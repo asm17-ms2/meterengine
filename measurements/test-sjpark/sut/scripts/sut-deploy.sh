@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SUT에 커밋 하나를 배포한다. 사용법: sut-deploy.sh [SHA]  (없으면 ECR에 이미지가 있고 Caddy와 환경 파일이 있는 가장 최근 main 커밋)
+# SUT에 커밋 하나를 배포한다. 사용법: sut-deploy.sh [SHA]  (없으면 ECR에 이미지가 있고 Caddy, 환경 파일, 공용 감시 포트가 있는 가장 최근 main 커밋)
 
 set -euo pipefail
 
@@ -20,6 +20,11 @@ readonly DEPLOY_DB_LINE_PREFIX='[deploy] DB: '
 # 이 SUT는 HTTPS를 서버의 Caddy가 맡는다. Caddy가 빠진 커밋을 checkout하면 다음 기동부터 서버가 뜨지 못한다.
 readonly CADDYFILE_PATH=deploy/caddy/Caddyfile
 readonly ENVIRONMENT_FILE_PATH=deploy/environments/test-sjpark.json
+# 공용 모니터링 서버는 호스트 9100과 9101로 긁는다. 이 표식이 없는 옛 compose 파일은 두 포트를 열지 않는다.
+readonly COMPOSE_FILE_PATH=deploy/compose.prod.yml
+readonly NODE_EXPORTER_PORT_MARKER='"9100:9100"'
+readonly REMOTE_ENV_FILE=/etc/meterengine/prod.env
+readonly SERVER_MONITORING_SERVICES="prometheus grafana oauth2-proxy postgres-exporter cloudwatch-exporter"
 
 deploy_output_file=""
 
@@ -51,6 +56,8 @@ commit_problem() {
 		echo "Caddy가 빠진 커밋이라 test-sjpark에 배포하지 않는다"
 	elif ! git -C "$SCRIPT_DIR" cat-file -e "$sha:$ENVIRONMENT_FILE_PATH" 2>/dev/null; then
 		echo "test-sjpark 환경 파일이 없는 커밋이다"
+	elif ! git -C "$SCRIPT_DIR" grep -q -F -e "$NODE_EXPORTER_PORT_MARKER" "$sha" -- "$COMPOSE_FILE_PATH" 2>/dev/null; then
+		echo "공용 감시가 긁을 포트가 없는 커밋이다"
 	fi
 }
 
@@ -74,7 +81,7 @@ latest_deployable_sha() {
 		fi
 		log "$sha 건너뜀: $problem" >&2
 	done
-	die "ECR $ECR_REPOSITORIES 둘 다에 이미지가 있으면서 Caddy와 test-sjpark 환경 파일이 있는 커밋이 없다. measurements/test-sjpark/README.md \"보존 이미지\"를 본다"
+	die "ECR $ECR_REPOSITORIES 둘 다에 이미지가 있으면서 Caddy, test-sjpark 환경 파일, 공용 감시 포트가 있는 커밋이 없다. measurements/test-sjpark/README.md \"보존 이미지\"를 본다"
 }
 
 log_when_behind_main() {
@@ -123,8 +130,10 @@ require_dns_points_to() {
 
 # CD처럼 대상 커밋으로 먼저 checkout해 그 커밋의 deploy.sh를 돌린다. 하한 확인은 checkout 전에 해야 옛 Caddyfile이 깔리지 않는다.
 # 환경 파일이 없는 옛 커밋은 deploy.conf로 값을 받으므로 그때만 deploy.conf를 대조한다.
+# Caddy가 남은 커밋의 환경 파일은 서버 안 감시를 켠다. deploy.sh가 자기 checkout 전에 읽는 사본만 agents로 바꾸고, 그 checkout이 파일을 되돌린다.
 deploy_command() {
 	local sha="$1" param_path="$2" domain="$3" environment="${2##*/}"
+	local profiles_without_server_monitoring=agents
 	printf '%s' "exec 8>/etc/meterengine/deploy-command.lock || exit 1
 flock -n 8 || { echo '다른 배포가 아직 돌고 있거나 잠금을 잡지 못했다' >&2; exit 1; }
 cd $REMOTE_REPO_DIR || exit 1
@@ -132,12 +141,23 @@ git fetch --quiet origin 8>&- 9>&- || exit 1
 git merge-base --is-ancestor $FIRST_SHA_WITH_DEPLOY_CONF $sha 8>&- 9>&- || { echo '$sha 는 deploy.conf를 읽기 전 커밋(${FIRST_SHA_WITH_DEPLOY_CONF:0:7} 이전)이거나 원격에 없는 커밋이라 배포하지 않는다' >&2; exit 1; }
 if git cat-file -e $sha:deploy/environments/$environment.json 8>&- 9>&-; then
 	deploy_arguments='$environment $sha'
+	environment_file=deploy/environments/$environment.json
 else
 	grep -qx 'PARAM_PATH=$param_path' $REMOTE_DEPLOY_CONFIG && grep -qx 'SITE_DOMAIN=$domain' $REMOTE_DEPLOY_CONFIG || { echo '$REMOTE_DEPLOY_CONFIG 의 PARAM_PATH나 SITE_DOMAIN이 SUT 값이 아니다' >&2; exit 1; }
 	deploy_arguments='$sha'
+	environment_file=
 fi
 git checkout --quiet --force $sha 8>&- 9>&- || exit 1
+[ -z \"\$environment_file\" ] || python3 -c 'import json, sys; path = sys.argv[1]; target = json.load(open(path)); target[\"compose_profiles\"] = sys.argv[2:]; json.dump(target, open(path, \"w\"), indent=2)' \"\$environment_file\" $profiles_without_server_monitoring 8>&- 9>&- || exit 1
 ./deploy/deploy.sh \$deploy_arguments"
+}
+
+# 프로필을 꺼도 이미 뜬 서버 안 감시 컨테이너는 남는다. 볼륨은 지우지 않아 옛 기록으로 되돌릴 수 있다.
+monitoring_cleanup_command() {
+	printf '%s' "exec 8>/etc/meterengine/deploy-command.lock || exit 1
+flock -n 8 || { echo '다른 배포가 아직 돌고 있거나 잠금을 잡지 못했다' >&2; exit 1; }
+cd $REMOTE_REPO_DIR || exit 1
+docker compose --env-file $REMOTE_ENV_FILE -f $COMPOSE_FILE_PATH --profile monitoring rm --stop --force $SERVER_MONITORING_SERVICES 8>&- 9>&-"
 }
 
 deployed_db_host() {
@@ -162,7 +182,7 @@ main() {
 	fetch_operator_checkout
 	if [ -z "$sha" ]; then
 		sha=$(latest_deployable_sha) || exit 1
-		log "SHA를 주지 않아 ECR에 이미지가 있고 Caddy와 환경 파일이 있는 가장 최근 커밋을 쓴다: $sha"
+		log "SHA를 주지 않아 ECR에 이미지가 있고 Caddy, 환경 파일, 공용 감시 포트가 있는 가장 최근 커밋을 쓴다: $sha"
 		log_when_behind_main "$sha"
 	fi
 	require_full_sha "$sha"
@@ -195,6 +215,8 @@ main() {
 		die "배포가 실패했다. 위 출력을 확인한다"
 	fi
 	require_sut_db "$deploy_output_file" "$db_address"
+	log "서버 안 감시 컨테이너를 내린다. 볼륨은 남긴다"
+	run_remote_command "$sut_instance_id" "sut-monitoring-cleanup" "$(monitoring_cleanup_command)"
 	wait_for_usage_ok "$domain" "첫 배포라면 Caddy가 인증서를 받는 중이거나 받지 못했을 수 있다. SUT에 들어가 caddy 컨테이너 로그에서 인증서 오류를 보고, $domain 이 $sut_public_ip 로 풀리는지 다시 확인한다"
 
 	log "배포한 SHA: $sha"

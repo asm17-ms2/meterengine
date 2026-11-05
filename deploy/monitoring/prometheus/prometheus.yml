@@ -18,10 +18,16 @@ scrape_configs:
             values: [app]
           - name: instance-state-name
             values: [running]
-    relabel_configs: &app_labels
+    relabel_configs:
+      # test-sjpark은 백엔드가 블루그린이라 호스트에 8080이 없다.
       - source_labels: [__meta_ec2_tag_Environment]
+        regex: test-sjpark
+        action: drop
+      - &env_from_tag
+        source_labels: [__meta_ec2_tag_Environment]
         target_label: env
-      - source_labels: [__meta_ec2_instance_id]
+      - &instance_from_id
+        source_labels: [__meta_ec2_instance_id]
         target_label: instance
 
   - job_name: node
@@ -30,7 +36,9 @@ scrape_configs:
         port: 9100
         refresh_interval: 30s
         filters: *app_servers
-    relabel_configs: *app_labels
+    relabel_configs: &app_labels
+      - *env_from_tag
+      - *instance_from_id
 
   - job_name: cadvisor
     # cAdvisor는 표본에 시각을 붙인다. 이게 없으면 다시 만든 컨테이너의 옛 시계열이 5분 남아 겹쳐 그려진다.

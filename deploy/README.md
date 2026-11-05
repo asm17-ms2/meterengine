@@ -546,6 +546,7 @@ GRANT pg_monitor TO meterengine_exporter;
 EC2 `meterengine-monitoring` 한 대가 모든 환경의 앱 서버와 DB를 긁는다. 서버와 권한은 `deploy/terraform/monitoring`이 정한다.
 
 - 앱 서버는 태그 `Role=app`인 실행 중 서버를 30초마다 다시 찾아 백엔드 `8080`, node exporter `9100`, cAdvisor `9101`을 긁는다. `Environment` 태그가 `env` 라벨, 인스턴스 ID가 `instance` 라벨이 된다.
+- 측정 환경 test-sjpark은 백엔드가 블루그린이라 호스트에 8080이 없어 node exporter와 cAdvisor만 긁는다.
 - DB는 환경마다 postgres exporter를 하나씩 띄워 `env`를 붙이고, RDS 지표는 DB 식별자에서 `env`를 만든다.
 - 서버나 DB 보안 그룹이 보안 그룹 `meterengine-monitoring`을 들여야 긁힌다. 들이지 않은 대상은 down으로 보인다. 다른 루트가 이 이름으로 찾으므로 이름을 바꾸지 않는다.
 - 들어오는 규칙은 운영 ALB에서 오는 3000 하나다. Prometheus는 서버의 127.0.0.1:9090, Grafana는 3000에 뜬다.

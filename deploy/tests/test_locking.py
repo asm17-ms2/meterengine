@@ -27,7 +27,9 @@ class DeploymentLockTest(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.repo = self.root / "repo"
-        (self.repo / "deploy").mkdir(parents=True)
+        (self.repo / "deploy/environments").mkdir(parents=True)
+        # sut-deploy는 /meterengine/test 경로로 불려 환경 test의 파일에서 서버 안 감시를 끈다.
+        (self.repo / "deploy/environments/test.json").write_text('{"compose_profiles": ["agents", "monitoring"]}\n')
         source = (ROOT / "deploy/deploy.sh").read_text()
         lock_path = re.findall(r"^LOCK_FILE=(.+)$", source, re.M)[-1]
         self.lock = self.root / Path(lock_path).name
