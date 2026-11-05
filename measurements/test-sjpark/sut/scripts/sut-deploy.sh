@@ -68,7 +68,7 @@ require_ecr_images() {
 			--image-ids "imageTag=$sha" 2>&1 >/dev/null); then
 			case "$aws_error" in
 			*ImageNotFoundException*)
-				die "ECR $repository 에 태그 $sha 이미지가 없다. CD가 아직 도는 중이거나, CD가 이미지를 올리지 않는 커밋이거나, ECR 수명 주기 정책으로 이미 지워진 커밋이다. SHA를 빼면 이미지가 있는 가장 최근 커밋을 쓴다. 보존 범위는 measurements/test-slo/README.md \"다시 배포\"에 있다"
+				die "ECR $repository 에 태그 $sha 이미지가 없다. CD가 아직 도는 중이거나, CD가 이미지를 올리지 않는 커밋이거나, ECR 수명 주기 정책으로 이미 지워진 커밋이다. SHA를 빼면 이미지가 있는 가장 최근 커밋을 쓴다. 보존 범위는 measurements/test-sjpark/README.md \"다시 배포\"에 있다"
 				;;
 			*)
 				die "ECR $repository 이미지를 확인하지 못했다: $aws_error"

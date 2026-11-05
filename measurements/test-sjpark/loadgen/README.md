@@ -1,6 +1,6 @@
 # loadgen
 
-test-slo SUT에 k6로 요청을 보내는 부하 발생기 EC2다. 돌리는 법은 [`../k6/README.md`](../k6/README.md).
+test-sjpark SUT에 k6로 요청을 보내는 부하 발생기 EC2다. 돌리는 법은 [`../k6/README.md`](../k6/README.md).
 
 - 접속은 SSM으로만 한다.
 - 매일 04:00(서울)에 자동으로 꺼진다.
@@ -10,10 +10,10 @@ test-slo SUT에 k6로 요청을 보내는 부하 발생기 EC2다. 돌리는 법
 ## 만들기와 지우기
 
 ```bash
-terraform -chdir=measurements/test-slo/loadgen/terraform init
-terraform -chdir=measurements/test-slo/loadgen/terraform plan -out=loadgen.tfplan
-terraform -chdir=measurements/test-slo/loadgen/terraform apply loadgen.tfplan
-terraform -chdir=measurements/test-slo/loadgen/terraform destroy
+terraform -chdir=measurements/test-sjpark/loadgen/terraform init
+terraform -chdir=measurements/test-sjpark/loadgen/terraform plan -out=loadgen.tfplan
+terraform -chdir=measurements/test-sjpark/loadgen/terraform apply loadgen.tfplan
+terraform -chdir=measurements/test-sjpark/loadgen/terraform destroy
 ```
 
 - 부팅하면서 k6와 git을 설치한다. 접속해서 `cloud-init status`가 `done`이고 `k6 version`이 나오면 끝난 것이다.
@@ -21,7 +21,7 @@ terraform -chdir=measurements/test-slo/loadgen/terraform destroy
 ## 켜고 끄기
 
 ```bash
-LOADGEN=$(terraform -chdir=measurements/test-slo/loadgen/terraform output -raw instance_id)
+LOADGEN=$(terraform -chdir=measurements/test-sjpark/loadgen/terraform output -raw instance_id)
 aws ec2 start-instances --instance-ids $LOADGEN
 aws ec2 stop-instances --instance-ids $LOADGEN
 ```

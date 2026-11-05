@@ -1,7 +1,7 @@
 {
-  "database_identifier": "meterengine-test-slo-db",
-  "parameter_path": "/meterengine/test-slo",
-  "site_domain": "test-slo.meterengine.com",
+  "database_identifier": "meterengine-test-sjpark-db",
+  "parameter_path": "/meterengine/test-sjpark",
+  "site_domain": "test-sjpark.meterengine.com",
   "site_aliases": [],
   "compose_profiles": ["agents", "monitoring"],
   "sso_sites": false,

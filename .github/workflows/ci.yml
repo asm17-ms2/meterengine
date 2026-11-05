@@ -49,7 +49,7 @@ jobs:
               - '.github/workflows/cd-production.yml'
               - '.github/workflows/cd-staging.yml'
               - '.github/workflows/deploy.yml'
-              - 'measurements/test-slo/k6/README.md'
+              - 'measurements/test-sjpark/k6/README.md'
               - 'measurements/*/README.md'
               - 'measurements/*/lib/common.sh'
               - 'measurements/*/sut/scripts/sut-deploy.sh'

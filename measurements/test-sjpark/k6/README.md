@@ -1,6 +1,6 @@
 # k6
 
-부하 발생기에서 test-slo SUT로 k6 스크립트를 돌린다.
+부하 발생기에서 test-sjpark SUT로 k6 스크립트를 돌린다.
 
 - SUT와 부하 발생기가 켜져 있어야 한다. 켜는 법과 아래의 `$LOADGEN`은 [`../README.md`](../README.md)와 [`../loadgen/README.md`](../loadgen/README.md)의 "켜고 끄기".
 - `smoke.js`는 초당 5건을 2분 보내 연결을 확인한다.
@@ -8,7 +8,7 @@
 ## API 키
 
 - 모든 스크립트는 `API_KEY` 환경변수가 없으면 시작하지 않는다.
-- test-slo 전용 키를 쓴다. 운영자로 로그인한 세션에서 SUT 도입사에 `ingest`, `read` 스코프 키를 발급한다(`POST /v1/api-keys`, 절차는 [`backend/README.md`](../../../backend/README.md#배포-환경의-운영-키-발급)). 원문은 발급 응답에만 나온다.
+- test-sjpark 전용 키를 쓴다. 운영자로 로그인한 세션에서 SUT 도입사에 `ingest`, `read` 스코프 키를 발급한다(`POST /v1/api-keys`, 절차는 [`backend/README.md`](../../../backend/README.md#배포-환경의-운영-키-발급)). 원문은 발급 응답에만 나온다.
 - 셸 기록에 남지 않게 아래 `read`로 입력받는다. 세션을 새로 열면 다시 입력한다.
 
 ## 실행
@@ -19,7 +19,7 @@ aws ssm start-session --target $LOADGEN
 
 ```bash
 git clone --depth 1 https://github.com/asm17-ms2/meterengine.git ~/meterengine
-cd ~/meterengine/measurements/test-slo/k6
+cd ~/meterengine/measurements/test-sjpark/k6
 read -rsp 'API_KEY: ' API_KEY
 export API_KEY
 k6 run smoke.js
@@ -41,7 +41,7 @@ k6 run smoke.js
 1. SUT에 붙어 `/etc/meterengine/deploy.conf`에 측정용 값을 더한다. 첫 전환 배포 전에 한 번만 한다.
 
 ```bash
-aws ssm start-session --target "$(terraform -chdir=measurements/test-slo/sut/terraform output -raw sut_instance_id)"
+aws ssm start-session --target "$(terraform -chdir=measurements/test-sjpark/sut/terraform output -raw sut_instance_id)"
 ```
 
 ```bash
@@ -83,7 +83,7 @@ done
 1. 부하 발생기에서 k6를 띄운다.
 
 ```bash
-cd ~/meterengine/measurements/test-slo/k6
+cd ~/meterengine/measurements/test-sjpark/k6
 RUN_ID=$(date +%Y%m%d-%H%M)-deploy
 mkdir -p results/$RUN_ID
 k6 run -e RUN_ID=$RUN_ID --console-output results/$RUN_ID/console.log deploy-ingest.js
@@ -93,11 +93,11 @@ k6 run -e RUN_ID=$RUN_ID --console-output results/$RUN_ID/console.log deploy-ing
    - `aws ssm wait command-executed`는 100초에서 끝나 배포보다 먼저 돌아오므로 상태를 직접 묻는다.
 
 ```bash
-SUT=$(terraform -chdir=measurements/test-slo/sut/terraform output -raw sut_instance_id)
+SUT=$(terraform -chdir=measurements/test-sjpark/sut/terraform output -raw sut_instance_id)
 SHA=<고른 SHA 40자>
 REF=<측정할 브랜치 끝 커밋 SHA 40자>
 CMD=$(aws ssm send-command --instance-ids $SUT --document-name AWS-RunShellScript \
-  --parameters commands="exec 8>/etc/meterengine/deploy-command.lock && flock -n 8 && cd /opt/meterengine && git fetch --quiet origin 8>&- 9>&- && git checkout --quiet --force $REF 8>&- 9>&- && ./deploy/deploy.sh test-slo $SHA $REF" \
+  --parameters commands="exec 8>/etc/meterengine/deploy-command.lock && flock -n 8 && cd /opt/meterengine && git fetch --quiet origin 8>&- 9>&- && git checkout --quiet --force $REF 8>&- 9>&- && ./deploy/deploy.sh test-sjpark $SHA $REF" \
   --query Command.CommandId --output text)
 st=Pending
 while [ "$st" = Pending ] || [ "$st" = InProgress ] || [ "$st" = Delayed ] || [ "$st" = Cancelling ]; do
@@ -151,7 +151,7 @@ python3 -m http.server 8000 --bind 127.0.0.1 --directory /tmp/results
 내 컴퓨터에서 포워딩을 켜 두고 다른 터미널에서 받은 뒤, SUT의 서버를 Ctrl+C로 끈다.
 
 ```bash
-aws ssm start-session --target "$(terraform -chdir=measurements/test-slo/sut/terraform output -raw sut_instance_id)" \
+aws ssm start-session --target "$(terraform -chdir=measurements/test-sjpark/sut/terraform output -raw sut_instance_id)" \
   --document-name AWS-StartPortForwardingSession \
   --parameters '{"portNumber":["8000"],"localPortNumber":["8000"]}'
 RUN_ID=<k6의 RUN_ID>

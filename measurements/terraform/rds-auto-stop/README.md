@@ -1,6 +1,6 @@
 # 시험 RDS 자동 재기동 감지
 
-`test-slo`와 `test-storage`의 자동 재기동 중지만 소유하는 전용 Terraform root다. 기존 DB, EC2와 SUT 상태는 가져오거나 변경하지 않는다.
+`test-sjpark`와 `test-storage`의 자동 재기동 중지만 소유하는 전용 Terraform root다. 기존 DB, EC2와 SUT 상태는 가져오거나 변경하지 않는다.
 기존 S3 버킷의 `measurements/rds-auto-stop/terraform.tfstate`에 새 자원 상태를 둔다. Storage의 원래 로컬 상태 파일이 없어도 적용할 수 있다.
 
 처리, 중복 방지와 실패 조건은 [모듈 설명](../modules/rds-auto-stop/README.md)을 따른다. DB는 data source로만 읽는다.
@@ -32,14 +32,14 @@ terraform -chdir=measurements/terraform/rds-auto-stop apply "$rds_plan_dir/rds-a
 
 ```bash
 aws stepfunctions list-executions --region ap-northeast-2 \
-  --state-machine-arn arn:aws:states:ap-northeast-2:928618307647:stateMachine:meterengine-test-slo-rds-auto-stop \
+  --state-machine-arn arn:aws:states:ap-northeast-2:928618307647:stateMachine:meterengine-test-sjpark-rds-auto-stop \
   --max-results 5
 aws rds describe-db-instances --region ap-northeast-2 \
-  --db-instance-identifier meterengine-test-slo-db \
+  --db-instance-identifier meterengine-test-sjpark-db \
   --query 'DBInstances[0].[DBInstanceStatus,AutomaticRestartTime]' --output json
 ```
 
-`test-storage`는 위 이름의 `test-slo`를 바꿔 확인한다. 실패 경보의 `alarm_actions` 기본값은 비어 있어 외부 알림은 없다. 실행 이력과 CloudWatch 경보 상태로 확인한다.
+`test-storage`는 위 이름의 `test-sjpark`를 바꿔 확인한다. 실패 경보의 `alarm_actions` 기본값은 비어 있어 외부 알림은 없다. 실행 이력과 CloudWatch 경보 상태로 확인한다.
 
 ## 복구
 
@@ -53,7 +53,7 @@ aws rds describe-db-instances --region ap-northeast-2 \
 umask 077
 rds_plan_dir="$(mktemp -d)"
 terraform -chdir=measurements/terraform/rds-auto-stop plan -lock=false \
-  -var='enabled={test-slo=false,test-storage=true}' \
+  -var='enabled={test-sjpark=false,test-storage=true}' \
   -out="$rds_plan_dir/disable-slo-detector.tfplan"
 ```
 
@@ -66,7 +66,7 @@ terraform -chdir=measurements/terraform/rds-auto-stop output dead_letter_queue_u
 aws sqs receive-message --region ap-northeast-2 --queue-url <큐 URL> \
   --attribute-names All --message-attribute-names All --max-number-of-messages 10
 aws rds describe-db-instances --region ap-northeast-2 \
-  --db-instance-identifier meterengine-test-slo-db \
+  --db-instance-identifier meterengine-test-sjpark-db \
   --query 'DBInstances[0].DBInstanceStatus' --output text
 ```
 

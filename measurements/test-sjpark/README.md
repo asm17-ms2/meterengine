@@ -1,9 +1,9 @@
-# test-slo
+# test-sjpark
 
 박성종이 측정에 쓰는 SUT(테스트 대상 시스템)다. 개발 서버와 같은 스택을 따로 띄워 개발 서버의 DB와 파라미터를 건드리지 않고 잰다. 측정할 때만 켜고, 매일 04:00(서울)에 자동으로 꺼진다.
 
 - **측정 중일 수 있으니 배포하거나 끄기 전에 박성종에게 묻는다.**
-- 명령은 레포 루트에서 실행한다. Terraform 상태는 S3 `meterengine-tfstate-928618307647`에 있어 어느 컴퓨터에서든 같다. 새 컴퓨터에서는 `terraform -chdir=measurements/test-slo/sut/terraform init`을 먼저 한 번 해야 스크립트와 아래 명령이 `terraform output`을 읽는다.
+- 명령은 레포 루트에서 실행한다. Terraform 상태는 S3 `meterengine-tfstate-928618307647`에 있어 어느 컴퓨터에서든 같다. 새 컴퓨터에서는 `terraform -chdir=measurements/test-sjpark/sut/terraform init`을 먼저 한 번 해야 스크립트와 아래 명령이 `terraform output`을 읽는다.
 - 사양은 운영 가정(T 계열을 빼고 m 계열)을 따른다. 근거는 [Discussion #346](https://github.com/asm17-ms2/meterengine/discussions/346).
 
 ## 구성
@@ -17,12 +17,12 @@
 | [`k6/`](k6/README.md) | k6 스크립트 |
 | [`scripts/deploy-report.sh`](scripts/deploy-report.sh) | 배포 중 실패 계산. 쓰는 법은 k6 README "배포 중 실패 측정" |
 
-- 자원 이름 접두는 `meterengine-test-slo`, 도메인은 `test-slo.meterengine.com`, 파라미터 경로는 `/meterengine/test-slo`다.
+- 자원 이름 접두는 `meterengine-test-sjpark`, 도메인은 `test-sjpark.meterengine.com`, 파라미터 경로는 `/meterengine/test-sjpark`다.
 - EC2 역할은 Parameter Store에서 자기 경로만 읽는다. `/meterengine/prod`와 `/meterengine/production`은 Deny로 막혀 있다.
 - VPC, 서브넷, RDS 서브넷 그룹, 호스티드 존, ECR 이미지는 개발 서버와 같이 쓴다. 호스티드 존에는 SUT 도메인 레코드를 더하고, 나머지는 읽기만 한다.
 - Slack 웹훅은 아무도 받지 않는 주소라 SUT 경보가 팀 채널로 가지 않는다.
 - 자원에는 `Project=meterengine`, `Owner=sjparkx1129`, `Purpose=sut` 태그가 붙는다. 자동 중지 스케줄(EventBridge Scheduler)은 태그를 붙일 수 없다.
-- 자원 ID는 `terraform -chdir=measurements/test-slo/sut/terraform output`으로 본다.
+- 자원 ID는 `terraform -chdir=measurements/test-sjpark/sut/terraform output`으로 본다.
 
 ## 사전 준비
 
@@ -34,10 +34,10 @@
 ### 1. 만들기
 
 ```bash
-terraform -chdir=measurements/test-slo/sut/terraform init
-terraform -chdir=measurements/test-slo/sut/terraform plan -out=sut.tfplan
-terraform -chdir=measurements/test-slo/sut/terraform apply sut.tfplan
-terraform -chdir=measurements/test-slo/sut/terraform output
+terraform -chdir=measurements/test-sjpark/sut/terraform init
+terraform -chdir=measurements/test-sjpark/sut/terraform plan -out=sut.tfplan
+terraform -chdir=measurements/test-sjpark/sut/terraform apply sut.tfplan
+terraform -chdir=measurements/test-sjpark/sut/terraform output
 ```
 
 - `Plan:` 줄이 `N to add, 0 to change, 0 to destroy`가 아니면 멈춘다.
@@ -46,22 +46,22 @@ terraform -chdir=measurements/test-slo/sut/terraform output
 ### 2. 배포
 
 ```bash
-measurements/test-slo/sut/scripts/sut-deploy.sh
+measurements/test-sjpark/sut/scripts/sut-deploy.sh
 ```
 
 - SHA를 빼면 ECR `meterengine-backend`와 `meterengine-frontend` 둘 다에 이미지가 있는 가장 최근 main 커밋을 배포한다.
-- 배포 전에 ECR 이미지, DNS, RDS 상태, EC2 상태를 확인하고 하나라도 틀리면 멈춘다. 서버의 `deploy.sh`도 DB 식별자를 `deploy/environments/test-slo.json`과 대조한다. 환경 파일이 없는 옛 커밋은 `deploy.conf`를 대조한다. EC2 준비가 끝나기 전이면 원격 명령이 실패하니 몇 분 뒤 다시 돌린다.
+- 배포 전에 ECR 이미지, DNS, RDS 상태, EC2 상태를 확인하고 하나라도 틀리면 멈춘다. 서버의 `deploy.sh`도 DB 식별자를 `deploy/environments/test-sjpark.json`과 대조한다. 환경 파일이 없는 옛 커밋은 `deploy.conf`를 대조한다. EC2 준비가 끝나기 전이면 원격 명령이 실패하니 몇 분 뒤 다시 돌린다.
 - 성공하면 아래 줄이 나온다. 첫 배포는 Caddy가 인증서를 받는다(같은 도메인 주 5회 제한).
 
 ```
-[sut-deploy] DB 확인: meterengine-test-slo-db.<...>.rds.amazonaws.com
-[sut-deploy] https://test-slo.meterengine.com/usage -> https://test-slo.meterengine.com/usage 가 200 을 돌려줬다(1회 시도)
+[sut-deploy] DB 확인: meterengine-test-sjpark-db.<...>.rds.amazonaws.com
+[sut-deploy] https://test-sjpark.meterengine.com/usage -> https://test-sjpark.meterengine.com/usage 가 200 을 돌려줬다(1회 시도)
 ```
 
 ### 3. exporter 사용자 만들기
 
 ```bash
-measurements/test-slo/sut/scripts/create-exporter-user.sh
+measurements/test-sjpark/sut/scripts/create-exporter-user.sh
 ```
 
 - 성공하면 `meterengine_exporter 로그인 가능, pg_monitor 멤버 확인`이 나온다.
@@ -73,10 +73,10 @@ measurements/test-slo/sut/scripts/create-exporter-user.sh
 ## 다시 배포
 
 ```bash
-measurements/test-slo/sut/scripts/sut-deploy.sh <SHA 40자>
+measurements/test-sjpark/sut/scripts/sut-deploy.sh <SHA 40자>
 ```
 
-- 배포 로그의 `파라미터 경로:` 줄이 `/meterengine/test-slo`인지 본다. `DB:` 줄은 스크립트가 `meterengine-test-slo-db`인지 확인하고 다르면 멈춘다.
+- 배포 로그의 `파라미터 경로:` 줄이 `/meterengine/test-sjpark`인지 본다. `DB:` 줄은 스크립트가 `meterengine-test-sjpark-db`인지 확인하고 다르면 멈춘다.
 - SUT에는 CD가 없다. main이 바뀌어도 직접 배포할 때까지 그대로다.
 - ECR은 태그 이미지를 최근 10개만 남긴다. 같은 SHA로 다시 재려면 이미지가 남아 있는지 먼저 본다.
 
@@ -93,15 +93,15 @@ aws ecr describe-images --region ap-northeast-2 --repository-name meterengine-fr
 
 ```bash
 aws stepfunctions list-executions --region ap-northeast-2 \
-  --state-machine-arn arn:aws:states:ap-northeast-2:928618307647:stateMachine:meterengine-test-slo-rds-auto-stop \
+  --state-machine-arn arn:aws:states:ap-northeast-2:928618307647:stateMachine:meterengine-test-sjpark-rds-auto-stop \
   --status-filter RUNNING --query 'length(executions)'
 ```
 
 "환경 빼기"로 이 환경의 감지를 뺀 뒤라면 상태 머신이 없어 0 대신 `StateMachineDoesNotExist` 오류가 난다. 이때는 DB를 끌 흐름이 없으니 기다리지 않고 켠다.
 
 ```bash
-measurements/test-slo/sut/scripts/sut-start.sh
-measurements/test-slo/sut/scripts/sut-stop.sh
+measurements/test-sjpark/sut/scripts/sut-start.sh
+measurements/test-sjpark/sut/scripts/sut-stop.sh
 ```
 
 - 켤 때는 RDS를 먼저 켜고 쓸 수 있게 된 뒤 EC2를 켜고, `/usage`가 리다이렉트를 따라가 200이 될 때까지 기다린다.
@@ -110,9 +110,9 @@ measurements/test-slo/sut/scripts/sut-stop.sh
 
 ```bash
 aws ec2 describe-instances --region ap-northeast-2 \
-  --instance-ids "$(terraform -chdir=measurements/test-slo/sut/terraform output -raw sut_instance_id)" \
+  --instance-ids "$(terraform -chdir=measurements/test-sjpark/sut/terraform output -raw sut_instance_id)" \
   --query 'Reservations[0].Instances[0].State.Name' --output text
-aws rds describe-db-instances --region ap-northeast-2 --db-instance-identifier meterengine-test-slo-db \
+aws rds describe-db-instances --region ap-northeast-2 --db-instance-identifier meterengine-test-sjpark-db \
   --query 'DBInstances[0].DBInstanceStatus' --output text
 ```
 
@@ -120,11 +120,11 @@ aws rds describe-db-instances --region ap-northeast-2 --db-instance-identifier m
 - 04:00를 넘겨 측정하는 날에는 자동 중지를 끄고, 끝나면 `-var` 없이 apply 해 다시 켠다. plan에서 바뀌는 것은 스케줄 state뿐이어야 한다.
 
 ```bash
-terraform -chdir=measurements/test-slo/sut/terraform apply -var auto_stop_state=DISABLED
-terraform -chdir=measurements/test-slo/sut/terraform apply
+terraform -chdir=measurements/test-sjpark/sut/terraform apply -var auto_stop_state=DISABLED
+terraform -chdir=measurements/test-sjpark/sut/terraform apply
 ```
 
-- RDS Multi-AZ는 [`test-storage/README.md`](../test-storage/README.md) "RDS Multi-AZ"를 따르되 test-storage를 test-slo로 바꾼다.
+- RDS Multi-AZ는 [`test-storage/README.md`](../test-storage/README.md) "RDS Multi-AZ"를 따르되 test-storage를 test-sjpark로 바꾼다.
 
 ## 서버에 들어가기
 
@@ -132,18 +132,18 @@ SSH가 없어 SSM으로만 붙는다. 컨테이너와 로그를 보는 방법은
 
 ```bash
 aws ssm start-session --region ap-northeast-2 \
-  --target "$(terraform -chdir=measurements/test-slo/sut/terraform output -raw sut_instance_id)"
+  --target "$(terraform -chdir=measurements/test-sjpark/sut/terraform output -raw sut_instance_id)"
 ```
 
 ## Grafana
 
-SUT 안 `127.0.0.1:3001`에만 열려 있어 포트 포워딩으로 본다. 들어가는 법은 [`test-storage/README.md`](../test-storage/README.md) "Grafana"를 따르되 test-storage를 test-slo로 바꾼다.
+SUT 안 `127.0.0.1:3001`에만 열려 있어 포트 포워딩으로 본다. 들어가는 법은 [`test-storage/README.md`](../test-storage/README.md) "Grafana"를 따르되 test-storage를 test-sjpark로 바꾼다.
 
 ```bash
-aws ssm get-parameter --region ap-northeast-2 --name /meterengine/test-slo/grafana-admin-password \
+aws ssm get-parameter --region ap-northeast-2 --name /meterengine/test-sjpark/grafana-admin-password \
   --with-decryption --query Parameter.Value --output text
 aws ssm start-session --region ap-northeast-2 \
-  --target "$(terraform -chdir=measurements/test-slo/sut/terraform output -raw sut_instance_id)" \
+  --target "$(terraform -chdir=measurements/test-sjpark/sut/terraform output -raw sut_instance_id)" \
   --document-name AWS-StartPortForwardingSession \
   --parameters '{"portNumber":["3001"],"localPortNumber":["3001"]}'
 ```
@@ -153,21 +153,21 @@ aws ssm start-session --region ap-northeast-2 \
 DB 마스터, exporter, Grafana, 첫 운영자 비밀번호와 프론트 API 키, 암호화 키는 Terraform이 만들고 상태 파일에 남기지 않는다. 값은 Parameter Store에서 본다.
 
 ```bash
-aws ssm get-parameter --region ap-northeast-2 --name /meterengine/test-slo/db-password \
+aws ssm get-parameter --region ap-northeast-2 --name /meterengine/test-sjpark/db-password \
   --with-decryption --query Parameter.Value --output text
 ```
 
-- 운영자로 로그인할 때는 `operator-email`(`operator@test-slo.meterengine.com`)과 `operator-password`를 쓴다.
+- 운영자로 로그인할 때는 `operator-email`(`operator@test-sjpark.meterengine.com`)과 `operator-password`를 쓴다.
 - **암호화 키는 `password_version`을 올려도 바뀌지 않는다.** 바꾸면 DB에 저장한 암호문을 풀지 못하므로 DB를 새로 만들 때만 `crypto_encryption_key_version`을 올린다.
 
-바꾸는 절차는 [`test-storage/README.md`](../test-storage/README.md) "비밀번호"를 따르되 test-storage를 test-slo로 바꾼다.
+바꾸는 절차는 [`test-storage/README.md`](../test-storage/README.md) "비밀번호"를 따르되 test-storage를 test-sjpark로 바꾼다.
 
 ## 지우기
 
-지우기 전에 [`rds-auto-stop` README](../terraform/rds-auto-stop/README.md) "환경 빼기"로 test-slo의 자동 재기동 감지를 먼저 뺀다.
+지우기 전에 [`rds-auto-stop` README](../terraform/rds-auto-stop/README.md) "환경 빼기"로 test-sjpark의 자동 재기동 감지를 먼저 뺀다.
 
 ```bash
-terraform -chdir=measurements/test-slo/sut/terraform destroy
+terraform -chdir=measurements/test-sjpark/sut/terraform destroy
 ```
 
 - 평소에는 지우지 않고 끈다. 다시 만들면 인증서를 새로 받고 탄력적 IP가 바뀐다. 도메인은 Terraform이 새 IP로 고친다.

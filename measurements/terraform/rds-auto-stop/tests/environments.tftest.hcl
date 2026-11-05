@@ -22,12 +22,12 @@ run "both_environments_by_default" {
   command = plan
 
   assert {
-    condition     = toset(keys(module.rds_auto_stop)) == toset(["test-slo", "test-storage"])
+    condition     = toset(keys(module.rds_auto_stop)) == toset(["test-sjpark", "test-storage"])
     error_message = "Both test environments must be detected by default."
   }
 
   assert {
-    condition     = toset(keys(output.dead_letter_queue_urls)) == toset(["test-slo", "test-storage"])
+    condition     = toset(keys(output.dead_letter_queue_urls)) == toset(["test-sjpark", "test-storage"])
     error_message = "Operators need each environment's dead-letter queue URL to handle delivery alarms."
   }
 }
@@ -50,7 +50,7 @@ run "unknown_environment_is_rejected" {
   command = plan
 
   variables {
-    environments = ["test-slo", "prod"]
+    environments = ["test-sjpark", "prod"]
   }
 
   expect_failures = [var.environments]
