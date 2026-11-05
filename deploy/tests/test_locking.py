@@ -69,7 +69,7 @@ class DeploymentLockTest(unittest.TestCase):
                                                source, re.M).group()
         config = self.root / "deploy.conf"
         config.write_text("PARAM_PATH=/meterengine/test\nSITE_DOMAIN=test.example\n")
-        for target in ("test-sjpark", "test-storage"):
+        for target in ("test-sjpark",):
             source = (ROOT / f"measurements/{target}/sut/scripts/sut-deploy.sh").read_text()
             generate = ('REMOTE_DEPLOY_CONFIG=' + shlex.quote(str(config)) + '\n'
                         'REMOTE_REPO_DIR=/opt/meterengine\n'

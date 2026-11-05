@@ -1,24 +1,11 @@
-# 오토스케일링 실험: 측정한 서버를 이미지로 떠서 ASG가 같은 서버를 부하에 따라 늘리고 줄인다.
-resource "aws_ami_from_instance" "sut" {
-  # 이름을 바꾸면 server-1에서 다시 뜬다. v4는 10초 지표 스크립트, v5는 거기에 앱과 agents(node-exporter, cAdvisor)만 띄우는 설정이 든 이미지다.
-  name               = "${local.prefix}-sut-asg-v5"
-  source_instance_id = aws_instance.sut.id
-
-  tags = {
-    Name = "${local.prefix}-sut-asg-v5"
-  }
-
-  # 옛 이미지를 먼저 지우면 그 사이 시작 템플릿이 없는 이미지를 가리켜 늘리기가 실패한다.
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
+# 서버는 기본 이미지로 뜨고 staging, production과 같은 부팅 스크립트로 버전 파라미터의 커밋을 배포한다.
+# 그 스크립트를 바꾸면 다음 apply에서 이 시작 템플릿도 새 버전이 되고 떠 있는 서버가 바뀐다.
 resource "aws_launch_template" "sut" {
   name_prefix            = "${local.prefix}-sut-"
-  image_id               = aws_ami_from_instance.sut.id
+  image_id               = var.ami_id
   instance_type          = var.sut_instance_type
   update_default_version = true
+  user_data              = base64encode(templatefile(local.boot_template_path, local.boot_template_vars))
 
   iam_instance_profile {
     name = aws_iam_instance_profile.sut.name
@@ -37,6 +24,16 @@ resource "aws_launch_template" "sut" {
     instance_metadata_tags = "enabled"
   }
 
+  block_device_mappings {
+    device_name = "/dev/xvda"
+    ebs {
+      volume_size           = 30
+      volume_type           = "gp3"
+      encrypted             = true
+      delete_on_termination = true
+    }
+  }
+
   # 줄어든 서버의 기록은 서버와 함께 사라지므로 CloudWatch 1분 CPU로 본다.
   monitoring {
     enabled = true
@@ -52,9 +49,9 @@ resource "aws_autoscaling_group" "sut" {
   vpc_zone_identifier = [data.aws_subnet.public_2a.id]
   target_group_arns   = [aws_lb_target_group.backend.arn, aws_lb_target_group.frontend.arn]
 
-  # ALB 헬스 체크(backend readiness)로 살았는지 본다. 유예는 띄우고 healthy까지 실측(1분 38초에서 1분 56초)의 약 두 배다.
+  # ALB 헬스 체크(backend readiness)로 살았는지 본다. 기본 이미지에 설치부터 하므로 staging, production과 같은 유예를 준다.
   health_check_type         = "ELB"
-  health_check_grace_period = 240
+  health_check_grace_period = 600
   default_instance_warmup   = 180
 
   # 버전 번호를 적어야 시작 템플릿이 바뀔 때 Terraform이 아래 롤링을 시작한다. $Latest면 이미 떠 있는 서버가 옛 이미지로 남는다.
@@ -71,6 +68,12 @@ resource "aws_autoscaling_group" "sut" {
       max_healthy_percentage = 200
       instance_warmup        = 180
     }
+  }
+
+  # 상태 확인으로 바꿀 때도 새 서버가 healthy가 된 뒤 옛 서버를 뺀다.
+  instance_maintenance_policy {
+    min_healthy_percentage = 100
+    max_healthy_percentage = 200
   }
 
   tag {
@@ -94,7 +97,18 @@ resource "aws_autoscaling_group" "sut" {
 
   lifecycle {
     ignore_changes = [desired_capacity]
+
+    # 버전이 커밋 SHA가 아니면 서버가 부팅 중 실패해 교체만 되풀이한다.
+    precondition {
+      condition     = var.asg_min_size == 0 || can(regex("^[0-9a-f]{40}$", data.aws_ssm_parameter.app_version.insecure_value))
+      error_message = "asg_min_size를 올리기 전에 sut-deploy.sh로 버전 파라미터에 커밋 SHA를 기록한다."
+    }
   }
+}
+
+# 리소스의 value는 ignore_changes라 sut-deploy.sh가 쓴 실제 값을 따로 읽는다.
+data "aws_ssm_parameter" "app_version" {
+  name = aws_ssm_parameter.app_version.name
 }
 
 # 서버당 초당 600건(한 대 CPU 80% 지점 약 810건보다 낮게)을 넘으면 늘린다. ALB 1분 지표는 늦어 서버가 10초마다 올리는 값을 쓴다.

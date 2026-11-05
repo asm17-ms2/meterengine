@@ -9,8 +9,8 @@
 
 | 경로 | 내용 |
 | --- | --- |
-| `sut/terraform/` | ALB(ACM 인증서), 오토스케일링 그룹(m7g.large, 최소 0, 최대 3), 이미지 원본 EC2, RDS db.m7g.large(PostgreSQL 18.4, Single-AZ), 보안 그룹, IAM 역할, 파라미터, 도메인, 자동 중지 |
-| `sut/scripts/` | 배포, exporter 사용자 만들기, 켜고 끄기, 부하 실험 중 CPU와 메모리 기록 켜기 |
+| `sut/terraform/` | ALB(ACM 인증서), 오토스케일링 그룹(m7g.large, 최소 0, 최대 3), 버전 파라미터, RDS db.m7g.large(PostgreSQL 18.4, Single-AZ), 보안 그룹, IAM 역할, 파라미터, 도메인, 자동 중지 |
+| `sut/scripts/` | 배포, exporter 사용자 만들기, 켜고 끄기, 앱 서버 목록, 부하 실험 중 CPU와 메모리 기록 켜기 |
 | `load-generator/terraform/` | 부하 발생기 EC2 m7g.large, 보안 그룹, IAM 역할, 자동 중지 |
 | `load-generator/k6/` | k6 스크립트 |
 | `load-generator/scripts/` | 켜고 끄기, 실험 실행, 보낸 것과 저장된 것 대조 |
@@ -19,15 +19,15 @@
 | `lib/common.sh` | 스크립트가 같이 쓰는 함수 |
 
 - 자원 이름 접두는 `meterengine-test-storage`, 도메인은 `test-storage.meterengine.com`, 파라미터 경로는 `/meterengine/test-storage`다.
-- 도메인은 ALB를 가리킨다. 앱 서버는 오토스케일링 그룹이 server-1(`sut_instance_id`)을 뜬 이미지로 띄우고, 앱과 수집 에이전트(node-exporter, cAdvisor)만 돈다. server-1은 이미지 원본으로만 남아 꺼 둔다.
+- 도메인은 ALB를 가리킨다. 앱 서버는 오토스케일링 그룹이 기본 이미지(Amazon Linux 2023 arm64)로 띄우고, 부팅 스크립트가 버전 파라미터 `/meterengine/test-storage/app-version`의 커밋으로 배포한다. 앱과 수집 에이전트(node-exporter, cAdvisor)만 돈다.
+- 부팅 스크립트는 staging, production과 같은 [`app-user-data.sh.tftpl`](../../deploy/terraform/modules/app_fleet/templates/app-user-data.sh.tftpl)을 사본 없이 읽는다. 그 파일이 바뀌면 다음 apply에서 시작 템플릿이 새 버전이 되고, 떠 있는 서버는 새 서버로 바뀐다. 측정 중에는 apply 하지 않는다.
 - 이 환경에는 모니터링 서버가 없다. 공용 모니터링 서버가 앱 서버와 DB를 긁는다("Grafana" 참고).
-- `sut/scripts/`의 `sut-deploy.sh`, `sut-start.sh`, `sut-stop.sh`, `create-exporter-user.sh`, `start-resource-recording.sh`는 server-1과 DNS 대조를 써서 오토스케일링 그룹 구조에서는 쓸 수 없다. 앱 서버가 기본 이미지로 부팅해 스스로 배포하게 바뀌면 다시 쓴다.
-- 매일 04:00(서울)에 server-1과 RDS가 꺼지고 오토스케일링 그룹은 0대로 내려간다.
+- 매일 04:00(서울)에 RDS가 꺼지고 오토스케일링 그룹은 0대로 내려간다.
 - VPC, 서브넷, 호스티드 존, ECR 이미지는 개발 서버와 같이 쓰고 읽기만 한다. 역할은 `/meterengine/prod`와 `/meterengine/production`을 읽지 못한다.
 
 ## 사전 준비
 
-- Terraform 1.17.1, AWS CLI, `session-manager-plugin`, `jq`, `git`, `curl`, `dig`. 상태 파일을 한 번 1.17.1로 쓰면 1.16으로는 읽지 못한다.
+- Terraform 1.17.1, AWS CLI, `session-manager-plugin`, `jq`, `git`, `curl`. 상태 파일을 한 번 1.17.1로 쓰면 1.16으로는 읽지 못한다.
 - `ap-northeast-2`에 자원을 만들 수 있는 AWS 자격.
 
 ```bash
@@ -47,30 +47,28 @@ terraform -chdir=measurements/test-storage/sut/terraform output
 ```
 
 - plan 마지막 줄이 `N to add, 0 to change, 0 to destroy`가 아니면 멈춘다.
-- RDS 때문에 10-15분 걸린다. EC2는 부팅하면서 docker, compose, 레포, `/etc/meterengine/deploy.conf`를 준비한다.
+- RDS 때문에 10-15분 걸린다. 앱 서버는 0대로 시작한다.
 
-### 2. 배포
+### 2. 버전 기록
 
 ```bash
-measurements/test-storage/sut/scripts/sut-deploy.sh
+measurements/test-storage/sut/scripts/sut-deploy.sh <SHA 40자>
 ```
 
-- SHA를 빼면 ECR `meterengine-backend`와 `meterengine-frontend` 둘 다에 이미지가 있는 가장 최근 main 커밋을 배포한다.
-- 배포 전에 ECR 이미지, DNS, RDS 상태, EC2 상태를 확인하고 하나라도 틀리면 멈춘다. 서버의 `deploy.sh`도 DB 식별자를 `deploy/environments/test-storage.json`과 대조한다. 환경 파일이 없는 옛 커밋은 `deploy.conf`를 대조한다.
-- 성공하면 아래 두 줄이 나온다. 첫 배포는 Caddy가 인증서를 받는다(같은 도메인 주 5회 제한).
+- 앱 서버가 0대라 버전 파라미터에 SHA만 쓰고 끝난다. `앱 서버가 0대라 버전만 기록했다`가 나온다.
+- 확인하는 것과 SHA를 뺐을 때 고르는 커밋은 "다시 배포"와 같다.
 
-```
-[sut-deploy] DB 확인: meterengine-test-storage-db.<...>.rds.amazonaws.com
-[sut-deploy] https://test-storage.meterengine.com/usage -> https://test-storage.meterengine.com/usage 가 200 을 돌려줬다(1회 시도)
-```
+### 3. 앱 서버 띄우기
 
-### 3. exporter 사용자 만들기
+"켜고 끄기"의 켜기 순서대로 최소 대수를 1로 올린다. 서버가 부팅하며 2에서 기록한 커밋으로 배포한다.
+
+### 4. exporter 사용자 만들기
 
 ```bash
 measurements/test-storage/sut/scripts/create-exporter-user.sh
 ```
 
-- SUT EC2 안에서 docker `postgres:18`로 SUT RDS에 `meterengine_exporter`(`pg_monitor`)를 만든다. 여러 번 돌려도 된다.
+- 일하는 앱 서버 하나에서 docker `postgres:18`로 SUT RDS에 `meterengine_exporter`(`pg_monitor`)를 만든다. 여러 번 돌려도 된다.
 - 성공하면 `meterengine_exporter 로그인 가능, pg_monitor 멤버 확인`이 나온다.
 
 ## 다시 배포
@@ -79,7 +77,17 @@ measurements/test-storage/sut/scripts/create-exporter-user.sh
 measurements/test-storage/sut/scripts/sut-deploy.sh <SHA 40자>
 ```
 
-- 지금 구조에서는 쓸 수 없다("구성" 참고).
+- staging, production과 같은 `deploy/rollout.sh`로 배포한다. 버전 파라미터에 SHA를 쓰고, 서버가 있으면 새 서버를 먼저 띄워 대상 그룹에서 healthy가 된 뒤 옛 서버를 뺀다. 실패하면 `rollout.sh`가 버전을 이전 값으로 되돌리고 서버를 다시 바꾼다.
+- 배포 전에 그 커밋에 `deploy/rollout.sh`가 있는지(apply한 컴퓨터의 레포에서 `git fetch` 뒤 확인), ECR 이미지, RDS 상태를 보고 하나라도 틀리면 멈춘다. `rollout.sh`가 없는 옛 커밋은 이 구조의 서버로 뜨지 못해 거절한다.
+- 서버의 `deploy.sh`가 DB 식별자를 `deploy/environments/test-storage.json`과 대조한다.
+- 성공하면 아래 줄이 나온다. 서버가 여러 대면 한 대씩 바뀌어 더 걸린다.
+
+```
+[sut-deploy] https://test-storage.meterengine.com/usage -> https://test-storage.meterengine.com/usage 가 200 을 돌려줬다(1회 시도)
+```
+
+- SHA를 빼면 ECR 두 저장소 모두에 이미지가 있고 `deploy/rollout.sh`가 있는 가장 최근 main 커밋을 쓴다.
+- 저장소는 `deploy/environments/test-storage.json`의 `image_repository_prefix`로 정한다. 지금은 운영 저장소(`meterengine-backend`, `meterengine-frontend`)라 main 릴리스에 들어간 커밋만 잴 수 있다.
 - SUT에는 CD가 없다. main이 바뀌어도 직접 배포할 때까지 그대로다.
 - ECR은 태그 이미지를 최근 10개만 남긴다. 같은 SHA로 다시 재려면 이미지가 남아 있는지 먼저 본다.
 
@@ -88,7 +96,7 @@ aws ecr describe-images --region ap-northeast-2 --repository-name meterengine-ba
 aws ecr describe-images --region ap-northeast-2 --repository-name meterengine-frontend --image-ids imageTag=<SHA>
 ```
 
-- a4bdf42 이전 커밋은 `deploy.conf`를 읽지 않아 스크립트가 거절한다.
+- 버전 파라미터가 커밋 SHA가 아니면(처음 만든 값 `unset`) `asg_min_size`를 1 이상으로 올리는 plan이 멈춘다. 서버가 부팅 중 실패해 교체만 되풀이하지 않게 막는다.
 
 ## 켜고 끄기
 
@@ -102,11 +110,10 @@ aws stepfunctions list-executions --region ap-northeast-2 \
 
 "환경 빼기"로 이 환경의 감지를 뺀 뒤라면 상태 머신이 없어 0 대신 `StateMachineDoesNotExist` 오류가 난다. 이때는 DB를 끌 흐름이 없으니 기다리지 않고 켠다.
 
-앱 서버는 오토스케일링 그룹이 띄운다. 04:00 예약이 최소와 원하는 대수를 0으로 내려 평소에는 0대다. 켤 때는 RDS를 먼저 켜고 쓸 수 있게 된 뒤 최소를 1로 올린다. 두 대상 그룹이 모두 `healthy`면 쓸 수 있다.
+앱 서버는 오토스케일링 그룹이 띄운다. 04:00 예약이 최소와 원하는 대수를 0으로 내려 평소에는 0대다. 켤 때는 `sut-start.sh`로 RDS를 켜고 쓸 수 있게 된 뒤 최소를 1로 올린다. 두 대상 그룹이 모두 `healthy`면 쓸 수 있다.
 
 ```bash
-aws rds start-db-instance --region ap-northeast-2 --db-instance-identifier meterengine-test-storage-db
-aws rds wait db-instance-available --region ap-northeast-2 --db-instance-identifier meterengine-test-storage-db
+measurements/test-storage/sut/scripts/sut-start.sh
 terraform -chdir=measurements/test-storage/sut/terraform apply -var asg_min_size=1
 for tg in backend frontend; do
   aws elbv2 describe-target-health --region ap-northeast-2 \
@@ -115,19 +122,16 @@ for tg in backend frontend; do
 done
 ```
 
+- 서버는 기본 이미지에 docker와 레포를 설치하고 배포까지 하므로 `healthy`까지 몇 분 걸린다. 헬스 체크 유예는 600초다. 늦으면 서버의 `/var/log/cloud-init-output.log`를 본다.
 - 켜 둔 동안의 apply에는 모두 `-var asg_min_size=1`을 붙인다. 빼면 최소가 0으로 돌아간다.
-- 끌 때는 `-var` 없이 apply 해 최소를 0으로 되돌리고, 원하는 대수를 0으로 내린 뒤 RDS를 멈춘다. 지우지는 않는다.
+- 끌 때는 `sut-stop.sh`로 최소와 원하는 대수를 0으로 내리고, 서버가 다 빠지면 RDS를 멈춘다. 지우지는 않는다. 최소 0은 Terraform 기본값이라 다음 `-var` 없는 apply와 어긋나지 않는다.
 
 ```bash
-terraform -chdir=measurements/test-storage/sut/terraform apply
-aws autoscaling set-desired-capacity --region ap-northeast-2 \
-  --auto-scaling-group-name "$(terraform -chdir=measurements/test-storage/sut/terraform output -raw asg_name)" --desired-capacity 0
-aws rds stop-db-instance --region ap-northeast-2 --db-instance-identifier meterengine-test-storage-db \
-  --query 'DBInstance.DBInstanceStatus' --output text
+measurements/test-storage/sut/scripts/sut-stop.sh
 ```
 
 - RDS는 꺼 둔 지 7일 뒤 저절로 켜진다. [RDS 자동 재기동 중지](../terraform/modules/rds-auto-stop/README.md)가 이를 감지해 바로 다시 끈다. 이 흐름이 실패해도 다음 04:00 자동 중지가 끈다.
-- 04:00를 넘겨 측정하는 날에는 자동 중지를 끄고, 측정이 끝나면 위 끄기 순서의 `-var` 없는 apply로 다시 켠다. 자동 중지를 끌 때 plan에서 바뀌는 것은 스케줄 state와 ASG 0대 예약 삭제뿐이어야 한다.
+- 04:00를 넘겨 측정하는 날에는 자동 중지를 끄고, 측정이 끝나면 `-var` 없는 apply로 다시 켠다. 자동 중지를 끌 때 plan에서 바뀌는 것은 스케줄 state와 ASG 0대 예약 삭제뿐이어야 한다.
 
 ```bash
 terraform -chdir=measurements/test-storage/sut/terraform apply -var auto_stop_state=DISABLED -var asg_min_size=1
@@ -154,11 +158,11 @@ aws rds describe-db-instances --region ap-northeast-2 --db-instance-identifier m
 
 ## 서버에 들어가기
 
-SSH가 없어 SSM으로만 붙는다.
+SSH가 없어 SSM으로만 붙는다. `sut-instances.sh`가 일하는 앱 서버 ID를 한 줄에 하나씩 찍는다. 여러 대면 `head` 대신 원하는 서버 ID를 준다.
 
 ```bash
 aws ssm start-session --region ap-northeast-2 \
-  --target "$(terraform -chdir=measurements/test-storage/sut/terraform output -raw sut_instance_id)"
+  --target "$(measurements/test-storage/sut/scripts/sut-instances.sh | head -n 1)"
 ```
 
 컨테이너와 로그를 보는 방법은 [`deploy/README.md`](../../deploy/README.md) "문제 해결"과 같다.
@@ -177,23 +181,6 @@ aws ssm start-session --region ap-northeast-2 \
   --document-name AWS-StartPortForwardingSession \
   --parameters '{"portNumber":["9090"],"localPortNumber":["9090"]}'
 ```
-
-### 서버 안 Grafana
-
-서버 안에 Grafana를 띄우는 다른 측정 환경은 이 절차를 따른다. Grafana는 서버 안 `127.0.0.1:3001`에만 열려 있어 포트 포워딩으로 본다. 포워딩 세션은 켜 둔 채로 브라우저를 쓴다.
-
-```bash
-aws ssm get-parameter --region ap-northeast-2 --name /meterengine/test-storage/grafana-admin-password \
-  --with-decryption --query Parameter.Value --output text
-aws ssm start-session --region ap-northeast-2 \
-  --target "$(terraform -chdir=measurements/test-storage/sut/terraform output -raw sut_instance_id)" \
-  --document-name AWS-StartPortForwardingSession \
-  --parameters '{"portNumber":["3001"],"localPortNumber":["3001"]}'
-```
-
-- http://localhost:3001 에 `admin`과 위 비밀번호로 들어간다.
-- DB 대시보드는 `RDS 인스턴스` 변수 기본값이 개발 서버 DB다. 아래 주소로 SUT DB를 골라 연다.
-  http://localhost:3001/d/meterengine-db?var-db=meterengine-test-storage-db
 
 ## 비밀번호
 
@@ -219,14 +206,14 @@ measurements/test-storage/sut/scripts/create-exporter-user.sh
 measurements/test-storage/sut/scripts/sut-deploy.sh <지금 SHA>
 ```
 
-- 지금 SHA는 SUT 안에서 `sudo git -C /opt/meterengine rev-parse HEAD`로 본다.
-- exporter 비밀번호를 바꾸면 공용 모니터링 서버의 `start.sh`를 다시 돌려야 공용 postgres-exporter가 새 값을 읽는다([`deploy/README.md`](../../deploy/README.md) "모니터링").
-- Grafana는 데이터 볼륨을 처음 만들 때만 admin 비밀번호를 받는다. 바꿀 때는 `grafana_admin_password_version`을 올려 apply 하고 다시 배포한 뒤, SUT 안에서 아래를 실행한다.
+- 지금 SHA는 버전 파라미터에서 본다. 같은 SHA로 다시 배포해도 서버를 새로 바꾼다.
 
 ```bash
-sudo docker compose --env-file /etc/meterengine/prod.env -f /opt/meterengine/deploy/compose.prod.yml \
-  exec -T grafana sh -c 'grafana cli admin reset-admin-password "$GF_SECURITY_ADMIN_PASSWORD"'
+aws ssm get-parameter --region ap-northeast-2 --name /meterengine/test-storage/app-version \
+  --query Parameter.Value --output text
 ```
+
+- exporter 비밀번호를 바꾸면 공용 모니터링 서버의 `start.sh`를 다시 돌려야 공용 postgres-exporter가 새 값을 읽는다([`deploy/README.md`](../../deploy/README.md) "모니터링").
 
 ## 부하 발생기
 
@@ -268,8 +255,9 @@ export RUN_ID=<날짜>-ingest
 measurements/test-storage/sut/scripts/start-resource-recording.sh "$RUN_ID"
 ```
 
+- 그때 일하는 앱 서버마다 기록을 켠다. 켠 뒤 늘어난 서버는 기록하지 않으므로, 확장을 재는 실험은 Grafana와 CloudWatch로 본다.
 - 컨테이너마다, 그리고 SUT 전체의 CPU 누적값은 SUT의 `/var/tmp/results/<RUN_ID>-sut-cpu.tsv`에, 메모리 값과 백엔드 JVM의 힙과 GC 값은 `<RUN_ID>-sut-memory.tsv`에 10초마다 쌓인다. 90분 뒤 스스로 멈추고, 길이는 `RECORD_SECONDS`(초)로 바꾼다.
-- JVM 값은 SUT 안에서 블루와 그린 컨테이너 IP의 `/actuator/prometheus`를 10초마다 한 번씩 읽는다. 백엔드 요청 로그에 이 경로가 색마다 10초에 한 줄씩 남는다.
+- JVM 값은 SUT 안에서 백엔드 컨테이너 IP의 `/actuator/prometheus`를 10초마다 한 번씩 읽는다. 백엔드 요청 로그에 이 경로가 10초에 한 줄씩 남는다.
 - 출력에 cgroup 드라이버와 커널의 IRQ 시간 계산 설정(`irq_time_accounting`)이 찍힌다. 같은 내용과 인스턴스 ID가 `<RUN_ID>-sut-info.txt`에 남는다.
 - 출력에 `백엔드 JVM 값을 읽지 못했다`가 나오면 첫 회차에 힙과 GC를 읽지 못한 것이다. 기록은 계속되고, 뒤 회차도 읽지 못한 단계는 메모리 표의 힙과 GC 열이 `없음`이 된다. 그때는 아래 메모리 보고서 설명 끝의 Prometheus 질의로 본다.
 - 일찍 멈추거나 다른 기록을 켜려면 SUT에서 `sudo systemctl stop meterengine-resource-record-<RUN_ID>`로 끈다.
@@ -327,8 +315,8 @@ measurements/test-storage/scripts/sut-cpu-report.sh work/<RUN_ID> work/<RUN_ID>/
 
 - 값은 SUT 전체 CPU 대비 %이고, 단계 시작 1분을 뺀 구간에서 잰다. 표는 `<RUN_ID>-sut-cpu-report.tsv`로도 남는다.
 - `ec2_cpu`는 Grafana의 EC2 CPU처럼 idle만 뺀 값이고, `containers`, `outside`, `iowait`, `steal`을 더한 값과 같다.
-- `backend`는 블루와 그린을 더한 값이다. 컨테이너 안 모든 프로세스를 세므로 Grafana의 JVM CPU와 조금 다를 수 있다.
-- 그 밖의 컨테이너는 compose 서비스마다 열이 하나씩 생긴다. `caddy` 열은 HTTPS 암호화와 백엔드로 넘기는 일을 포함해 Caddy가 쓴 CPU다. 패킷을 받고 보내는 커널 처리는 여기 들어가지 않고 `softirq`, `outside`에 들어간다.
+- `backend`는 백엔드 컨테이너 값이다(옛 기록의 블루와 그린은 더한다). 컨테이너 안 모든 프로세스를 세므로 Grafana의 JVM CPU와 조금 다를 수 있다.
+- 그 밖의 컨테이너는 compose 서비스마다 열이 하나씩 생긴다. HTTPS는 ALB가 맡아 SUT CPU에 들지 않는다. 패킷을 받고 보내는 커널 처리는 여기 들어가지 않고 `softirq`, `outside`에 들어간다.
 - `outside`는 컨테이너 밖에서 쓴 CPU다. 커널 네트워크 처리, dockerd, SSM 에이전트, 기록 자신이 들어가고, `docker.service`, `sampler` 같은 시스템 단위 열은 그 일부다.
 - `softirq`, `irq`는 SUT 전체 값이다. info 파일의 `irq_time_accounting`이 `CONFIG_IRQ_TIME_ACCOUNTING=y`일 때만 컨테이너 값에 섞이지 않고 `outside`에 들어간다.
 - `note`가 `없음`이 아닌 단계는 그 사유를 보고 읽는다. `멈춤`이 있는 단계는 멈춘 컨테이너가 마지막 표본 뒤 최대 10초 동안 쓴 CPU가 `outside`에 들어간다.
@@ -347,7 +335,7 @@ measurements/test-storage/scripts/sut-memory-report.sh work/<RUN_ID> work/<RUN_I
   - `backend_restarts`만 0보다 크면 메모리가 아닌 이유로 다시 떴다. 백엔드 로그를 본다.
   - `backend_limit_hits`만 0보다 크면 한도에 닿아 커널이 캐시를 비웠고 죽지는 않았다.
   - 셋 다 0인데 응답이 무너졌으면 원인은 메모리 한도가 아니다. `jvm_read_failed`가 0보다 크면 백엔드가 2초 안에 답하지 못할 만큼 바빴거나 멈춘 것이니 CPU 표와 GC 열을 본다.
-- `backend_peak_mib`는 블루와 그린 중 높은 쪽 컨테이너의 최대 메모리이고 `backend_peak_pct`는 그 컨테이너 한도(`backend_limit_mib`, 배포 설정 `BACKEND_MEM_LIMIT`, [`deploy/README.md`](../../deploy/README.md)) 대비다. 한도는 컨테이너마다 걸리므로 두 색을 더하지 않는다. 페이지 캐시가 들어 있어, 비울 수 없는 몫은 `backend_anon_max_mib`로 본다.
+- `backend_peak_mib`는 백엔드 컨테이너의 최대 메모리이고(옛 기록은 블루와 그린 중 높은 쪽) `backend_peak_pct`는 그 컨테이너 한도(`backend_limit_mib`, 배포 설정 `BACKEND_MEM_LIMIT`, [`deploy/README.md`](../../deploy/README.md)) 대비다. 페이지 캐시가 들어 있어, 비울 수 없는 몫은 `backend_anon_max_mib`로 본다.
 - note의 `최고값 하한`은 그 백엔드가 구간보다 앞(대개 기동 때)에 더 높았다는 뜻이고, 이때 최고값은 10초 표본의 최고값이라 실제보다 낮을 수 있다. 다른 컨테이너 열(`<이름>_peak_mib`)도 같은 방법으로 재지만 이 note는 백엔드에만 붙는다.
 - 백엔드가 OOM 등으로 다시 뜬 단계는 note에 `재시작 전 최고값 못 잼`이 붙는다. 다시 뜨면 cgroup이 새로 생겨, 그 단계의 최고값과 `backend_limit_hits`는 죽은 컨테이너의 마지막 10초 값이 빠진 하한이다.
 - `host_used_max_mib`는 EC2 전체 메모리에서 남은 메모리(MemAvailable)를 뺀 값의 최고값으로, 기준선의 EC2 메모리와 같은 값이다. 호스트 값, anon, 힙은 10초 표본이라 그 사이 잠깐 오른 값은 놓칠 수 있다.
@@ -392,7 +380,7 @@ tail -f /root/$RUN_ID.log
 
 ### 2. 백엔드 로그 받기 (SUT, 부하 시작 직후)
 
-로그는 30MB가 차면 지워지므로 주입 뒤에 받기 시작하면 첫 예외가 남지 않는다.
+로그는 30MB가 차면 지워지므로 주입 뒤에 받기 시작하면 첫 예외가 남지 않는다. 서버에는 "서버에 들어가기"대로 붙고, 서버가 여러 대면 대마다 받는다.
 
 ```bash
 sudo -i
@@ -441,7 +429,7 @@ aws rds describe-events --region ap-northeast-2 --source-type db-instance \
 
 ```bash
 aws ssm start-session --region ap-northeast-2 \
-  --target "$(terraform -chdir=measurements/test-storage/sut/terraform output -raw sut_instance_id)" \
+  --target <2에서 로그를 받은 서버 ID> \
   --document-name AWS-StartPortForwardingSession --parameters '{"portNumber":["8000"],"localPortNumber":["8000"]}'
 curl -fo work/<RUN_ID>/<RUN_ID>-backend.log http://localhost:8000/<RUN_ID>-backend.log
 ```
@@ -479,7 +467,7 @@ terraform -chdir=measurements/test-storage/sut/terraform destroy
 
 서울 온디맨드, 2026-10 기준이다.
 
-- 켜 둔 동안 시간당 약 $0.34(앱 서버 한 대 $0.10, RDS $0.23, 탄력적 IP $0.005). 앱 서버가 늘면 한 대에 약 $0.10씩 더 든다. RDS Multi-AZ를 켠 동안은 RDS 몫이 약 두 배다.
-- 꺼 둔 동안 월 약 $8(EBS, RDS 스토리지, 탄력적 IP)에 ALB 고정비 월 약 $16(시간당 $0.0225)이 더 든다. ALB는 끌 수 없어 켜고 끄기와 상관없이 나간다.
+- 켜 둔 동안 시간당 약 $0.34(앱 서버 한 대 $0.10, RDS $0.23, 공인 IP $0.005). 앱 서버가 늘면 한 대에 약 $0.10씩 더 든다. RDS Multi-AZ를 켠 동안은 RDS 몫이 약 두 배다.
+- 꺼 둔 동안 앱 서버는 0대라 EC2, EBS, 공인 IP 비용이 없다. RDS 스토리지 월 약 $3에 ALB 고정비 월 약 $16(시간당 $0.0225)이 더 든다. ALB는 끌 수 없어 켜고 끄기와 상관없이 나간다.
 - 부하 발생기는 켜 둔 동안 시간당 약 $0.11(EC2 $0.10, 공인 IP $0.005), 꺼 둔 동안 월 약 $2(EBS).
 - SUT RDS가 있는 동안 cloudwatch exporter의 CloudWatch API 호출이 RDS 한 대 몫만큼 늘어 월 약 $17이 더 든다. exporter 설정([`deploy/cloudwatch/config.yml`](../../deploy/cloudwatch/config.yml))이 계정의 RDS를 모두 읽기 때문이다.

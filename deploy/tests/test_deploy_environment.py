@@ -208,6 +208,8 @@ class DeployEnvironmentTest(unittest.TestCase):
 
 class SutDeployTest(unittest.TestCase):
     SUTS = ("test-sjpark", "test-storage")
+    # test-storage는 서버에 SSM 명령을 보내지 않고 rollout.sh로 배포한다.
+    SSM_DEPLOY_SUTS = ("test-sjpark",)
 
     def setUp(self):
         temp = tempfile.TemporaryDirectory(prefix="meterengine-sut-")
@@ -242,20 +244,20 @@ case "$1" in cat-file) exit "$HAS_ENVIRONMENT_FILE" ;; esac
                               text=True, capture_output=True, timeout=10)
 
     def test_sut_deploy_passes_environment(self):
-        for sut in self.SUTS:
+        for sut in self.SSM_DEPLOY_SUTS:
             result = self.run_command(sut, has_environment_file=True)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn(f"deploy {sut} {SHA}\n", self.trace.read_text())
 
     def test_sut_old_commit_uses_old_call(self):
-        for sut in self.SUTS:
+        for sut in self.SSM_DEPLOY_SUTS:
             self.config.write_text(f"PARAM_PATH=/meterengine/{sut}\nSITE_DOMAIN={sut}.meterengine.com\n")
             result = self.run_command(sut, has_environment_file=False)
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn(f"deploy {SHA}\n", self.trace.read_text())
 
     def test_sut_old_commit_needs_sut_deploy_conf(self):
-        for sut in self.SUTS:
+        for sut in self.SSM_DEPLOY_SUTS:
             self.config.write_text("")
             result = self.run_command(sut, has_environment_file=False)
             self.assertNotEqual(result.returncode, 0)
@@ -337,6 +339,52 @@ case "$1" in cat-file) exit "$HAS_ENVIRONMENT_FILE" ;; esac
                 check = (MEASUREMENTS / sut / relative).read_text()
                 self.assertIn("readonly PRODUCTION_PARAM_PATH=/meterengine/production", check)
                 self.assertIn('"$PRODUCTION_PARAM_PATH" | "$PRODUCTION_PARAM_PATH"/*', check)
+
+
+class StorageSutDeployTest(unittest.TestCase):
+    SOURCE = MEASUREMENTS / "test-storage/sut/scripts/sut-deploy.sh"
+
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory(prefix="meterengine-storage-")
+        self.addCleanup(temp.cleanup)
+        self.root = Path(temp.name)
+        self.trace = self.root / "trace"
+        bin_dir = self.root / "bin"
+        bin_dir.mkdir()
+        fake_git = bin_dir / "git"
+        fake_git.write_text('#!/bin/sh\n[ "$3" = cat-file ] || exit 0\ngrep -Fxq -- "$5" "$TREE"\n')
+        fake_rollout = self.root / "rollout.sh"
+        fake_rollout.write_text('#!/bin/sh\nprintf \'rollout %s\\n\' "$*" >>"$TRACE"\n')
+        for path in (fake_git, fake_rollout):
+            path.chmod(path.stat().st_mode | stat.S_IEXEC)
+        self.env = dict(os.environ, PATH=f"{bin_dir}{os.pathsep}{os.environ['PATH']}", TRACE=str(self.trace))
+
+    def run_functions(self, call, tree=()):
+        source = self.SOURCE.read_text()
+        functions = "\n".join(re.search(rf"^{name}\(\) \{{.*?^\}}", source, re.M | re.S).group()
+                              for name in ("commit_problem", "require_deployable_commit", "rollout"))
+        constant = re.search(r"^readonly ROLLOUT_PATH=.*$", source, re.M).group()
+        script = (f"set -euo pipefail\nREPO_ROOT=/operator\nROLLOUT_SCRIPT={self.root / 'rollout.sh'}\n{constant}\n"
+                  "die() { echo \"$*\" >&2; exit 1; }\nrequire_shell_safe() { :; }\nrequire_not_dev_server_path() { :; }\n"
+                  "tf_out() { case \"$1\" in asg_name) echo meterengine-test-storage-sut ;; app_version_parameter_name) echo /meterengine/test-storage/app-version ;; esac; }\n"
+                  f"{functions}\n{call}\n")
+        tree_file = self.root / "tree"
+        tree_file.write_text("".join(f"{line}\n" for line in tree))
+        return subprocess.run(["bash", "-c", script], env={**self.env, "TREE": str(tree_file)}, text=True, capture_output=True, timeout=10)
+
+    def test_rollout_gets_group_parameter_and_sha_in_cd_order(self):
+        result = self.run_functions(f"rollout {SHA}")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.trace.read_text(), f"rollout meterengine-test-storage-sut /meterengine/test-storage/app-version {SHA}\n")
+
+    def test_commit_without_rollout_script_is_rejected(self):
+        result = self.run_functions(f"require_deployable_commit {SHA}", tree=[f"{SHA}^{{commit}}"])
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("deploy/rollout.sh 가 없는 옛 커밋", result.stderr)
+
+    def test_commit_with_rollout_script_is_accepted(self):
+        result = self.run_functions(f"require_deployable_commit {SHA}", tree=[f"{SHA}^{{commit}}", f"{SHA}:deploy/rollout.sh"])
+        self.assertEqual(result.returncode, 0, result.stderr)
 
 
 if __name__ == "__main__":

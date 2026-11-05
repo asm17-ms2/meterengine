@@ -10,7 +10,7 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
 | --- | --- | --- | --- |
 | staging | develop 머지 | staging.meterengine.com | agents |
 | production | main 머지 | meterengine.com | agents |
-| test-storage | `sut-deploy.sh` | test-storage.meterengine.com | agents |
+| test-storage | `sut-deploy.sh`가 `rollout.sh`를 부른다 | test-storage.meterengine.com | agents |
 
 | 프로필 | 서비스 |
 | --- | --- |
@@ -484,6 +484,7 @@ aws ssm get-parameter --name /meterengine/production/operator-password --with-de
   2. docker, git, compose를 설치하고 저장소를 그 커밋으로 받는다.
   3. `deploy/deploy.sh <환경> <SHA>`를 부른다. 앱과 감시 에이전트를 띄우고 수집량 지표 유닛 `meterengine-ingest-rate.service`를 설치한다.
 - 배포는 `rollout.sh`가 버전 파라미터에 SHA를 쓰고 새로 고침(최소 건강 100%, 최대 200%)을 시작하는 것이다. 새 서버가 대상 그룹에서 healthy가 된 뒤 옛 서버가 빠진다.
+- 측정 환경 test-storage도 이 부팅 스크립트를 사본 없이 읽는다. 바꾸면 다음 test-storage apply에서 시작 템플릿 새 버전이 나온다([`measurements/test-storage/README.md`](../measurements/test-storage/README.md)).
 - 부팅이 느리거나 설치 실패가 잦으면 릴리스마다 이미지를 미리 굽는 방식으로 옮긴다. 그때는 시작 템플릿의 image_id와 부팅 스크립트만 바뀌고 롤링, 버전 파라미터, 확장 정책은 그대로다.
 - 최소 대수는 1, 최대는 3이다(`<환경>/main.tf`의 `min_size`).
   - 최소 대수가 1 이상이면 버전 파라미터가 40자 SHA인지 plan에서 본다. `unset`이면 plan이 멈춘다.
