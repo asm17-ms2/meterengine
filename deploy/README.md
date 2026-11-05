@@ -4,7 +4,24 @@
 
 ## 구성
 
-지금 띄운 서버는 개발 서버 하나이고 운영 서버는 없다.
+develop 머지는 staging에, main 머지는 production에 배포한다. 서버마다 다른 값은 `deploy/environments/<환경>.json`이 정한다. 비밀값은 넣지 않는다.
+
+| 환경 | 언제 | 도메인 | 프로필 |
+| --- | --- | --- | --- |
+| staging | develop 머지 | staging.meterengine.com | agents |
+| production | main 머지 | meterengine.com | agents, monitoring |
+| test-slo, test-storage | `sut-deploy.sh` | `<환경>.meterengine.com` | agents, monitoring |
+
+| 프로필 | 서비스 |
+| --- | --- |
+| 없음(항상) | Caddy, frontend, backend-blue, backend-green |
+| agents | node-exporter, cAdvisor |
+| monitoring | Prometheus, Grafana, oauth2-proxy, postgres-exporter, cloudwatch-exporter |
+
+- `deploy.sh`는 env 파일과 Caddy 설정, 컨테이너를 건드리기 전에 Parameter Store `db-host`의 RDS 식별자를 환경 파일과 대조하고, staging과 production은 이 서버의 인스턴스 ID도 대조한다. 다르면 멈춘다.
+- staging이나 production 서버를 새로 만들면 인스턴스 ID가 바뀌어, 환경 파일을 고치는 PR이 머지되어야 배포된다.
+
+아래 그림과 항목은 production 기준이다.
 
 ```
 인터넷 --443--> [Caddy] --/v1/*----> [backend-blue:8080 | backend-green:8080] --> RDS PostgreSQL
@@ -30,9 +47,9 @@
   - `www.meterengine.com`도 같은 IP를 가리키고 Caddy가 `https://meterengine.com`으로 301 리다이렉트한다.
 - 서버: EC2 `meterengine-server` (t4g.medium, arm64, Amazon Linux 2023, ap-northeast-2).
   - 인스턴스 ID `i-0f47bb1f028cd29a9`.
-- 이미지: ECR `meterengine-backend`, `meterengine-frontend`. 태그는 배포한 커밋의 git SHA 40자.
+- 이미지: ECR `meterengine-backend`, `meterengine-frontend`(staging은 `meterengine-staging-backend`, `meterengine-staging-frontend`). 태그는 배포한 커밋의 git SHA 40자.
   - 레지스트리 `928618307647.dkr.ecr.ap-northeast-2.amazonaws.com`.
-- 설정과 비밀값: SSM Parameter Store `/meterengine/prod/*`.
+- 설정과 비밀값: SSM Parameter Store `/meterengine/<환경>/*`.
 - 인터넷에 열린 포트는 80과 443이다. SSH 포트는 열려 있지 않고 접속은 SSM으로 한다.
 - `3000`, `3001`은 서버의 127.0.0.1에만 열려 있다. 백엔드의 `8080`, Caddy 내부 사이트 `8081`과 지표 사이트 `2020`은 compose 네트워크 안에서만 닿는다.
 - 백엔드 두 색과 프론트는 고정 대역의 `proxy` 네트워크에만 붙고, Caddy와 Prometheus는 `default`와 `proxy`에 모두 붙는다. 이유는 "공개 인증의 실제 IP" 참조.
@@ -62,12 +79,12 @@
 배포를 직접 돌리거나 서버에 붙기 전에 갖춰야 하는 것이다.
 
 - 로컬에 AWS CLI와 `session-manager-plugin`을 설치하고 `ap-northeast-2` 자격을 설정한다.
-- `/meterengine/prod/*` 파라미터가 먼저 등록되어 있어야 한다.
-  - **compose가 값이 없으면 기동을 막으므로, 값을 쓰는 구성이 파라미터 없이 main에 머지되면 그 즉시 CD 배포가 실패한다.** 등록 명령은 "설정값" 참조.
+- `/meterengine/production/*` 파라미터가 먼저 등록되어 있어야 한다.
+  - **compose나 `deploy.sh`가 값이 없으면 배포를 멈추므로, 값을 쓰는 구성이 파라미터 없이 머지되면 그 즉시 CD 배포가 실패한다.** monitoring 서비스의 값은 꺼진 환경에서도 compose가 검사하지 않도록 `deploy.sh`가 본다(`environment.py`의 목록). 등록 명령은 "설정값" 참조.
 - Grafana, Prometheus의 GitHub 로그인에는 아래가 있어야 한다. oauth2-proxy가 든 구성을 머지하기 전에 순서대로 만든다.
   1. Route 53에 `grafana.meterengine.com`, `prometheus.meterengine.com` A 레코드. `meterengine.com`과 같은 EC2 탄력적 IP를 가리킨다. 없으면 Caddy가 두 주소의 인증서를 받지 못한다.
   2. GitHub OAuth App. 개인 계정이 아니라 조직 `asm17-ms2` 소유로 만든다. 만드는 사람은 조직의 organization owner여야 한다. 콜백 URL은 `https://grafana.meterengine.com/oauth2/callback`이다.
-  3. 파라미터 `oauth2-proxy-client-id`, `oauth2-proxy-client-secret`, `oauth2-proxy-cookie-secret`. 앞의 둘은 OAuth App 화면의 값이다. 없으면 compose가 배포를 멈춘다.
+  3. 파라미터 `oauth2-proxy-client-id`, `oauth2-proxy-client-secret`, `oauth2-proxy-cookie-secret`. 앞의 둘은 OAuth App 화면의 값이다. 없으면 `deploy.sh`가 배포를 멈춘다.
 
 ### 서버 1회 셋업
 
@@ -79,7 +96,7 @@
 ```bash
 sudo -i
 
-dnf install -y docker git
+dnf install -y docker git python3
 systemctl enable --now docker
 
 docker compose version 2>/dev/null || {
@@ -95,20 +112,14 @@ mkdir -p /etc/meterengine && chmod 700 /etc/meterengine
 
 - 이 서버는 arm64라 compose 플러그인도 `aarch64` 파일을 받는다.
 - `/etc/meterengine/prod.env`는 만들지 않는다. 배포할 때마다 `deploy.sh`가 Parameter Store 값으로 새로 쓴다.
-- 개발 서버와 다른 파라미터 경로나 도메인을 쓰는 서버에만 `/etc/meterengine/deploy.conf`를 만든다. 이 파일이 없으면 `deploy.sh`는 개발 서버의 값을 쓴다.
-
-```bash
-cat > /etc/meterengine/deploy.conf <<'EOF'
-PARAM_PATH=/meterengine/<이름>
-SITE_DOMAIN=<도메인>
-SITE_ALIASES=
-EOF
-```
-
-- **적지 않은 변수는 개발 서버의 값을 쓰므로 세 줄을 다 적는다.** `PARAM_PATH`를 빠뜨리면 개발 서버의 DB에 붙는다.
-- `SITE_ALIASES`에 적은 주소는 `SITE_DOMAIN`으로 리다이렉트되고, 비우면 `SITE_DOMAIN` 하나만 받는다.
-- 프론트는 `https://<SITE_DOMAIN>`에서 온 공개 인보이스 조회와 결제 재시도만 받는다. compose가 이 값을 `METERENGINE_PUBLIC_ORIGIN`으로 넣는다.
-- Caddy가 인증서를 받으려면 `SITE_DOMAIN`과 `SITE_ALIASES`의 주소마다 Route 53 레코드가 이 서버를 가리켜야 한다.
+- `deploy/environments/<환경>.json`에 이 서버의 값을 적어 PR로 머지한다.
+  - `instance_id`는 staging과 production에만 적는다. 측정 서버는 다시 만들거나 ASG로 늘리면 ID가 바뀐다.
+  - `site_aliases`에 적은 주소는 `site_domain`으로 리다이렉트되고, 비우면 `site_domain` 하나만 받는다.
+  - 프론트는 `https://<site_domain>`에서 온 공개 인보이스 조회와 결제 재시도만 받는다. compose가 이 값을 `METERENGINE_PUBLIC_ORIGIN`으로 넣는다.
+  - Caddy가 인증서를 받으려면 `site_domain`과 `site_aliases`의 주소마다 Route 53 레코드가 이 서버를 가리켜야 한다.
+  - `image_repository_prefix`: ECR 저장소 이름 앞부분. `<값>-backend`, `<값>-frontend`에서 이미지를 받는다.
+  - `backend_mem_limit`: 백엔드 컨테이너의 메모리 한도. `backend_max_ram_percentage`: 그 한도 중 JVM 힙의 최대 비율(%).
+- `/etc/meterengine/deploy.conf`에는 측정용 값(`DEPLOY_TIMING`, `CADDY_ACCESS_LOG`)만 둔다. 환경 파일과 같은 이름의 값을 적어도 환경 파일이 앞선다.
 - 배포 중 실패를 재는 서버에만 `DEPLOY_TIMING=on`을 더한다. `deploy.sh`가 맨 앞과 맨 끝에 아래 두 줄을 더 찍는다. 재는 법은 [`measurements/test-slo/k6/README.md`](../measurements/test-slo/k6/README.md).
 
 ```
@@ -118,32 +129,29 @@ EOF
 
 - ID는 그 순간 실행 중인 컨테이너만 적는다. `legacy`는 블루그린 이전의 `backend` 서비스다.
 
-- 메모리 크기가 개발 서버(4GiB)와 다른 서버는 `deploy.conf`에 백엔드 메모리 한도도 적는다.
-  - `BACKEND_MEM_LIMIT`: 백엔드 컨테이너의 메모리 한도. 기본 `768m`.
-  - `BACKEND_MAX_RAM_PERCENTAGE`: 그 한도 중 JVM 힙의 최대 비율(%). 기본 `50`.
 - 배포 중 실패의 원인을 찾는 서버에만 `CADDY_ACCESS_LOG`를 적는다. 값은 공개 사이트 요청 로그를 보낼 Caddy `output`이고, 기본 `discard`는 남기지 않는다. 쓰는 법은 [`measurements/test-slo/k6/README.md`](../measurements/test-slo/k6/README.md).
   - `deploy.sh`가 배포마다 이 값을 `deploy/caddy/access-log.caddy`(git이 무시하는 파일)에 쓰고 Caddyfile이 그 파일을 import한다. 이 파일이 없으면 Caddy가 설정을 읽지 못한다.
   - 접속 로그와 기본 오류 로그는 카드 등록과 도입사 초대 URL의 토큰과 query를 가린다. 같은 URL이 담긴 `Referer`, `Location`도 가리며, 경로에 퍼센트 인코딩, 세미콜론, 점 세그먼트가 있으면 경로 전체를 가린다. 규칙은 Caddyfile의 `redacted_path` 한 곳에 있다. `Authorization`, `Cookie` 등 민감 헤더의 기본 마스킹은 유지한다. 로컬 검증: `python3 -m unittest discover -s deploy/tests -p test_logging.py -v` (Docker와 `caddy:2.11.7-alpine` 이미지 필요).
-- `CADDY_SSO_SITES`는 `grafana.`, `prometheus.` SSO 사이트를 켜고 끈다. 적지 않으면 `PARAM_PATH`가 `/meterengine/prod`인 서버만 `on`이고, SUT처럼 다른 경로를 쓰는 서버는 설정 없이 `off`다. `deploy.conf`에 적으면 그 값을 따른다.
+- 환경 파일의 `sso_sites`는 `grafana.`, `prometheus.` SSO 사이트를 켜고 끈다.
   - SUT에는 두 이름의 DNS 레코드가 없어, 켜면 Caddy가 받을 수 없는 인증서 발급을 계속 재시도한다. 그 실패가 운영과 함께 쓰는 `meterengine.com` 발급 한도에 잡히는지 확인하지 못했다.
-  - `deploy.sh`가 배포마다 이 값으로 `deploy/caddy/sso.caddy`(git이 무시하는 파일)를 쓰고 Caddyfile이 그 파일을 import한다. `on`, `off` 말고 다른 값이면 배포가 멈춘다.
-  - `off`여도 oauth2-proxy 컨테이너는 뜨므로 `oauth2-proxy-*` 파라미터는 있어야 한다.
+  - `deploy.sh`가 배포마다 이 값으로 `deploy/caddy/sso.caddy`(git이 무시하는 파일)를 쓰고 Caddyfile이 그 파일을 import한다. 
+  - 꺼도 monitoring 프로필이 켜진 환경은 oauth2-proxy 컨테이너가 뜨므로 `oauth2-proxy-*` 파라미터는 있어야 한다.
 
 ## 배포
 
 ### 자동 배포
 
-- main에 머지되면 `.github/workflows/cd.yml`이 배포까지 끝낸다. 따로 할 일은 없다.
-  - `backend/`, `frontend/`, `deploy/`, `cd.yml` 중 하나라도 바뀐 머지만 배포한다. 문서나 demo만 바뀐 머지는 배포하지 않는다.
+- develop에 머지되면 `.github/workflows/cd-staging.yml`이 staging에, main에 머지되면 `cd-production.yml`이 production에 배포까지 끝낸다. 따로 할 일은 없다. 내용은 둘 다 `deploy.yml`에 있다.
+  - `backend/`, `frontend/`, `deploy/`, 그 워크플로 파일 중 하나라도 바뀐 머지만 배포한다. 문서나 demo만 바뀐 머지는 배포하지 않는다.
 
 ```
-main 머지 -> build (backend) | build (frontend)   ubuntu-24.04-arm 러너에서 병렬
-          -> ECR push (태그 = 커밋 SHA)
-          -> deploy: SSM SendCommand -> 서버에서 deploy.sh
-          -> https://meterengine.com/usage 를 리다이렉트까지 따라가 마지막 응답이 200인지 외부에서 확인
+머지    -> build (backend) | build (frontend)   ubuntu-24.04-arm 러너에서 병렬
+        -> ECR push (태그 = 커밋 SHA)
+        -> deploy: SSM SendCommand -> 서버에서 deploy.sh <환경> <SHA>
+        -> https://<site_domain>/usage 를 리다이렉트까지 따라가 마지막 응답이 200인지 외부에서 확인
 ```
 
-- **IAM 신뢰 정책이 `refs/heads/main` 한정이라 다른 브랜치에서 실행하면 AssumeRole에서 막힌다.** PR 단계에서는 CD를 시험할 수 없다.
+- **AWS 역할의 신뢰 정책은 GitHub Environment(`production`, `staging`) 한정이고, 각 Environment는 자기 브랜치에서만 돈다. 다른 브랜치에서 실행하면 막힌다.** PR 단계에서는 CD를 시험할 수 없다.
 - 같은 SHA의 이미지가 ECR에 이미 있으면 빌드를 건너뛴다.
 - 배포가 실패하면 Actions 로그에 서버 출력이 찍힌다. SSM 응답은 2500자에서 잘리므로 원인이 안 보이면 서버에 붙어 로그를 본다 ("문제 해결" 참조).
 
@@ -152,42 +160,43 @@ main 머지 -> build (backend) | build (frontend)   ubuntu-24.04-arm 러너에�
 - checkout 전에 잠금을 잡고 대상 커밋의 `deploy.sh`를 실행한다. 다른 배포가 돌고 있으면 checkout 전에 종료한다.
 
 ```bash
-(exec 8>/etc/meterengine/deploy-command.lock && flock -n 8 && cd /opt/meterengine && git fetch --quiet origin 8>&- 9>&- && git checkout --quiet --force <git-sha> 8>&- 9>&- && ./deploy/deploy.sh <git-sha>)
+(exec 8>/etc/meterengine/deploy-command.lock && flock -n 8 && cd /opt/meterengine && git fetch --quiet origin 8>&- 9>&- && git checkout --quiet --force <git-sha> 8>&- 9>&- && ./deploy/deploy.sh <환경> <git-sha>)
 ```
 
-- 두 번째 인자로 체크아웃할 git ref를 따로 줄 수 있다. 그때는 앞의 `git checkout`에도 그 ref를 준다. 주지 않으면 이미지와 같은 SHA로 맞춘다.
+- 환경 파일이 없는 옛 커밋에는 쓸 수 없다. 옛 `deploy.sh`는 첫 인자를 SHA로 읽는다. 그런 커밋으로 되돌릴 때는 "서버에서 롤백"의 명령을 쓴다.
+- 세 번째 인자로 체크아웃할 git ref를 따로 줄 수 있다. 그때는 앞의 `git checkout`에도 그 ref를 준다. 주지 않으면 이미지와 같은 SHA로 맞춘다.
 
 - 서버 밖에서 한 번에 실행한다.
 
 ```bash
 aws ssm send-command \
-  --instance-ids i-0f47bb1f028cd29a9 \
+  --instance-ids <environments/<환경>.json의 instance_id> \
   --document-name AWS-RunShellScript \
-  --parameters commands="exec 8>/etc/meterengine/deploy-command.lock && flock -n 8 && cd /opt/meterengine && git fetch --quiet origin 8>&- 9>&- && git checkout --quiet --force <git-sha> 8>&- 9>&- && ./deploy/deploy.sh <git-sha>" \
+  --parameters commands="exec 8>/etc/meterengine/deploy-command.lock && flock -n 8 && cd /opt/meterengine && git fetch --quiet origin 8>&- 9>&- && git checkout --quiet --force <git-sha> 8>&- 9>&- && ./deploy/deploy.sh <환경> <git-sha>" \
   --query 'Command.CommandId' --output text
 ```
 
-- `deploy.sh`가 하는 일의 순서다.
+- `deploy.sh`가 하는 일의 순서다. 먼저 환경 파일을 서버와 대조하고, 틀리면 아무것도 바꾸지 않고 멈춘다.
 
 1. Caddy 컨테이너 안에서 도는 색의 `/actuator/health/readiness`를 1초 간격으로 세 번까지 묻고 대상 색을 정한다.
    - 한 색만 돌면 반대 색이 대상이다. 도는 색이 UP이 아니어도 다시 만들지 않고 경고만 남긴다.
    - 두 색이 다 돌면 UP이 아닌 색이 대상이다. 둘 다 UP이면 Caddy 내부 사이트 `:8081` 응답의 `X-Upstream`이 가리키는 색을 살리고, 그 색을 알 수 없으면 기록 파일의 색(파일이 없으면 블루)을 살린다. 둘 다 UP이 아니면 블루가 대상이다.
    - 둘 다 돌지 않으면 블루가 대상이다.
-2. `/opt/meterengine`을 그 커밋(두 번째 인자를 주면 그 ref)으로 맞추고, 곧바로 Caddy 요청 로그 설정 `deploy/caddy/access-log.caddy`, SSO 사이트 설정 `deploy/caddy/sso.caddy`, 백엔드 목록 `deploy/caddy/upstreams.caddy`를 쓴다.
+2. `/opt/meterengine`을 그 커밋(세 번째 인자를 주면 그 ref)으로 맞추고, 곧바로 Caddy 요청 로그 설정 `deploy/caddy/access-log.caddy`, SSO 사이트 설정 `deploy/caddy/sso.caddy`, 백엔드 목록 `deploy/caddy/upstreams.caddy`를 쓴다.
    - 목록은 돌고 있는 반대 색과 블루그린 이전 `backend`다. 그중 UP인 색도 `backend`도 없으면 대상 색을 더한다.
-3. Parameter Store `/meterengine/prod/*`(`deploy.conf`가 있으면 그 `PARAM_PATH`)를 읽어 `/etc/meterengine/prod.env`를 새로 만든다 (권한 600). 대상 색의 태그는 새 SHA, 돌고 있는 반대 색의 태그는 지금 이미지의 태그다.
+3. Parameter Store `/meterengine/<환경>/*`를 읽어 `/etc/meterengine/prod.env`를 새로 만든다 (권한 600). 환경의 프로필에 필요한 값이 빠져 있으면 기존 파일을 두고 멈춘다. 대상 색의 태그는 새 SHA, 돌고 있는 반대 색의 태그는 지금 이미지의 태그다.
 4. ECR에 로그인하고 백엔드가 아닌 서비스와 대상 색의 이미지만 받은 뒤, 백엔드가 아닌 서비스를 `up -d`로 올리고(orphan은 지우지 않는다) 대상 색을 띄운다. 이어 Caddy 설정을 reload 한다.
    - 돌고 있는 반대 색은 받지도 다시 만들지도 않는다. 그 태그가 ECR에서 지워졌어도 배포가 막히지 않는다.
    - Caddyfile은 bind mount라 `deploy.sh`를 거치지 않고 compose만 올리면 반영되지 않는다. `docker compose -p meterengine-prod exec caddy caddy reload --config /etc/caddy/Caddyfile`을 직접 실행한다.
 5. 대상 색의 `/actuator/health`(DB 포함)가 UP인지 최대 90초 기다리고, 그 컨테이너의 이미지가 새 SHA인지 확인한다.
-6. Prometheus와 cloudwatch exporter 설정을 다시 읽게 한다.
+6. monitoring이 켜진 환경은 Prometheus와 cloudwatch exporter 설정을 다시 읽게 한다.
    - prometheus.yml도 Caddyfile과 같다. `docker compose -p meterengine-prod exec prometheus kill -HUP 1`로 다시 읽게 한다. `docker compose kill`로 보내면 Docker가 수동으로 멈춘 컨테이너로 기록해 다시 켜지 않는다.
    - cloudwatch/config.yml도 같다. `docker compose -p meterengine-prod exec cloudwatch-exporter kill -HUP 1`로 다시 읽게 한다. 이것이 실패해도 배포는 멈추지 않는다.
 7. 백엔드 목록을 대상 색 하나로 바꾸고 Caddy를 reload 한다. 새 요청은 대상 색으로 가고, 반대 색이 받던 요청은 마저 끝난다. 이어 내부 사이트 `:8081`의 응답 헤더 `X-Upstream`이 대상 색인지 최대 60초 확인한다.
 8. 5초(Caddyfile의 `lb_try_duration`) 기다린 뒤 돌고 있던 반대 색을 `stop`으로 멈춘다. 지우지 않아 그 이미지가 정리되지 않는다. 블루그린 이전 `backend` 컨테이너가 있으면 이때 지운다.
 9. 프론트 `/health`가 ok를 돌려주는지 최대 90초 기다린다.
 10. 336시간보다 오래된 이미지를 정리한다.
-11. Grafana 경보 설정을 다시 읽게 한다. 앱 확인은 이미 끝난 상태다. 401이면 관리자 비밀번호와 `grafana-admin-password`가 일치하는지 확인하고, 다른 오류면 `alerting.yml`과 Grafana 로그를 본다. 이 단계가 실패해도 새 백엔드는 남고 CD의 외부 확인은 실행된다.
+11. monitoring이 켜진 환경은 Grafana 경보 설정을 다시 읽게 한다. 앱 확인은 이미 끝난 상태다. 401이면 관리자 비밀번호와 `grafana-admin-password`가 일치하는지 확인하고, 다른 오류면 `alerting.yml`과 Grafana 로그를 본다. 이 단계가 실패해도 새 백엔드는 남고 CD의 외부 확인은 실행된다.
 12. 마지막으로 배포 기록 파일을 쓴다.
 
 - 어느 단계든 실패하면 컨테이너 로그나 실패 줄을 찍고 0이 아닌 코드로 끝난다.
@@ -231,11 +240,12 @@ aws ecr describe-images --repository-name meterengine-backend \
 
 ### Actions에서 롤백
 
-1. GitHub > Actions > CD > Run workflow.
-2. **Use workflow from은 main으로 둔다.** 다른 브랜치를 고르면 AssumeRole이 막힌다.
+1. GitHub > Actions > CD production(staging은 CD staging) > Run workflow.
+2. **Use workflow from은 main(staging은 develop)으로 둔다.** 다른 브랜치를 고르면 GitHub Environment가 막는다.
 3. `image_tag`에 되돌릴 커밋 SHA 40자를 넣고 실행한다.
 
 - 빌드 job은 건너뛰고 배포만 다시 돈다.
+- 환경 파일이 없는 옛 커밋은 production에서만 옛 호출(`deploy.sh <SHA>`)로 돈다. staging은 멈춘다.
 - 서버 레포도 그 커밋으로 맞춰지므로 compose 파일과 Caddyfile까지 그 시점 상태로 돌아간다.
 
 ### 서버에서 롤백
@@ -246,7 +256,7 @@ Actions에 들어갈 수 없을 때 쓴다.
 aws ssm send-command \
   --instance-ids i-0f47bb1f028cd29a9 \
   --document-name AWS-RunShellScript \
-  --parameters commands="exec 8>/etc/meterengine/deploy-command.lock && flock -n 8 && cd /opt/meterengine && git fetch --quiet origin 8>&- 9>&- && git checkout --quiet --force <SHA> 8>&- 9>&- && ./deploy/deploy.sh <SHA>"
+  --parameters commands="exec 8>/etc/meterengine/deploy-command.lock && flock -n 8 && cd /opt/meterengine && git fetch --quiet origin 8>&- 9>&- && git checkout --quiet --force <SHA> 8>&- 9>&- && if test -f deploy/environments/production.json; then ./deploy/deploy.sh production <SHA>; else ./deploy/deploy.sh <SHA>; fi"
 ```
 
 ## DB 백업과 복구
@@ -257,7 +267,7 @@ aws ssm send-command \
 ### 설정 확인
 
 ```bash
-aws ssm get-parameter --name /meterengine/prod/db-host --query Parameter.Value --output text
+aws ssm get-parameter --name /meterengine/production/db-host --query Parameter.Value --output text
 aws rds describe-db-instances --db-instance-identifier meterengine-db \
   --query 'DBInstances[0].{endpoint:Endpoint.Address,retentionDays:BackupRetentionPeriod,backupWindowUtc:PreferredBackupWindow,latestRestorable:LatestRestorableTime,deletionProtection:DeletionProtection,multiAz:MultiAZ,encrypted:StorageEncrypted,subnetGroup:DBSubnetGroup.DBSubnetGroupName,securityGroups:VpcSecurityGroups[].VpcSecurityGroupId,maxStorage:MaxAllocatedStorage,performanceInsights:PerformanceInsightsEnabled,logExports:EnabledCloudwatchLogsExports,copyTags:CopyTagsToSnapshot}'
 aws rds describe-db-instance-automated-backups --db-instance-identifier meterengine-db \
@@ -290,7 +300,7 @@ aws rds wait db-snapshot-available --db-snapshot-identifier meterengine-db-befor
 ### 복원
 
 - **복원본에는 복원 시각 뒤에 원본에 쓰인 데이터가 없다.** 복원 시각부터 5의 배포로 백엔드가 복원본에 붙을 때까지 원본에 들어온 이벤트, 인보이스, 결제 시도가 복원본에서 빠진다.
-- 먼저 main 머지를 멈추고 Actions에서 CD가 돌고 있지 않은지 본다. CD는 main HEAD를 그때의 `db-host`로 배포해서, 전환 전이면 백엔드가 원본 DB로 다시 뜨고 전환 뒤면 3에서 피한 마이그레이션이 복원본에 적용된다. 5를 마칠 때까지, 3에서 이전 SHA를 골랐다면 그 마이그레이션을 main에서 되돌릴 때까지 멈춘다.
+- 먼저 main 머지를 멈추고 Actions에서 CD가 돌고 있지 않은지 본다. CD는 main HEAD를 그때의 `db-host`로 배포해서, 전환 전이면 백엔드가 원본 DB로 다시 뜨고 전환 뒤면 3에서 피한 마이그레이션이 복원본에 적용된다. 5를 마칠 때까지 멈추고, 6의 PR만 넣는다.
 - 원본이 살아 있는 채로 되돌린다면 1 전에 서버에 붙어 `sudo -i` 한 뒤 백엔드를 멈춘다. 그러면 빠지는 구간이 멈춘 시각에서 끝난다. 그동안 API는 응답하지 않고, 5의 배포가 다시 띄운다.
 
 ```bash
@@ -355,15 +365,23 @@ docker run --rm -e PGPASSWORD postgres:18 psql \
 
 3. 배포할 SHA를 정한다. 지금 SHA를 다시 배포하면 복원본보다 새 마이그레이션이 기동 때 다시 적용된다. 그 마이그레이션 때문에 복원했다면 복원본의 마지막 버전까지만 가진 이전 SHA를 배포한다.
 4. 복원 시각 뒤에 암호화 키를 바꿨으면 그 시각의 키로 되돌린다("암호화 키 맞추기").
-5. `db-host`를 복원본으로 바꾸고 3에서 정한 SHA로 다시 배포한다("롤백"의 Actions나 서버 명령). 배포 로그의 `DB:` 줄이 복원본인지 본다.
+5. `db-host`를 복원본으로 바꾸고 3에서 정한 SHA로 서버에서 다시 배포한다. 환경 파일의 식별자가 아직 원본이라 `RECOVERY_DB_IDENTIFIER`를 주는 아래 명령만 통과하고, Actions로는 안 된다. 배포 로그의 `DB:` 줄이 복원본인지 본다.
    - 복원본에 삭제 방지, 자동 확장 상한, Performance Insights를 원본과 같게 켠다. 복원으로는 켜지지 않고, 켜도 DB가 멈추지 않는다.
 
 ```bash
-aws ssm put-parameter --name /meterengine/prod/db-host --type String --overwrite --value <복원본 엔드포인트>
+aws ssm put-parameter --name /meterengine/production/db-host --type String --overwrite --value <복원본 엔드포인트>
 aws rds modify-db-instance --db-instance-identifier meterengine-db-restore-<YYYYMMDD> \
   --deletion-protection --max-allocated-storage 50 \
   --enable-performance-insights --performance-insights-retention-period 7
+RESTORED_ID=meterengine-db-restore-<YYYYMMDD>
+aws ssm send-command \
+  --instance-ids i-0f47bb1f028cd29a9 \
+  --document-name AWS-RunShellScript \
+  --parameters commands="exec 8>/etc/meterengine/deploy-command.lock && flock -n 8 && cd /opt/meterengine && git fetch --quiet origin 8>&- 9>&- && git checkout --quiet --force <SHA> 8>&- 9>&- && if test -f deploy/environments/production.json; then RECOVERY_DB_IDENTIFIER=$RESTORED_ID ./deploy/deploy.sh production <SHA>; else ./deploy/deploy.sh <SHA>; fi"
 ```
+
+6. `deploy/environments/production.json`의 `database_identifier`를 복원본으로 고쳐 main에 넣는다. 그 전에는 CD가 환경 확인에서 멈춘다. 돌고 있는 서비스는 영향이 없다. 3에서 이전 SHA를 골랐다면 그 마이그레이션을 되돌리는 변경도 같이 넣는다. main에 들어가면 CD가 main HEAD를 배포한다.
+   - 이 뒤로 그 PR 이전 커밋으로 되돌릴 때도 `RECOVERY_DB_IDENTIFIER`가 필요하다. 그 커밋의 환경 파일에는 원본 식별자가 있다.
 
 - 원본 인스턴스는 바로 지우지 않는다. 복원 시각과 멈춘 시각(멈추지 못했으면 전환한 시각) 사이에 들어온 행은 원본과 복원본을 대조해 찾는다. 삭제 방지가 켜져 있어 먼저 꺼야 지워진다.
 
@@ -372,15 +390,15 @@ aws rds modify-db-instance --db-instance-identifier meterengine-db-restore-<YYYY
 - 키는 바꾸지 않는 것이 원칙이다. 이력은 값을 찍지 않고 버전과 시각만 본다.
 
 ```bash
-aws ssm get-parameter-history --name /meterengine/prod/crypto-encryption-key \
+aws ssm get-parameter-history --name /meterengine/production/crypto-encryption-key \
   --query 'Parameters[].[Version,LastModifiedDate]' --output text
 ```
 
 - 복원 시각에 쓰던 버전으로 되돌린다. 값을 화면에 찍지 않는다.
 
 ```bash
-aws ssm put-parameter --name /meterengine/prod/crypto-encryption-key --type SecureString --overwrite \
-  --value "$(aws ssm get-parameter --name /meterengine/prod/crypto-encryption-key:<버전> --with-decryption --query Parameter.Value --output text)"
+aws ssm put-parameter --name /meterengine/production/crypto-encryption-key --type SecureString --overwrite \
+  --value "$(aws ssm get-parameter --name /meterengine/production/crypto-encryption-key:<버전> --with-decryption --query Parameter.Value --output text)"
 ```
 
 ## 서버 접속
@@ -415,7 +433,7 @@ aws ssm start-session --target i-0f47bb1f028cd29a9 \
 
 ## 설정값
 
-- 전부 Parameter Store `/meterengine/prod/` 아래에 있다.
+- 전부 Parameter Store `/meterengine/<환경>/` 아래에 있다. 아래 명령은 production 기준이다.
 - 파라미터 이름이 대문자 환경변수 이름이 된다 (`db-host` -> `DB_HOST`).
 
 | 파라미터 | 타입 | 쓰이는 곳 |
@@ -443,27 +461,27 @@ aws ssm start-session --target i-0f47bb1f028cd29a9 \
 - 새 파라미터를 등록한다.
 
 ```bash
-aws ssm put-parameter --name /meterengine/prod/<이름> --type String --value '<값>'
-aws ssm put-parameter --name /meterengine/prod/<이름> --type SecureString --value '<값>'
+aws ssm put-parameter --name /meterengine/production/<이름> --type String --value '<값>'
+aws ssm put-parameter --name /meterengine/production/<이름> --type SecureString --value '<값>'
 ```
 
 - 값을 만들어야 하는 비밀값은 아래 명령으로 등록한다. 값을 화면에 찍지 않는다.
 
 ```bash
-aws ssm put-parameter --name /meterengine/prod/crypto-encryption-key --type SecureString \
+aws ssm put-parameter --name /meterengine/production/crypto-encryption-key --type SecureString \
   --value "$(openssl rand -base64 32)"
-aws ssm put-parameter --name /meterengine/prod/operator-password --type SecureString \
+aws ssm put-parameter --name /meterengine/production/operator-password --type SecureString \
   --value "$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 32)"
-aws ssm put-parameter --name /meterengine/prod/frontend-api-key --type SecureString \
+aws ssm put-parameter --name /meterengine/production/frontend-api-key --type SecureString \
   --value "me_live_$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 32)"
-aws ssm put-parameter --name /meterengine/prod/oauth2-proxy-cookie-secret --type SecureString \
+aws ssm put-parameter --name /meterengine/production/oauth2-proxy-cookie-secret --type SecureString \
   --value "$(openssl rand -base64 32 | tr -- '+/' '-_')"
 ```
 
 - 운영자로 로그인할 때 비밀번호는 Parameter Store에서 본다.
 
 ```bash
-aws ssm get-parameter --name /meterengine/prod/operator-password --with-decryption --query Parameter.Value --output text
+aws ssm get-parameter --name /meterengine/production/operator-password --with-decryption --query Parameter.Value --output text
 ```
 
 - test-slo와 test-storage는 각자의 `sut/terraform/parameters.tf`가 같은 이름의 파라미터를 만든다.

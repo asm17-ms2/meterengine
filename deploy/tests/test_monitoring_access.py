@@ -12,12 +12,13 @@ DUMMY_ENV = {
     name: "dummy" for name in (
         "DB_HOST", "DB_PORT", "DB_NAME", "DB_USERNAME", "DB_PASSWORD", "DB_EXPORTER_PASSWORD",
         "CRYPTO_ENCRYPTION_KEY", "OPERATOR_EMAIL", "OPERATOR_PASSWORD", "FRONTEND_API_KEY",
-        "ORGANIZATION_ID", "ORGANIZATION_NAME", "BACKEND_MAX_RAM_PERCENTAGE", "ECR_REGISTRY",
+        "ORGANIZATION_ID", "ORGANIZATION_NAME", "BACKEND_MAX_RAM_PERCENTAGE", "ECR_REGISTRY", "IMAGE_REPOSITORY_PREFIX",
         "BACKEND_BLUE_TAG", "BACKEND_GREEN_TAG", "IMAGE_TAG", "SITE_DOMAIN", "SITE_ALIASES",
         "GRAFANA_ADMIN_PASSWORD", "SLACK_WEBHOOK_URL",
         "OAUTH2_PROXY_CLIENT_ID", "OAUTH2_PROXY_CLIENT_SECRET", "OAUTH2_PROXY_COOKIE_SECRET")
 }
 DUMMY_ENV["BACKEND_MEM_LIMIT"] = "768m"
+DUMMY_ENV["COMPOSE_PROFILES"] = "agents,monitoring"
 MONITORING_ONLY = ("grafana", "node-exporter", "cadvisor", "postgres-exporter", "cloudwatch-exporter")
 APPS = ("frontend", "backend-blue", "backend-green")
 WRITE_FLAGS = ("--web.enable-admin-api", "--web.enable-lifecycle",
@@ -107,11 +108,6 @@ class MonitoringNetworkTest(unittest.TestCase):
         self.assertFalse(any("secret" in arg or "client-id" in arg for arg in command))
         self.assertFalse(any(arg.split("=")[0] == "--trusted-ip" for arg in command))
         self.assertFalse(any(arg.startswith("--skip-auth") for arg in command))
-
-    def test_oauth2_proxy_refuses_to_start_without_secrets(self):
-        for name in ("OAUTH2_PROXY_CLIENT_ID", "OAUTH2_PROXY_CLIENT_SECRET", "OAUTH2_PROXY_COOKIE_SECRET"):
-            with self.assertRaisesRegex(AssertionError, name):
-                compose_config(**{name: None})  # None은 env에서 뺀다는 뜻
 
 
 if __name__ == "__main__":

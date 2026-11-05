@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
   merge_group:
 
@@ -46,9 +46,16 @@ jobs:
             # deploy 시험이 읽는 바깥 파일도 넣는다
             deploy:
               - 'deploy/**'
-              - '.github/workflows/cd.yml'
+              - '.github/workflows/cd-production.yml'
+              - '.github/workflows/cd-staging.yml'
+              - '.github/workflows/deploy.yml'
               - 'measurements/test-slo/k6/README.md'
+              - 'measurements/*/README.md'
+              - 'measurements/*/lib/common.sh'
               - 'measurements/*/sut/scripts/sut-deploy.sh'
+              - 'measurements/*/sut/scripts/remote/upsert-exporter-user.sh'
+              - 'measurements/*/sut/terraform/iam.tf'
+              - 'measurements/*/sut/terraform/locals.tf'
               - '.github/workflows/ci.yml'
             rds_auto_stop:
               - 'measurements/terraform/modules/rds-auto-stop/**'
@@ -147,6 +154,19 @@ jobs:
       - run: docker pull caddy:2.11.7-alpine
       - run: docker pull quay.io/oauth2-proxy/oauth2-proxy:v7.15.5
       - run: python3 -m unittest discover -s deploy/tests -v
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.17.1
+          terraform_wrapper: false
+      - run: terraform fmt -check -recursive deploy/terraform
+      # AWS 자격 없이 mock으로만 돈다
+      - name: Terraform 시험
+        run: |
+          for dir in deploy/terraform/staging deploy/terraform/production; do
+            terraform -chdir="$dir" init -backend=false -input=false
+            terraform -chdir="$dir" validate
+            terraform -chdir="$dir" test
+          done
 
 
   rds-auto-stop:

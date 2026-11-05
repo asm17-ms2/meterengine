@@ -90,16 +90,22 @@ require_dns_points_to() {
 }
 
 # CD처럼 대상 커밋으로 먼저 checkout해 그 커밋의 deploy.sh를 돌린다. 하한 확인은 checkout 전에 해야 옛 Caddyfile이 깔리지 않는다.
+# 환경 파일이 없는 옛 커밋은 deploy.conf로 값을 받으므로 그때만 deploy.conf를 대조한다.
 deploy_command() {
-	local sha="$1" param_path="$2" domain="$3"
-	printf '%s' "grep -qx 'PARAM_PATH=$param_path' $REMOTE_DEPLOY_CONFIG && grep -qx 'SITE_DOMAIN=$domain' $REMOTE_DEPLOY_CONFIG || { echo '$REMOTE_DEPLOY_CONFIG 의 PARAM_PATH나 SITE_DOMAIN이 SUT 값이 아니다' >&2; exit 1; }
-exec 8>/etc/meterengine/deploy-command.lock || exit 1
+	local sha="$1" param_path="$2" domain="$3" environment="${2##*/}"
+	printf '%s' "exec 8>/etc/meterengine/deploy-command.lock || exit 1
 flock -n 8 || { echo '다른 배포가 아직 돌고 있거나 잠금을 잡지 못했다' >&2; exit 1; }
 cd $REMOTE_REPO_DIR || exit 1
 git fetch --quiet origin 8>&- 9>&- || exit 1
 git merge-base --is-ancestor $FIRST_SHA_WITH_DEPLOY_CONF $sha 8>&- 9>&- || { echo '$sha 는 deploy.conf를 읽기 전 커밋(${FIRST_SHA_WITH_DEPLOY_CONF:0:7} 이전)이거나 원격에 없는 커밋이라 배포하지 않는다' >&2; exit 1; }
+if git cat-file -e $sha:deploy/environments/$environment.json 8>&- 9>&-; then
+	deploy_arguments='$environment $sha'
+else
+	grep -qx 'PARAM_PATH=$param_path' $REMOTE_DEPLOY_CONFIG && grep -qx 'SITE_DOMAIN=$domain' $REMOTE_DEPLOY_CONFIG || { echo '$REMOTE_DEPLOY_CONFIG 의 PARAM_PATH나 SITE_DOMAIN이 SUT 값이 아니다' >&2; exit 1; }
+	deploy_arguments='$sha'
+fi
 git checkout --quiet --force $sha 8>&- 9>&- || exit 1
-./deploy/deploy.sh $sha"
+./deploy/deploy.sh \$deploy_arguments"
 }
 
 deployed_db_host() {
@@ -111,7 +117,8 @@ require_sut_db() {
 	local output_file="$1" db_address="$2" db_host
 	db_host=$(deployed_db_host "$output_file")
 	[ -n "$db_host" ] || die "배포 출력에 '$DEPLOY_DB_LINE_PREFIX' 줄이 없다"
-	[ "$db_host" = "$db_address" ] ||
+	# 옛 커밋은 전체 주소를, 지금 커밋은 식별자만 찍어 식별자로 비교한다.
+	[ "${db_host%%.*}" = "${db_address%%.*}" ] ||
 		die "배포한 DB($db_host)가 SUT DB($db_address)가 아니다. 개발 서버 DB에 붙었을 수 있다. 바로 확인한다"
 	log "DB 확인: $db_address"
 }

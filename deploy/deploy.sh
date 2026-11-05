@@ -7,15 +7,9 @@ REPO_DIR=/opt/meterengine
 ENV_FILE=/etc/meterengine/prod.env
 CONFIG_FILE=/etc/meterengine/deploy.conf
 STATE_FILE=/etc/meterengine/deploy-state
-PARAM_PATH=/meterengine/prod
-SITE_DOMAIN=meterengine.com
-SITE_ALIASES=www.meterengine.com
+# 환경별 값은 deploy/environments/<환경>.json에 있다. 같은 값은 환경 파일이 deploy.conf보다 앞선다.
 DEPLOY_TIMING=off
-BACKEND_MEM_LIMIT=768m
-BACKEND_MAX_RAM_PERCENTAGE=50
 CADDY_ACCESS_LOG=discard
-# 셸에서 물려받은 값이 deploy.conf를 앞서지 않게 비운다. deploy.conf에 없으면 write_sso_file이 PARAM_PATH로 정한다.
-unset CADDY_SSO_SITES
 
 if [ -f "$CONFIG_FILE" ]; then
 	. "$CONFIG_FILE"
@@ -312,16 +306,25 @@ write_env_file() {
 		printf 'BACKEND_BLUE_TAG=%s\n' "$blue_tag"
 		printf 'BACKEND_GREEN_TAG=%s\n' "$green_tag"
 		printf 'ECR_REGISTRY=%s\n' "$ECR_REGISTRY"
+		printf 'IMAGE_REPOSITORY_PREFIX=%s\n' "$IMAGE_REPOSITORY_PREFIX"
 		printf 'SITE_DOMAIN=%s\n' "$SITE_DOMAIN"
 		printf 'SITE_ALIASES=%s\n' "$SITE_ALIASES"
 		printf 'BACKEND_MEM_LIMIT=%s\n' "$BACKEND_MEM_LIMIT"
 		printf 'BACKEND_MAX_RAM_PERCENTAGE=%s\n' "$BACKEND_MAX_RAM_PERCENTAGE"
+		printf 'COMPOSE_PROFILES=%s\n' "$COMPOSE_PROFILES"
 	} >>"$tmp"
+
+	# 빠진 값이 있으면 지금 env 파일을 그대로 둔다.
+	local key
+	for key in $REQUIRED_PARAMETERS; do
+		if ! grep -q "^$key=." "$tmp"; then
+			rm -f "$tmp"
+			die "Parameter Store $PARAM_PATH 에 $key 값이 없다"
+		fi
+	done
 
 	mv "$tmp" "$ENV_FILE"
 	chmod 600 "$ENV_FILE"
-
-	grep -q '^DB_HOST=' "$ENV_FILE" || die "Parameter Store에서 db-host를 읽지 못했다"
 }
 
 # Caddyfile이 가져오는 요청 로그 출력을 쓴다. 값을 env로 넘기면 바뀔 때마다 Caddy 컨테이너가 다시 만들어져 끊긴다.
@@ -334,20 +337,15 @@ write_access_log_file() {
 	mv "$tmp" "$file"
 }
 
-# SUT도 이 Caddyfile을 쓰는데 DNS 없는 이름은 meterengine.com 공용 Let's Encrypt 한도로 발급을 계속 재시도하고, 이미 있는 SUT는 user-data를 다시 돌지 않아 PARAM_PATH로 정한다.
-sso_sites_default() {
-	if [ "$PARAM_PATH" = /meterengine/prod ]; then echo on; else echo off; fi
-}
-
-# Caddyfile이 가져오는 SSO 사이트 설정을 쓴다. deploy.conf의 CADDY_SSO_SITES가 있으면 그 값을 따른다.
+# Caddyfile이 가져오는 SSO 사이트 설정을 쓴다. 값은 환경 파일의 sso_sites에서 온다.
 # Caddy가 반쯤 쓴 파일을 읽지 않도록 같은 디렉터리에 쓰고 mv한다.
 write_sso_file() {
 	local file="$REPO_DIR/deploy/caddy/sso.caddy" value content tmp
-	value=${CADDY_SSO_SITES-$(sso_sites_default)}
+	value=${CADDY_SSO_SITES-}
 	case "$value" in
 	on) content='import sso-sites.caddy' ;;
 	off) content='# CADDY_SSO_SITES=off' ;;
-	*) die "deploy.conf의 CADDY_SSO_SITES는 on이나 off여야 한다. 지금 값: '$value'" ;;
+	*) die "CADDY_SSO_SITES는 on이나 off여야 한다. 지금 값: '$value'" ;;
 	esac
 	tmp=$(mktemp "$file.XXXXXX")
 	printf '%s\n' "$content" >"$tmp"
@@ -435,10 +433,19 @@ reload_grafana_alerting() {
 	done
 }
 
+monitoring_enabled() {
+	case ",$COMPOSE_PROFILES," in
+	*,monitoring,*) return 0 ;;
+	*) return 1 ;;
+	esac
+}
+
 main() {
-	local sha="${1:-}"
-	[ -n "$sha" ] || die "배포할 이미지의 git SHA를 인자로 줘야 한다. 예: $0 979e251... [체크아웃할 git ref]"
-	local git_ref="${2:-$sha}"
+	local environment="${1:-}" sha="${2:-}"
+	if [ -z "$environment" ] || ! [[ "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+		die "사용법: $0 <환경> <이미지 git SHA 40자> [체크아웃할 git ref]"
+	fi
+	local git_ref="${3:-$sha}"
 
 	# CD가 기다리다 포기해도 SSM은 이 스크립트를 계속 돌린다. 두 배포가 겹치면 살아 있는 색을 멈출 수 있다.
 	acquire_deploy_lock
@@ -448,7 +455,13 @@ main() {
 		log "측정 시작 $(now_ms) backend=$(backend_container)"
 	fi
 
-	log "배포 시작: $sha"
+	# eval "$(...)"로 바로 쓰면 실패해도 종료 코드가 0이라 먼저 받는다. deploy.conf의 같은 값보다 앞선다.
+	local target_values
+	target_values=$(python3 "$REPO_DIR/deploy/environment.py" preflight --environment "$environment") ||
+		die "환경 $environment 확인에 실패해 아무것도 바꾸지 않았다"
+	eval "$target_values"
+
+	log "배포 시작: $environment $sha"
 	if [ "$git_ref" != "$sha" ]; then
 		log "레포는 이미지와 다른 $git_ref 로 맞춘다"
 	fi
@@ -506,9 +519,11 @@ main() {
 	write_env_file "$sha" "$blue_tag" "$green_tag"
 
 	# 엉뚱한 DB에 붙은 채 성공한 배포를 알아챌 수 있게 남긴다.
-	local db_host
-	db_host=$(grep '^DB_HOST=' "$ENV_FILE" | cut -d= -f2-)
-	log "DB: $db_host"
+	# 이 출력은 공개된 Actions 로그에 남아 전체 주소를 찍지 않는다.
+	local db_identifier
+	db_identifier=$(grep '^DB_HOST=' "$ENV_FILE" | cut -d= -f2- | cut -d. -f1)
+	log "DB: $db_identifier"
+	[ "$db_identifier" = "$EXPECTED_DB_IDENTIFIER" ] || die "DB($db_identifier)가 환경 $environment 의 값($EXPECTED_DB_IDENTIFIER)과 다르다"
 
 	compose=(docker compose --env-file "$ENV_FILE" -f "$REPO_DIR/deploy/compose.prod.yml")
 
@@ -539,20 +554,22 @@ main() {
 		die "새 백엔드(backend-$target_color)가 90초 안에 준비되지 않았다"
 	fi
 
-	local want_image="$ECR_REGISTRY/meterengine-backend:$sha" target_image
+	local want_image="$ECR_REGISTRY/$IMAGE_REPOSITORY_PREFIX-backend:$sha" target_image
 	target_image=$(running_image "backend-$target_color") || die "새 백엔드(backend-$target_color)의 이미지를 읽지 못했다"
 	[ "$target_image" = "$want_image" ] || die "새 백엔드(backend-$target_color)의 이미지가 다르다. 기대: $want_image, 실제: $target_image"
 
-	# prometheus.yml만 바뀐 배포도 up -d가 컨테이너를 다시 만들지 않아 HUP으로 다시 읽게 한다.
-	wait_for_prometheus_ready "${compose[@]}" || die "Prometheus가 90초 안에 준비되지 않았다"
-	"${compose[@]}" exec -T prometheus kill -HUP 1
-	log "Prometheus 설정 반영 완료"
-	# cloudwatch exporter도 기동할 때만 config.yml을 읽는다.
-	# 실패해도 새 색은 멀쩡하므로 이것 때문에 새 색을 버리지 않는다.
-	if "${compose[@]}" exec -T cloudwatch-exporter kill -HUP 1; then
-		log "cloudwatch exporter 설정 반영 완료"
-	else
-		log "cloudwatch exporter가 설정을 다시 읽지 못했다"
+	if monitoring_enabled; then
+		# prometheus.yml만 바뀐 배포도 up -d가 컨테이너를 다시 만들지 않아 HUP으로 다시 읽게 한다.
+		wait_for_prometheus_ready "${compose[@]}" || die "Prometheus가 90초 안에 준비되지 않았다"
+		"${compose[@]}" exec -T prometheus kill -HUP 1
+		log "Prometheus 설정 반영 완료"
+		# cloudwatch exporter도 기동할 때만 config.yml을 읽는다.
+		# 실패해도 새 색은 멀쩡하므로 이것 때문에 새 색을 버리지 않는다.
+		if "${compose[@]}" exec -T cloudwatch-exporter kill -HUP 1; then
+			log "cloudwatch exporter 설정 반영 완료"
+		else
+			log "cloudwatch exporter가 설정을 다시 읽지 못했다"
+		fi
 	fi
 
 	# 옛 색을 멈추기 전에 목록에서 빼야 Caddy가 멈추는 색에 새 요청을 보내지 않는다.
@@ -587,11 +604,13 @@ main() {
 	# 지운 이미지도 ECR에 남아 있어 롤백할 수 있다.
 	docker image prune -af --filter "until=336h" >/dev/null 2>&1 || true
 
-	# 경보 provisioning은 기동할 때만 읽혀, bind mount로 바뀐 alerting.yml을 reload API로 다시 읽게 한다.
-	# 앱이 쓰는 경로가 아니라서 앱 확인과 이미지 정리가 끝난 뒤에 한다.
-	wait_for_http "Grafana" http://127.0.0.1:3001/api/health '"database"' || die "Grafana가 90초 안에 준비되지 않았다"
-	reload_grafana_alerting || die "Grafana 경보 설정을 반영하지 못했다. 401이면 admin 비밀번호가 grafana-admin-password와 다르고, 아니면 alerting.yml을 확인한다"
-	log "Grafana 경보 설정 반영 완료"
+	if monitoring_enabled; then
+		# 경보 provisioning은 기동할 때만 읽혀, bind mount로 바뀐 alerting.yml을 reload API로 다시 읽게 한다.
+		# 앱이 쓰는 경로가 아니라서 앱 확인과 이미지 정리가 끝난 뒤에 한다.
+		wait_for_http "Grafana" http://127.0.0.1:3001/api/health '"database"' || die "Grafana가 90초 안에 준비되지 않았다"
+		reload_grafana_alerting || die "Grafana 경보 설정을 반영하지 못했다. 401이면 admin 비밀번호가 grafana-admin-password와 다르고, 아니면 alerting.yml을 확인한다"
+		log "Grafana 경보 설정 반영 완료"
+	fi
 
 	write_state_file "$target_color" "$sha"
 	log "배포 성공: $sha"

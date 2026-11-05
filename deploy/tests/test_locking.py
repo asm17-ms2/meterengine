@@ -36,7 +36,7 @@ class DeploymentLockTest(unittest.TestCase):
         self.trace.touch()
         self.release = self.root / "release"
         self.env = dict(os.environ, LOCK_FILE=str(self.lock), LEGACY_LOCK_FILE=str(self.legacy_lock), TRACE=str(self.trace),
-                        RELEASE=str(self.release), SHA="a" * 40, REF="b" * 40)
+                        RELEASE=str(self.release), SHA="a" * 40, REF="b" * 40, DEPLOY_ENV="production")
         if "\nacquire_deploy_lock() {" in source:
             self.acquire = function(source, "acquire_deploy_lock")
         else:
@@ -60,7 +60,7 @@ class DeploymentLockTest(unittest.TestCase):
 
     def entrypoints(self):
         entries = {}
-        for relative in (".github/workflows/cd.yml", "deploy/README.md",
+        for relative in (".github/workflows/deploy.yml", "deploy/README.md",
                          "measurements/test-slo/k6/README.md"):
             source = (ROOT / relative).read_text()
             for index, command in enumerate(re.findall(r'--parameters commands="([^"\n]+)"', source)):
@@ -83,7 +83,7 @@ class DeploymentLockTest(unittest.TestCase):
         return {key: value.replace("/etc/meterengine/deploy-command.lock", str(self.root / "deploy-command.lock"))
                 .replace("/etc/meterengine/deploy.lock", str(self.legacy_lock))
                 .replace("/opt/meterengine", str(self.repo))
-                .replace("<git-sha>", "$SHA").replace("<SHA>", "$SHA")
+                .replace("<git-sha>", "$SHA").replace("<SHA>", "$SHA").replace("<환경>", "production")
                 for key, value in entries.items()}
 
     def run_entry(self, command, shell="bash", invocation="ssm", **env):

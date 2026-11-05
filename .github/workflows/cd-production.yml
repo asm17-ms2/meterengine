@@ -1,0 +1,39 @@
+name: CD production
+
+# main 머지를 production에 배포한다. 수동 실행은 롤백이다: 이미지 태그를 주면 빌드 없이 그 태그를 배포한다.
+# GitHub Environment production이 main에서만 돌아, "Use workflow from"을 main으로 둔다.
+
+on:
+  push:
+    branches: [main]
+    # 이미지 빌드 컨텍스트와 서버가 읽는 deploy/만 본다
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - 'deploy/**'
+      - '.github/workflows/cd-production.yml'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "배포할 이미지 태그(커밋 SHA 40자). 비우면 현재 main을 새로 빌드한다"
+        required: false
+        default: ""
+
+# 배포는 겹치면 안 된다. 앞 배포가 끝날 때까지 기다린다(취소하지 않는다).
+concurrency:
+  group: cd-production
+  cancel-in-progress: false
+
+# id-token은 OIDC로 AWS 임시 자격을 받기 위한 것이다. 장기 액세스 키는 secrets에 없다.
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  cd:
+    uses: ./.github/workflows/deploy.yml
+    with:
+      environment: production
+      aws_role: arn:aws:iam::928618307647:role/meterengine-github-actions-role
+      image_tag: ${{ inputs.image_tag }}
