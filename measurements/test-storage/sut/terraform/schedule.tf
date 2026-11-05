@@ -48,3 +48,17 @@ resource "aws_scheduler_schedule" "stop_ec2" {
     }
   }
 }
+
+# ASG 서버는 멈추면 ASG가 고장으로 보고 새로 띄워, 위 EC2 정지 대신 대수를 0으로 내린다.
+# 다음 날 쓰려면 -var asg_min_size=1로 apply한다(원하는 대수는 최소에 맞춰 올라간다).
+resource "aws_autoscaling_schedule" "stop_asg" {
+  count = var.auto_stop_state == "ENABLED" ? 1 : 0
+
+  scheduled_action_name  = "${local.prefix}-stop-asg"
+  autoscaling_group_name = aws_autoscaling_group.sut.name
+  recurrence             = "0 4 * * *"
+  time_zone              = local.auto_stop_timezone
+  min_size               = 0
+  max_size               = 3
+  desired_capacity       = 0
+}
