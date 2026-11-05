@@ -6,11 +6,18 @@ name: CD staging
 on:
   push:
     branches: [develop]
-    # 이미지 빌드 컨텍스트와 서버가 읽는 deploy/만 본다
+    # 이미지 빌드 컨텍스트와 앱 서버가 읽는 deploy/만 본다. 배포 한 번이 서버 교체라, 앱 서버가 읽지 않는 파일만 바뀐 머지는 배포하지 않는다
     paths:
       - 'backend/**'
       - 'frontend/**'
       - 'deploy/**'
+      - '!deploy/terraform/**'
+      - '!deploy/tests/**'
+      - '!deploy/**/*.md'
+      - '!deploy/monitoring/**'
+      - '!deploy/compose.monitoring.yml'
+      - '!deploy/grafana/**'
+      - '!deploy/cloudwatch/**'
       - '.github/workflows/cd-staging.yml'
       - '.github/workflows/deploy.yml'
   workflow_dispatch:

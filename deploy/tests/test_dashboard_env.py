@@ -7,8 +7,8 @@ from promql import selectors
 
 DASHBOARDS = sorted((Path(__file__).resolve().parents[1] / "grafana/dashboards").glob("*.json"))
 ENV_FILTER = 'env=~"$env"'
-# 관측 시스템 자신과 Caddy는 환경마다 따로 있지 않아 env로 고르지 않는다.
-SHARED_PANELS = {("meterengine-resources.json", "관측"), ("meterengine-overview.json", "Caddy")}
+# 관측 시스템 자신은 환경마다 따로 있지 않아 env로 고르지 않는다.
+SHARED_PANELS = {("meterengine-resources.json", "관측")}
 
 
 def environment_panels(path):

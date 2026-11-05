@@ -5,9 +5,28 @@ mock_provider "aws" {
   mock_data "aws_region" {
     defaults = { region = "ap-northeast-2" }
   }
+  mock_data "aws_ssm_parameter" {
+    defaults = { insecure_value = "0123456789abcdef0123456789abcdef01234567" }
+  }
 }
 
-run "production_fleet_is_wired_beside_the_old_server" {
+# 손으로 만든 도메인 레코드를 가져오는 import는 가짜 공급자가 받지 않아 결과를 정해 준다.
+# 가져온 상태에 모르는 값이 남지 않게 별칭이 가리킬 ALB 주소도 plan에서 정한다.
+override_resource {
+  target          = module.app_fleet.aws_lb.app
+  override_during = plan
+  values = {
+    arn      = "arn:aws:elasticloadbalancing:ap-northeast-2:928618307647:loadbalancer/app/meterengine-production-alb/0000000000000000"
+    dns_name = "meterengine-production-alb-1.ap-northeast-2.elb.amazonaws.com"
+    zone_id  = "ZWKZPGTI48KDX"
+  }
+}
+override_resource {
+  target = aws_route53_record.public
+  values = {}
+}
+
+run "production_runs_one_server_beside_the_old_server" {
   command = plan
   override_resource {
     target = module.service.aws_instance.app[0]
@@ -24,7 +43,11 @@ run "production_fleet_is_wired_beside_the_old_server" {
   }
   assert {
     condition     = module.service.instance_id == "i-0f47bb1f028cd29a9"
-    error_message = "The old server keeps serving while the fleet is empty."
+    error_message = "The old server stays so the domains can move back to it."
+  }
+  assert {
+    condition     = module.app_fleet.min_size == 1
+    error_message = "Production keeps one server running."
   }
 }
 
@@ -57,7 +80,11 @@ run "production_fleet_configuration" {
   }
   assert {
     condition     = aws_autoscaling_group.app.name == "meterengine-production-app" && aws_autoscaling_group.app.min_size == 0 && aws_autoscaling_group.app.max_size == 3
-    error_message = "The production fleet starts at zero servers."
+    error_message = "The fleet module still allows zero servers."
+  }
+  assert {
+    condition     = aws_autoscaling_group.app.wait_for_elb_capacity == null && length(data.aws_ssm_parameter.app_version) == 0
+    error_message = "An empty fleet neither waits for servers nor reads the version parameter."
   }
   assert {
     condition     = toset(keys(aws_route53_record.certificate_validation)) == toset(["meterengine.com", "www.meterengine.com"]) && aws_acm_certificate.site.subject_alternative_names == toset(["www.meterengine.com"])
@@ -87,5 +114,78 @@ run "production_fleet_configuration" {
   assert {
     condition     = strcontains(base64decode(aws_launch_template.app.user_data), "--name '/meterengine/production/app-version'") && aws_ssm_parameter.app_version.value == "unset"
     error_message = "Boot reads the production version parameter, which starts unset."
+  }
+}
+
+# 하위 모듈 자원은 루트 run의 expect_failures로 가리킬 수 없어 모듈을 직접 돌린다.
+run "unset_version_keeps_servers_off" {
+  command = plan
+  module {
+    source = "../modules/app_fleet"
+  }
+  variables {
+    environment                        = "production"
+    parameter_path                     = "/meterengine/production"
+    site_domain                        = "meterengine.com"
+    site_aliases                       = ["www.meterengine.com"]
+    vpc_id                             = "vpc-07498f0672b7f3c9e"
+    public_subnet_ids                  = ["subnet-0348a18c1d399c193", "subnet-0e375e82d415767a3"]
+    route53_zone_id                    = "Z08728621CQ5R1K37A7N1"
+    database_security_group_id         = "sg-068a54ab4cfa91730"
+    ecr_repository_names               = ["meterengine-backend", "meterengine-frontend"]
+    ami_id                             = "ami-0f4109eb491b0476f"
+    min_size                           = 1
+    scaling_target_requests_per_second = 450
+    alb_deletion_protection            = true
+    app_egress_ports                   = [443]
+    monitoring_security_group_id       = "sg-33333333333333333"
+  }
+  override_data {
+    target = data.aws_ssm_parameter.app_version
+    values = { insecure_value = "unset" }
+  }
+  expect_failures = [aws_autoscaling_group.app]
+}
+
+run "recorded_sha_starts_one_server_and_waits_for_it" {
+  command = plan
+  module {
+    source = "../modules/app_fleet"
+  }
+  variables {
+    environment                        = "production"
+    parameter_path                     = "/meterengine/production"
+    site_domain                        = "meterengine.com"
+    site_aliases                       = ["www.meterengine.com"]
+    vpc_id                             = "vpc-07498f0672b7f3c9e"
+    public_subnet_ids                  = ["subnet-0348a18c1d399c193", "subnet-0e375e82d415767a3"]
+    route53_zone_id                    = "Z08728621CQ5R1K37A7N1"
+    database_security_group_id         = "sg-068a54ab4cfa91730"
+    ecr_repository_names               = ["meterengine-backend", "meterengine-frontend"]
+    ami_id                             = "ami-0f4109eb491b0476f"
+    min_size                           = 1
+    scaling_target_requests_per_second = 450
+    alb_deletion_protection            = true
+    app_egress_ports                   = [443]
+    monitoring_security_group_id       = "sg-33333333333333333"
+  }
+  override_resource {
+    target          = aws_lb_target_group.frontend
+    override_during = plan
+    values          = { arn = "arn:aws:elasticloadbalancing:ap-northeast-2:928618307647:targetgroup/front-1/0000000000000001" }
+  }
+  override_resource {
+    target          = aws_lb_target_group.backend
+    override_during = plan
+    values          = { arn = "arn:aws:elasticloadbalancing:ap-northeast-2:928618307647:targetgroup/back-1/0000000000000002" }
+  }
+
+  assert {
+    condition     = aws_autoscaling_group.app.min_size == 1 && aws_autoscaling_group.app.wait_for_elb_capacity == 1 && aws_autoscaling_group.app.wait_for_capacity_timeout == "20m"
+    error_message = "Raising the minimum waits until that many servers are healthy."
+  }
+  assert {
+    condition     = length(aws_autoscaling_group.app.target_group_arns) == 2
+    error_message = "The wait counts servers in both target groups. Without them it would end without any health check."
   }
 }

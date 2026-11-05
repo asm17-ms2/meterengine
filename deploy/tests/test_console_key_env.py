@@ -31,9 +31,8 @@ class ConsoleKeyEnvironmentTest(unittest.TestCase):
         frontend = services["frontend"]["environment"]
         for name in ("METERENGINE_API_KEY", "METERENGINE_ORGANIZATION_ID", "METERENGINE_ORGANIZATION_NAME"):
             self.assertNotIn(name, frontend)
-        for backend in ("backend-blue", "backend-green"):
-            for name in ("FRONTEND_API_KEY", "FRONTEND_ORGANIZATION_ID"):
-                self.assertNotIn(name, services[backend]["environment"])
+        for name in ("FRONTEND_API_KEY", "FRONTEND_ORGANIZATION_ID"):
+            self.assertNotIn(name, services["backend"]["environment"])
 
 
 if __name__ == "__main__":

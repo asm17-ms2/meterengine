@@ -126,7 +126,7 @@ docker run -p 3000:3000 \
 | `src/app/admin/` | 플랫폼 운영자 화면 |
 | `src/proxy.ts` | 세션 쿠키가 없으면 공개 화면 밖의 경로를 로그인으로 보내고, 현재 경로와 화면의 도입사, `X-Forwarded-For` 맨 오른쪽의 사용자 IP를 서버에 넘긴다 |
 | `src/lib/auth/` | 세션 확인, 권한, 로그인 뒤 이동 경로 |
-| `src/app/health/` | `deploy.sh`가 서버 안에서 부르는 준비 확인. 백엔드를 부르지 않고 `ok`만 돌려준다. Caddy가 바깥에서는 404로 막는다 |
+| `src/app/health/` | `deploy.sh`와 ALB 대상 그룹 헬스 체크가 부르는 준비 확인. 백엔드를 부르지 않고 `ok`만 돌려준다. 인터넷에서 온 요청은 ALB가 404로 막는다 |
 | `src/components/` | 화면별 컴포넌트 |
 | `src/components/shell/` | 콘솔과 운영자 셸, 메뉴, 안내 모드, 테마와 로케일을 거는 `AppProviders` |
 | `src/components/screen/` | 화면 공용 조각: 제목 줄, 툴바, 카드, 각주, 빈 상태, 오류, 스켈레톤, 링크 버튼, 월 선택, 검색과 필터, 페이지 |

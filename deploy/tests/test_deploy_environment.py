@@ -11,39 +11,19 @@ SOURCE = Path(__file__).resolve().parents[1] / "deploy.sh"
 MEASUREMENTS = Path(__file__).resolve().parents[2] / "measurements"
 SHA = "a" * 40
 REQUIRED = "DB_HOST DB_PORT DB_NAME DB_USERNAME DB_PASSWORD CRYPTO_ENCRYPTION_KEY OPERATOR_EMAIL OPERATOR_PASSWORD"
-MONITORING_REQUIRED = "DB_EXPORTER_PASSWORD GRAFANA_ADMIN_PASSWORD SLACK_WEBHOOK_URL OAUTH2_PROXY_CLIENT_ID OAUTH2_PROXY_CLIENT_SECRET OAUTH2_PROXY_COOKIE_SECRET"
 BASE_PARAMETERS = {"db-host": "db.example.invalid", "db-port": "5432", "db-name": "app", "db-username": "owner", "db-password": "secret",
                    "crypto-encryption-key": "key", "operator-email": "a@example.invalid", "operator-password": "secret"}
-MONITORING_PARAMETERS = {"db-exporter-password": "secret", "grafana-admin-password": "secret", "slack-webhook-url": "https://hook.invalid",
-                         "oauth2-proxy-client-id": "id", "oauth2-proxy-client-secret": "secret", "oauth2-proxy-cookie-secret": "secret"}
 
 FAKE_DOCKER = r'''#!/usr/bin/env bash
 printf 'docker %s\n' "$*" >>"$TRACE"
 case "$1" in
 # 표준 입력을 읽지 않으면 pipefail 아래에서 보내는 쪽이 SIGPIPE로 실패한다.
 login) cat >/dev/null; exit 0 ;;
-image) exit 0 ;;
 inspect) printf '928618307647.dkr.ecr.ap-northeast-2.amazonaws.com/%s-backend:%s\n' "${RUNNING_IMAGE_PREFIX:-meterengine}" "$SHA"; exit 0 ;;
-ps)
-    case "$*" in
-    *service=caddy*) echo caddy1 ;;
-    *service=backend-blue*) [ -f "$ROOT/blue-up" ] && echo blue1 ;;
-    esac
-    exit 0
-    ;;
-exec)
-    url=${!#}
-    case "$url" in
-    http://localhost:8081/*) printf '  X-Upstream: backend-blue:8080\n' >&2 ;;
-    *) printf '{"status":"UP"}\n' ;;
-    esac
-    exit 0
-    ;;
+ps) echo backend1; exit 0 ;;
 compose)
-    case "$*" in
-    *"config --services"*) printf 'caddy\nfrontend\nbackend-blue\nbackend-green\n' ;;
-    *"up -d backend-blue"*) touch "$ROOT/blue-up" ;;
-    esac
+    # 서비스 이름 없이 부르는 up -d는 감시 에이전트까지 올린다.
+    case "$*" in *"up -d") exit "${AGENTS_EXIT:-0}" ;; esac
     exit 0
     ;;
 esac
@@ -59,14 +39,17 @@ esac
 FAKE_CURL = r'''#!/usr/bin/env bash
 printf 'curl %s\n' "$*" >>"$TRACE"
 case "$*" in
-*"-K -"*) cat >/dev/null ;;
+*8080/actuator/health*) [ -z "$BACKEND_DOWN" ] || exit 7; echo '{"status":"UP"}' ;;
 *3000/health*) echo ok ;;
-*3001/api/health*) echo '{"database":"ok"}' ;;
 esac
 '''
 FAKE_GIT = r'''#!/usr/bin/env bash
 printf 'git %s\n' "$*" >>"$TRACE"
 [ "$1" != rev-parse ] || echo abc1234
+'''
+FAKE_SYSTEMCTL = r'''#!/usr/bin/env bash
+printf 'systemctl %s\n' "$*" >>"$TRACE"
+exit "${SYSTEMCTL_EXIT:-0}"
 '''
 
 
@@ -76,20 +59,22 @@ class DeployEnvironmentTest(unittest.TestCase):
         self.addCleanup(temp.cleanup)
         self.root = Path(temp.name)
         self.repo = self.root / "repo"
-        (self.repo / "deploy/caddy").mkdir(parents=True)
+        (self.repo / "deploy/server").mkdir(parents=True)
+        (self.repo / "deploy/server/ingest-rate.service").write_text("[Unit]\n")
         self.env_file = self.root / "prod.env"
+        self.unit_file = self.root / "meterengine-ingest-rate.service"
         self.trace = self.root / "trace"
         self.trace.touch()
         source = SOURCE.read_text()
-        for name, value in (("REPO_DIR", self.repo), ("ENV_FILE", self.env_file), ("CONFIG_FILE", self.root / "deploy.conf"),
-                            ("STATE_FILE", self.root / "deploy-state"), ("LOCK_FILE", self.root / "deploy-command.lock"), ("DRAIN_SECONDS", 0)):
+        for name, value in (("REPO_DIR", self.repo), ("ENV_FILE", self.env_file), ("UNIT_FILE", self.unit_file),
+                            ("LOCK_FILE", self.root / "deploy-command.lock")):
             source = re.sub(rf"^{name}=.*$", f"{name}={value}", source, flags=re.M)
         self.script = self.repo / "deploy/deploy.sh"
         self.script.write_text(source)
         self.script.chmod(self.script.stat().st_mode | stat.S_IEXEC)
         bin_dir = self.root / "bin"
         bin_dir.mkdir()
-        for name, body in (("docker", FAKE_DOCKER), ("aws", FAKE_AWS), ("curl", FAKE_CURL), ("git", FAKE_GIT),
+        for name, body in (("docker", FAKE_DOCKER), ("aws", FAKE_AWS), ("curl", FAKE_CURL), ("git", FAKE_GIT), ("systemctl", FAKE_SYSTEMCTL),
                            ("flock", "#!/bin/sh\nexit 0\n"), ("sleep", "#!/bin/sh\nexit 0\n")):
             path = bin_dir / name
             path.write_text(body)
@@ -101,24 +86,25 @@ class DeployEnvironmentTest(unittest.TestCase):
     def set_parameters(self, parameters):
         (self.root / "parameters").write_text("".join(f"/meterengine/test/{name}\t{value}\n" for name, value in parameters.items()))
 
-    def set_preflight(self, profiles="agents", required=REQUIRED, exit_code=0, expected_db_identifier="db", image_prefix="meterengine"):
+    def set_preflight(self, profiles="agents", exit_code=0, expected_db_identifier="db", image_prefix="meterengine"):
         values = {"PARAM_PATH": "/meterengine/test", "SITE_DOMAIN": "test.example.invalid", "SITE_ALIASES": "", "COMPOSE_PROFILES": profiles,
-                  "CADDY_SSO_SITES": "off", "BACKEND_MEM_LIMIT": "2g", "BACKEND_MAX_RAM_PERCENTAGE": "70",
-                  "EXPECTED_DB_IDENTIFIER": expected_db_identifier, "REQUIRED_PARAMETERS": required, "IMAGE_REPOSITORY_PREFIX": image_prefix}
+                  "BACKEND_MEM_LIMIT": "2g", "BACKEND_MAX_RAM_PERCENTAGE": "70",
+                  "EXPECTED_DB_IDENTIFIER": expected_db_identifier, "REQUIRED_PARAMETERS": REQUIRED, "IMAGE_REPOSITORY_PREFIX": image_prefix}
         lines = "\n".join(f"print({f'{key}={chr(39)}{value}{chr(39)}'!r})" for key, value in values.items())
         body = f"import sys\nprint('stop', file=sys.stderr)\nsys.exit({exit_code})\n" if exit_code else lines + "\n"
         (self.repo / "deploy/environment.py").write_text(body)
 
-    def deploy(self, *arguments):
-        return subprocess.run(["bash", str(self.script), *arguments], env=self.env, text=True, capture_output=True, timeout=30)
+    def deploy(self, *arguments, **env):
+        return subprocess.run(["bash", str(self.script), *arguments], env={**self.env, **env}, text=True, capture_output=True, timeout=30)
 
     def traced(self):
         return self.trace.read_text()
 
+    def trace_index(self, text):
+        return self.traced().index(text)
+
     def assert_nothing_written(self):
         self.assertFalse(self.env_file.exists())
-        self.assertFalse((self.repo / "deploy/caddy/upstreams.caddy").exists())
-        self.assertFalse((self.repo / "deploy/caddy/sso.caddy").exists())
         self.assertNotIn("git ", self.traced())
         self.assertNotIn("docker compose", self.traced())
 
@@ -136,14 +122,22 @@ class DeployEnvironmentTest(unittest.TestCase):
         self.assert_nothing_written()
 
     def test_missing_required_parameter_stops_before_compose(self):
-        self.set_preflight(profiles="agents,monitoring", required=f"{REQUIRED} {MONITORING_REQUIRED}")
-        self.set_parameters({**BASE_PARAMETERS, **MONITORING_PARAMETERS, "grafana-admin-password": ""})
+        self.set_parameters({**BASE_PARAMETERS, "operator-password": ""})
         self.env_file.write_text("IMAGE_TAG=previous\n")
         result = self.deploy("production", SHA)
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("GRAFANA_ADMIN_PASSWORD", result.stderr)
+        self.assertIn("OPERATOR_PASSWORD", result.stderr)
         self.assertNotIn("docker compose", self.traced())
         self.assertEqual(self.env_file.read_text(), "IMAGE_TAG=previous\n")
+
+    def test_env_file_has_one_image_tag(self):
+        result = self.deploy("staging", SHA)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        content = self.env_file.read_text()
+        self.assertIn(f"IMAGE_TAG={SHA}\n", content)
+        self.assertIn("COMPOSE_PROFILES=agents\n", content)
+        self.assertIn("BACKEND_MEM_LIMIT=2g\n", content)
+        self.assertNotIn("BLUE", content)
 
     def test_log_shows_only_the_identifier(self):
         result = self.deploy("staging", SHA)
@@ -158,21 +152,45 @@ class DeployEnvironmentTest(unittest.TestCase):
         self.assertIn("other", result.stderr)
         self.assertNotIn("docker compose", self.traced())
 
-    def test_without_monitoring_skips_monitoring_steps(self):
+    def test_app_starts_before_the_agents(self):
         result = self.deploy("staging", SHA)
         self.assertEqual(result.returncode, 0, result.stderr)
-        for word in ("prometheus", "cloudwatch-exporter", "3001"):
-            self.assertNotIn(word, self.traced())
-        self.assertIn("COMPOSE_PROFILES=agents\n", self.env_file.read_text())
-        self.assertIn("BACKEND_MEM_LIMIT=2g\n", self.env_file.read_text())
+        self.assertIn("pull --quiet backend frontend\n", self.traced())
+        app = self.trace_index("up -d --remove-orphans backend frontend\n")
+        self.assertLess(app, self.trace_index("8080/actuator/health"))
+        self.assertLess(self.trace_index("3000/health"), self.trace_index("compose.prod.yml up -d\n"))
 
-    def test_with_monitoring_runs_monitoring_steps(self):
-        self.set_preflight(profiles="agents,monitoring", required=f"{REQUIRED} {MONITORING_REQUIRED}")
-        self.set_parameters({**BASE_PARAMETERS, **MONITORING_PARAMETERS})
-        result = self.deploy("production", SHA)
+    def test_agent_failure_keeps_the_app(self):
+        result = self.deploy("staging", SHA, AGENTS_EXIT="1")
         self.assertEqual(result.returncode, 0, result.stderr)
-        for word in ("exec -T prometheus kill -HUP 1", "exec -T cloudwatch-exporter kill -HUP 1", "3001/api/health", "provisioning/alerting/reload"):
-            self.assertIn(word, self.traced())
+        self.assertIn("감시 에이전트", result.stdout)
+
+    def test_without_profiles_skips_agents(self):
+        self.set_preflight(profiles="")
+        result = self.deploy("staging", SHA)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("compose.prod.yml up -d\n", self.traced())
+
+    def test_backend_that_never_gets_ready_fails_before_the_unit(self):
+        result = self.deploy("staging", SHA, BACKEND_DOWN="1")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("180초", result.stderr)
+        self.assertIn("logs --tail 50 backend", self.traced())
+        self.assertNotIn("systemctl", self.traced())
+
+    def test_ingest_rate_unit_is_installed_and_restarted_after_checkout(self):
+        result = self.deploy("staging", SHA)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(self.unit_file.read_text(), "[Unit]\n")
+        for command in ("systemctl daemon-reload", "systemctl enable --quiet meterengine-ingest-rate.service",
+                        "systemctl restart meterengine-ingest-rate.service"):
+            self.assertIn(command + "\n", self.traced())
+        self.assertLess(self.trace_index("git checkout"), self.trace_index("systemctl restart"))
+
+    def test_unit_failure_keeps_the_app(self):
+        result = self.deploy("staging", SHA, SYSTEMCTL_EXIT="1")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("수집량 지표", result.stdout)
 
     def test_image_prefix_reaches_env_file_and_image_check(self):
         self.set_preflight(image_prefix="meterengine-staging")
@@ -186,14 +204,6 @@ class DeployEnvironmentTest(unittest.TestCase):
         result = self.deploy("staging", SHA)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("meterengine-staging-backend", result.stderr)
-
-    def test_preflight_values_override_deploy_conf(self):
-        (self.root / "deploy.conf").write_text("PARAM_PATH=/meterengine/prod\nBACKEND_MEM_LIMIT=768m\nCADDY_SSO_SITES=on\n")
-        result = self.deploy("staging", SHA)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("--path /meterengine/test ", self.traced())
-        self.assertIn("BACKEND_MEM_LIMIT=2g\n", self.env_file.read_text())
-        self.assertEqual((self.repo / "deploy/caddy/sso.caddy").read_text(), "# CADDY_SSO_SITES=off\n")
 
 
 class SutDeployTest(unittest.TestCase):
@@ -261,6 +271,58 @@ case "$1" in cat-file) exit "$HAS_ENVIRONMENT_FILE" ;; esac
             output.write_text(f"[deploy] DB: {line}\n")
             result = subprocess.run(["bash", "-c", script, "bash", str(output)], text=True, capture_output=True)
             self.assertEqual(result.returncode, code, (line, result.stderr))
+
+    def run_commit_selection(self, call, commits):
+        """commits: SHA마다 그 트리에 있는 경로 목록. ECR에는 두 저장소 모두 이 순서(최신부터)로 있다."""
+        source = (MEASUREMENTS / "test-sjpark/sut/scripts/sut-deploy.sh").read_text()
+        constants = "\n".join(re.findall(r"^readonly (?:[A-Z_]+)=.*$", source, re.M))
+        functions = "\n".join(re.search(rf"^{name}\(\) \{{.*?^\}}", source, re.M | re.S).group()
+                              for name in ("ecr_sha_tags_newest_first", "commit_problem", "require_deployable_commit", "latest_deployable_sha"))
+        script = (f"set -euo pipefail\nSCRIPT_DIR=/operator\n{constants}\n"
+                  "log() { printf '[sut-deploy] %s\\n' \"$*\"; }\ndie() { echo \"$*\" >&2; exit 1; }\n"
+                  f"{functions}\n{call}\n")
+        tree = self.root / "tree"
+        tree.write_text("".join(f"{sha}:{path}\n" for sha, paths in commits.items() for path in paths)
+                        + "".join(f"{sha}^{{commit}}\n" for sha in commits))
+        fake_git = self.root / "bin/git"
+        fake_git.write_text('#!/bin/sh\nprintf \'git %s\\n\' "$*" >>"$TRACE"\n[ "$3" = cat-file ] || exit 0\ngrep -Fxq -- "$5" "$TREE"\n')
+        fake_aws = self.root / "bin/aws"
+        fake_aws.write_text('#!/bin/sh\nprintf \'aws %s\\n\' "$*" >>"$TRACE"\nprintf \'%s\\n\' $COMMITS\n')
+        for path in (fake_git, fake_aws):
+            path.chmod(path.stat().st_mode | stat.S_IEXEC)
+        self.trace.write_text("")
+        return subprocess.run(["bash", "-c", script], env={**self.env, "TREE": str(tree), "COMMITS": " ".join(commits)},
+                              text=True, capture_output=True, timeout=10)
+
+    def test_selection_skips_commits_without_caddy_or_environment_file(self):
+        both = ["deploy/caddy/Caddyfile", "deploy/environments/test-sjpark.json"]
+        commits = {"1" * 40: ["deploy/environments/test-sjpark.json"], "2" * 40: ["deploy/caddy/Caddyfile"], "3" * 40: both, "4" * 40: both}
+        result = self.run_commit_selection("latest_deployable_sha", commits)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "3" * 40)
+        self.assertIn(f"{'1' * 40} 건너뜀: Caddy가 빠진 커밋", result.stderr)
+        self.assertIn(f"{'2' * 40} 건너뜀: test-sjpark 환경 파일이 없는 커밋", result.stderr)
+
+    def test_selection_without_any_caddy_commit_points_to_the_kept_images(self):
+        result = self.run_commit_selection("latest_deployable_sha", {"1" * 40: ["deploy/environments/test-sjpark.json"]})
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("보존 이미지", result.stderr)
+
+    def test_given_sha_without_caddy_is_rejected(self):
+        result = self.run_commit_selection(f"require_deployable_commit {'1' * 40}", {"1" * 40: ["deploy/environments/test-sjpark.json"]})
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Caddy가 빠진 커밋이라 test-sjpark에 배포하지 않는다", result.stderr)
+
+    def test_given_sha_without_environment_file_is_rejected(self):
+        result = self.run_commit_selection(f"require_deployable_commit {'1' * 40}", {"1" * 40: ["deploy/caddy/Caddyfile"]})
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("test-sjpark 환경 파일이 없는 커밋이다", result.stderr)
+
+    def test_given_sha_is_checked_before_any_remote_command(self):
+        main = re.search(r"^main\(\) \{.*?^\}", (MEASUREMENTS / "test-sjpark/sut/scripts/sut-deploy.sh").read_text(), re.M | re.S).group()
+        self.assertLess(main.index("fetch_operator_checkout"), main.index("latest_deployable_sha"))
+        self.assertLess(main.index('require_deployable_commit "$sha"'), main.index("run_remote_command"))
+        self.assertLess(main.index('require_deployable_commit "$sha"'), main.index("wait_ssm_online"))
 
     def test_sut_cannot_read_either_production_path(self):
         for sut in self.SUTS:

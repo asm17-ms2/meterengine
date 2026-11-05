@@ -5,6 +5,9 @@ mock_provider "aws" {
   mock_data "aws_region" {
     defaults = { region = "ap-northeast-2" }
   }
+  mock_data "aws_ssm_parameter" {
+    defaults = { insecure_value = "0123456789abcdef0123456789abcdef01234567" }
+  }
   mock_resource "aws_acm_certificate" {
     defaults = {
       arn = "arn:aws:acm:ap-northeast-2:928618307647:certificate/00000000-0000-0000-0000-000000000000"
@@ -345,4 +348,97 @@ run "fleet_starts_empty_beside_the_old_server" {
     condition     = aws_ssm_parameter.app_version.name == "/meterengine/staging/app-version" && aws_ssm_parameter.app_version.type == "String" && aws_ssm_parameter.app_version.value == "unset"
     error_message = "The version parameter starts unset."
   }
+}
+
+run "domain_points_at_the_alb" {
+  command = plan
+  # 앞의 apply가 만든 자원은 plan 덮어쓰기가 먹지 않아 빈 상태에서 본다.
+  state_key = "domain"
+  override_resource {
+    target          = module.app_fleet.aws_lb.app
+    override_during = plan
+    values = {
+      arn      = "arn:aws:elasticloadbalancing:ap-northeast-2:928618307647:loadbalancer/app/meterengine-staging-alb/0000000000000000"
+      dns_name = "meterengine-staging-alb-1.ap-northeast-2.elb.amazonaws.com"
+      zone_id  = "ZWKZPGTI48KDX"
+    }
+  }
+
+  assert {
+    condition = (
+      one(aws_route53_record.app.alias).name == "meterengine-staging-alb-1.ap-northeast-2.elb.amazonaws.com" &&
+      one(aws_route53_record.app.alias).zone_id == "ZWKZPGTI48KDX" &&
+      !one(aws_route53_record.app.alias).evaluate_target_health &&
+      aws_route53_record.app.ttl == null && aws_route53_record.app.records == null
+    )
+    error_message = "The staging domain is an alias of the staging ALB."
+  }
+  assert {
+    condition     = module.app_fleet.min_size == 1
+    error_message = "Staging keeps one server running behind the domain."
+  }
+  assert {
+    condition     = strcontains(file("${path.module}/dns.tf"), "depends_on = [module.app_fleet]") && strcontains(file("${path.module}/dns.tf"), "prevent_destroy = true")
+    error_message = "The record changes after the fleet is healthy and is never deleted."
+  }
+}
+
+run "turning_on_keeps_the_domain_on_the_old_server" {
+  command = plan
+  # 앞의 apply가 만든 자원은 plan 덮어쓰기가 먹지 않아 빈 상태에서 본다.
+  state_key = "domain"
+  variables {
+    serve_domain_from_alb = false
+  }
+  override_resource {
+    target          = aws_eip.app
+    override_during = plan
+    values          = { public_ip = "3.34.216.111" }
+  }
+
+  assert {
+    condition     = length(aws_route53_record.app.alias) == 0 && aws_route53_record.app.ttl == 60 && aws_route53_record.app.records == toset(["3.34.216.111"])
+    error_message = "Without the switch the record stays an A record of the old server address, as it is now."
+  }
+}
+
+run "rollback_allows_an_empty_fleet" {
+  command   = plan
+  state_key = "fleet_outputs_overridden"
+  variables {
+    serve_domain_from_alb = false
+  }
+  override_module {
+    target = module.app_fleet
+    outputs = {
+      min_size                   = 0
+      alb_dns_name               = "meterengine-staging-alb-1.ap-northeast-2.elb.amazonaws.com"
+      alb_zone_id                = "ZWKZPGTI48KDX"
+      autoscaling_group_name     = "meterengine-staging-app"
+      autoscaling_group_arn      = "arn:aws:autoscaling:ap-northeast-2:928618307647:autoScalingGroup:00000000-0000-0000-0000-000000000000:autoScalingGroupName/meterengine-staging-app"
+      app_version_parameter_name = "/meterengine/staging/app-version"
+    }
+  }
+
+  assert {
+    condition     = length(aws_route53_record.app.alias) == 0
+    error_message = "Once the domain is back on the old server the fleet can drop to zero."
+  }
+}
+
+run "alb_domain_needs_a_server" {
+  command   = plan
+  state_key = "fleet_outputs_overridden"
+  override_module {
+    target = module.app_fleet
+    outputs = {
+      min_size                   = 0
+      alb_dns_name               = "meterengine-staging-alb-1.ap-northeast-2.elb.amazonaws.com"
+      alb_zone_id                = "ZWKZPGTI48KDX"
+      autoscaling_group_name     = "meterengine-staging-app"
+      autoscaling_group_arn      = "arn:aws:autoscaling:ap-northeast-2:928618307647:autoScalingGroup:00000000-0000-0000-0000-000000000000:autoScalingGroupName/meterengine-staging-app"
+      app_version_parameter_name = "/meterengine/staging/app-version"
+    }
+  }
+  expect_failures = [aws_route53_record.app]
 }
