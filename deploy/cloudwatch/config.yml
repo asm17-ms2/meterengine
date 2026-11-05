@@ -1,4 +1,4 @@
-# cloudwatch_exporter 설정. 계정의 모든 RDS 인스턴스를 읽고 대시보드가 dbinstance_identifier로 고른다.
+# cloudwatch_exporter 설정. 계정의 모든 RDS 인스턴스와 MeterEngine ALB를 읽는다. env 라벨은 공용 Prometheus가 이름에서 만든다.
 # 자격은 EC2 역할이다. 5분 단위로만 나오는 지표(크레딧, EBS 잔량)는 period_seconds가 300이다.
 
 region: ap-northeast-2
@@ -92,3 +92,51 @@ metrics:
     aws_metric_name: CheckpointLag
     aws_dimensions: [DBInstanceIdentifier]
     aws_statistics: [Average]
+  # 앱 서버 대상 그룹(back-, front-)만 읽는다. Grafana 대상 그룹(graf-)은 대시보드가 쓰지 않아 조회 요금만 는다.
+  # 대상 그룹 목록은 10분마다 다시 찾는다. 대상 그룹을 교체하면 새 그룹 지표가 그만큼 늦게 보인다.
+  - aws_namespace: AWS/ApplicationELB
+    aws_metric_name: HealthyHostCount
+    aws_dimensions: [LoadBalancer, TargetGroup]
+    aws_statistics: [Minimum]
+    aws_dimension_select_regex: &app_target_groups
+      LoadBalancer: ["app/meterengine-.+-alb/.+"]
+      TargetGroup: ["targetgroup/(back|front)-.+"]
+    list_metrics_cache_ttl: 600
+  - aws_namespace: AWS/ApplicationELB
+    aws_metric_name: UnHealthyHostCount
+    aws_dimensions: [LoadBalancer, TargetGroup]
+    aws_statistics: [Maximum]
+    aws_dimension_select_regex: *app_target_groups
+    list_metrics_cache_ttl: 600
+  - aws_namespace: AWS/ApplicationELB
+    aws_metric_name: RequestCount
+    aws_dimensions: [LoadBalancer, TargetGroup]
+    aws_statistics: [Sum]
+    aws_dimension_select_regex: *app_target_groups
+    list_metrics_cache_ttl: 600
+  - aws_namespace: AWS/ApplicationELB
+    aws_metric_name: HTTPCode_Target_5XX_Count
+    aws_dimensions: [LoadBalancer, TargetGroup]
+    aws_statistics: [Sum]
+    aws_dimension_select_regex: *app_target_groups
+    list_metrics_cache_ttl: 600
+  - aws_namespace: AWS/ApplicationELB
+    aws_metric_name: TargetResponseTime
+    aws_dimensions: [LoadBalancer, TargetGroup]
+    aws_extended_statistics: [p50, p99]
+    aws_dimension_select_regex: *app_target_groups
+    list_metrics_cache_ttl: 600
+  # ALB가 직접 낸 5xx다. 502는 서버 keep-alive가 ALB보다 먼저 끊겨도 나서 따로 본다.
+  - aws_namespace: AWS/ApplicationELB
+    aws_metric_name: HTTPCode_ELB_5XX_Count
+    aws_dimensions: [LoadBalancer]
+    aws_statistics: [Sum]
+    aws_dimension_select_regex: &meterengine_albs
+      LoadBalancer: ["app/meterengine-.+-alb/.+"]
+    list_metrics_cache_ttl: 600
+  - aws_namespace: AWS/ApplicationELB
+    aws_metric_name: HTTPCode_ELB_502_Count
+    aws_dimensions: [LoadBalancer]
+    aws_statistics: [Sum]
+    aws_dimension_select_regex: *meterengine_albs
+    list_metrics_cache_ttl: 600

@@ -31,10 +31,11 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
                                                 부팅 때 버전 파라미터의 커밋으로 배포한다
 
 [공용 모니터링 서버 meterengine-monitoring] --scrape--> 서버마다 8080, 9100, 9101과 환경별 DB --경보--> Slack
+     ^
+     \--3000-- 운영 ALB (grafana.meterengine.com)
 ```
 
-- 도메인: https://meterengine.com (Route 53 호스티드 존).
-  - 지금은 A 레코드가 옛 서버의 탄력적 IP를 가리킨다. 아래 "전환 중인 옛 서버" 참조.
+- 도메인: https://meterengine.com (Route 53 호스티드 존). apex, www, grafana 레코드는 ALB 별칭이고 Terraform이 관리한다. 아래 "도메인 전환과 옛 서버" 참조.
 - 앱 서버: 오토스케일링 그룹 `meterengine-production-app`(t4g.medium, arm64, Amazon Linux 2023, ap-northeast-2). "앱 서버 오토스케일링 그룹" 참조.
 - DB: RDS `meterengine-db` (db.t4g.small, PostgreSQL 18, 단일 AZ).
 - staging은 ALB, 오토스케일링 그룹 `meterengine-staging-app`, DB `meterengine-staging-db`(db.t4g.small)를 따로 쓴다.
@@ -54,19 +55,29 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
 | `environment.py`, `environments/` | 환경별 값과 이 서버가 그 환경의 서버인지 확인 |
 | `server/` | 서버마다 systemd로 도는 10초 수집량 지표 스크립트와 유닛 |
 | `compose.monitoring.yml`, `monitoring/` | 공용 모니터링 서버의 스택, 수집 설정, 기동 스크립트, 읽을 파라미터 이름 목록. "공용 모니터링 서버" 참조 |
-| `cloudwatch/config.yml` | 공용 모니터링 서버의 cloudwatch exporter가 읽을 RDS 지표 목록 |
+| `cloudwatch/config.yml` | 공용 모니터링 서버의 cloudwatch exporter가 읽을 RDS와 ALB 지표 목록 |
 | `grafana/provisioning/`, `grafana/dashboards/` | Grafana 데이터 소스, 대시보드, 경보의 정본 |
 | `terraform/` | staging, production, 공용 모니터링의 Terraform 루트와 모듈 |
 
 - 루트의 `docker-compose.yml`은 로컬 개발용이고 배포 스택과 무관하다.
 - Grafana의 데이터 소스, 대시보드, 경보는 파일이 정본이다. 공용 모니터링 서버의 `start.sh`가 반영한다.
 
-### 전환 중인 옛 서버
+### 도메인 전환과 옛 서버
 
-- 두 환경의 도메인은 아직 옛 서버(production `meterengine-server` `i-0f47bb1f028cd29a9`, staging `meterengine-staging`)를 가리킨다. 오토스케일링 그룹은 최소 0대로 비어 있다.
-- 옛 서버는 Caddy가 HTTPS와 경로 분배를, 블루그린 백엔드 두 색이 API를 맡는 구성으로 돈다. 옛 운영 서버는 서버 안 Prometheus, Grafana, exporter와 oauth2-proxy도 띄워 `grafana.meterengine.com`, `prometheus.meterengine.com`을 받는다.
-- CD는 더 이상 옛 서버에 배포하지 않는다. 옛 서버는 Caddy와 블루그린으로 도는 마지막 커밋에 머물고, 그 구성은 그 커밋의 이 문서가 설명한다.
-- 이 저장소 지금 커밋의 `deploy.sh`는 오토스케일링 그룹 밖 서버에서 환경 확인을 통과하지 못해 옛 서버를 건드리지 않는다.
+- 도메인 레코드는 staging `terraform/staging/dns.tf`, production `terraform/production/dns.tf`(apex, www, grafana)가 정한다. production의 세 레코드는 손으로 만든 것을 import 블록으로 가져온다.
+- 변수 `serve_domain_from_alb`(기본 true)가 true면 ALB 별칭, false면 옛 서버 탄력적 IP의 A 레코드(TTL 60)다. 어느 쪽으로 바꿔도 같은 레코드를 제자리에서 고치고, 레코드는 삭제 보호가 걸려 있다.
+- 처음 넘길 때는 두 번 apply한다.
+  1. `-var serve_domain_from_alb=false`로 서버만 켠다. 최소 대수가 1이 되고 healthy 1대를 기다린다. 도메인은 그대로라 `curl --connect-to <도메인>:443:<ALB 주소>:443`로 ALB를 거쳐 확인한다.
+  2. 같은 날 기본값으로 다시 apply해 도메인을 ALB로 넘긴다. plan은 레코드 제자리 수정뿐이어야 한다.
+- production은 1단계 전에 세 레코드의 TTL을 CLI로 300에서 60으로 낮추고 10분 넘게 기다린다. 그래야 1단계 plan의 import에 레코드 변경이 섞이지 않는다.
+- 되돌리기는 옛 서버를 켜고 `-var serve_domain_from_alb=false`로 apply하는 것이다. 급하면 저장해 둔 값으로 CLI UPSERT한다.
+  - 옛 서버 Caddy는 도메인이 ALB로 간 뒤 인증서를 갱신하지 못한다. 그 인증서가 유효한 동안만 되돌릴 수 있다.
+  - 되돌린 뒤에는 기본값을 false로 바꾸는 PR이 머지될 때까지 기본값으로 apply하지 않는다.
+  - git revert로 되돌리지 않는다. 레코드 삭제 plan이 나오고 import 블록도 사라진다.
+  - 도메인이 옛 서버를 가리키는 동안은 최소 대수를 0으로 내릴 수 있다. 레코드가 ALB를 가리킬 때만 최소 1대를 요구한다.
+- 옛 서버(production `meterengine-server` `i-0f47bb1f028cd29a9`, staging `meterengine-staging`)는 넘긴 뒤 정지한다. 지우지 않고 탄력적 IP와 볼륨을 남긴다. 두 서버가 같이 돌면 같은 DB에서 예약 작업을 둘 다 돌리므로 정지는 넘긴 날 한다.
+- 옛 서버는 Caddy와 블루그린으로 도는 마지막 커밋에 머물고, 그 구성은 그 커밋의 이 문서가 설명한다. CD는 옛 서버에 배포하지 않고, 지금 커밋의 `deploy.sh`는 오토스케일링 그룹 밖 서버에서 환경 확인을 통과하지 못한다.
+- `prometheus.meterengine.com` 레코드는 Terraform 밖이다. 넘긴 뒤 CLI로 지운다. 옛 운영 서버의 탄력적 IP를 반납하기 전에 지운다. 남겨 두면 반납한 주소를 받은 남의 서버를 가리킨다.
 
 ## 사전 준비
 
@@ -76,7 +87,6 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
 - `/meterengine/production/*` 파라미터가 먼저 등록되어 있어야 한다.
   - **compose나 `deploy.sh`가 값이 없으면 배포를 멈추므로, 값을 쓰는 구성이 파라미터 없이 머지되면 그 뒤로 뜨는 서버가 모두 실패한다.** 필수 값 목록은 `environment.py`에 있다. 등록 명령은 "설정값" 참조.
 - Grafana의 GitHub 로그인은 공용 모니터링 서버의 Grafana가 직접 한다. 준비는 "공용 모니터링 서버" 참조.
-  - 옛 운영 서버의 `grafana.`, `prometheus.` 사이트는 아직 그 서버의 Caddy와 oauth2-proxy가 같은 OAuth 앱으로 GitHub 로그인을 받는다.
 
 ### 서버 준비
 
@@ -443,7 +453,9 @@ aws ssm get-parameter --name /meterengine/production/operator-password --with-de
 - apply는 develop 최신 커밋에서만 한다. PR 브랜치의 plan은 미리 보기로만 쓴다.
   - main이나 릴리스 체크아웃에서는 plan도 apply도 하지 않는다. main은 릴리스 전까지 develop의 Terraform을 갖지 않아, 거기서 apply하면 사양이 되돌아가거나 develop에만 있는 자원이 지워진다.
 - CD가 돌지 않을 때 apply한다. DB 클래스나 서버 사양을 바꾸면 몇 분 끊겨 겹친 배포의 헬스 확인이 실패한다.
-- production plan은 입력이 없다. staging plan은 기본값 없는 입력 다섯 개를 `TF_VAR_` 환경 변수로 넣고, 값을 화면에 찍지 않는다.
+- production plan은 입력이 없다.
+  - 운영 버전 파라미터 `/meterengine/production/app-version`에 40자 SHA가 기록되기 전에는 production plan이 실패한다. main 릴리스의 CD가 이 값을 쓴다. 최소 1대 확인이라 의도한 동작이다.
+- staging plan은 기본값 없는 입력 다섯 개를 `TF_VAR_` 환경 변수로 넣고, 값을 화면에 찍지 않는다.
   - `db_password_version`, `runtime_secret_versions`: 상태에 기록된 지금 버전을 그대로 쓴다. 버전이 같으면 write-only 값은 비교하지 않는다.
   - `db_password_wo`, `runtime_secrets`: Parameter Store의 지금 값을 `--with-decryption`으로 읽어 쓴다.
   - `operator_email`: Parameter Store `/meterengine/staging/operator-email`의 지금 값을 쓴다.
@@ -473,8 +485,12 @@ aws ssm get-parameter --name /meterengine/production/operator-password --with-de
   3. `deploy/deploy.sh <환경> <SHA>`를 부른다. 앱과 감시 에이전트를 띄우고 수집량 지표 유닛 `meterengine-ingest-rate.service`를 설치한다.
 - 배포는 `rollout.sh`가 버전 파라미터에 SHA를 쓰고 새로 고침(최소 건강 100%, 최대 200%)을 시작하는 것이다. 새 서버가 대상 그룹에서 healthy가 된 뒤 옛 서버가 빠진다.
 - 부팅이 느리거나 설치 실패가 잦으면 릴리스마다 이미지를 미리 굽는 방식으로 옮긴다. 그때는 시작 템플릿의 image_id와 부팅 스크립트만 바뀌고 롤링, 버전 파라미터, 확장 정책은 그대로다.
-- 최소 대수는 0이다. 그동안 CD는 버전만 기록한다(`recorded_only=true`).
-  - Caddy 없는 커밋의 SHA가 버전 파라미터에 기록된 뒤에 최소 대수를 1로 올린다. 버전 파라미터가 `unset`이거나 Caddy가 있는 커밋이면 서버가 ALB 헬스 체크를 통과하지 못해 교체만 되풀이한다. 그 전에 원하는 대수를 손으로 올리지 않는다.
+- 최소 대수는 1, 최대는 3이다(`<환경>/main.tf`의 `min_size`).
+  - 최소 대수가 1 이상이면 버전 파라미터가 40자 SHA인지 plan에서 본다. `unset`이면 plan이 멈춘다.
+  - 형식만 보므로, 그 커밋이 Caddy를 걷어낸 커밋인지는 apply 전에 `git cat-file -e <값>:deploy/caddy/Caddyfile`가 실패하는지로 본다. Caddy가 있는 커밋이면 서버가 ALB 헬스 체크를 통과하지 못해 교체만 되풀이한다.
+- 최소 대수를 바꾸는 apply는 두 대상 그룹 모두에서 그만큼 healthy가 될 때까지 최대 20분 기다린다. 도메인 레코드는 그 뒤에 바뀐다.
+  - 시간이 지나 실패하면 바로 다시 apply하지 않는다. 다시 돌리면 기다리지 않고 지나가 healthy 서버 없이 도메인이 넘어갈 수 있다. "문제 해결"의 `describe-target-health`로 두 대상 그룹에 healthy 서버가 있는지 먼저 본다.
+  - 대기는 healthy 수가 최소 대수와 같아야 끝난다. 확장으로 대수가 늘어난 동안 최소 대수를 바꾸면 끝나지 않으니, 원하는 대수가 최소일 때 바꾼다.
 - 확장: 서버마다 `deploy/server/ingest-rate.sh`가 10초마다 (초당 수집 요청 / 원하는 대수)를 `MeterEngine/Scaling`에 올리고, 확장 정책은 그 10초 합을 서버당 초당 450건에 맞춘다. 450은 측정 환경 숫자로 잡은 추정값이다.
 - 배포 역할이 버전 파라미터를 쓰고 롤링을 시작한다. Terraform은 버전 값과 원하는 대수를 되돌리지 않는다.
 - CD가 도는 동안 apply하지 않는다. 시작 템플릿이 바뀌는 apply는 롤링을 시작해, 배포가 시작한 롤링과 겹치면 실패한다.
@@ -492,11 +508,13 @@ aws ssm get-parameter --name /meterengine/production/operator-password --with-de
 - 옛 서버의 보안 그룹 `meterengine-ec2-sg`와 역할 `meterengine-ec2-role`, DB 보안 그룹 `meterengine-rds-sg`, ECR `meterengine-backend`, `meterengine-frontend`는 Terraform이 만들지 않는다. DB 보안 그룹에는 새 앱 서버와 공용 모니터링에서 오는 5432 규칙만 Terraform이 더한다.
 - 배포 역할 `meterengine-github-actions-role`도 Terraform 밖이다. 롤링에 필요한 권한은 인라인 정책 `meterengine-production-rollout`으로 손으로 더한다.
   - `meterengine-production-app` 그룹의 새로 고침 시작과 취소, 오토스케일링 그룹과 ALB 조회, `/meterengine/production/app-version` 읽기와 쓰기.
+- 운영 레코드 `prometheus.meterengine.com`은 Terraform 밖이다("도메인 전환과 옛 서버").
 - 새 운영 서버의 송신은 443과 DB 5432만 열린다. 옛 운영 서버는 송신이 모두 열려 있다. 다른 포트가 필요하면 `production/main.tf`의 `app_egress_ports`에 더한다.
 
 ### 공용 모니터링 연결
 
 - 두 루트가 보안 그룹 `meterengine-monitoring`을 이름으로 찾아, 그 그룹에서 앱 서버로 오는 8080, 9100, 9101과 DB로 오는 5432를 연다. 이 그룹이 없으면 plan이 멈춘다.
+- production 루트는 그 그룹에 운영 ALB에서 오는 3000을 더하고, 태그 `Role=monitoring`인 서버를 Grafana 대상 그룹에 붙인다(`terraform/production/grafana.tf`).
 - staging은 exporter 비밀번호 파라미터 `/meterengine/staging/db-exporter-password`를 Terraform이 자리 값으로 만든다. 실제 값과 DB 사용자는 사람이 넣는다.
 
 ```bash
@@ -514,7 +532,7 @@ sudo bash /opt/meterengine/measurements/test-storage/sut/scripts/remote/upsert-e
 ## 모니터링
 
 - 모든 환경의 앱 서버와 DB를 공용 모니터링 서버 한 대가 긁는다. 앱 서버에는 agents 프로필의 node exporter와 cAdvisor만 뜬다.
-- 옛 운영 서버는 아직 서버 안 Prometheus, Grafana, oauth2-proxy, postgres exporter, cloudwatch exporter로 자기 자신을 본다. 대시보드와 경보 파일은 공용 서버와 같이 쓴다.
+- 옛 운영 서버는 정지하기 전까지 서버 안 Prometheus, Grafana, oauth2-proxy, exporter로 자기 자신을 본다. 이 저장소의 대시보드와 경보 파일 변경은 거기에 반영되지 않는다.
 - postgres exporter는 RDS에 `pg_monitor` 권한의 읽기 전용 사용자 `meterengine_exporter`로 붙는다. 새 RDS에는 이 사용자를 먼저 만든다.
 
 ```sql
@@ -529,7 +547,9 @@ EC2 `meterengine-monitoring` 한 대가 모든 환경의 앱 서버와 DB를 긁
 - 앱 서버는 태그 `Role=app`인 실행 중 서버를 30초마다 다시 찾아 백엔드 `8080`, node exporter `9100`, cAdvisor `9101`을 긁는다. `Environment` 태그가 `env` 라벨, 인스턴스 ID가 `instance` 라벨이 된다.
 - DB는 환경마다 postgres exporter를 하나씩 띄워 `env`를 붙이고, RDS 지표는 DB 식별자에서 `env`를 만든다.
 - 서버나 DB 보안 그룹이 보안 그룹 `meterengine-monitoring`을 들여야 긁힌다. 들이지 않은 대상은 down으로 보인다. 다른 루트가 이 이름으로 찾으므로 이름을 바꾸지 않는다.
-- 이 서버는 들어오는 규칙이 없다. Prometheus는 서버의 127.0.0.1:9090, Grafana는 3000에 뜬다.
+- 들어오는 규칙은 운영 ALB에서 오는 3000 하나다. Prometheus는 서버의 127.0.0.1:9090, Grafana는 3000에 뜬다.
+- 운영 ALB가 `grafana.meterengine.com`을 이 서버의 3000으로 보낸다. 인증서는 사이트와 따로 발급해 리스너에 더하고, `/metrics`는 ALB가 404로 끝낸다.
+  - 서버를 다시 만들면 다음 production apply가 새 서버를 대상 그룹에 붙일 때까지 Grafana가 503이다.
 - 지표 보관은 15일 또는 20GB 중 먼저 닿는 쪽에서 오래된 것부터 지운다. 기록은 서버 디스크에만 있어 서버를 다시 만들면 지워진다.
 - 서버가 읽는 파라미터 이름은 `monitoring/parameters.json` 하나가 정한다. `start.sh`와 서버 역할이 이 파일을 같이 읽어, 목록 밖 파라미터는 읽지 못한다. 환경을 더하면 이 파일과 `compose.monitoring.yml`, `monitoring/prometheus/prometheus.yml`을 같이 고친다.
 - 환경의 `db-exporter-password`가 없으면 그 환경 exporter는 띄우지 않는다.
@@ -540,7 +560,7 @@ EC2 `meterengine-monitoring` 한 대가 모든 환경의 앱 서버와 DB를 긁
 | --- | --- | --- |
 | `grafana-admin-password` | 난수 | 없음 |
 | `grafana-github-client-id`, `grafana-github-client-secret` | `unset` | #526의 조직 `asm17-ms2` 소유 OAuth 앱 값을 그대로 쓴다. 운영 `/meterengine/production/oauth2-proxy-client-id`, `-client-secret` 값을 아래 명령으로 옮긴다. `unset`이 남아 있으면 `start.sh`가 멈춘다 |
-| `slack-webhook-url` | 받는 곳 없는 자리 주소 | 공용 Grafana를 열 때 실제 주소를 넣는다. 그 전에는 공용 서버의 경보가 아무 데도 가지 않는다 |
+| `slack-webhook-url` | 받는 곳 없는 자리 주소 | 옛 운영 서버를 정지한 뒤 실제 주소를 넣는다. 그 전에는 공용 서버의 경보가 아무 데도 가지 않는다. 옛 서버 Grafana와 같이 돌 때 넣으면 같은 경보가 두 번 온다 |
 
 - 값을 화면에 찍지 않고 옮긴다.
 
@@ -568,7 +588,7 @@ aws ssm start-session --target <서버 ID>
 sudo bash -c 'cd /opt/meterengine && git fetch origin && git checkout --force <SHA> && ./deploy/monitoring/start.sh <SHA>'
 ```
 
-- Grafana는 GitHub `asm17-ms2` 조직 로그인만 받고 로그인 폼과 기본 인증은 꺼져 있다. 도메인으로 열리기 전에는 Grafana 화면에 들어갈 수 없고, 9090 포트 포워딩으로 Prometheus 화면에서 조회한다.
+- Grafana는 GitHub `asm17-ms2` 조직 로그인만 받고 로그인 폼과 기본 인증은 꺼져 있다. GitHub 로그인이 안 되면 Grafana 화면에 들어갈 수 없고, 9090 포트 포워딩으로 Prometheus 화면에서 조회한다.
 
 ```bash
 aws ssm start-session --target <서버 ID> \
@@ -578,12 +598,15 @@ aws ssm start-session --target <서버 ID> \
 
 ### 대시보드 보기
 
-- 지금 https://grafana.meterengine.com, https://prometheus.meterengine.com 은 옛 운영 서버 안의 Grafana와 Prometheus다. 그 서버의 oauth2-proxy를 거쳐 GitHub로 로그인한다. `asm17-ms2` 조직 멤버만 들어온다.
-  - 로그인은 24시간 유지된다. 조직 멤버인지는 로그인할 때만 보므로, 조직에서 뺀 사람도 그동안은 들어온다.
+- https://grafana.meterengine.com 은 운영 ALB를 거쳐 공용 모니터링 서버의 Grafana로 간다. GitHub로 로그인하고 `asm17-ms2` 조직 멤버만 들어온다.
+  - 조직 멤버인지는 로그인할 때만 보므로, 조직에서 뺀 사람도 로그인이 유지되는 동안은 들어온다.
+  - Prometheus 화면은 밖에 열지 않는다. 쿼리는 Grafana Explore에서 한다.
 - Grafana의 MeterEngine 폴더에서 대시보드를 연다.
-  - 대시보드마다 맨 위 `환경` 변수로 `env`를 고른다. 서버 안 Grafana에는 `env` 라벨이 없어 All만 보인다. 관측 시스템과 Caddy 패널은 환경을 가리지 않는다.
+  - 대시보드마다 맨 위 `환경` 변수로 `env`를 고른다. 관측 시스템 패널은 환경을 가리지 않는다.
   - 앱 자원 대시보드의 `서버` 변수는 고른 환경의 백엔드 서버다. 서버 안 Grafana에서는 백엔드 색이라 특정 색을 고르면 서버와 컨테이너 패널이 빈다.
-  - MeterEngine 서비스 개요는 가용성, 요청 수, 5xx 비율, 느린 API, Caddy 요청과 업스트림 상태다.
+  - MeterEngine 서비스 개요는 가용성, 요청 수, 5xx 비율, 느린 API와 ALB의 요청, 5xx, 지연, 정상 서버 수다.
+    - ALB 패널은 cloudwatch exporter가 읽는 CloudWatch 지표라 3분쯤 늦다. 앱 서버 대상 그룹만 읽는다.
+    - 비용: `cloudwatch/config.yml`의 ALB 지표마다 1분에 한 번씩 CloudWatch를 조회하고, 대상 그룹 지표는 대상 그룹마다 조회한다. 계정의 무료 한도를 넘으면 조회 1,000번에 0.01달러다.
   - MeterEngine API 상세는 uri와 method로 고른 API의 지연과 오류, 그리고 전체 요청의 인증, 호출 제한, 감사 기록 실패 지표다.
   - MeterEngine 이벤트 수집은 수집 API 요청, 이벤트 결과, 저장 실패 지표다. 맨 아래 접힌 DB 왕복 행은 단건 수집이 거치는 DB 왕복별 평균과 p99다.
   - MeterEngine 청구와 결제는 인보이스 확정, 결제, 토스페이먼츠 지표다.
@@ -594,18 +617,7 @@ aws ssm start-session --target <서버 ID> \
   - 파일로 관리하는 대시보드와 경보 규칙은 화면에서 저장되지 않는다. 바꾸려면 파일을 고쳐 배포한다.
   - 화면에서 새로 만든 대시보드는 Grafana 볼륨에만 남는다. 오래 쓸 것은 JSON으로 내보내 `grafana/dashboards/`에 넣고 PR로 올린다.
 
-GitHub 로그인이 안 되면 옛 운영 서버의 127.0.0.1:3001로 들어간다.
-
-1. 포트 포워딩 세션을 켠다.
-
-```bash
-aws ssm start-session --target i-0f47bb1f028cd29a9 \
-  --document-name AWS-StartPortForwardingSession \
-  --parameters '{"portNumber":["3001"],"localPortNumber":["3001"]}'
-```
-
-2. 세션을 켠 채 http://localhost:3001 에 접속한다.
-3. `admin`과 Parameter Store `grafana-admin-password` 값으로 로그인한다.
+GitHub 로그인이 안 되면 공용 모니터링 서버의 9090을 포트 포워딩해 Prometheus 화면에서 조회한다("공용 모니터링 서버").
 
 ### 경보
 
@@ -616,6 +628,7 @@ aws ssm start-session --target i-0f47bb1f028cd29a9 \
 | 경보 | 조건 | 뜻 |
 | --- | --- | --- |
 | 백엔드 헬스체크 실패 | `max by (env) (up{job="backend"}) < 1` 1분 지속 | 그 환경의 어느 백엔드 서버도 scrape에 응답하지 않는다. 프로세스 다운이나 응답 불능 |
+| 앱 서버 없음 | staging이나 production에서 찾은 앱 서버 0대, 1분 지속 | 오토스케일링 그룹에 실행 중인 서버가 없다. 서버가 0대면 위 경보는 계열이 사라져 울리지 않아 따로 센다 |
 | 5xx 응답 비율 초과 | 5분 창 5xx 비율 > 5%, 5분 지속 | 요청이 실패로 새고 있다 |
 | CPU 사용률 초과 | 서버마다 5분 평균 > 80%, 10분 지속 | 처리량 한계이거나 폭주 프로세스 |
 | 예약 작업 실패 | 15분 안에 실행이 예외로 끝나거나 대상 일부가 실패 | 작업이 일을 다 끝내지 못했다. 작업 이름별로 울린다 |

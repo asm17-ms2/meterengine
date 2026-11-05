@@ -42,8 +42,8 @@ module "app_fleet" {
   database_security_group_id = "sg-068a54ab4cfa91730"
   ecr_repository_names       = ["meterengine-backend", "meterengine-frontend"]
   ami_id                     = "ami-0f4109eb491b0476f"
-  # Caddy 없는 배포의 SHA가 버전 파라미터에 기록되기 전에는 서버가 떠도 헬스를 통과하지 못해 교체만 반복한다.
-  min_size = 0
+  # 버전 파라미터에 40자 SHA가 기록되기 전에는 모듈의 precondition이 plan을 멈춘다.
+  min_size = 1
   # 측정 환경 숫자로 잡은 추정값이다.
   scaling_target_requests_per_second = 450
   # main 체크아웃에서 잘못 apply해도 운영 ALB가 지워지지 않게 한다.
