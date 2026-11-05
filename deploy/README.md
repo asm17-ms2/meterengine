@@ -573,8 +573,9 @@ for name in client-id client-secret; do
 done
 ```
 
-- 그 앱의 콜백 URL은 경로 없는 `https://grafana.meterengine.com`으로 바꿔 Grafana의 `/login/github`가 통하게 한다. 조직 owner가 바꾸고, Grafana를 도메인으로 공개하는 apply 전에 바꾼다.
-  - GitHub는 콜백 URL 아래 경로를 모두 받으므로, 경로를 비우면 옛 운영 서버 oauth2-proxy의 `/oauth2/callback`도 그대로 통한다.
+- 그 앱의 리다이렉트 URI에 `https://grafana.meterengine.com/login/github`를 더한다. Grafana는 이 경로로 로그인을 시작하고 돌아온다. 조직 owner가 더하고, Grafana를 도메인으로 공개하는 apply 전에 더한다.
+  - 지금 GitHub OAuth 앱은 wildcard를 켜지 않으면 등록한 경로만 받는다. 경로 없는 주소로 바꾸면 `/login/github`가 거절된다.
+  - 옛 운영 서버 oauth2-proxy의 `/oauth2/callback`은 옛 서버를 정리할 때 지운다.
 
 띄우거나 설정을 바꿀 때는 서버에 붙어 저장소를 원하는 SHA로 바꾼 뒤 `start.sh`를 부른다. `start.sh`는 스스로 체크아웃하지 않고 저장소 HEAD가 인자와 같은지만 본다.
 
