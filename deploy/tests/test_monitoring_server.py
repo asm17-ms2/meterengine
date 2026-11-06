@@ -120,6 +120,10 @@ class StartScriptTest(unittest.TestCase):
         fakes = {
             "git": 'echo "$HEAD"',
             "docker": 'echo "docker $*" >> "$TRACE"',
+            # READY_AFTER번 실패한 뒤부터 준비됐다고 답한다.
+            "curl": 'echo "curl $*" >> "$TRACE"\n'
+                    '[ "$(grep -c "^curl " "$TRACE")" -gt "$READY_AFTER" ]',
+            "sleep": 'echo "sleep $*" >> "$TRACE"',
             "aws": 'exec python3 -c \'import json, os, sys\n'
                    'names = sys.argv[sys.argv.index("--names") + 1:]\n'
                    'open(os.environ["TRACE"], "a").write("aws " + " ".join(names) + "\\n")\n'
@@ -133,11 +137,14 @@ class StartScriptTest(unittest.TestCase):
         self.env = {**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}", "TRACE": str(self.trace),
                     "VALUES": str(self.root / "values.json"), "HEAD": SHA}
 
-    def run_start(self, head=SHA):
+    def run_start(self, head=SHA, ready_after=0):
         (self.root / "values.json").write_text(json.dumps(self.values))
         self.trace.touch()
-        return subprocess.run(["bash", str(self.script), SHA], env={**self.env, "HEAD": head},
+        return subprocess.run(["bash", str(self.script), SHA], env={**self.env, "HEAD": head, "READY_AFTER": str(ready_after)},
                               text=True, capture_output=True, timeout=10)
+
+    def reload_signals(self):
+        return [call for call in self.calls("docker") if "SIGHUP" in call]
 
     def calls(self, tool):
         return [line.split()[1:] for line in self.trace.read_text().splitlines() if line.startswith(tool + " ")]
@@ -168,6 +175,17 @@ class StartScriptTest(unittest.TestCase):
     def test_other_checkout_stops_before_reading_parameters(self):
         self.assertNotEqual(self.run_start(head="b" * 40).returncode, 0)
         self.assertEqual(self.calls("aws"), [])
+
+    def test_prometheus_reloads_only_after_it_answers_ready(self):
+        self.assertEqual(self.run_start(ready_after=2).returncode, 0)
+        tools = [line.split()[0] for line in self.trace.read_text().splitlines() if "SIGHUP" in line or line.startswith("curl ")]
+        self.assertEqual(tools, ["curl", "curl", "curl", "docker"])
+
+    def test_prometheus_never_ready_stops_without_reload(self):
+        result = self.run_start(ready_after=10_000)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.reload_signals(), [])
+        self.assertIn("Prometheus", result.stderr)
 
 
 if __name__ == "__main__":

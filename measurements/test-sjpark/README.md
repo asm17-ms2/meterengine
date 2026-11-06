@@ -151,14 +151,20 @@ aws ecr put-lifecycle-policy --region ap-northeast-2 --repository-name "$REPOSIT
 
 ```bash
 aws ecr batch-get-image --region ap-northeast-2 --repository-name "$REPOSITORY" --image-ids imageTag="$SHA" \
-  --query 'images[0].imageManifest' --output text > /tmp/manifest.json
+  --accepted-media-types application/vnd.oci.image.index.v1+json application/vnd.docker.distribution.manifest.list.v2+json \
+    application/vnd.oci.image.manifest.v1+json application/vnd.docker.distribution.manifest.v2+json \
+  --output json > /tmp/image.json
+jq -j '.images[0].imageManifest' /tmp/image.json > /tmp/manifest.json
 aws ecr put-image --region ap-northeast-2 --repository-name "$REPOSITORY" --image-tag "keep-test-sjpark-${SHA:0:7}" \
-  --image-manifest file:///tmp/manifest.json --query 'image.imageId.imageTag' --output text
+  --image-digest "$(jq -r '.images[0].imageId.imageDigest' /tmp/image.json)" \
+  --image-manifest-media-type "$(jq -r '.images[0].imageManifestMediaType' /tmp/image.json)" \
+  --image-manifest file:///tmp/manifest.json --query 'image.imageId.imageDigest' --output text
 aws ecr start-lifecycle-policy-preview --region ap-northeast-2 --repository-name "$REPOSITORY" --query status --output text
 aws ecr get-lifecycle-policy-preview --region ap-northeast-2 --repository-name "$REPOSITORY" \
   --query "[status, length(previewResults[?imageTags && contains(join(',', imageTags), 'keep-')])]" --output text
 ```
 
+- 매니페스트는 받은 바이트 그대로 넣는다. `--output text`로 받으면 바이트가 바뀌어 같은 이미지가 아닌 새 digest에 태그가 붙는다. `--image-digest`가 다르면 `put-image`가 거절한다.
 - `COMPLETE`와 `0`이 나와야 한다. 0이 아니면 정책에 1번 규칙이 들어갔는지 다시 본다.
 
 고를 커밋이 없다고 스크립트가 멈추면 이 태그의 이미지를 찾는다.

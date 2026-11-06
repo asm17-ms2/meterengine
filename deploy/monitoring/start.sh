@@ -15,6 +15,9 @@ readonly PLACEHOLDER=unset
 readonly MONITORING_GROUP=monitoring
 # 파라미터가 없는 환경을 건너뛰라는 env_lines의 반환 코드다.
 readonly MISSING_PARAMETERS=3
+readonly PROMETHEUS_READY_URL=http://127.0.0.1:9090/-/ready
+readonly PROMETHEUS_READY_ATTEMPTS=60
+readonly PROMETHEUS_READY_INTERVAL_SECONDS=2
 
 # EXIT 처리기도 읽으므로 main 밖에 둔다.
 new_env=
@@ -51,6 +54,16 @@ for parameter in response["Parameters"]:
 ' "$1" "$MONITORING_GROUP" "$PLACEHOLDER" "$MISSING_PARAMETERS"
 }
 
+# 막 다시 만든 Prometheus는 신호 처리기를 걸기 전이라 SIGHUP에 죽는다(exit 129). 준비된 뒤에 보낸다.
+wait_prometheus_ready() {
+	local attempt
+	for ((attempt = 1; attempt <= PROMETHEUS_READY_ATTEMPTS; attempt++)); do
+		curl -fsS -o /dev/null "$PROMETHEUS_READY_URL" && return 0
+		sleep "$PROMETHEUS_READY_INTERVAL_SECONDS"
+	done
+	die "Prometheus가 $((PROMETHEUS_READY_ATTEMPTS * PROMETHEUS_READY_INTERVAL_SECONDS))초 안에 준비되지 않아 설정을 다시 읽히지 않았다"
+}
+
 main() {
 	[ $# -eq 1 ] && [[ $1 =~ ^[0-9a-f]{40}$ ]] || die "사용법: start.sh <40자 커밋 SHA>"
 	local sha=$1
@@ -84,6 +97,7 @@ main() {
 	"${compose[@]}" up -d "${services[@]}"
 	[ ${#skipped[@]} -eq 0 ] || "${compose[@]}" rm --stop --force "${skipped[@]}"
 	# 설정 디렉터리만 바뀌면 up -d가 컨테이너를 다시 만들지 않아 직접 다시 읽힌다.
+	wait_prometheus_ready
 	"${compose[@]}" kill -s SIGHUP prometheus
 	# 기본 인증을 꺼서 provisioning 다시 읽기 API를 부를 수 없다. 대시보드와 경보는 재시작으로 다시 읽힌다.
 	"${compose[@]}" restart grafana
