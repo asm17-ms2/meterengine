@@ -63,6 +63,8 @@ checkstyle {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+	// 캐시된 컨텍스트가 쌓여 기본값 512MB로는 전체 시험의 힙 여유가 없다
+	maxHeapSize = "1g"
 }
 
 tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
