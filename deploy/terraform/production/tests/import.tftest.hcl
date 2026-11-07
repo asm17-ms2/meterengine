@@ -26,6 +26,10 @@ override_resource {
   values = {}
 }
 override_resource {
+  target = aws_ssm_parameter.coded
+  values = {}
+}
+override_resource {
   target = module.service.aws_instance.app[0]
   values = { id = "i-0f47bb1f028cd29a9" }
 }
@@ -204,4 +208,12 @@ run "alb_domains_need_a_server" {
     }
   }
   expect_failures = [aws_route53_record.public]
+}
+
+run "auto_finalize_switch_is_coded" {
+  command = plan
+  assert {
+    condition     = contains(keys(aws_ssm_parameter.coded), "invoice-auto-finalize-enabled")
+    error_message = "The auto-finalize switch must stay in code."
+  }
 }
