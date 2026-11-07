@@ -1,10 +1,11 @@
 locals {
   runtime_public = {
-    db-host        = module.service.database_host
-    db-port        = "5432"
-    db-name        = "meterengine_app"
-    db-username    = "meterengine_owner"
-    operator-email = var.operator_email
+    db-host                       = module.service.database_host
+    db-port                       = "5432"
+    db-name                       = "meterengine_app"
+    db-username                   = "meterengine_owner"
+    operator-email                = var.operator_email
+    invoice-auto-finalize-enabled = "true"
   }
   runtime_secret_names = ["db-password", "crypto-encryption-key", "operator-password"]
   # RDS 마스터 비밀번호와 앱이 읽는 값이 어긋나지 않게 db-password는 같은 변수에서 받는다.
@@ -26,4 +27,9 @@ resource "aws_ssm_parameter" "db_exporter_password" {
   type             = "SecureString"
   value_wo         = "unset"
   value_wo_version = 1
+}
+
+import {
+  to = aws_ssm_parameter.runtime["invoice-auto-finalize-enabled"]
+  id = "/meterengine/staging/invoice-auto-finalize-enabled"
 }

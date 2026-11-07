@@ -50,6 +50,12 @@ variables {
   operator_email = "d2-fixture@example.invalid"
 }
 
+# 가짜 공급자가 받지 않는 import의 결과를 정해 준다.
+override_resource {
+  target = aws_ssm_parameter.runtime
+  values = {}
+}
+
 run "staging_is_isolated" {
   command = plan
 
@@ -178,7 +184,7 @@ run "runtime_uses_single_account" {
   command = plan
 
   assert {
-    condition     = toset(keys(aws_ssm_parameter.runtime)) == toset(["db-host", "db-port", "db-name", "db-username", "db-password", "crypto-encryption-key", "operator-email", "operator-password"])
+    condition     = toset(keys(aws_ssm_parameter.runtime)) == toset(["db-host", "db-port", "db-name", "db-username", "db-password", "crypto-encryption-key", "operator-email", "operator-password", "invoice-auto-finalize-enabled"])
     error_message = "Staging must define exactly the parameters deploy.sh requires."
   }
   assert {
