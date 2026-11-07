@@ -40,9 +40,9 @@ variable "db_instance_class" {
 }
 
 variable "ami_id" {
-  description = "앱 서버 기본 이미지. staging, production과 같은 Amazon Linux 2023 arm64"
+  description = "앱 서버 이미지. staging, production과 같은 미리 구운 이미지"
   type        = string
-  default     = "ami-0f4109eb491b0476f"
+  default     = "ami-02b68e7eb6b798d63"
 }
 
 variable "db_max_allocated_storage" {

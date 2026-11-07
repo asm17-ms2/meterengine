@@ -19,7 +19,7 @@
 | `lib/common.sh` | 스크립트가 같이 쓰는 함수 |
 
 - 자원 이름 접두는 `meterengine-test-storage`, 도메인은 `test-storage.meterengine.com`, 파라미터 경로는 `/meterengine/test-storage`다.
-- 도메인은 ALB를 가리킨다. 앱 서버는 오토스케일링 그룹이 기본 이미지(Amazon Linux 2023 arm64)로 띄우고, 부팅 스크립트가 버전 파라미터 `/meterengine/test-storage/app-version`의 커밋으로 배포한다. 앱과 수집 에이전트(node-exporter, cAdvisor)만 돈다.
+- 도메인은 ALB를 가리킨다. 앱 서버는 오토스케일링 그룹이 staging, production과 같은 미리 구운 앱 서버 이미지로 띄우고, 부팅 스크립트가 버전 파라미터 `/meterengine/test-storage/app-version`의 커밋으로 배포한다. 앱과 수집 에이전트(node-exporter, cAdvisor)만 돈다.
 - 부팅 스크립트는 staging, production과 같은 [`app-user-data.sh.tftpl`](../../deploy/terraform/modules/app_fleet/templates/app-user-data.sh.tftpl)을 사본 없이 읽는다. 그 파일이 바뀌면 다음 apply에서 시작 템플릿이 새 버전이 되고, 떠 있는 서버는 새 서버로 바뀐다. 측정 중에는 apply 하지 않는다.
 - 이 환경에는 모니터링 서버가 없다. 공용 모니터링 서버가 앱 서버와 DB를 긁는다("Grafana" 참고).
 - 매일 04:00(서울)에 RDS가 꺼지고 오토스케일링 그룹은 0대로 내려간다.
@@ -122,7 +122,7 @@ for tg in backend frontend; do
 done
 ```
 
-- 서버는 기본 이미지에 docker와 레포를 설치하고 배포까지 하므로 `healthy`까지 몇 분 걸린다. 헬스 체크 유예는 600초다. 늦으면 서버의 `/var/log/cloud-init-output.log`를 본다.
+- 서버는 미리 구운 이미지로 떠 레포를 받고 배포까지 마친 뒤에 `healthy`가 된다. 헬스 체크 유예는 600초다. 늦으면 서버의 `/var/log/cloud-init-output.log`를 본다.
 - 켜 둔 동안의 apply에는 모두 `-var asg_min_size=1`을 붙인다. 빼면 최소가 0으로 돌아간다.
 - 끌 때는 `sut-stop.sh`로 최소와 원하는 대수를 0으로 내리고, 서버가 다 빠지면 RDS를 멈춘다. 지우지는 않는다. 최소 0은 Terraform 기본값이라 다음 `-var` 없는 apply와 어긋나지 않는다.
 

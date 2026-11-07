@@ -91,7 +91,7 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
 
 ### 서버 준비
 
-앱 서버는 손으로 셋업하지 않는다. 부팅 스크립트가 설치부터 배포까지 한다("앱 서버 오토스케일링 그룹").
+앱 서버는 손으로 셋업하지 않는다. 미리 구운 이미지로 뜨고 부팅 스크립트가 배포까지 한다("앱 서버 오토스케일링 그룹").
 
 - 부팅 스크립트가 `/etc/meterengine/instance.env`에 `ENVIRONMENT`, `PARAMETER_PATH`, `APP_VERSION_PARAMETER`, `AWS_REGION`을 적는다.
 - `/etc/meterengine/prod.env`는 배포할 때마다 `deploy.sh`가 Parameter Store 값으로 새로 쓴다.
@@ -482,13 +482,13 @@ aws ssm get-parameter --name /meterengine/production/operator-password --with-de
 
 - ALB는 `/v1/*`를 backend(8080)로, 나머지를 frontend(3000)로 보낸다. 도메인이 아닌 Host는 404, http는 https로 301, production의 www는 apex로 301이다.
   - idle 130초, X-Forwarded-For는 append, 접속 로그는 끈다(토큰이 실린 URL이 남는다). production ALB는 삭제 보호가 켜져 있다.
-- 서버는 기본 이미지로 뜨고 부팅 스크립트(`modules/app_fleet/templates/app-user-data.sh.tftpl`)가 배포까지 한다.
-  1. 버전 파라미터를 읽는다. 40자 커밋 SHA가 아니면 설치 전에 실패한다.
-  2. docker, git, compose를 설치하고 저장소를 그 커밋으로 받는다.
-  3. `deploy/deploy.sh <환경> <SHA>`를 부른다. 앱과 감시 에이전트를 띄우고 수집량 지표 유닛 `meterengine-ingest-rate.service`를 설치한다.
+- 서버는 미리 구운 앱 서버 이미지("앱 서버 이미지")로 뜨고 부팅 스크립트(`modules/app_fleet/templates/app-user-data.sh.tftpl`)가 배포까지 한다. 부팅 때는 패키지와 도구를 설치하지 않는다.
+  1. 버전 파라미터를 읽는다. 40자 커밋 SHA가 아니면 저장소를 받기 전에 실패한다.
+  2. 이미지에 docker, git, python3, compose가 있는지 본다. 하나라도 없으면 그 이름을 찍고 실패한다.
+  3. 저장소를 그 커밋으로 받는다.
+  4. `deploy/deploy.sh <환경> <SHA>`를 부른다. 앱과 감시 에이전트를 띄우고 수집량 지표 유닛 `meterengine-ingest-rate.service`를 설치한다.
 - 배포는 `rollout.sh`가 버전 파라미터에 SHA를 쓰고 새로 고침(최소 건강 100%, 최대 200%)을 시작하는 것이다. 새 서버가 대상 그룹에서 healthy가 된 뒤 옛 서버가 빠진다.
 - 측정 환경 test-storage도 이 부팅 스크립트를 사본 없이 읽는다. 바꾸면 다음 test-storage apply에서 시작 템플릿 새 버전이 나온다([`measurements/test-storage/README.md`](../measurements/test-storage/README.md)).
-- 설치를 미리 넣은 이미지는 "앱 서버 이미지"에서 굽는다. 부팅을 그 이미지로 옮기면 시작 템플릿의 image_id와 부팅 스크립트만 바뀌고 롤링, 버전 파라미터, 확장 정책은 그대로다.
 - 최소 대수는 1, 최대는 3이다(`<환경>/main.tf`의 `min_size`).
   - 최소 대수가 1 이상이면 버전 파라미터가 40자 SHA인지 plan에서 본다. `unset`이면 plan이 멈춘다.
   - 형식만 보므로, 그 커밋이 Caddy를 걷어낸 커밋인지는 apply 전에 `git cat-file -e <값>:deploy/caddy/Caddyfile`가 실패하는지로 본다. Caddy가 있는 커밋이면 서버가 ALB 헬스 체크를 통과하지 못해 교체만 되풀이한다.
@@ -536,7 +536,9 @@ sudo bash /opt/meterengine/measurements/test-storage/sut/scripts/remote/upsert-e
 
 ### 앱 서버 이미지
 
+- staging, production, test-storage의 앱 서버가 이 이미지로 뜬다. 값은 `<환경>/main.tf`의 app_fleet `ami_id`와 test-storage의 `ami_id` 기본값이고, 서로 다르면 deploy 시험이 실패한다.
 - `terraform/modules/app_fleet/image/provision.sh`가 이미지에 넣을 것을 정하고, `build-app-image.sh`가 그 스크립트로 이미지를 굽는다.
+- 부팅 스크립트가 쓰는 도구를 늘리면 provision.sh에도 넣고 다시 굽는다.
 - 기본 이미지(Amazon Linux 2023 arm64)에 docker, git, python3, openssl과 compose 플러그인을 더한다. docker는 부팅 때 시작하게 등록만 하고 굽는 동안 띄우지 않는다.
 - 저장소 체크아웃, 수집량 지표 유닛, `/etc/meterengine` 설정은 넣지 않는다. `/etc/machine-id`를 비워 두어 이 이미지로 뜬 서버마다 새 값을 만든다.
 - 이미지 태그는 `Role=app-image`, `BaseImage`(기본 AMI), `ComposeVersion`, `SourceCommit`(구운 커밋)이다.
@@ -547,7 +549,7 @@ sudo bash /opt/meterengine/measurements/test-storage/sut/scripts/remote/upsert-e
   - provision.sh에 커밋하지 않은 변경이 있거나 지금 커밋이 origin/develop에 없으면 아무것도 만들지 않고 멈춘다.
   - 쓰는 권한: `sts:GetCallerIdentity`, EC2의 보안 그룹 만들기와 송신 규칙 바꾸기와 지우기, 인스턴스 시작과 조회와 콘솔 출력과 종료, 이미지 만들기와 조회와 삭제 보호, 태그 달기.
 
-- 기본 AMI는 인수로 준다. 처음에는 지금 시작 템플릿과 같은 기본 AMI(`staging/main.tf`의 app_fleet `ami_id`)로 굽는다. 설치 말고는 바뀌지 않아야 부팅 시간 차이를 설치 몫으로 볼 수 있다. 보안 공지로 다시 구울 때는 최신 기본 AMI를 준다.
+- 기본 AMI는 인수로 준다. provision.sh만 바꿔 다시 구울 때는 가장 최근 이미지의 `BaseImage` 태그 값을, 보안 공지로 다시 구울 때는 최신 기본 AMI를 준다. 시작 템플릿의 `ami_id`는 이미 구운 이미지라 인수로 주지 않는다.
 
 ```bash
 git switch develop && git pull
@@ -594,7 +596,7 @@ aws ec2 describe-images --owners self --filters Name=tag:Role,Values=app-image \
   --query 'sort_by(Images, &CreationDate)[-1].[ImageId, Tags[?Key==`BaseImage`].Value | [0]]' --output text
 ```
 
-- compose 버전을 올릴 때는 provision.sh, `terraform/modules/app_fleet/templates/app-user-data.sh.tftpl`, `terraform/monitoring/bootstrap.sh`를 같이 본다. 각 파일이 같은 버전과 sha256을 따로 고정한다.
+- compose 버전을 올릴 때는 provision.sh와 `terraform/monitoring/bootstrap.sh`를 같이 고친다. 각 파일이 같은 버전과 sha256을 따로 고정하고, 서로 다르면 deploy 시험이 실패한다.
 
 ## 모니터링
 
@@ -721,6 +723,7 @@ GitHub 로그인이 안 되면 공용 모니터링 서버의 9090을 포트 포�
 ## 문제 해결
 
 - 서버는 부팅 때 배포까지 끝낸다. 부팅 배포의 출력은 서버의 `/var/log/cloud-init-output.log`에 남는다.
+- 그 기록에 `서버 이미지에 ... 없다`가 있으면 시작 템플릿의 image_id가 미리 구운 앱 서버 이미지가 아니다. `<환경>/main.tf`의 app_fleet `ami_id`를 본다("앱 서버 이미지").
 - CD가 실패하면 먼저 서버 밖에서 새로 고침과 대상 그룹 상태를 본다.
 
 ```bash
