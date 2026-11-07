@@ -414,6 +414,9 @@ ALB는 받은 `X-Forwarded-For` 뒤에 접속 주소를 붙이므로 맨 오른�
 | `operator-password` | SecureString | 첫 운영자 비밀번호. 값을 바꾸고 재배포하면 새 비밀번호가 된다 |
 | `meterengine-auth-rate-limit-login-ip-limit`, `-login-account-limit`, `-login-window`, `-signup-ip-limit`, `-signup-account-limit`, `-signup-window` | String | 선택. 로그인과 가입 한도와 구간. 없으면 compose가 백엔드 기본값(100, 10, 5m, 20, 3, 30m)을 넣는다 |
 | `invoice-auto-finalize-enabled` | String | 선택. `true`면 인보이스 자동 확정이 매시 정각에 돈다. 없으면 compose가 `false`를 넣는다. 켜면 첫 정시가 확정 시각이 지난 과거 달을 모두 확정하므로 켜기 전에 팀에 알린다 |
+| `ingest-warmup-api-key` | SecureString | 선택. 백엔드가 기동할 때 수집 경로를 데우는 예열 도입사의 ingest 키 원문. 없으면 예열을 건너뛴다("수집 경로 예열") |
+| `ingest-warmup-organization-id`, `ingest-warmup-customer-id` | String | 선택. 예열 도입사와 예열 고객의 id. 없으면 compose가 빈 값을 넣는다 |
+| `ingest-warmup-requests`, `ingest-warmup-time-limit` | String | 선택. 예열 요청 수와 시간 상한. 없으면 compose가 `1000`, `20s`를 넣는다. 숫자나 기간 형식이 아니면 백엔드가 뜨지 못한다. 시간 상한은 늘리지 않는다. 예열 중에는 readiness가 503이고 ALB는 15초 간격 5번 실패면 빼므로, 컨테이너가 죽고 빠르면 60초 뒤 서버가 교체된다. 스스로 다시 뜨는 데 약 23초, 상한 20초, 마지막 요청 대기 5초를 더하면 약 48초다. 상한은 예열을 시작한 때부터 재므로 다시 뜨는 데 35초를 넘기면 서버가 교체될 수 있다 |
 | `frontend-api-key` | SecureString | 이 버전의 compose는 읽지 않는다. 옛 프론트가 백엔드를 부르던 API 키 원문이고, 옛 버전으로 되돌리는 배포가 요구해 남긴다 |
 | `app-version` | String | 앱 서버가 띄울 커밋 SHA 40자. CD와 `rollout.sh`가 쓰고 서버가 부팅 때 읽는다. Terraform은 자리 값 `unset`만 만들고 되돌리지 않는다. `prod.env`에는 들어가지 않는다 |
 
@@ -445,6 +448,51 @@ aws ssm get-parameter --name /meterengine/production/operator-password --with-de
 
 - 값을 고쳤으면 서버를 다시 띄워야 반영된다. 같은 SHA로 `rollout.sh`를 다시 부르면 서버를 새로 바꾼다("수동 배포").
 - **값에 개행이 섞이면 `deploy.sh`가 배포를 멈춘다.** 콘솔에서 복사할 때 줄바꿈이 딸려 오지 않았는지 본다.
+
+### 수집 경로 예열
+
+새 서버의 백엔드는 readiness를 열기 전에 자기 수집 API를 불러 데운다. 동작은 [`backend/README.md`](../backend/README.md#수집-경로-예열)에 있다. 환경마다 예열 도입사, 고객, ingest 키를 한 번 만들어 Parameter Store에 넣는다. 넣기 전에는 예열 없이 뜬다.
+
+1. 가입 화면(`https://<호스트>/signup`)에서 도입사 이름을 `MeterEngine 예열 (삭제 금지)`로 가입한다. 비밀번호는 무작위로 만들고 보관하지 않는다.
+2. [`backend/README.md`](../backend/README.md#배포-환경의-운영-키-발급) "배포 환경의 운영 키 발급"의 1, 2단계로 운영자 세션을 열고, 그 도입사를 active로 승인한다.
+3. 같은 절의 3단계로 운영자를 그 도입사에 소속시키고 세션의 도입사를 바꾼다.
+4. 키와 고객을 만들고 Parameter Store에 넣은 뒤 로그아웃한다.
+
+```bash
+# 2. pending 목록에서 예열 도입사 id를 찾아 승인한다
+api "$BASE/v1/organizations?status=pending"
+api -X PUT $BASE/v1/organizations/<도입사 id>/status -d '{"status":"active"}'
+
+# 4. live 모드에 ingest 스코프만 주고 분당 한도는 두지 않는다. 응답의 secret이 원문이다
+api $BASE/v1/api-keys -d '{"label":"수집 경로 예열","mode":"live","scopes":["ingest"]}'
+read -rsp '예열 키: ' WARMUP_KEY && echo
+# 고객은 그 키로 만들어야 키와 같은 live 환경에 들어간다. 응답의 id가 고객 id다
+curl -s $BASE/v1/customers -H @<(printf 'Authorization: Bearer %s\n' "$WARMUP_KEY") \
+  -H 'Content-Type: application/json' -d '{"name":"MeterEngine 예열","external_id":"meterengine-warmup"}'
+aws ssm put-parameter --name /meterengine/<환경>/ingest-warmup-api-key --type SecureString --overwrite --value "$WARMUP_KEY"
+aws ssm put-parameter --name /meterengine/<환경>/ingest-warmup-organization-id --type String --overwrite --value '<도입사 id>'
+aws ssm put-parameter --name /meterengine/<환경>/ingest-warmup-customer-id --type String --overwrite --value '<고객 id>'
+unset WARMUP_KEY
+api -X DELETE $BASE/v1/sessions/current
+unset SESSION
+```
+
+- zsh에서는 4의 `read`를 `read -rs '?예열 키: ' WARMUP_KEY`로 바꾼다.
+
+5. 같은 SHA로 `rollout.sh`를 불러 서버를 바꾼다. 새 서버의 백엔드 로그에 `Ingest warm-up finished: requests=..., elapsed=...ms`가 남는다.
+
+- 끌 때는 `ingest-warmup-api-key`를 지우고 같은 SHA로 `rollout.sh`를 부른다. Parameter Store는 빈 값을 담지 못한다.
+
+```bash
+aws ssm delete-parameter --name /meterengine/<환경>/ingest-warmup-api-key
+```
+
+- 예열 도입사를 정지하면 예열도 멈춘다.
+- 받아들인 부작용
+  - 예열 도입사와 고객이 운영자 도입사 목록과 그 도입사의 고객 목록에 보인다.
+  - 인보이스 자동 확정이 켜진 환경에서는 달마다 예열 고객의 `no_events` 확정 시도 행이 남는다. 미터와 단가가 없어 청구는 생기지 않는다.
+  - 서버를 바꿀 때마다 백엔드 요청 로그에 `127.0.0.1`에서 온 예열 요청 줄이 요청 수만큼 남는다.
+  - 서버를 바꿀 때마다 요청 지표와 수집 중복 수가 예열 요청만큼 오른다. 확장 지표는 readiness가 200인 칸만 세어 새 서버의 예열이 들어가지 않는다.
 
 ## Terraform
 
