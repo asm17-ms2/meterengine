@@ -58,6 +58,7 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
 | `cloudwatch/config.yml` | 공용 모니터링 서버의 cloudwatch exporter가 읽을 RDS와 ALB 지표 목록 |
 | `grafana/provisioning/`, `grafana/dashboards/` | Grafana 데이터 소스, 대시보드, 경보의 정본 |
 | `terraform/` | staging, production, 공용 모니터링의 Terraform 루트와 모듈 |
+| `terraform/modules/app_fleet/image/` | 앱 서버 이미지에 넣을 것을 설치하는 스크립트와 그 이미지를 굽는 스크립트. "앱 서버 이미지" 참조 |
 
 - 루트의 `docker-compose.yml`은 로컬 개발용이고 배포 스택과 무관하다.
 - Grafana의 데이터 소스, 대시보드, 경보는 파일이 정본이다. 공용 모니터링 서버의 `start.sh`가 반영한다.
@@ -485,7 +486,7 @@ aws ssm get-parameter --name /meterengine/production/operator-password --with-de
   3. `deploy/deploy.sh <환경> <SHA>`를 부른다. 앱과 감시 에이전트를 띄우고 수집량 지표 유닛 `meterengine-ingest-rate.service`를 설치한다.
 - 배포는 `rollout.sh`가 버전 파라미터에 SHA를 쓰고 새로 고침(최소 건강 100%, 최대 200%)을 시작하는 것이다. 새 서버가 대상 그룹에서 healthy가 된 뒤 옛 서버가 빠진다.
 - 측정 환경 test-storage도 이 부팅 스크립트를 사본 없이 읽는다. 바꾸면 다음 test-storage apply에서 시작 템플릿 새 버전이 나온다([`measurements/test-storage/README.md`](../measurements/test-storage/README.md)).
-- 부팅이 느리거나 설치 실패가 잦으면 릴리스마다 이미지를 미리 굽는 방식으로 옮긴다. 그때는 시작 템플릿의 image_id와 부팅 스크립트만 바뀌고 롤링, 버전 파라미터, 확장 정책은 그대로다.
+- 설치를 미리 넣은 이미지는 "앱 서버 이미지"에서 굽는다. 부팅을 그 이미지로 옮기면 시작 템플릿의 image_id와 부팅 스크립트만 바뀌고 롤링, 버전 파라미터, 확장 정책은 그대로다.
 - 최소 대수는 1, 최대는 3이다(`<환경>/main.tf`의 `min_size`).
   - 최소 대수가 1 이상이면 버전 파라미터가 40자 SHA인지 plan에서 본다. `unset`이면 plan이 멈춘다.
   - 형식만 보므로, 그 커밋이 Caddy를 걷어낸 커밋인지는 apply 전에 `git cat-file -e <값>:deploy/caddy/Caddyfile`가 실패하는지로 본다. Caddy가 있는 커밋이면 서버가 ALB 헬스 체크를 통과하지 못해 교체만 되풀이한다.
@@ -529,6 +530,68 @@ aws ssm start-session --target <staging 서버 ID>
 ```bash
 sudo bash /opt/meterengine/measurements/test-storage/sut/scripts/remote/upsert-exporter-user.sh /meterengine/staging
 ```
+
+### 앱 서버 이미지
+
+- `terraform/modules/app_fleet/image/provision.sh`가 이미지에 넣을 것을 정하고, `build-app-image.sh`가 그 스크립트로 이미지를 굽는다.
+- 기본 이미지(Amazon Linux 2023 arm64)에 docker, git, python3, openssl과 compose 플러그인을 더한다. docker는 부팅 때 시작하게 등록만 하고 굽는 동안 띄우지 않는다.
+- 저장소 체크아웃, 수집량 지표 유닛, `/etc/meterengine` 설정은 넣지 않는다. `/etc/machine-id`를 비워 두어 이 이미지로 뜬 서버마다 새 값을 만든다.
+- 이미지 태그는 `Role=app-image`, `BaseImage`(기본 AMI), `ComposeVersion`, `SourceCommit`(구운 커밋)이다.
+
+#### 굽기
+
+- 계정 928618307647의 관리자 자격과 AWS CLI v2로, develop을 받은 체크아웃에서 돌린다. 리전은 스크립트가 ap-northeast-2로 정한다.
+  - provision.sh에 커밋하지 않은 변경이 있거나 지금 커밋이 origin/develop에 없으면 아무것도 만들지 않고 멈춘다.
+  - 쓰는 권한: `sts:GetCallerIdentity`, EC2의 보안 그룹 만들기와 송신 규칙 바꾸기와 지우기, 인스턴스 시작과 조회와 콘솔 출력과 종료, 이미지 만들기와 조회와 삭제 보호, 태그 달기.
+
+- 기본 AMI는 인수로 준다. 처음에는 지금 시작 템플릿과 같은 기본 AMI(`staging/main.tf`의 app_fleet `ami_id`)로 굽는다. 설치 말고는 바뀌지 않아야 부팅 시간 차이를 설치 몫으로 볼 수 있다. 보안 공지로 다시 구울 때는 최신 기본 AMI를 준다.
+
+```bash
+git switch develop && git pull
+# 최신 기본 AMI로 다시 구울 때
+base=$(aws ssm get-parameter --name /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64 \
+  --query Parameter.Value --output text)
+deploy/terraform/modules/app_fleet/image/build-app-image.sh "$base"
+```
+
+- 약 10분 걸린다. staging 공용 서브넷에 빌더(t4g.medium)를 띄워 provision.sh를 돌리고, 빌더가 스스로 꺼지면 이미지를 만든다. 빌더에는 역할이 없고, 임시 보안 그룹은 송신 443만 연다.
+- 표준 출력은 `image_id=<AMI ID>` 한 줄이고, 그 이미지에는 삭제 보호가 켜진다. 진행 기록은 표준 오류로 나온다.
+- 빌더가 시간 안에 꺼지지 않으면 콘솔 출력을 찍고 이미지 없이 실패한다.
+- 이미지가 failed가 되면 바로 실패한다. 시간 안에 available이 되지 않으면 그 이미지를 삭제 보호 없이 남기고 실패한다.
+- 결과 이미지가 시작 템플릿에 맞지 않으면(arm64, 루트 `/dev/xvda`, 30GiB 이하) 실패한다. 그 이미지는 삭제 보호 없이 남으니 deregister-image로 지우고 스냅숏도 delete-snapshot으로 지운다.
+- 성공해도 실패해도 빌더와 임시 보안 그룹을 지운다. 지우지 못하면 진행 기록에 지울 명령을 찍는다. 스크립트가 강제로 끊겼으면 남은 것을 찾아 지운다.
+
+```bash
+aws ec2 describe-instances --filters Name=tag:Name,Values=meterengine-app-image-builder \
+  Name=instance-state-name,Values=pending,running,stopping,stopped --query 'Reservations[].Instances[].InstanceId' --output text
+aws ec2 describe-security-groups --filters Name=tag:Name,Values=meterengine-app-image-builder \
+  --query 'SecurityGroups[].GroupId' --output text
+```
+
+- 이 이미지로 뜬 서버의 `/var/log/cloud-init-output.log` 앞부분은 굽던 때 기록이다. `[app-image] 굽기 끝` 줄 아래부터가 그 서버의 부팅 기록이다.
+- 옛 이미지는 지금 쓰는 것과 그 직전 것만 남긴다. 지울 때는 삭제 보호를 끄고 이미지를 지운 뒤 스냅숏도 지운다.
+
+```bash
+aws ec2 disable-image-deregistration-protection --image-id <AMI ID>
+aws ec2 deregister-image --image-id <AMI ID>
+aws ec2 delete-snapshot --snapshot-id <스냅숏 ID>
+```
+
+#### 다시 굽는 계기
+
+- 날짜가 아니라 계기가 생기면 굽는다.
+  - provision.sh를 바꾸는 PR이 머지되면 같은 날 굽고 ami 값을 바꾸는 PR을 낸다. provision.sh만 머지하면 어느 서버에도 반영되지 않는다.
+  - AL2023 보안 공지(ALAS)에 이미지 안 패키지(kernel, docker, containerd, runc, git, openssl, openssh, glibc)의 Critical이나 Important가 나오면 한 주 안에 새 기본 AMI로 굽는다.
+- 스프린트를 시작할 때 최신 기본 AMI와 가장 최근 이미지의 `BaseImage` 태그를 비교하고 ALAS를 훑는다.
+
+```bash
+aws ssm get-parameter --name /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64 \
+  --query Parameter.Value --output text
+aws ec2 describe-images --owners self --filters Name=tag:Role,Values=app-image \
+  --query 'sort_by(Images, &CreationDate)[-1].[ImageId, Tags[?Key==`BaseImage`].Value | [0]]' --output text
+```
+
+- compose 버전을 올릴 때는 provision.sh, `terraform/modules/app_fleet/templates/app-user-data.sh.tftpl`, `terraform/monitoring/bootstrap.sh`를 같이 본다. 각 파일이 같은 버전과 sha256을 따로 고정한다.
 
 ## 모니터링
 
