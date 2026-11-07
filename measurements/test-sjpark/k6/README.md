@@ -60,6 +60,7 @@ EOF
    - k6가 키를 `Authorization: Bearer`로 보내므로 Bearer 인증이 들어간 SHA만 고른다.
    - SUT의 지금 SHA부터 마지막 SHA까지 마이그레이션이 없어야 한다. 아래 `git log`가 아무것도 찍지 않아야 한다.
    - 고를 수 있는 SHA는 [`deploy/README.md`](../../../deploy/README.md) "되돌릴 SHA 찾기"로 본다. 백엔드와 프론트엔드 이미지가 모두 ECR에 있어야 한다.
+   - `sut-deploy.sh`가 받는 커밋이어야 한다. 조건은 [`../README.md`](../README.md) "다시 배포".
 
 SUT에서 지금 이미지를 보고, 내 컴퓨터의 레포에서 고른 SHA를 확인한다.
 
@@ -74,8 +75,6 @@ for r in meterengine-backend meterengine-frontend; do
 done
 ```
 
-3. 블루그린이 main에 머지되기 전에는 배포 파일(`deploy.sh`, compose 파일, Caddyfile)을 측정할 브랜치에서 가져온다. 그 브랜치 끝 커밋의 SHA를 `REF`로 쓴다. 브랜치가 origin에 올라가 있어야 SUT가 받는다.
-
 ### 실행
 
 첫 전환 배포와 세 번 모두 아래를 한 번씩 한다. 매번 다음 SHA를 쓴다.
@@ -89,23 +88,13 @@ mkdir -p results/$RUN_ID
 k6 run -e RUN_ID=$RUN_ID --console-output results/$RUN_ID/console.log deploy-ingest.js
 ```
 
-2. 3분쯤 지나서 내 컴퓨터에서 배포하고, 끝날 때까지 기다린 뒤 출력에서 `측정` 두 줄을 본다.
-   - `aws ssm wait command-executed`는 100초에서 끝나 배포보다 먼저 돌아오므로 상태를 직접 묻는다.
+2. 3분쯤 지나서 내 컴퓨터에서 `sut-deploy.sh`로 배포하고, 끝난 뒤 출력에서 `측정` 두 줄을 본다.
+   - `deploy.sh`를 SSM으로 직접 부르면 서버 안 감시가 다시 떠 측정 조건이 바뀐다.
 
 ```bash
-SUT=$(terraform -chdir=measurements/test-sjpark/sut/terraform output -raw sut_instance_id)
-SHA=<고른 SHA 40자>
-REF=<측정할 브랜치 끝 커밋 SHA 40자>
-CMD=$(aws ssm send-command --instance-ids $SUT --document-name AWS-RunShellScript \
-  --parameters commands="exec 8>/etc/meterengine/deploy-command.lock && flock -n 8 && cd /opt/meterengine && git fetch --quiet origin 8>&- 9>&- && git checkout --quiet --force $REF 8>&- 9>&- && ./deploy/deploy.sh test-sjpark $SHA $REF" \
-  --query Command.CommandId --output text)
-st=Pending
-while [ "$st" = Pending ] || [ "$st" = InProgress ] || [ "$st" = Delayed ] || [ "$st" = Cancelling ]; do
-  sleep 5
-  st=$(aws ssm get-command-invocation --command-id $CMD --instance-id $SUT --query Status --output text) || st=Pending
-done
-aws ssm get-command-invocation --command-id $CMD --instance-id $SUT \
-  --query StandardOutputContent --output text | grep '측정'
+RUN_ID=<k6의 RUN_ID>
+measurements/test-sjpark/sut/scripts/sut-deploy.sh <고른 SHA 40자> | tee work/$RUN_ID-deploy.log
+grep '측정' work/$RUN_ID-deploy.log
 ```
 
 ```
@@ -119,23 +108,29 @@ aws ssm get-command-invocation --command-id $CMD --instance-id $SUT \
 ../scripts/deploy-report.sh results/$RUN_ID <시작 ms> <끝 ms> <배포 전 backend 값> <배포 뒤 backend 값>
 ```
 
-4. SUT에 붙어 배포 구간의 메모리를 본다. `측정` 두 줄의 시각을 넣고, 나온 값을 부하 발생기의 `results/$RUN_ID/memory.txt`에 옮겨 적는다.
+4. 배포 구간의 메모리를 공용 Prometheus에서 본다. [`deploy/README.md`](../../../deploy/README.md) "공용 모니터링 서버"대로 9090 포트 포워딩을 켜 두고, 내 컴퓨터의 다른 터미널에서 `측정` 두 줄의 시각을 넣는다. 나온 값은 부하 발생기의 `results/$RUN_ID/memory.txt`에 옮겨 적는다.
 
 ```bash
 START=<시작 ms>
 END=<끝 ms>
-P=$(sudo docker ps -q --filter label=com.docker.compose.project=meterengine-prod --filter label=com.docker.compose.service=prometheus)
 T=$((END / 1000 + 15))
 W=$(((END - START) / 1000 + 30))s
-sudo docker exec $P promtool query instant --time=$T http://localhost:9090 "min_over_time(node_memory_MemAvailable_bytes[$W])"
-sudo docker exec $P promtool query instant --time=$T http://localhost:9090 "max_over_time(node_vmstat_oom_kill[$W]) - min_over_time(node_vmstat_oom_kill[$W])"
+for q in "min_over_time(node_memory_MemAvailable_bytes{env=\"test-sjpark\"}[$W])" \
+  "max_over_time(node_vmstat_oom_kill{env=\"test-sjpark\"}[$W]) - min_over_time(node_vmstat_oom_kill{env=\"test-sjpark\"}[$W])"; do
+  curl -fsS http://localhost:9090/api/v1/query --data-urlencode "time=$T" --data-urlencode "query=$q" | jq -r '.data.result[].value[1]'
+done
+```
+
+SUT에 붙어 두 색이 OOM으로 죽었는지 본다.
+
+```bash
 for c in backend-blue backend-green; do
   id=$(sudo docker ps -aq --filter label=com.docker.compose.project=meterengine-prod --filter label=com.docker.compose.service=$c)
   [ -z "$id" ] || echo "$c OOMKilled=$(sudo docker inspect -f '{{.State.OOMKilled}}' $id)"
 done
 ```
 
-- 첫 값은 배포 구간과 앞뒤 15초 동안의 `MemAvailable` 최저값(바이트)이고, 둘째 값은 그동안 커널 OOM killer가 죽인 프로세스 수다. 둘 다 Prometheus `node` job이 node exporter에서 긁은 값이다.
+- 첫 값은 배포 구간과 앞뒤 15초 동안의 `MemAvailable` 최저값(바이트)이고, 둘째 값은 그동안 커널 OOM killer가 죽인 프로세스 수다. 둘 다 공용 Prometheus `node` job이 SUT의 node exporter에서 긁은 값이다.
 - 메모리 판정은 세 번 모두 둘째 값이 0이고 두 색이 `OOMKilled=false`여야 통과다. 최저값은 기록만 한다.
 
 5. Caddy 요청 로그를 내 컴퓨터의 `work/`로 가져온다. SUT에 붙어 로그를 묶고 HTTP로 잠깐 연다.

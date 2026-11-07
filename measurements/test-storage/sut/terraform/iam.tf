@@ -156,12 +156,6 @@ data "aws_iam_policy_document" "scheduler" {
     actions   = ["rds:StopDBInstance"]
     resources = [aws_db_instance.sut.arn]
   }
-
-  statement {
-    sid       = "StopSutEc2"
-    actions   = ["ec2:StopInstances"]
-    resources = [aws_instance.sut.arn]
-  }
 }
 
 resource "aws_iam_role_policy" "scheduler" {

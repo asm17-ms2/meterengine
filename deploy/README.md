@@ -10,7 +10,7 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
 | --- | --- | --- | --- |
 | staging | develop 머지 | staging.meterengine.com | agents |
 | production | main 머지 | meterengine.com | agents |
-| test-storage | `sut-deploy.sh` | test-storage.meterengine.com | agents |
+| test-storage | `sut-deploy.sh`가 `rollout.sh`를 부른다 | test-storage.meterengine.com | agents |
 
 | 프로필 | 서비스 |
 | --- | --- |
@@ -484,6 +484,7 @@ aws ssm get-parameter --name /meterengine/production/operator-password --with-de
   2. docker, git, compose를 설치하고 저장소를 그 커밋으로 받는다.
   3. `deploy/deploy.sh <환경> <SHA>`를 부른다. 앱과 감시 에이전트를 띄우고 수집량 지표 유닛 `meterengine-ingest-rate.service`를 설치한다.
 - 배포는 `rollout.sh`가 버전 파라미터에 SHA를 쓰고 새로 고침(최소 건강 100%, 최대 200%)을 시작하는 것이다. 새 서버가 대상 그룹에서 healthy가 된 뒤 옛 서버가 빠진다.
+- 측정 환경 test-storage도 이 부팅 스크립트를 사본 없이 읽는다. 바꾸면 다음 test-storage apply에서 시작 템플릿 새 버전이 나온다([`measurements/test-storage/README.md`](../measurements/test-storage/README.md)).
 - 부팅이 느리거나 설치 실패가 잦으면 릴리스마다 이미지를 미리 굽는 방식으로 옮긴다. 그때는 시작 템플릿의 image_id와 부팅 스크립트만 바뀌고 롤링, 버전 파라미터, 확장 정책은 그대로다.
 - 최소 대수는 1, 최대는 3이다(`<환경>/main.tf`의 `min_size`).
   - 최소 대수가 1 이상이면 버전 파라미터가 40자 SHA인지 plan에서 본다. `unset`이면 plan이 멈춘다.
@@ -545,6 +546,7 @@ GRANT pg_monitor TO meterengine_exporter;
 EC2 `meterengine-monitoring` 한 대가 모든 환경의 앱 서버와 DB를 긁는다. 서버와 권한은 `deploy/terraform/monitoring`이 정한다.
 
 - 앱 서버는 태그 `Role=app`인 실행 중 서버를 30초마다 다시 찾아 백엔드 `8080`, node exporter `9100`, cAdvisor `9101`을 긁는다. `Environment` 태그가 `env` 라벨, 인스턴스 ID가 `instance` 라벨이 된다.
+- 측정 환경 test-sjpark은 백엔드가 블루그린이라 호스트에 8080이 없어 node exporter와 cAdvisor만 긁는다.
 - DB는 환경마다 postgres exporter를 하나씩 띄워 `env`를 붙이고, RDS 지표는 DB 식별자에서 `env`를 만든다.
 - 서버나 DB 보안 그룹이 보안 그룹 `meterengine-monitoring`을 들여야 긁힌다. 들이지 않은 대상은 down으로 보인다. 다른 루트가 이 이름으로 찾으므로 이름을 바꾸지 않는다.
 - 들어오는 규칙은 운영 ALB에서 오는 3000 하나다. Prometheus는 서버의 127.0.0.1:9090, Grafana는 3000에 뜬다.
@@ -571,8 +573,9 @@ for name in client-id client-secret; do
 done
 ```
 
-- 그 앱의 콜백 URL은 경로 없는 `https://grafana.meterengine.com`으로 바꿔 Grafana의 `/login/github`가 통하게 한다. 조직 owner가 바꾸고, Grafana를 도메인으로 공개하는 apply 전에 바꾼다.
-  - GitHub는 콜백 URL 아래 경로를 모두 받으므로, 경로를 비우면 옛 운영 서버 oauth2-proxy의 `/oauth2/callback`도 그대로 통한다.
+- 그 앱의 리다이렉트 URI에 `https://grafana.meterengine.com/login/github`를 더한다. Grafana는 이 경로로 로그인을 시작하고 돌아온다. 조직 owner가 더하고, Grafana를 도메인으로 공개하는 apply 전에 더한다.
+  - 지금 GitHub OAuth 앱은 wildcard를 켜지 않으면 등록한 경로만 받는다. 경로 없는 주소로 바꾸면 `/login/github`가 거절된다.
+  - 옛 운영 서버 oauth2-proxy의 `/oauth2/callback`은 옛 서버를 정리할 때 지운다.
 
 띄우거나 설정을 바꿀 때는 서버에 붙어 저장소를 원하는 SHA로 바꾼 뒤 `start.sh`를 부른다. `start.sh`는 스스로 체크아웃하지 않고 저장소 HEAD가 인자와 같은지만 본다.
 

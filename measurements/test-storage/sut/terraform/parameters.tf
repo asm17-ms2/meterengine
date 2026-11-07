@@ -65,6 +65,17 @@ resource "aws_ssm_parameter" "plain" {
   value = each.value
 }
 
+# sut-deploy.sh가 커밋 SHA를 쓰고 서버가 부팅 때 읽는다. Terraform은 자리만 만들고 값을 되돌리지 않는다.
+resource "aws_ssm_parameter" "app_version" {
+  name  = "${local.param_path}/app-version"
+  type  = "String"
+  value = "unset"
+
+  lifecycle {
+    ignore_changes = [value]
+  }
+}
+
 resource "aws_ssm_parameter" "slack_webhook_url" {
   name  = "${local.param_path}/slack-webhook-url"
   type  = "SecureString"

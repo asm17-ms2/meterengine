@@ -14,6 +14,7 @@ COMPOSE_FILE = DEPLOY / "compose.monitoring.yml"
 PARAMETERS = json.loads((DEPLOY / "monitoring/parameters.json").read_text())
 SHARED_PROMETHEUS_CONFIG = DEPLOY / "monitoring/prometheus/prometheus.yml"
 START = DEPLOY / "monitoring/start.sh"
+TEST_SJPARK = DEPLOY.parent / "measurements/test-sjpark"
 SHA = "a" * 40
 CENTRAL = {"prometheus", "grafana", "cloudwatch-exporter"}
 EXPORTERS = {f"postgres-exporter-{env}" for env in PARAMETERS["environments"]}
@@ -73,9 +74,29 @@ class SharedPrometheusConfigTest(unittest.TestCase):
         for job, port in (("backend", 8080), ("node", 9100), ("cadvisor", 9101)):
             self.assertIn(f"port: {port}\n", jobs[job], job)
             self.assertRegex(jobs[job], r"filters: (&|\*)app_servers", job)
+        for job in ("node", "cadvisor"):
             self.assertRegex(jobs[job], r"relabel_configs: (&|\*)app_labels", job)
         self.assertIn("name: tag:Role\n            values: [app]", jobs["backend"])
         self.assertIn("source_labels: [__meta_ec2_tag_Environment]\n        target_label: env", jobs["backend"])
+        self.assertIn("- *env_from_tag\n      - *instance_from_id\n", jobs["node"])
+
+    def test_test_sjpark_backend_is_not_scraped(self):
+        jobs = scrape_jobs()
+        self.assertIn("- source_labels: [__meta_ec2_tag_Environment]\n        regex: test-sjpark\n        action: drop\n", jobs["backend"])
+        for job in ("node", "cadvisor"):
+            self.assertNotIn("action: drop", jobs[job], job)
+
+    def test_test_sjpark_opens_the_ports_its_jobs_scrape(self):
+        block = re.search(r"app_scrape_ports = \{(.*?)\}", (TEST_SJPARK / "sut/terraform/locals.tf").read_text(), re.S).group(1)
+        ports = {job: int(port) for job, port in re.findall(r"(\w+)\s*=\s*(\d+)", block)}
+        jobs = scrape_jobs()
+        self.assertEqual(set(ports), {"node", "cadvisor"})
+        for job, port in ports.items():
+            self.assertIn(f"port: {port}\n", jobs[job], job)
+
+    def test_test_sjpark_deploy_looks_for_a_marker_the_compose_file_has(self):
+        marker = re.search(r"^readonly NODE_EXPORTER_PORT_MARKER='(.+)'$", (TEST_SJPARK / "sut/scripts/sut-deploy.sh").read_text(), re.M).group(1)
+        self.assertIn(f"- {marker}\n", (DEPLOY / "compose.prod.yml").read_text())
 
     def test_every_environment_database_is_scraped_with_its_env(self):
         targets = re.findall(r'targets: \["postgres-exporter-([a-z-]+):9187"\]\n\s+labels: \{ env: ([a-z-]+) \}', scrape_jobs()["postgres"])
@@ -99,6 +120,10 @@ class StartScriptTest(unittest.TestCase):
         fakes = {
             "git": 'echo "$HEAD"',
             "docker": 'echo "docker $*" >> "$TRACE"',
+            # READY_AFTER번 실패한 뒤부터 준비됐다고 답한다.
+            "curl": 'echo "curl $*" >> "$TRACE"\n'
+                    '[ "$(grep -c "^curl " "$TRACE")" -gt "$READY_AFTER" ]',
+            "sleep": 'echo "sleep $*" >> "$TRACE"',
             "aws": 'exec python3 -c \'import json, os, sys\n'
                    'names = sys.argv[sys.argv.index("--names") + 1:]\n'
                    'open(os.environ["TRACE"], "a").write("aws " + " ".join(names) + "\\n")\n'
@@ -112,11 +137,14 @@ class StartScriptTest(unittest.TestCase):
         self.env = {**os.environ, "PATH": f"{bin_dir}:{os.environ['PATH']}", "TRACE": str(self.trace),
                     "VALUES": str(self.root / "values.json"), "HEAD": SHA}
 
-    def run_start(self, head=SHA):
+    def run_start(self, head=SHA, ready_after=0):
         (self.root / "values.json").write_text(json.dumps(self.values))
         self.trace.touch()
-        return subprocess.run(["bash", str(self.script), SHA], env={**self.env, "HEAD": head},
+        return subprocess.run(["bash", str(self.script), SHA], env={**self.env, "HEAD": head, "READY_AFTER": str(ready_after)},
                               text=True, capture_output=True, timeout=10)
+
+    def reload_signals(self):
+        return [call for call in self.calls("docker") if "SIGHUP" in call]
 
     def calls(self, tool):
         return [line.split()[1:] for line in self.trace.read_text().splitlines() if line.startswith(tool + " ")]
@@ -147,6 +175,17 @@ class StartScriptTest(unittest.TestCase):
     def test_other_checkout_stops_before_reading_parameters(self):
         self.assertNotEqual(self.run_start(head="b" * 40).returncode, 0)
         self.assertEqual(self.calls("aws"), [])
+
+    def test_prometheus_reloads_only_after_it_answers_ready(self):
+        self.assertEqual(self.run_start(ready_after=2).returncode, 0)
+        tools = [line.split()[0] for line in self.trace.read_text().splitlines() if "SIGHUP" in line or line.startswith("curl ")]
+        self.assertEqual(tools, ["curl", "curl", "curl", "docker"])
+
+    def test_prometheus_never_ready_stops_without_reload(self):
+        result = self.run_start(ready_after=10_000)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.reload_signals(), [])
+        self.assertIn("Prometheus", result.stderr)
 
 
 if __name__ == "__main__":

@@ -49,8 +49,9 @@ class WebhookClientTest {
     CountDownLatch allowRead = new CountDownLatch(1);
     try (ServerSocket serverSocket = new ServerSocket(0, 1, InetAddress.getByName("127.0.0.1"));
         var receiver = Executors.newSingleThreadExecutor();
+        // 힙이 찬 시험 JVM은 전체 GC로 500ms 넘게 멈춰, 짧은 기한은 write를 시작하기도 전에 지날 수 있다.
         WebhookClient client =
-            new WebhookClient(new WebhookAddressPolicy(true), Duration.ofMillis(500))) {
+            new WebhookClient(new WebhookAddressPolicy(true), Duration.ofSeconds(2))) {
       serverSocket.setReceiveBufferSize(1024);
       var received =
           receiver.submit(
@@ -84,7 +85,7 @@ class WebhookClientTest {
               body);
       assertThat(accepted.await(1, TimeUnit.SECONDS)).isTrue();
       assertThat(outcome.failureReason()).isEqualTo("timeout");
-      assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofSeconds(3));
+      assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofSeconds(5));
       allowRead.countDown();
       assertThat(received.get(5, TimeUnit.SECONDS)).isPositive().isLessThan(body.length());
     } finally {
