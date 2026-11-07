@@ -14,15 +14,19 @@ npx mint dev --port 3333
 - 3000은 frontend `pnpm dev`가 쓰므로 다른 포트를 쓴다.
 - 브라우저에서 http://localhost:3333 을 연다.
 - 설정과 링크 검사: `npx mint validate`, `npx mint broken-links`.
+- 금지 문자, 레포 경로, 내부 링크 검사: 레포 루트에서 `python3 -I guide/scripts/lint_guide.py`(표준 라이브러리만 쓴다).
 
 ## 구조
 
 | 경로 | 내용 |
 | --- | --- |
-| `docs.json` | 사이트 설정. 탭과 탐색 순서, 시험 화면 설정 |
+| `docs.json` | 사이트 설정. 탭 "가이드"와 "API 참조", 탐색 순서, 시험 화면 설정 |
+| `*.mdx`, `*/` | 가이드 페이지. 경로는 docs.json의 pages와 같다 |
 | `openapi/overlays/meterengine.yaml` | API 참조에만 필요한 변경(OpenAPI Overlay 1.0). 생성 파일 |
-| `scripts/` | overlay 생성 스크립트 |
-| `.mintignore` | `scripts/`를 게시에서 뺀다 |
+| `scripts/` | overlay 생성과 MDX 검사 스크립트 |
+| `_meta/canonical.md` | 여러 페이지에 걸치는 사실의 정본 페이지 표 |
+| `_meta/style.md` | 문체 규칙과 화면 표기 대응 |
+| `.mintignore` | `_meta/`와 `scripts/`를 게시에서 뺀다 |
 
 ## API 참조
 
@@ -38,13 +42,19 @@ npx mint dev --port 3333
   - 콘솔 로그인으로만 되는 관리 경로와 토스페이먼츠 웹훅 수신 경로에 `x-hidden`을 붙여 페이지는 만들되 탐색에서 숨긴다.
   - 최상위 `tags`를 만들고 `x-group`으로 한국어 그룹 이름을 붙인다.
 - 설명, 예시, 필요 권한처럼 정본이 코드에 있는 것은 overlay로 덮지 않고 백엔드(컨트롤러와 DTO)에서 고친다.
-- 시험 화면(playground)은 proxy를 켠다. 백엔드에 CORS 설정이 없어 브라우저 직접 호출이 안 된다. 그래서 입력한 키가 Mintlify 서버를 지난다.
+- 시험 화면(playground)은 proxy를 켠다. 백엔드에 CORS 설정이 없어 브라우저 직접 호출이 안 된다. 그래서 입력한 키가 Mintlify 서버를 지나며, 소개 페이지가 테스트 환경 키만 쓰라고 안내한다.
 
 ## 배포
 
 - 아직 Mintlify에 연결하지 않았다. 연결하면 배포 브랜치는 main, Git Settings의 "docs.json is in a subdirectory"에 `/guide`를 넣는다. develop이 main에 머지될 때 production 배포와 함께 공개된다.
 - Mintlify 웹 편집기는 main으로 직접 PR을 열어 브랜치 규칙과 부딪히므로 쓰지 않는다.
 - 본문은 문서 도메인을 쓰지 않고 절대 경로 링크만 쓴다. 문서 주소는 정하지 않았다.
+
+## 확인 필요 주석
+
+- 팀이 아직 정하지 않은 것에 기대는 문장 앞에는 MDX 주석 `{/* 확인 필요: 내용 */}`이 있다. 공개 화면에는 나오지 않는다.
+- 모아 보기: `grep -rn "확인 필요" guide --include=*.mdx`.
+- 정해지면 문장을 맞추고 주석을 지운다.
 
 ## 알려진 문제
 
