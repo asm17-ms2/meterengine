@@ -19,6 +19,7 @@
 | 스프린트 목표와 작업 | Jira(MS2 프로젝트) |
 | 회의록, 일정, 브레인스토밍 | Miro |
 | 실행법과 운영 절차 | 각 디렉터리의 `README.md` |
+| 도입사 가이드와 API 참조 | `guide/` (Mintlify) |
 | 팀 규칙 | `docs/contributing/` |
 
 - `docs/contributing/git-workflow.md`: 브랜치, 커밋 메시지, 머지 방식.
