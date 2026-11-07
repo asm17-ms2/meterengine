@@ -140,6 +140,15 @@ class DeployEnvironmentTest(unittest.TestCase):
         self.assertIn("BACKEND_MEM_LIMIT=2g\n", content)
         self.assertNotIn("BLUE", content)
 
+    def test_optional_warmup_parameters_reach_env_file(self):
+        self.set_parameters({**BASE_PARAMETERS, "ingest-warmup-api-key": "me_live_warmup",
+                             "ingest-warmup-organization-id": "org", "ingest-warmup-customer-id": "customer"})
+        result = self.deploy("staging", SHA)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        content = self.env_file.read_text()
+        for line in ("INGEST_WARMUP_API_KEY=me_live_warmup\n", "INGEST_WARMUP_ORGANIZATION_ID=org\n", "INGEST_WARMUP_CUSTOMER_ID=customer\n"):
+            self.assertIn(line, content)
+
     def test_log_shows_only_the_identifier(self):
         result = self.deploy("staging", SHA)
         self.assertEqual(result.returncode, 0, result.stderr)

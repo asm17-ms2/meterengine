@@ -101,6 +101,25 @@ docker build -t meterengine-backend .
 - `meterengine.webhook.allow-private-network`(기본 false)를 true로 두면 http와 사설망 주소로도 통보를 보낸다. `local` 프로파일과 시험만 켠다.
 - 오류 문구의 언어는 `spring.web.locale=ko`, `spring.web.locale-resolver=fixed`로 고정한다. `Accept-Language`가 무엇이든 한국어가 나간다.
 
+### 수집 경로 예열
+
+기동할 때 readiness를 열기 전에 자기 서버(`127.0.0.1`)의 수집 API를 불러 데운다. ALB는 readiness가 200인 서버에만 보내므로 새 서버가 받자마자 느려지지 않는다.
+
+| 환경변수 | 용도 | 기본값 |
+| --- | --- | --- |
+| `INGEST_WARMUP_API_KEY` | 예열 도입사의 ingest 키 원문. 비면 예열을 건너뛴다 | 없음 |
+| `INGEST_WARMUP_ORGANIZATION_ID` | 예열 도입사 id. 요청마다 `X-MeterEngine-Organization-Id`로 실어 키가 다른 도입사 것이면 403으로 멈춘다 | 없음 |
+| `INGEST_WARMUP_CUSTOMER_ID` | 예열 고객 id | 없음 |
+| `INGEST_WARMUP_REQUESTS` | 보낼 요청 수 | `1000` |
+| `INGEST_WARMUP_TIME_LIMIT` | 시간 상한. 요청 수와 둘 중 먼저 닿는 쪽에서 멈춘다. 단위가 없으면 초다 | `20s` |
+
+- 단건 `POST /v1/events`와 원소 하나짜리 `POST /v1/event-batches`를 번갈아 보낸다. 기본값이면 반씩이다.
+- 모든 이벤트가 같은 `transaction_id`(`meterengine-warmup`)를 써서 환경마다 이벤트가 한 행만 남는다. type은 `meterengine_warmup`이다.
+- 2xx가 아닌 응답, 묶음 원소의 거절, 연결 실패, UUID가 아닌 id는 실패다. 첫 실패에서 멈추고 WARN 로그와 원인 스택을 남긴 뒤 기동을 이어간다. 키 원문은 로그에 남기지 않는다.
+- 예열 고객 id가 그 키의 환경에 없으면 값을 고칠 때까지 기동마다 예열 도입사에 `event_rejection` 행이 하나씩 남는다. 키나 도입사가 틀린 401, 403은 아무 행도 남기지 않는다.
+- 키가 비면 `Ingest warm-up skipped: no api key`, 끝나면 `Ingest warm-up finished: requests=<수>, elapsed=<밀리초>ms`를 INFO로 남긴다.
+- 시험 설정은 키를 비워 예열을 끈다. 예열 도입사와 키를 만드는 절차와 끄는 법은 `deploy/README.md` "수집 경로 예열".
+
 ## 인증
 
 - `/v1` 요청은 `Authorization: Bearer <값>`으로 인증한다. 값은 API 키(`me_live_`, `me_test_`)나 로그인 세션 토큰(`me_session_`)이고, 도입사는 키나 세션이 정한다.
@@ -263,7 +282,7 @@ unset SESSION
 
 | 패키지 | 내용 | 경로 |
 | --- | --- | --- |
-| `event` | 사용량 이벤트 수집과 조회 | `/v1/events` |
+| `event` | 사용량 이벤트 수집과 조회, 기동 시 수집 경로 예열 | `/v1/events` |
 | `metric` | 미터 등록, 수정, 보관과 복원, 조회, 고객별 월 사용량 집계(속성 값 조합별로 나눔) | `/v1/billable-metrics`, `/v1/usage` |
 | `pricing` | 단가 등록(같은 조합이면 덮어쓰기)과 보관, 복원, 미터별 가격 목록 | `/v1/billable-metrics/{code}/price-rates`, `/v1/billable-metric-prices` |
 | `invoice` | 청구 예정액 조회(속성 값 조합별 사용량에 같은 조합의 단가를 곱함), 인보이스 일괄 확정(집계 마감 시각까지 받은 이벤트로, 고객마다 따로 커밋하고 청구 메일을 남김), 확정 인보이스 목록 조회(금액 구성과 라인 포함), 매시 정각 자동 확정(확정 시각이 지난 달의 끝나지 않은 고객과 달을 환경 범위마다 시도하고, 단가 없는 사용량이 있으면 보류하며(0원이면 보류하지 않고 끝냄), 고객과 달마다 시도 결과를 남김. 실패는 매 정시 다시 시도하고 보류는 수동 확정으로 끝냄) | `/v1/invoices`, `/v1/invoices/draft` |
