@@ -1,0 +1,50 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "MeterEngine",
+  "description": "MeterEngine 도입사를 위한 연동 가이드와 API 참조",
+  "colors": {
+    "primary": "#5746ad"
+  },
+  "navbar": {
+    "primary": {
+      "type": "button",
+      "label": "콘솔 열기",
+      "href": "https://meterengine.com"
+    }
+  },
+  "navigation": {
+    "languages": [
+      {
+        "language": "ko",
+        "default": true,
+        "tabs": [
+          {
+            "tab": "API 참조",
+            "groups": [
+              {
+                "group": "엔드포인트",
+                "openapi": {
+                  "source": "https://raw.githubusercontent.com/asm17-ms2/meterengine/main/backend/openapi.yaml",
+                  "overlays": ["openapi/overlays/meterengine.yaml"]
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "api": {
+    "playground": {
+      "display": "interactive",
+      "proxy": true
+    },
+    "examples": {
+      "languages": ["bash", "node"]
+    }
+  },
+  "search": {
+    "prompt": "가이드와 API 검색"
+  }
+}
