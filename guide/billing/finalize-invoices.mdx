@@ -1,0 +1,208 @@
+---
+title: "인보이스 수동 확정"
+description: "한 달의 청구 예정액을 고객별 인보이스로 확정하는 방법과 확정 결과를 읽는 법을 설명합니다."
+---
+
+확정은 한 달의 청구 예정액을 고객마다 인보이스로 굳히는 일입니다. 확정해야 인보이스가 생기고, 인보이스가 있어야 결제를 요청하거나 고객에게 보여 줄 조회 링크를 만들 수 있습니다. 확정하지 않은 달은 청구 예정액으로만 보입니다.
+
+{/* 확인 필요: 배포 서버 자동 확정 켜는 시점 */}
+<Info>
+자동 확정 여부는 청구 예정액 응답의 `auto_finalize_enabled`로 확인합니다. 꺼져 있으면(`false`) 이 페이지의 방법으로 직접 확정합니다. 켜져 있어도 보류된 고객은 직접 확정해야 합니다. 자세한 동작은 [자동 확정과 보류](/billing/auto-finalization)를 보세요.
+</Info>
+
+## 확정의 범위
+
+- **달 전체를 한 번에 확정합니다.** 그 달 청구 예정액이 0원이 아닌 고객을 모두 확정합니다. 고객 하나만 골라 확정하는 방법은 없습니다. 콘솔에서 검색 조건으로 고객을 좁혀 놓아도 그 달 전체가 확정됩니다.
+- **업무 환경마다 따로 확정합니다.** 지금 쓰는 업무 환경의 고객만 확정하며, 테스트 환경을 확정해도 실제 환경은 그대로입니다. 업무 환경은 [업무 환경](/concepts/environments)을 보세요.
+- **0원 고객은 인보이스를 만들지 않습니다.** 청구 예정액이 0원인 고객은 확정에서 건너뜁니다. 그 달 이벤트가 없는 고객이 여기에 해당하고, 단가 없는 사용량만 있는 고객도 요금제의 기본료나 최소 사용료가 붙지 않으면 0원입니다. 집계 마감 전에 확정했다면, 그 뒤 마감 전까지 금액이 생긴 고객을 같은 달로 다시 확정할 수 있습니다.
+- **세액은 공급가액의 10%입니다.** 인보이스에는 공급가액(`supply_amount`), 세액(`tax_amount`), 합계(`total_amount`)가 찍힙니다. 금액 용어는 [예정액, 확정액, 수납액](/concepts/amounts)을 보세요.
+- **필요 권한:** 확정은 admin(전체 관리), 청구 예정액과 인보이스 조회는 read(조회) 권한이 필요합니다. 권한은 [화면과 API, 권한](/authentication/scopes)을 보세요.
+
+## 언제 확정하나
+
+지난달 사용량은 다음 달 1일 13:00 KST까지 받은 것만 청구됩니다. 마감 규칙은 [시간 규칙](/concepts/time-rules)을 보세요. 확정하는 시점에 따라 금액에 드는 이벤트가 달라지고, 그 기준 시각이 인보이스의 `cutoff_at`에 남습니다.
+
+| 확정하는 시점 | 금액에 드는 이벤트 | `cutoff_at` |
+| --- | --- | --- |
+| 집계 마감(다음 달 1일 13:00 KST)이 지난 뒤 | 그 달에 발생했고 마감 전에 받은 이벤트 | 마감 시각, 예: `2026-11-01T13:00:00+09:00` |
+| 집계 마감 전 | 그 달에 발생했고 확정하는 순간까지 받은 이벤트 | 확정한 시각 |
+
+마감이 지난 달을 확정하면 확정 금액과 라인이 그 시점의 청구 예정액과 같습니다.
+
+<Warning>
+마감 전에 확정하면, 확정한 고객에게 그 뒤 들어온 그 달 이벤트는 청구되지 않습니다. 이번 달처럼 아직 끝나지 않은 달을 확정하면 남은 기간의 사용량이 빠집니다. 지난달은 다음 달 1일 13:00 KST가 지난 뒤에 확정하세요.
+</Warning>
+
+단가 없는 사용량이 있어도 확정은 됩니다. 그 사용량은 인보이스에 실리지 않고, 확정한 뒤 단가를 등록해도 그 달 인보이스에는 더해지지 않습니다. 확정 전에 점검할 것은 [확정 뒤 바뀌는 것과 안 바뀌는 것](/billing/after-finalization)에 모았습니다.
+
+## 콘솔에서 확정하기
+
+<Steps>
+  <Step title="업무 환경을 확인합니다">
+    화면 위 '업무 환경'이 확정하려는 환경인지 확인합니다. {/* 확인 필요: 새 도입사 기본 환경이 기존 데이터 */}로그인 직후에는 '기존 데이터'로 열리므로 테스트 환경을 확정하려면 '테스트 환경'으로 전환합니다.
+  </Step>
+  <Step title="'청구 검토' 화면에서 달을 고릅니다">
+    왼쪽 메뉴의 '청구 검토'를 열고 확정할 달을 고릅니다. 화면 제목이 '청구 예정액 - 2026년 10월'처럼 바뀝니다. 마감이 지난 달은 '집계 기준 2026-11-01 13:00 KST까지 받은 사용량'으로, 마감 전인 달은 '집계 마감 2026-11-01 13:00 KST 예정'으로 표시됩니다.
+  </Step>
+  <Step title="고객별 금액을 확인합니다">
+    고객마다 금액과 라인을 펼쳐 봅니다. '기타 (단가 없음)' 줄이 있는 고객은 그 사용량이 청구되지 않습니다.
+  </Step>
+  <Step title="'월 전체 확정'을 누릅니다">
+    버튼은 admin(전체 관리) 권한이 있는 구성원에게만 보입니다. 청구할 금액이 있는 고객이 없거나 모두 확정됐으면 버튼이 비활성으로 보이고 그 이유가 버튼 아래에 나옵니다.
+  </Step>
+  <Step title="확인 창을 읽고 '확정'을 누릅니다">
+    확인 창 제목에 업무 환경과 달이 나옵니다(예: '테스트 환경 2026년 10월 인보이스를 확정할까요?'). 아직 끝나지 않은 달이거나 단가 없는 사용량이 있으면 경고가 함께 나옵니다.
+    <Warning>확정한 인보이스는 고치거나 지울 수 없습니다. 확정 창의 업무 환경과 달, 고객 수, 공급가액 합을 다시 확인하세요.</Warning>
+  </Step>
+  <Step title="결과를 확인합니다">
+    결과 창에 새로 확정한 인보이스 수와 공급가액, 세액, 총액이 나옵니다. 확정하지 못한 고객이 있으면 그 수가 나오며, 다시 '월 전체 확정'을 누르면 남은 고객만 다시 시도합니다. '인보이스 보기'를 누르면 '확정 인보이스' 화면으로 갑니다.
+  </Step>
+</Steps>
+
+## API로 확정하기
+
+<Steps>
+  <Step title="청구 예정액을 확인합니다">
+    read 권한 키로 `GET /v1/invoices/draft?month=YYYY-MM`을 부릅니다. `month`를 빼면 이번 달입니다.
+
+    ```bash
+    curl "https://meterengine.com/v1/invoices/draft?month=2026-10" \
+      -H "Authorization: Bearer me_test_xxxxxxxx"
+    ```
+
+    고객마다 `amount`, `lines`, `unpriced_usages`, `negative_usages`가 나옵니다. 이미 확정한 고객은 나오지 않습니다.
+  </Step>
+  <Step title="확정을 요청합니다">
+    admin 권한 키로 `POST /v1/invoices?month=YYYY-MM`을 부릅니다. 요청 본문은 없습니다. `month`는 꼭 넣어야 합니다.
+
+    <Warning>확정은 되돌릴 수 없습니다. 테스트 환경 키로 보낸 확정도 마찬가지입니다.</Warning>
+
+    <CodeGroup>
+    ```bash curl
+    curl -X POST "https://meterengine.com/v1/invoices?month=2026-10" \
+      -H "Authorization: Bearer me_test_xxxxxxxx"
+    ```
+
+    ```javascript Node
+    const response = await fetch("https://meterengine.com/v1/invoices?month=2026-10", {
+      method: "POST",
+      headers: { Authorization: "Bearer me_test_xxxxxxxx" },
+    });
+    const body = await response.json();
+    if (!response.ok) throw new Error(`확정 실패: ${body.code}`);
+    if (body.failed_count > 0) {
+      // 같은 달로 다시 부르면 확정하지 못한 고객만 다시 시도합니다.
+    }
+    ```
+    </CodeGroup>
+  </Step>
+  <Step title="응답의 failed_count를 확인합니다">
+    응답은 확정하지 못한 고객이 있어도 200입니다. `failed_count`가 0보다 크면 같은 달로 다시 부릅니다.
+
+    ```json 200 응답
+    {
+      "month": "2026-10",
+      "finalized_count": 1,
+      "failed_count": 0,
+      "invoices": [
+        {
+          "id": "6f1c2b9e-3d4a-4c8b-9e2f-1a7b5c3d9e01",
+          "invoice_number": "ME-202610-00000012",
+          "customer_id": "0b8e4f2a-7c1d-4e5b-a9f3-2d6c8e1b4a70",
+          "customer_name": "에이컴퍼니",
+          "month": "2026-10",
+          "cutoff_at": "2026-11-01T13:00:00+09:00",
+          "finalized_at": "2026-11-02T10:15:30+09:00",
+          "supply_amount": 12000,
+          "tax_amount": 1200,
+          "total_amount": 13200,
+          "lines": [
+            {
+              "billable_metric_code": "llm_tokens",
+              "billable_metric_name": "LLM 토큰",
+              "target_property": "tokens",
+              "dimension_values": { "model": "small" },
+              "quantity": 1200,
+              "unit_price": 10,
+              "amount": 12000,
+              "line_type": "per_unit",
+              "tier_index": 0,
+              "quantity_numerator": 1200,
+              "quantity_denominator": 1
+            }
+          ]
+        }
+      ],
+      "supply_amount": 12000,
+      "tax_amount": 1200,
+      "total_amount": 13200
+    }
+    ```
+  </Step>
+  <Step title="확정된 인보이스를 조회합니다">
+    read 권한 키로 `GET /v1/invoices?month=YYYY-MM`을 부르면 그 달에 확정된 인보이스가 고객마다 한 줄씩 나옵니다. 하나만 볼 때는 `GET /v1/invoices/{id}`를 씁니다.
+
+    ```bash
+    curl "https://meterengine.com/v1/invoices?month=2026-10" \
+      -H "Authorization: Bearer me_test_xxxxxxxx"
+    ```
+  </Step>
+</Steps>
+
+### 확정 응답 필드
+
+<ResponseField name="month" type="string">
+  확정한 달(`YYYY-MM`, KST).
+</ResponseField>
+<ResponseField name="finalized_count" type="integer">
+  이번 호출로 새로 확정한 인보이스 수. 이미 확정돼 있던 고객은 세지 않습니다.
+</ResponseField>
+<ResponseField name="failed_count" type="integer">
+  이번 호출에서 확정하지 못한 고객 수. 0보다 크면 같은 달로 다시 부릅니다.
+</ResponseField>
+<ResponseField name="invoices" type="object[]">
+  이번 호출로 새로 확정한 인보이스. 각 원소는 `GET /v1/invoices/{id}` 응답과 같습니다.
+  <Expandable title="인보이스 필드">
+    <ResponseField name="id" type="string">인보이스 id(UUID). 결제 요청과 조회 링크 발급에 씁니다.</ResponseField>
+    <ResponseField name="invoice_number" type="string">고객에게 보여 주는 인보이스 번호. 세금계산서나 영수증 번호가 아닙니다.</ResponseField>
+    <ResponseField name="customer_id" type="string">고객 id(UUID).</ResponseField>
+    <ResponseField name="customer_name" type="string">확정할 때의 고객 이름.</ResponseField>
+    <ResponseField name="cutoff_at" type="string">금액에 든 이벤트의 받은 시각 상한(KST, `+09:00`).</ResponseField>
+    <ResponseField name="finalized_at" type="string">확정한 시각(KST, `+09:00`).</ResponseField>
+    <ResponseField name="supply_amount" type="integer">공급가액(원). 라인 금액의 합입니다.</ResponseField>
+    <ResponseField name="tax_amount" type="integer">세액(원). 공급가액의 10%입니다.</ResponseField>
+    <ResponseField name="total_amount" type="integer">합계(원). 공급가액과 세액의 합이며 결제 금액입니다.</ResponseField>
+    <ResponseField name="lines" type="object[]">확정할 때 저장한 조합별 수량, 단가, 금액. 수량이 0인 라인은 싣지 않습니다.</ResponseField>
+  </Expandable>
+</ResponseField>
+<ResponseField name="supply_amount" type="integer">
+  이번 호출로 새로 확정한 인보이스의 공급가액 합(원).
+</ResponseField>
+<ResponseField name="tax_amount" type="integer">
+  이번 호출로 새로 확정한 인보이스의 세액 합(원).
+</ResponseField>
+<ResponseField name="total_amount" type="integer">
+  이번 호출로 새로 확정한 인보이스의 합계 합(원).
+</ResponseField>
+
+### 오류
+
+| 상태 | `code` | 원인 |
+| --- | --- | --- |
+| 400 | `validation_error` | `month`가 없거나 `YYYY-MM` 형식이 아니거나 0001-01부터 9999-12까지의 범위 밖입니다. |
+| 403 | `permission_denied` | 키에 admin 권한이 없습니다. |
+
+공통 오류 형식과 처리 방법은 [오류 응답과 X-Request-ID](/api-basics/errors)를 보세요.
+
+## 다시 부르기와 실패한 고객
+
+- 같은 달로 다시 부르거나 동시에 불러도 인보이스가 겹치지 않습니다. 그 달이 이미 확정된 고객은 건너뜁니다. 응답을 받지 못했으면 같은 요청을 다시 보내도 됩니다.
+- 고객마다 따로 확정합니다. 한 고객이 실패해도 다른 고객의 확정은 남고, 실패한 고객은 `failed_count`에 셉니다.
+- 응답에는 실패한 고객의 수만 실리고 어느 고객이 왜 실패했는지는 실리지 않습니다. 확정되지 않고 남은 고객은 `GET /v1/invoices/draft?month=YYYY-MM`에 그대로 나오므로, 금액이 0원이 아닌데 남아 있는 고객이 확정하지 못한 고객입니다.
+
+## 확정한 뒤
+
+- {/* 확인 필요: 확정 뒤 자동 첫 결제 없음 */} 확정해도 결제는 자동으로 시작되지 않습니다. 확정한 뒤 인보이스마다 결제를 요청해야 합니다. [첫 결제 요청과 결과 확인](/payments/charging)을 보세요.
+- MeterEngine은 메일을 보내지 않으니 인보이스 안내는 도입사가 직접 전달합니다. API 참조의 확정 설명에는 청구 메일을 남긴다는 문장이 있지만, 그 메일은 고객에게 발송되지 않습니다. 고객에게 인보이스를 보여 주려면 [고객에게 인보이스 보여 주기](/payments/invoice-links)를 만듭니다.
+- {/* 확인 필요: 웹훅 data 공개 형태와 확정 통보 없음 */} 인보이스 확정을 알리는 통보는 없습니다. 확정 결과는 통보가 아니라 인보이스 목록 API로 확인합니다. [웹훅 이벤트 유형과 data](/webhooks/events)를 보세요.
+- 확정한 인보이스는 되돌릴 수 없습니다. 확정 뒤 고정되는 값은 [확정 뒤 바뀌는 것과 안 바뀌는 것](/billing/after-finalization)을 보세요.

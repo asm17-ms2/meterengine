@@ -1,0 +1,198 @@
+---
+title: "오류 응답과 X-Request-ID"
+description: "오류 응답 형식과 code별 처리, 다시 보낼지 판단하는 기준, X-Request-ID로 요청을 찾는 방법을 설명합니다."
+---
+
+MeterEngine API(`/v1/` 아래 모든 경로)는 4xx와 5xx 오류를 같은 JSON 형식으로 돌려줍니다. 인증, 권한, 요청 한도 오류도 같습니다. 오류 처리는 HTTP 상태와 응답 본문의 `code`로 나눕니다.
+
+## 오류 응답 형식
+
+{/* 확인 필요: 공개 API 주소 */}
+키 없이 요청을 보내면 오류 응답이 어떻게 생겼는지 바로 볼 수 있습니다.
+
+```bash
+curl -i https://meterengine.com/v1/customers
+```
+
+```http
+HTTP/2 401
+content-type: application/json
+www-authenticate: Bearer
+x-request-id: 8d3c88b0-7675-41fe-8c29-eba228dd431c
+
+{"code":"authentication_required","message":"인증 정보가 없습니다"}
+```
+
+입력 값이 틀린 400 응답에는 어느 값이 왜 틀렸는지가 `errors`에 실립니다.
+
+```json
+{
+  "code": "validation_error",
+  "message": "요청 값이 올바르지 않습니다",
+  "errors": [
+    { "field": "transaction_id", "message": "공백일 수 없습니다" }
+  ]
+}
+```
+
+<ResponseField name="code" type="string" required>
+  오류 종류입니다. 오류별 처리는 이 값으로 나눕니다. 값은 소문자와 밑줄로 된 문자열입니다(예: `validation_error`).
+</ResponseField>
+
+<ResponseField name="message" type="string" required>
+  code마다 정해진 한국어 문구입니다. 사람이 읽으라고 넣은 값이며 예고 없이 바뀝니다.
+</ResponseField>
+
+<ResponseField name="errors" type="object[]">
+  틀린 값의 목록입니다. 400 응답에만 실리고, 목록이 비면 필드 자체가 빠집니다.
+  <Expandable title="errors의 항목">
+    <ResponseField name="field" type="string">
+      틀린 값을 보낸 자리의 이름입니다. 요청에 쓴 이름 그대로 나옵니다(예: `transaction_id`, `Idempotency-Key`). 이벤트 배치의 원소라면 `events[1].timestamp`처럼 몇 번째 원소인지가 붙습니다.
+    </ResponseField>
+    <ResponseField name="message" type="string">
+      그 자리의 값이 거절된 이유입니다.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<Warning>
+`message`로 분기하지 마세요. 문구는 예고 없이 바뀝니다. 분기는 언제나 `code`로 하고, `message`는 로그와 화면 표시에만 쓰세요.
+</Warning>
+
+이벤트 배치(`POST /v1/event-batches`)는 원소 하나가 거절돼도 HTTP 200으로 답하고, 거절된 원소의 `results[].error`에 같은 형식의 오류를 싣습니다. 배치 응답 읽는 법은 [사용량 이벤트 보내기](/integration/events)를 보세요.
+
+## 자주 만나는 code
+
+### 401: 인증 실패
+
+| code | 뜻 | 할 일 |
+| --- | --- | --- |
+| `authentication_required` | `Authorization` 헤더가 없습니다. | `Authorization: Bearer me_test_xxxxxxxx` 형식으로 키를 넣습니다. |
+| `invalid_credentials` | 키의 형식이 틀렸거나, 없는 키이거나, 폐기 또는 만료된 키입니다. `Bearer `로 시작하지 않는 값도 여기에 해당합니다. | 콘솔 'API 키와 통보' 화면에서 키 상태가 '사용 중'인지 확인합니다. |
+
+401 응답에는 언제나 `WWW-Authenticate: Bearer` 헤더가 붙습니다. 키 없이 보낸 요청은 경로가 없어도 404가 아니라 401을 받습니다. 키 발급과 폐기는 [API 키 발급과 첫 호출](/authentication/api-keys)을 보세요.
+
+### 403: 권한 밖의 요청
+
+| code | 뜻 | 할 일 |
+| --- | --- | --- |
+| `permission_denied` | 키의 권한(read, ingest, admin)으로는 할 수 없는 요청입니다. 콘솔에 로그인해야만 되는 기능을 API 키로 불렀을 때도 이 code입니다. | 필요한 권한을 [화면과 API, 권한](/authentication/scopes)에서 확인하고 '키 권한 변경'으로 권한을 더합니다. 콘솔 전용 기능이면 콘솔에 로그인해 처리합니다. |
+| `environment_mismatch` | `X-MeterEngine-Environment` 헤더에 키가 발급된 업무 환경과 다른 값을 적었습니다. | 헤더를 빼거나 키의 환경과 같은 값을 적습니다. |
+| `organization_not_active` | 도입사가 승인 전이거나, 거절 또는 정지된 상태입니다. | [가입과 승인](/account/signup)을 봅니다. |
+| `consent_required` | 콘솔에 로그인한 사용자가 필수 안내에 아직 동의하지 않았습니다. 콘솔 로그인에서만 나오고 API 키 요청에는 나오지 않습니다. | 콘솔에서 동의 화면을 마칩니다. |
+
+조회는 read, 고객 등록과 이벤트 전송은 ingest, 그 밖의 변경은 admin 권한이 필요합니다. 요청 본문 검사가 권한 검사보다 먼저 돌기 때문에, 권한이 없는 키로 형식이 틀린 본문을 보내면 403보다 400을 먼저 받습니다.
+
+{/* 확인 필요: API 참조에서 숨기는 범위 */}
+API 키 관리, 토스페이먼츠 키 저장, 구성원 관리, 감사 기록 조회는 콘솔에 로그인한 상태에서만 됩니다. API 키로 부르면 `403 permission_denied`로 거절됩니다.
+
+{/* 확인 필요: 시험 화면 proxy와 테스트 키 안내 */}
+테스트 환경 키와 실제 환경 키는 발급한 환경에 고정되어 있어 `X-MeterEngine-Environment` 헤더를 따로 넣지 않아도 됩니다. 자세한 내용은 [업무 환경](/concepts/environments)을 보세요.
+
+{/* 확인 필요: 승인 알림 없음과 처리 시간 */}
+승인 전이거나 거절, 정지된 도입사는 API 요청에 `403 organization_not_active`를 받습니다.
+
+### 400: 요청 값 오류
+
+| code | 뜻 | 할 일 |
+| --- | --- | --- |
+| `validation_error` | 필수 값이 없거나, 형식이나 범위가 틀렸거나, 받지 않는 조회 조건을 보냈습니다. | `errors`의 `field`와 `message`를 보고 값을 고칩니다. `errors` 없이 오는 경우도 있습니다. 이때는 헤더부터 확인합니다. `X-MeterEngine-Environment`에 받지 않는 값을 넣었거나 같은 헤더를 두 번 보내면 `errors` 없이 이 code가 옵니다. |
+| `malformed_request_body` | 본문을 JSON으로 읽을 수 없거나 비어 있습니다. JSON은 맞아도 값을 정해진 형으로 읽지 못하면 이 code입니다. 예를 들어 단건 이벤트의 `timestamp`에 시간대 오프셋이 없거나, UUID 자리에 UUID가 아닌 문자열을 넣은 경우입니다. `errors`는 실리지 않습니다. | 보낸 본문을 JSON 검사기로 확인하고, 시각에는 `+09:00`처럼 오프셋을 붙입니다. |
+
+`event_too_old`, `invalid_billable_metric`, `invalid_price_rate`처럼 기능마다 정해진 400 code도 있습니다. 뜻과 할 일은 각 기능 페이지와 [API 참조](/api-reference/introduction)에 있습니다.
+
+### 그 밖의 공통 code
+
+| HTTP 상태 | code | 뜻 |
+| --- | --- | --- |
+| 404 | `endpoint_not_found` | 요청한 경로가 없습니다. 주소의 `/v1/`와 철자를 확인합니다. |
+| 404 | `customer_not_found` 등 `*_not_found` | 경로나 본문의 id가 가리키는 자원이 지금 업무 환경에 없습니다. 다른 업무 환경에서 만든 자원도 여기에 해당합니다. |
+| 405 | `method_not_allowed` | 그 경로에서 받지 않는 메서드입니다. |
+| 406 | `response_type_not_acceptable` | `Accept` 헤더에 맞는 응답 형식이 없습니다. `Accept`를 빼거나 `application/json`으로 보냅니다. |
+| 409 | `resource_version_conflict` | 다른 요청이 먼저 바꾼 자원입니다. 다시 조회해 최신 값으로 고친 뒤 보냅니다. |
+| 409 | `idempotency_conflict` | 같은 `Idempotency-Key`를 다른 본문에 썼습니다. [멱등 규칙](/api-basics/idempotency)을 봅니다. |
+| 415 | `request_type_not_supported` | 지원하지 않는 `Content-Type`입니다. JSON 본문에는 `Content-Type: application/json`을 붙입니다. |
+| 429 | `rate_limit_exceeded` | 키의 분당 요청 한도를 넘었습니다. [요청 한도와 429](/api-basics/rate-limits)를 봅니다. |
+| 500 | `internal_server_error` | MeterEngine 서버 안에서 처리하지 못한 오류입니다. |
+| 503 | `request_timed_out` | 처리 시간이 초과되었습니다. |
+
+<Note>
+API 참조의 code 목록에는 `environment_not_ready`도 있지만, 지금은 어떤 요청에서도 나오지 않습니다.
+</Note>
+
+## 다시 보낼지 판단하기
+
+아래 표는 연동 코드를 짤 때 권하는 기준입니다. 같은 요청을 다시 보내는 것이 안전한지는 [멱등 규칙](/api-basics/idempotency)에 달려 있으니 함께 보세요.
+
+| 받은 응답 | 그대로 다시 보내도 되나 | 할 일 |
+| --- | --- | --- |
+| 400 | 아니오 | 값을 고친 뒤 보냅니다. 고치지 않고 다시 보내면 같은 오류가 납니다. |
+| 401, 403 | 아니오 | 키, 권한, 도입사 상태를 바로잡습니다. |
+| 404 | 아니오 | id나 경로를 확인합니다. |
+| 409 | code에 따라 다름 | `resource_version_conflict`는 다시 조회한 뒤 고쳐서 보냅니다. 그 밖의 409는 지금 자원 상태와 맞지 않는다는 뜻이라 상태를 먼저 바꿔야 합니다. |
+| 405, 406, 415 | 아니오 | 요청 형식을 고칩니다. |
+| 429 | 예 | `Retry-After` 헤더의 초만큼 기다린 뒤 보냅니다. |
+| 500, 503, 응답 없음 | 멱등한 요청만 | 이벤트는 같은 `transaction_id`, 고객과 미터 등록은 같은 `Idempotency-Key`로 간격을 늘려 가며 다시 보냅니다. |
+
+<Warning>
+결제 요청(`POST /v1/invoices/{id}/payment-attempts`)은 멱등 키가 없습니다. 500이나 503을 받았거나 응답을 받지 못했으면 다시 요청하기 전에 결제 시도를 먼저 조회하세요. 자세한 내용은 [첫 결제 요청과 결과 확인](/payments/charging)을 보세요.
+</Warning>
+
+이벤트에서 다시 보내지 말아야 할 거절 code와 보내지 못한 이벤트를 쌓아 두는 방법은 [재전송 설계](/integration/retries)를 보세요.
+
+응답 본문이 JSON이 아니면 `code`를 읽지 말고 HTTP 상태만으로 판단하세요.
+
+## X-Request-ID로 요청 찾기
+
+모든 `/v1/` 응답에는 `X-Request-ID` 헤더가 붙습니다. 값은 MeterEngine이 요청마다 새로 만드는 UUID이고, 요청에 같은 이름의 헤더를 넣어도 쓰지 않습니다. 오류 응답에도 붙으므로 연동 쪽 로그에 HTTP 상태, `code`와 함께 남겨 두세요.
+
+### 감사 기록에서 찾기
+
+이벤트 수집을 뺀 API 요청은 콘솔의 '감사 기록' 화면에 결과가 남습니다. 조회 요청도 남습니다.
+
+<Steps>
+<Step title="업무 환경을 맞춘다">
+콘솔에 로그인한 뒤 화면 위 '업무 환경'을 요청에 쓴 키의 환경으로 고릅니다. 테스트 환경 키(me_test_)로 보낸 요청이면 '테스트 환경'입니다. 감사 기록은 업무 환경마다 따로 보입니다.
+</Step>
+<Step title="요청 ID로 검색한다">
+왼쪽 메뉴에서 '감사 기록'을 엽니다. '행동 또는 대상 검색' 칸에 `X-Request-ID` 값을 넣고 '조건 적용'을 누릅니다.
+</Step>
+<Step title="결과를 확인한다">
+기록을 펼치면 메서드와 경로, HTTP 상태, 실행 주체가 보입니다. 4xx와 5xx는 '요청 거절/오류'로 표시됩니다.
+</Step>
+</Steps>
+
+감사 기록에 남지 않는 요청이 있습니다.
+
+- 키 없이 보냈거나 틀린 키로 보내 401을 받은 요청
+- 이벤트 수집 요청(`POST /v1/events`, `POST /v1/event-batches`)
+
+### 이벤트 수집 요청 찾기
+
+이벤트 수집 요청(`POST /v1/events`, `POST /v1/event-batches`)은 감사 기록에 남지 않습니다. 저장된 이벤트와 수집 거절 기록에 그 요청의 `request_id`(응답의 `X-Request-ID`와 같은 값)와 `transaction_id`가 남으니 이것으로 찾으세요.
+
+| 결과 | 찾는 곳 | 보이는 값 |
+| --- | --- | --- |
+| 저장됨 | read 권한 키로 `GET /v1/events/lookup?transaction_id=값`(목록 `GET /v1/events`에도 같은 값이 있습니다), 또는 콘솔 '수집 로그' 화면의 이벤트 상세 | 처음 저장한 요청의 `request_id`, `received_at` |
+| 거절됨: `customer_not_found`, `customer_archived`, `event_too_old`, 배치 원소의 `validation_error` | read 권한 키로 `GET /v1/event-rejections/search?q=transaction_id값&month=YYYY-MM`, 또는 콘솔 '수집 거절' 화면('감사 요청 ID' 열이 `request_id`입니다) | `request_id`, `error_code`, `error_fields`, 배치였다면 `batch_index` |
+| 응답 본문에만 보임 | 연동 쪽 로그 | 단건 요청의 `validation_error`, `malformed_request_body`, 배치 자체가 거절된 400(빈 배열이나 100건 초과 등), 401, 403, 429 |
+
+수집 거절 검색의 `month`는 이벤트가 일어난 달이 아니라 거절을 기록한 달(KST)입니다. 생략하면 이번 달입니다. 거절 기록에는 이벤트 원문과 `properties`가 남지 않습니다.
+
+응답 본문에만 보이는 오류는 MeterEngine 쪽에 다시 찾을 기록이 없습니다. 그 응답 본문과 `X-Request-ID`를 연동 쪽 로그에 남겨 두세요.
+
+<Note>
+콘솔의 '수집 거절', '이벤트 매핑 진단' 화면과 이벤트 상세는 감사 기록에서 확인하라고 안내하지만, 지금은 수집 요청이 감사 기록에 나오지 않습니다.
+</Note>
+
+## 문의할 때 적을 값
+
+{/* 확인 필요: 문의 경로(GitHub 이슈) */}
+API 동작을 문의할 때는 아래 값을 함께 적어 주세요. 문의 경로와 적으면 안 되는 정보는 [소개 페이지의 문의 절](/index)을 보세요.
+
+- 요청한 시각(KST)
+- HTTP 상태와 응답의 `code`
+- 응답 헤더 `X-Request-ID`
+- 이벤트라면 `transaction_id`
+
+API 키, 토스페이먼츠 키, 고객 정보는 적지 마세요.

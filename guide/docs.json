@@ -20,8 +20,26 @@
         "default": true,
         "tabs": [
           {
+            "tab": "가이드",
+            "groups": [
+              { "group": "시작하기", "pages": ["index", "quickstart"] },
+              { "group": "개념", "pages": ["concepts/how-it-works", "concepts/environments", "concepts/time-rules", "concepts/amounts"] },
+              { "group": "계정과 조직", "pages": ["account/signup", "account/members", "account/supplier"] },
+              { "group": "인증", "pages": ["authentication/api-keys", "authentication/scopes", "authentication/key-rotation"] },
+              { "group": "API 사용 기본", "pages": ["api-basics/errors", "api-basics/rate-limits", "api-basics/idempotency"] },
+              { "group": "가격 설계", "pages": ["pricing/meters", "pricing/dimensions", "pricing/price-models", "pricing/price-plans", "pricing/calculation-example", "pricing/changes-and-archiving"] },
+              { "group": "고객과 이벤트 연동", "pages": ["integration/customers", "integration/events", "integration/retries"] },
+              { "group": "확인과 진단", "pages": ["integration/verify-usage", "troubleshooting/events-not-billed", "reference/search-and-export"] },
+              { "group": "청구 확정", "pages": ["billing/finalize-invoices", "billing/auto-finalization", "billing/after-finalization"] },
+              { "group": "결제 연동", "pages": ["payments/overview", "payments/toss-setup", "payments/test-and-live", "payments/card-registration", "payments/charging", "payments/retries", "payments/cancellations", "payments/invoice-links", "payments/reconciliation"] },
+              { "group": "웹훅", "pages": ["webhooks/overview", "webhooks/verify-signatures", "webhooks/events", "webhooks/delivery-and-retries"] },
+              { "group": "참고", "pages": ["reference/glossary"] }
+            ]
+          },
+          {
             "tab": "API 참조",
             "groups": [
+              { "group": "소개", "pages": ["api-reference/introduction"] },
               {
                 "group": "엔드포인트",
                 "openapi": {
