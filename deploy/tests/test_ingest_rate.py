@@ -20,12 +20,18 @@ http_server_requests_seconds_count{error="none",method="GET",outcome="SUCCESS",s
 http_server_requests_seconds_count{error="none",method="POST",outcome="SUCCESS",status="201",uri="/v1/customers"} 9.0
 """
 
+NO_BASELINE = {"previous_total": "", "previous_slot": ""}
+
+
+def baseline(total, slot):
+    return {"previous_total": str(total), "previous_slot": str(slot)}
+
 
 def gnu_date_available():
     return subprocess.run(["date", "-u", "-d", "@0", "+%Y"], capture_output=True).returncode == 0
 
 
-class IngestRateTest(unittest.TestCase):
+class FakeCommandTestCase(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
@@ -40,8 +46,10 @@ class IngestRateTest(unittest.TestCase):
         path.write_text("#!/usr/bin/env bash\n" + body)
         path.chmod(0o755)
 
-    def run_bash(self, script):
-        return subprocess.run(["bash", "-c", script], env=self.env, text=True, capture_output=True, timeout=10)
+
+class IngestRateTest(FakeCommandTestCase):
+    def run_bash(self, script, stdin=""):
+        return subprocess.run(["bash", "-c", script], env=self.env, input=stdin, text=True, capture_output=True, timeout=10)
 
     def test_server_outside_an_asg_exits_cleanly_without_aws_calls(self):
         self.fake("curl", "exit 22\n")
@@ -51,8 +59,7 @@ class IngestRateTest(unittest.TestCase):
         self.assertEqual(self.trace.read_text(), "")
 
     def test_total_counts_only_ingest_posts(self):
-        self.fake("curl", f"cat <<'EOF'\n{PROMETHEUS_TEXT}EOF\n")
-        result = self.run_bash(f"source {SCRIPT}; ingest_request_total")
+        result = self.run_bash(f"source {SCRIPT}; ingest_request_total", stdin=PROMETHEUS_TEXT)
         self.assertEqual(result.stdout, "130")
 
     def test_sourcing_does_not_start_the_loop(self):
@@ -78,6 +85,77 @@ class IngestRateTest(unittest.TestCase):
     def test_unit_runs_the_repository_script(self):
         self.assertIn("ExecStart=/opt/meterengine/deploy/server/ingest-rate.sh\n", UNIT.read_text())
         self.assertTrue(os.access(SCRIPT, os.X_OK))
+
+
+class MeasureSlotTest(FakeCommandTestCase):
+    def setUp(self):
+        super().setUp()
+        self.fake(
+            "curl",
+            'case "$*" in\n'
+            '*/actuator/health/readiness*) echo readiness >> "$TRACE"; printf "%s" "$READINESS"; [ "$READINESS" != 000 ] ;;\n'
+            '*/actuator/prometheus*) echo prometheus >> "$TRACE"; [ "$TOTAL" != down ] || exit 22; '
+            'printf \'http_server_requests_seconds_count{method="POST",uri="/v1/events"} %s\\n\' "$TOTAL" ;;\n'
+            "*) exit 22 ;;\n"
+            "esac\n",
+        )
+
+    def measure(self, readiness, total, baseline, slot):
+        env = dict(self.env, READINESS=readiness, TOTAL=str(total))
+        script = (
+            f"source {SCRIPT}; rate=stale; previous_total={baseline['previous_total']}; "
+            f"previous_slot={baseline['previous_slot']}; "
+            f"measure_slot {slot}; printf '%s|%s|%s' \"$rate\" \"$previous_total\" \"$previous_slot\""
+        )
+        result = subprocess.run(["bash", "-c", script], env=env, text=True, capture_output=True, timeout=10)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        rate, previous_total, previous_slot = result.stdout.split("|")
+        return {"rate": rate, "previous_total": previous_total, "previous_slot": previous_slot}
+
+    def test_first_ready_slot_only_sets_the_baseline(self):
+        state = self.measure("200", 130, NO_BASELINE, 1700000010)
+        self.assertEqual(state, {"rate": "", "previous_total": "130", "previous_slot": "1700000010"})
+
+    def test_slot_reports_the_increase_per_second(self):
+        state = self.measure("200", 130, baseline(30, 1700000000), 1700000010)
+        self.assertEqual(state, {"rate": "10.0", "previous_total": "130", "previous_slot": "1700000010"})
+
+    def test_counter_drop_skips_the_slot_and_resets_the_baseline(self):
+        state = self.measure("200", 5, baseline(130, 1700000000), 1700000010)
+        self.assertEqual(state, {"rate": "", "previous_total": "5", "previous_slot": "1700000010"})
+
+    def test_missed_slot_is_divided_by_the_real_elapsed_seconds(self):
+        state = self.measure("200", 300, baseline(100, 1700000000), 1700000020)
+        self.assertEqual(state["rate"], "10.0")
+
+    def test_not_ready_slot_puts_nothing_and_forgets_the_baseline(self):
+        state = self.measure("503", 130, baseline(30, 1700000000), 1700000010)
+        self.assertEqual(state, {"rate": "", **NO_BASELINE})
+
+    def test_not_ready_slot_does_not_read_the_counter(self):
+        self.measure("503", 130, baseline(30, 1700000000), 1700000010)
+        self.assertEqual(self.trace.read_text().splitlines(), ["readiness"])
+
+    def test_first_ready_slot_after_not_ready_only_sets_the_baseline(self):
+        not_ready = self.measure("503", 130, baseline(30, 1700000000), 1700000010)
+        state = self.measure("200", 150, not_ready, 1700000020)
+        self.assertEqual(state, {"rate": "", "previous_total": "150", "previous_slot": "1700000020"})
+
+    def test_unanswered_readiness_skips_the_slot_and_keeps_the_baseline(self):
+        state = self.measure("000", 130, baseline(30, 1700000000), 1700000010)
+        self.assertEqual(state, {"rate": "", **baseline(30, 1700000000)})
+
+    def test_other_readiness_code_skips_the_slot_and_keeps_the_baseline(self):
+        state = self.measure("404", 130, baseline(30, 1700000000), 1700000010)
+        self.assertEqual(state, {"rate": "", **baseline(30, 1700000000)})
+
+    def test_failed_counter_read_skips_the_slot_and_keeps_the_baseline(self):
+        state = self.measure("200", "down", baseline(30, 1700000000), 1700000010)
+        self.assertEqual(state, {"rate": "", **baseline(30, 1700000000)})
+
+    def test_readiness_is_checked_before_the_counter(self):
+        self.measure("200", 130, baseline(30, 1700000000), 1700000010)
+        self.assertEqual(self.trace.read_text().splitlines(), ["readiness", "prometheus"])
 
 
 class ScalingPolicyContractTest(unittest.TestCase):

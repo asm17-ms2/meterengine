@@ -493,6 +493,7 @@ aws ssm get-parameter --name /meterengine/production/operator-password --with-de
   - 시간이 지나 실패하면 바로 다시 apply하지 않는다. 다시 돌리면 기다리지 않고 지나가 healthy 서버 없이 도메인이 넘어갈 수 있다. "문제 해결"의 `describe-target-health`로 두 대상 그룹에 healthy 서버가 있는지 먼저 본다.
   - 대기는 healthy 수가 최소 대수와 같아야 끝난다. 확장으로 대수가 늘어난 동안 최소 대수를 바꾸면 끝나지 않으니, 원하는 대수가 최소일 때 바꾼다.
 - 확장: 서버마다 `deploy/server/ingest-rate.sh`가 10초마다 (초당 수집 요청 / 원하는 대수)를 `MeterEngine/Scaling`에 올리고, 확장 정책은 그 10초 합을 서버당 초당 450건에 맞춘다. 450은 측정 환경 숫자로 잡은 추정값이다.
+  - 백엔드 readiness가 200인 칸만 센다. 503(기동이나 종료 중)이면 기준값을 버리고, 그 밖의 코드나 답이 없으면 그 칸만 건너뛴다.
 - 배포 역할이 버전 파라미터를 쓰고 롤링을 시작한다. Terraform은 버전 값과 원하는 대수를 되돌리지 않는다.
 - CD가 도는 동안 apply하지 않는다. 시작 템플릿이 바뀌는 apply는 롤링을 시작해, 배포가 시작한 롤링과 겹치면 실패한다.
 
