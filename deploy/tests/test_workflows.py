@@ -87,6 +87,7 @@ class WorkflowTest(unittest.TestCase):
         source = CI.read_text()
         for pattern in (".github/workflows/deploy.yml", ".github/workflows/cd-staging.yml", ".github/workflows/cd-production.yml", "measurements/*/lib/common.sh",
                         "measurements/*/sut/terraform/iam.tf", "measurements/*/sut/terraform/locals.tf",
+                        "measurements/*/sut/terraform/variables.tf",
                         "measurements/*/sut/scripts/remote/upsert-exporter-user.sh", "measurements/*/README.md"):
             self.assertIn(f"- '{pattern}'", source)
 
