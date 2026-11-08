@@ -71,7 +71,7 @@ class EventIngestDatabaseOperationIntegrationTest {
     assertThat(post(customerId)).hasStatusOk();
 
     assertThat(count("select", "api_key")).isEqualTo(apiKeySelects + 1);
-    assertThat(count("select", "organization_environment")).isEqualTo(environmentSelects + 1);
+    assertThat(count("select", "organization_environment")).isEqualTo(environmentSelects);
     assertThat(count("select", "organization")).isEqualTo(organizationSelects + 1);
     assertThat(count("select", "customer")).isEqualTo(customerSelects + 1);
     assertThat(count("insert", "event")).isEqualTo(eventInserts + 1);
