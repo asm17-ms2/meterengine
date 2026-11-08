@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.meterengine.global.security.SecureTokens;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -42,7 +43,50 @@ class ApiKeyTableTest {
     assertThat(apiKeyTable.find(old.keyHash())).contains(old);
   }
 
+  @Test
+  void 읽는_동안_고친_항목은_새_테이블에도_남는다() {
+    String rawKey = SecureTokens.generate("me_live_");
+    ApiKeySnapshot readBeforeRevoke = snapshotOf(rawKey);
+    ApiKeySnapshot revoked = snapshotOf(rawKey, null, OffsetDateTime.now());
+
+    apiKeyTable.replaceAll(
+        () -> {
+          apiKeyTable.put(revoked);
+          return List.of(readBeforeRevoke);
+        });
+
+    assertThat(apiKeyTable.find(ApiKeyHash.of(rawKey))).contains(revoked);
+  }
+
+  @Test
+  void 폐기된_항목_위에_폐기_안_된_스냅숏을_넣어도_폐기가_남는다() {
+    String rawKey = SecureTokens.generate("me_live_");
+    apiKeyTable.put(snapshotOf(rawKey, null, OffsetDateTime.now()));
+
+    apiKeyTable.put(snapshotOf(rawKey));
+
+    assertThat(apiKeyTable.find(ApiKeyHash.of(rawKey)))
+        .hasValueSatisfying(snapshot -> assertThat(snapshot.revokedAt()).isNotNull());
+  }
+
+  @Test
+  void 만료가_당겨진_항목_위에_만료_없는_스냅숏을_넣어도_당겨진_만료가_남는다() {
+    String rawKey = SecureTokens.generate("me_live_");
+    OffsetDateTime shortened = OffsetDateTime.now().plusHours(1);
+    apiKeyTable.put(snapshotOf(rawKey, shortened, null));
+
+    apiKeyTable.put(snapshotOf(rawKey));
+
+    assertThat(apiKeyTable.find(ApiKeyHash.of(rawKey)))
+        .hasValueSatisfying(snapshot -> assertThat(snapshot.expiresAt()).isEqualTo(shortened));
+  }
+
   private static ApiKeySnapshot snapshotOf(String rawKey) {
+    return snapshotOf(rawKey, null, null);
+  }
+
+  private static ApiKeySnapshot snapshotOf(
+      String rawKey, OffsetDateTime expiresAt, OffsetDateTime revokedAt) {
     return new ApiKeySnapshot(
         ApiKeyHash.of(rawKey),
         UUID.randomUUID(),
@@ -51,7 +95,7 @@ class ApiKeyTableTest {
         "live",
         Set.of("read"),
         null,
-        null,
-        null);
+        expiresAt,
+        revokedAt);
   }
 }

@@ -25,6 +25,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Predicate;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,16 +42,19 @@ public class ApiKeyService {
   private final ApiKeyProperties apiKeyProperties;
   private final AuditLogService auditLogService;
   private final DatabaseOperationTimer databaseOperationTimer;
+  private final ApplicationEventPublisher applicationEventPublisher;
 
   ApiKeyService(
       ApiKeyRepository apiKeyRepository,
       ApiKeyProperties apiKeyProperties,
       AuditLogService auditLogService,
-      DatabaseOperationTimer databaseOperationTimer) {
+      DatabaseOperationTimer databaseOperationTimer,
+      ApplicationEventPublisher applicationEventPublisher) {
     this.apiKeyRepository = apiKeyRepository;
     this.apiKeyProperties = apiKeyProperties;
     this.auditLogService = auditLogService;
     this.databaseOperationTimer = databaseOperationTimer;
+    this.applicationEventPublisher = applicationEventPublisher;
   }
 
   @Transactional(readOnly = true)
@@ -105,6 +109,7 @@ public class ApiKeyService {
       return apiKey;
     }
     apiKey.changeScopes(updated);
+    publishChanged(apiKey);
     auditLogService.record(
         organizationId,
         "api_key_scopes_updated",
@@ -136,6 +141,7 @@ public class ApiKeyService {
     if (replacedApiKeyId != null) {
       ApiKey replaced = usableApiKeyForUpdate(organizationId, replacedApiKeyId);
       replaced.expireNoLaterThan(now.plus(apiKeyProperties.replacementGrace()));
+      publishChanged(replaced);
     }
     List<String> distinctScopes = AccessScopes.normalize(scopes);
     String secret = SecureTokens.generate("me_" + mode + "_");
@@ -153,6 +159,7 @@ public class ApiKeyService {
                 now,
                 null,
                 BusinessEnvironmentContext.environmentId()));
+    publishChanged(apiKey);
     auditLogService.record(
         organizationId,
         CREATED_ACTION,
@@ -189,6 +196,7 @@ public class ApiKeyService {
       return;
     }
     apiKey.revoke(OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS));
+    publishChanged(apiKey);
     auditLogService.record(
         organizationId, "api_key_deleted", TARGET_TYPE, apiKey.getId().toString(), Map.of());
   }
@@ -214,5 +222,9 @@ public class ApiKeyService {
             Set.copyOf(apiKey.getScopes()),
             apiKey.getEnvironmentId());
     return new AuthenticatedCredential(principal, apiKey.getRateLimitPerMinute());
+  }
+
+  private void publishChanged(ApiKey apiKey) {
+    applicationEventPublisher.publishEvent(new ApiKeyChangedEvent(ApiKeySnapshot.of(apiKey)));
   }
 }

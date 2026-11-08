@@ -33,6 +33,30 @@ public record ApiKeySnapshot(
         apiKey.getRevokedAt());
   }
 
+  // 커밋 이벤트는 순서 없이 도착하므로 늦게 온 옛 값이 폐기와 당겨진 만료를 되돌리지 못하게 한다.
+  ApiKeySnapshot mergeNewer(ApiKeySnapshot newer) {
+    return new ApiKeySnapshot(
+        newer.keyHash,
+        newer.apiKeyId,
+        newer.organizationId,
+        newer.environmentId,
+        newer.mode,
+        newer.scopes,
+        newer.rateLimitPerMinute,
+        earlierOf(expiresAt, newer.expiresAt),
+        revokedAt != null ? revokedAt : newer.revokedAt);
+  }
+
+  private static OffsetDateTime earlierOf(OffsetDateTime first, OffsetDateTime second) {
+    if (first == null) {
+      return second;
+    }
+    if (second == null || first.isBefore(second)) {
+      return first;
+    }
+    return second;
+  }
+
   public boolean isUsableAt(OffsetDateTime now) {
     return revokedAt == null && (expiresAt == null || expiresAt.isAfter(now));
   }
