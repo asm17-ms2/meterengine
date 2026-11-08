@@ -396,6 +396,8 @@ ALB는 받은 `X-Forwarded-For` 뒤에 접속 주소를 붙이므로 맨 오른�
 
 - 전부 Parameter Store `/meterengine/<환경>/` 아래에 있다. 아래 명령은 production 기준이다.
 - 파라미터 이름이 대문자 환경변수 이름이 된다 (`db-host` -> `DB_HOST`).
+- staging은 모든 파라미터를 `deploy/terraform/staging/parameters.tf`가 만든다.
+- production은 DB 접속 정보와 `invoice-auto-finalize-enabled`만 `deploy/terraform/production/parameters.tf`가 갖고, 비밀값과 공개 저장소에 올리지 않는 값은 아래 명령으로 손으로 등록한다. 코드가 갖는 값을 손으로 바꾸면 다음 apply가 되돌린다.
 
 | 파라미터 | 타입 | 쓰이는 곳 |
 | --- | --- | --- |
