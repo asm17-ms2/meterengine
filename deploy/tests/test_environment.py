@@ -102,10 +102,10 @@ class LoadTargetTest(unittest.TestCase):
         host = "meterengine-staging-db.abc.ap-northeast-2.rds.amazonaws.com"
         self.assertEqual(environment.database_identifier(host), "meterengine-staging-db")
 
-    def test_only_staging_has_its_own_image_repositories(self):
+    def test_test_storage_measures_develop_images(self):
         prefixes = {name: environment.load_target(name, ENVIRONMENTS)["image_repository_prefix"]
                     for name in ("staging", "production", "test-storage")}
-        self.assertEqual(prefixes, {"staging": "meterengine-staging", "production": "meterengine", "test-storage": "meterengine"})
+        self.assertEqual(prefixes, {"staging": "meterengine-staging", "production": "meterengine", "test-storage": "meterengine-staging"})
 
     def test_production_memory_fits_the_current_server(self):
         # 서버 메모리에 맞춘 값이다. 사양을 바꾸면 같이 바꾼다.
