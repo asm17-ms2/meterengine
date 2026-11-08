@@ -145,6 +145,10 @@ public class ApiKey implements Persistable<UUID> {
     return label;
   }
 
+  public byte[] getKeyHash() {
+    return keyHash.clone();
+  }
+
   public String getLastFour() {
     return lastFour;
   }

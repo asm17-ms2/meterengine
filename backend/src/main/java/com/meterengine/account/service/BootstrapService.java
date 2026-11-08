@@ -24,11 +24,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+// 넣은 콘솔 키가 키 테이블에 들도록 테이블을 채우는 러너보다 먼저 돈다.
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class BootstrapService implements ApplicationRunner {
 
   private static final Logger logger = LoggerFactory.getLogger(BootstrapService.class);
