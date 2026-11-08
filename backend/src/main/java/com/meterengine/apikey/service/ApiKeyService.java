@@ -10,6 +10,7 @@ import com.meterengine.global.error.ErrorResponse.FieldError;
 import com.meterengine.global.error.InvalidRequestException;
 import com.meterengine.global.error.NotFoundException;
 import com.meterengine.global.security.AccessScopes;
+import com.meterengine.global.security.ActiveOrganizations;
 import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.global.security.SecureTokens;
 import java.time.OffsetDateTime;
@@ -35,16 +36,19 @@ public class ApiKeyService {
   private final ApiKeyProperties apiKeyProperties;
   private final AuditLogService auditLogService;
   private final ApplicationEventPublisher applicationEventPublisher;
+  private final ActiveOrganizations activeOrganizations;
 
   ApiKeyService(
       ApiKeyRepository apiKeyRepository,
       ApiKeyProperties apiKeyProperties,
       AuditLogService auditLogService,
-      ApplicationEventPublisher applicationEventPublisher) {
+      ApplicationEventPublisher applicationEventPublisher,
+      ActiveOrganizations activeOrganizations) {
     this.apiKeyRepository = apiKeyRepository;
     this.apiKeyProperties = apiKeyProperties;
     this.auditLogService = auditLogService;
     this.applicationEventPublisher = applicationEventPublisher;
+    this.activeOrganizations = activeOrganizations;
   }
 
   @Transactional(readOnly = true)
@@ -187,6 +191,8 @@ public class ApiKeyService {
   }
 
   private void publishChanged(ApiKey apiKey) {
-    applicationEventPublisher.publishEvent(new ApiKeyChangedEvent(ApiKeySnapshot.of(apiKey)));
+    applicationEventPublisher.publishEvent(
+        new ApiKeyChangedEvent(
+            ApiKeySnapshot.of(apiKey), activeOrganizations.contains(apiKey.getOrganizationId())));
   }
 }

@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
@@ -78,7 +79,7 @@ class ApiKeyTableIntegrationTest {
     assertThat(apiKeyTable.find(keyHash))
         .hasValueSatisfying(snapshot -> assertThat(snapshot.revokedAt()).isNull());
     assertThat(apiKeyCredentialService.authenticate(issued.secret()))
-        .contains(ApiKeySnapshot.of(issued.apiKey()).credential());
+        .contains(ApiKeySnapshot.of(issued.apiKey()).credential(true));
 
     apiKeyService.delete(organizationId, issued.apiKey().getId());
 
@@ -118,6 +119,39 @@ class ApiKeyTableIntegrationTest {
 
     assertThat(apiKeyTable.find(ApiKeyHash.of(old.secret())))
         .hasValueSatisfying(snapshot -> assertThat(snapshot.expiresAt()).isNotNull());
+  }
+
+  @Test
+  void 같은_서버에서_도입사를_정지하면_커밋_뒤_바로_그_도입사가_정지로_바뀐다() {
+    IssuedApiKey issued = issue(null);
+    assertThat(apiKeyTable.isOrganizationActive(organizationId)).isTrue();
+
+    assertThat(updateOrganizationStatus("suspended")).hasStatusOk();
+
+    assertThat(apiKeyTable.isOrganizationActive(organizationId)).isFalse();
+    assertThat(apiKeyCredentialService.authenticate(issued.secret()))
+        .contains(ApiKeySnapshot.of(issued.apiKey()).credential(false));
+  }
+
+  @Test
+  void 정지했다가_다시_활성으로_돌리면_같은_키가_그대로_통과한다() {
+    IssuedApiKey issued = issue(null);
+    assertThat(updateOrganizationStatus("suspended")).hasStatusOk();
+
+    assertThat(updateOrganizationStatus("active")).hasStatusOk();
+
+    assertThat(mvc().get().uri("/v1/customers").header(AUTHORIZATION, "Bearer " + issued.secret()))
+        .hasStatusOk();
+  }
+
+  private MvcTestResult updateOrganizationStatus(String status) {
+    return mvc()
+        .put()
+        .uri("/v1/organizations/{id}/status", organizationId)
+        .header(AUTHORIZATION, TestCredentials.issueOperatorSession(jdbcTemplate))
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("{\"status\":\"%s\"}".formatted(status))
+        .exchange();
   }
 
   private MockMvcTester mvc() {

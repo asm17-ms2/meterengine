@@ -64,7 +64,7 @@ public record ApiKeySnapshot(
     return revokedAt == null && (expiresAt == null || expiresAt.isAfter(now));
   }
 
-  public AuthenticatedCredential credential() {
+  public AuthenticatedCredential credential(boolean organizationActive) {
     AuthenticatedPrincipal principal =
         new AuthenticatedPrincipal(
             PrincipalKind.API_KEY,
@@ -76,6 +76,6 @@ public record ApiKeySnapshot(
             null,
             scopes,
             environmentId);
-    return new AuthenticatedCredential(principal, rateLimitPerMinute);
+    return new AuthenticatedCredential(principal, rateLimitPerMinute, organizationActive);
   }
 }

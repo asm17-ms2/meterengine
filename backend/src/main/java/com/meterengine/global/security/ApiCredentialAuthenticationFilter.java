@@ -21,6 +21,9 @@ public class ApiCredentialAuthenticationFilter extends OncePerRequestFilter {
   public static final String RATE_LIMIT_PER_MINUTE_ATTRIBUTE =
       "com.meterengine.global.security.RateLimitPerMinute";
 
+  public static final String ORGANIZATION_ACTIVE_ATTRIBUTE =
+      "com.meterengine.global.security.OrganizationActive";
+
   private static final String BEARER_PREFIX = "Bearer ";
 
   private final ApiKeyCredentials apiKeyCredentials;
@@ -77,6 +80,7 @@ public class ApiCredentialAuthenticationFilter extends OncePerRequestFilter {
     securityContextHolderStrategy.setContext(context);
     request.setAttribute(PRINCIPAL_ATTRIBUTE, principal);
     request.setAttribute(RATE_LIMIT_PER_MINUTE_ATTRIBUTE, credential.get().rateLimitPerMinute());
+    request.setAttribute(ORGANIZATION_ACTIVE_ATTRIBUTE, credential.get().organizationActive());
     filterChain.doFilter(request, response);
   }
 

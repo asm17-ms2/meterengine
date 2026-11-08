@@ -2,6 +2,7 @@ package com.meterengine.apikey.service;
 
 import com.meterengine.apikey.config.ApiKeyProperties;
 import com.meterengine.apikey.repository.ApiKeySnapshotRepository;
+import com.meterengine.global.security.ActiveOrganizations;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.annotation.PreDestroy;
@@ -9,7 +10,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
-import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -35,6 +35,7 @@ public class ApiKeyTableLoader implements ApplicationRunner {
 
   private final ApiKeyTable apiKeyTable;
   private final ApiKeySnapshotRepository apiKeySnapshotRepository;
+  private final ActiveOrganizations activeOrganizations;
   private final ApiKeyProperties apiKeyProperties;
   private final Clock clock;
 
@@ -48,11 +49,13 @@ public class ApiKeyTableLoader implements ApplicationRunner {
   public ApiKeyTableLoader(
       ApiKeyTable apiKeyTable,
       ApiKeySnapshotRepository apiKeySnapshotRepository,
+      ActiveOrganizations activeOrganizations,
       ApiKeyProperties apiKeyProperties,
       Clock clock,
       MeterRegistry meterRegistry) {
     this.apiKeyTable = apiKeyTable;
     this.apiKeySnapshotRepository = apiKeySnapshotRepository;
+    this.activeOrganizations = activeOrganizations;
     this.apiKeyProperties = apiKeyProperties;
     this.clock = clock;
     Gauge.builder(SIZE_GAUGE_NAME, apiKeyTable, ApiKeyTable::size)
@@ -106,12 +109,14 @@ public class ApiKeyTableLoader implements ApplicationRunner {
   }
 
   public void refresh() {
-    apiKeyTable.replaceAll(this::findUsableKeys);
+    apiKeyTable.replaceAll(this::load);
     lastRefreshSucceededAt = clock.instant();
   }
 
-  private List<ApiKeySnapshot> findUsableKeys() {
-    return apiKeySnapshotRepository.findUsableAt(OffsetDateTime.now(clock));
+  private ApiKeyTableContents load() {
+    return new ApiKeyTableContents(
+        apiKeySnapshotRepository.findUsableAt(OffsetDateTime.now(clock)),
+        activeOrganizations.list());
   }
 
   private double secondsSinceLastRefresh() {
