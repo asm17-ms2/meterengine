@@ -2,8 +2,11 @@ package com.meterengine;
 
 import java.security.SecureRandom;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.WeakHashMap;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 public final class TestCredentials {
@@ -21,6 +24,10 @@ public final class TestCredentials {
       "{bcrypt}$2a$10$Kqg4kLMfEy5ainWZ/SYDPOzmdZZi9Edq3zdE2tYtMeFpeTW1.ODGq";
 
   private static final SecureRandom RANDOM = new SecureRandom();
+
+  // 인증은 서버 메모리의 키 테이블만 보므로, SQL로 넣은 키를 같은 컨텍스트의 테이블에 올리는 길을 컨텍스트마다 둔다.
+  private static final Map<JdbcTemplate, Runnable> API_KEY_TABLE_REFRESHERS =
+      Collections.synchronizedMap(new WeakHashMap<>());
 
   private TestCredentials() {}
 
@@ -48,7 +55,21 @@ public final class TestCredentials {
         rawKey,
         rawKey.substring(rawKey.length() - 4),
         "{" + String.join(",", scopes.isEmpty() ? List.of("admin") : scopes) + "}");
+    refreshApiKeyTable(jdbcTemplate);
     return BEARER_PREFIX + rawKey;
+  }
+
+  public static void registerApiKeyTableRefresher(JdbcTemplate jdbcTemplate, Runnable refresher) {
+    API_KEY_TABLE_REFRESHERS.put(jdbcTemplate, refresher);
+  }
+
+  // 시험 트랜잭션 안에서 부르면 같은 커넥션으로 읽어 커밋하지 않은 키와 도입사 상태도 테이블에 들어간다.
+  public static void refreshApiKeyTable(JdbcTemplate jdbcTemplate) {
+    Runnable refresher = API_KEY_TABLE_REFRESHERS.get(jdbcTemplate);
+    if (refresher == null) {
+      throw new IllegalStateException("이 컨텍스트에 등록된 API 키 테이블 갱신이 없다");
+    }
+    refresher.run();
   }
 
   // 도입사에 소속된 member와 그 도입사를 고른 로그인 세션을 넣고 Authorization 헤더 값을 돌려준다.

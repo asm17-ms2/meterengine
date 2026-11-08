@@ -1,14 +1,20 @@
 package com.meterengine.apikey;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
 import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
+import com.meterengine.apikey.service.ApiKeyCredentialService;
 import com.meterengine.apikey.service.ApiKeyHash;
 import com.meterengine.apikey.service.ApiKeyService;
+import com.meterengine.apikey.service.ApiKeySnapshot;
 import com.meterengine.apikey.service.ApiKeyTable;
 import com.meterengine.apikey.service.ApiKeyTableLoader;
 import com.meterengine.apikey.service.IssuedApiKey;
+import com.meterengine.global.error.ErrorCode;
+import com.meterengine.global.security.SecureTokens;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,13 +23,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.web.servlet.assertj.MockMvcTester;
+import org.springframework.test.web.servlet.assertj.MvcTestResult;
+import org.springframework.web.context.WebApplicationContext;
 
 // DB에 커밋된 키를 읽는지, 커밋 뒤에 테이블을 고치는지 보려고 시험 트랜잭션 없이 커밋한다.
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
 class ApiKeyTableIntegrationTest {
 
+  @Autowired private WebApplicationContext webApplicationContext;
   @Autowired private JdbcTemplate jdbcTemplate;
+  @Autowired private ApiKeyCredentialService apiKeyCredentialService;
   @Autowired private ApiKeyService apiKeyService;
   @Autowired private ApiKeyTable apiKeyTable;
   @Autowired private ApiKeyTableLoader apiKeyTableLoader;
@@ -66,11 +77,37 @@ class ApiKeyTableIntegrationTest {
 
     assertThat(apiKeyTable.find(keyHash))
         .hasValueSatisfying(snapshot -> assertThat(snapshot.revokedAt()).isNull());
+    assertThat(apiKeyCredentialService.authenticate(issued.secret()))
+        .contains(ApiKeySnapshot.of(issued.apiKey()).credential());
 
     apiKeyService.delete(organizationId, issued.apiKey().getId());
 
     assertThat(apiKeyTable.find(keyHash))
         .hasValueSatisfying(snapshot -> assertThat(snapshot.revokedAt()).isNotNull());
+    assertThat(apiKeyCredentialService.authenticate(issued.secret())).isEmpty();
+  }
+
+  @Test
+  void 테이블에_없는_키는_DB에_있어도_401_invalid_credentials다() {
+    String rawKey = SecureTokens.generate("me_live_");
+    jdbcTemplate.update(
+        """
+        INSERT INTO api_key (id, organization_id, mode, label, key_hash, last_four, scopes, created_at)
+        VALUES (?, ?, 'live', '테이블 밖 키', sha256(convert_to(?, 'UTF8')), ?, '{read}', now())
+        """,
+        UUID.randomUUID(),
+        organizationId,
+        rawKey,
+        rawKey.substring(rawKey.length() - 4));
+
+    MvcTestResult result =
+        mvc().get().uri("/v1/customers").header(AUTHORIZATION, "Bearer " + rawKey).exchange();
+
+    assertThat(result).hasStatus(401);
+    assertThat(result)
+        .bodyJson()
+        .extractingPath("$.code")
+        .isEqualTo(ErrorCode.INVALID_CREDENTIALS.getCode());
   }
 
   @Test
@@ -81,6 +118,11 @@ class ApiKeyTableIntegrationTest {
 
     assertThat(apiKeyTable.find(ApiKeyHash.of(old.secret())))
         .hasValueSatisfying(snapshot -> assertThat(snapshot.expiresAt()).isNotNull());
+  }
+
+  private MockMvcTester mvc() {
+    return MockMvcTester.from(
+        webApplicationContext, builder -> builder.apply(springSecurity()).build());
   }
 
   private IssuedApiKey issue(UUID replacedApiKeyId) {
