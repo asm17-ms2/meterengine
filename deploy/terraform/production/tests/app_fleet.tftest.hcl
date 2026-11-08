@@ -25,6 +25,10 @@ override_resource {
   target = aws_route53_record.public
   values = {}
 }
+override_resource {
+  target = aws_ssm_parameter.coded
+  values = {}
+}
 
 run "production_runs_one_server_beside_the_old_server" {
   command = plan

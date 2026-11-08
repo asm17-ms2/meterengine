@@ -265,13 +265,13 @@ case "$1" in cat-file) exit "$HAS_ENVIRONMENT_FILE" ;; esac
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertIn(f"deploy {SHA}\n", self.trace.read_text())
 
-    def test_test_slo_deploy_turns_off_server_monitoring_before_deploy_sh(self):
+    def test_test_sjpark_deploy_turns_off_server_monitoring_before_deploy_sh(self):
         result = self.run_command("test-sjpark", has_environment_file=True)
         self.assertEqual(result.returncode, 0, result.stderr)
         seen_by_deploy = self.trace.read_text().split(f"deploy test-sjpark {SHA}\n")[1]
         self.assertEqual(json.loads(seen_by_deploy), {"site_domain": "test-sjpark.meterengine.com", "compose_profiles": ["agents"]})
 
-    def test_test_slo_old_commit_keeps_the_environment_file(self):
+    def test_test_sjpark_old_commit_keeps_the_environment_file(self):
         self.config.write_text("PARAM_PATH=/meterengine/test-sjpark\nSITE_DOMAIN=test-sjpark.meterengine.com\n")
         result = self.run_command("test-sjpark", has_environment_file=False)
         self.assertEqual(result.returncode, 0, result.stderr)
