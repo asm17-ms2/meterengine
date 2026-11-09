@@ -22,12 +22,12 @@ override_resource {
   }
 }
 
-run "servers_boot_from_the_base_image_with_the_shared_template" {
+run "servers_boot_from_the_baked_image_with_the_shared_template" {
   command = plan
 
   assert {
     condition     = aws_launch_template.sut.image_id == var.ami_id
-    error_message = "The launch template must use the base image, not a baked one."
+    error_message = "The launch template must use the baked app image in var.ami_id."
   }
   assert {
     condition = alltrue([
@@ -51,6 +51,6 @@ run "replacement_keeps_a_healthy_server" {
       && aws_autoscaling_group.sut.instance_maintenance_policy[0].max_healthy_percentage == 200
       && aws_autoscaling_group.sut.health_check_grace_period == 600
     )
-    error_message = "Health replacement must start a new server first and wait for the base image boot."
+    error_message = "Health replacement must start a new server first and wait as long as staging and production."
   }
 }

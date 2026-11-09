@@ -12,10 +12,13 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 MODULE = ROOT / "deploy/terraform/modules/app_fleet"
 PROVISION = MODULE / "image/provision.sh"
-# 서버가 아직 부팅 템플릿으로 compose를 받는다. 템플릿의 설치 줄이 빠지면 그 비교도 뺀다.
 BOOT_TEMPLATE = MODULE / "templates/app-user-data.sh.tftpl"
 MONITORING_BOOTSTRAP = ROOT / "deploy/terraform/monitoring/bootstrap.sh"
 COMPOSE_INSTALL_WORDS = ("docker-compose-linux-aarch64", "sha256sum --check", "install -D")
+COMPOSE_PLUGIN = "/usr/libexec/docker/cli-plugins/docker-compose"
+FLEET_IMAGE_SETTINGS = ((ROOT / "deploy/terraform/staging/main.tf", "module", "app_fleet", "ami_id"),
+                        (ROOT / "deploy/terraform/production/main.tf", "module", "app_fleet", "ami_id"),
+                        (ROOT / "measurements/test-storage/sut/terraform/variables.tf", "variable", "ami_id", "default"))
 BUILD = MODULE / "image/build-app-image.sh"
 BASE_IMAGE = "ami-0f4109eb491b0476f"
 SOURCE_COMMIT = "c" * 40
@@ -77,6 +80,16 @@ def lines_with(path, word):
     return [line for line in commands(path) if word in line]
 
 
+def block_value(path, kind, name, key):
+    block = re.search(rf'^{kind} "{name}" {{\n(.*?)^}}', path.read_text(), re.M | re.S)
+    if block is None:
+        raise AssertionError(f'{path}: {kind} "{name}" 블록이 없다')
+    value = re.search(rf'^\s+{key}\s+=\s+"([^"]+)"$', block.group(1), re.M)
+    if value is None:
+        raise AssertionError(f'{path}: {kind} "{name}"의 {key}가 따옴표 문자열이 아니다')
+    return value.group(1)
+
+
 class ProvisionTest(unittest.TestCase):
     def test_provision_parses(self):
         result = subprocess.run(["bash", "-n", str(PROVISION)], text=True, capture_output=True)
@@ -89,10 +102,6 @@ class ProvisionTest(unittest.TestCase):
         [install] = lines_with(PROVISION, "dnf install")
         for package in ("docker", "git", "python3", "openssl"):
             self.assertIn(package, install.split())
-
-    def test_provision_pins_the_same_compose_as_the_boot_template(self):
-        for word in COMPOSE_INSTALL_WORDS:
-            self.assertEqual(lines_with(PROVISION, word), lines_with(BOOT_TEMPLATE, word), word)
 
     def test_provision_pins_the_same_compose_as_the_monitoring_server(self):
         for word in COMPOSE_INSTALL_WORDS:
@@ -121,6 +130,19 @@ class ProvisionTest(unittest.TestCase):
         source = PROVISION.read_text()
         for word in ("git clone", "/opt/meterengine", "meterengine-ingest-rate", "/etc/meterengine"):
             self.assertNotIn(word, source)
+
+
+class BootFromImageTest(unittest.TestCase):
+    def test_boot_needs_only_what_the_image_provides(self):
+        [install] = lines_with(PROVISION, "dnf install")
+        [checked] = re.findall(r"^for tool in (.+); do$", BOOT_TEMPLATE.read_text(), re.M)
+        self.assertLessEqual(set(checked.split()), set(install.split()))
+        self.assertIn("docker compose version", BOOT_TEMPLATE.read_text())
+        self.assertTrue(lines_with(PROVISION, COMPOSE_PLUGIN))
+
+    def test_fleets_boot_the_same_image(self):
+        images = {str(setting[0].relative_to(ROOT)): block_value(*setting) for setting in FLEET_IMAGE_SETTINGS}
+        self.assertEqual(len(set(images.values())), 1, images)
 
 
 class BuildAppImageTest(unittest.TestCase):

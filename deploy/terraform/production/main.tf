@@ -41,7 +41,7 @@ module "app_fleet" {
   route53_zone_id            = "Z08728621CQ5R1K37A7N1"
   database_security_group_id = "sg-068a54ab4cfa91730"
   ecr_repository_names       = ["meterengine-backend", "meterengine-frontend"]
-  ami_id                     = "ami-0f4109eb491b0476f"
+  ami_id                     = "ami-02b68e7eb6b798d63"
   # 버전 파라미터에 40자 SHA가 기록되기 전에는 모듈의 precondition이 plan을 멈춘다.
   min_size = 1
   # 측정 환경 숫자로 잡은 추정값이다.
