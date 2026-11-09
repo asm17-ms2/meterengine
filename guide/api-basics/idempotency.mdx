@@ -1,0 +1,133 @@
+---
+title: "멱등 규칙"
+description: "응답을 받지 못해 같은 요청을 다시 보내도 결과가 한 번만 반영되게 하는 규칙을 요청별로 정리했습니다."
+---
+
+네트워크 오류나 시간 초과로 응답을 받지 못하면 요청이 처리됐는지 알 수 없습니다. 이럴 때 같은 요청을 다시 보내도 결과가 한 번만 반영되는 성질을 멱등이라고 합니다. MeterEngine은 요청마다 같은 요청을 알아보는 방법이 다르니, 다시 보내기 전에 아래 표에서 그 요청의 규칙을 확인하세요.
+
+## 요청별 규칙
+
+| 요청 | 같은 요청을 알아보는 값 | 다시 보냈을 때 |
+| --- | --- | --- |
+| `POST /v1/events`, `POST /v1/event-batches` | 본문의 `transaction_id` | 처음 저장한 이벤트를 그대로 두고 중복으로 답합니다. |
+| `POST /v1/customers` | 본문의 `external_id`, 또는 `Idempotency-Key` 헤더 | `external_id`가 같으면 기존 고객을 200으로 돌려줍니다. 그 고객을 보관했다면 `409 customer_archived`입니다. `Idempotency-Key`가 같으면 첫 응답을 그대로 돌려줍니다. |
+| `POST /v1/billable-metrics` | `Idempotency-Key` 헤더 | 첫 응답을 그대로 돌려줍니다. 키 없이 다시 보내면 `409 billable_metric_already_exists`입니다. |
+| `POST /v1/billable-metrics/{code}/price-rates` | 같은 차원 값 조합(`dimension_values`), 고객 범위(`customer_id`), 시작 월(`effective_from`) | 그 단가를 요청 값으로 덮어쓰고 201로 답합니다. |
+| `POST /v1/price-plans` | 같은 고객 범위(`customer_id`)와 시작 월(`effective_from`) | 그 요금제를 요청 값으로 덮어쓰고 201로 답합니다. |
+| `POST /v1/payment-attempts/{id}/cancellations` | `Idempotency-Key` 헤더(UUID) | 그 취소를 지금 상태로 201로 돌려줍니다. |
+| `POST /v1/invoices?month=YYYY-MM` | 확정할 달과 고객 | 그 달이 이미 확정된 고객은 건너뜁니다. |
+
+아래 요청은 같은 요청을 알아보는 장치가 없습니다. 다시 보내기 전에 먼저 조회하세요.
+
+| 요청 | 다시 보내면 | 먼저 할 일 |
+| --- | --- | --- |
+| `POST /v1/invoices/{id}/payment-attempts` | 결제 시도가 하나 더 만들어지거나 `409`로 거절됩니다. | 결제 시도를 조회합니다. [첫 결제 요청과 결과 확인](/payments/charging)을 보세요. |
+| `POST /v1/webhook-endpoints` | 같은 `url`로 수신 주소가 하나 더 등록되고 서명 비밀값도 새로 나옵니다. | 수신 주소 목록을 조회합니다. [웹훅 받기 시작하기](/webhooks/overview)를 보세요. |
+
+## 이벤트: transaction_id
+
+이벤트는 `transaction_id`로 같은 이벤트를 알아봅니다. 이미 저장된 `transaction_id`로 다시 보내면 저장하지 않고, 단건 요청은 `200`과 `"duplicate": true`로, 배치는 그 원소의 `"result": "duplicate"`로 답합니다.
+
+{/* 확인 필요: 공개 API 주소 */}
+<CodeGroup>
+```bash 요청
+curl https://meterengine.com/v1/events \
+  -H "Authorization: Bearer me_test_xxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "transaction_id": "evt_20261105_0001",
+    "customer_id": "3f6c2a1e-8b4d-4c7a-9e21-5d0b7a3c9f10",
+    "type": "api_call",
+    "properties": { "tokens": 1200 },
+    "timestamp": "2026-11-05T10:00:00+09:00"
+  }'
+```
+
+```json 처음 보낸 응답 (200)
+{ "transaction_id": "evt_20261105_0001", "duplicate": false }
+```
+
+```json 다시 보낸 응답 (200)
+{ "transaction_id": "evt_20261105_0001", "duplicate": true }
+```
+</CodeGroup>
+
+응답을 받지 못했으면 같은 `transaction_id`로 다시 보내면 됩니다. 두 번 청구되지 않습니다.
+
+<Warning>
+같은 `transaction_id`로 내용을 바꿔 다시 보내도 처음 저장한 이벤트가 남습니다. `type`, `properties`, `timestamp`가 다르거나 `customer_id`를 다른 고객으로 바꿔도 오류 없이 `"duplicate": true`로 답하므로, 값을 고치려고 다시 보낸 이벤트는 반영되지 않습니다. `customer_id`가 없는 고객을 가리키면 중복 판정 전에 `404 customer_not_found`로 거절됩니다. 보낸 이벤트는 고치거나 지울 수 없습니다. 바로잡는 방법은 [사용량 이벤트 보내기](/integration/events)를 보세요.
+</Warning>
+
+`transaction_id`를 정할 때 알아 둘 규칙입니다.
+
+- **범위는 도입사와 업무 환경입니다.** 고객과 관계없이 한 업무 환경 안에서 유일해야 합니다. 서로 다른 고객의 이벤트에 같은 `transaction_id`를 쓰면 나중 것은 중복으로 보고 버립니다. 테스트 환경과 실제 환경은 따로 셉니다.
+- **사용량이 생긴 순간에 한 번 정하고 다시 보낼 때도 같은 값을 씁니다.** 다시 보낼 때마다 새로 만들면 같은 사용량이 두 번 저장됩니다. 1자에서 255자까지 받습니다.
+- **이미 저장된 이벤트는 받는 기간과 고객 보관보다 중복 판정이 먼저입니다.** 이미 저장된 `transaction_id`라면 `timestamp`가 35일보다 오래됐거나 그 사이 고객을 보관했어도 거절하지 않고 중복으로 답합니다. 그래서 오래 쌓아 둔 이벤트를 다시 보내도 이미 저장된 것은 거절로 바뀌지 않습니다.
+- **한 배치 안에 같은 `transaction_id`가 두 번 있으면** 먼저 받아들인 원소를 저장하고 뒤의 원소는 `duplicate`로 답합니다.
+
+다시 보낼지 멈출지, 보내지 못한 이벤트를 쌓아 두는 방법은 [재전송 설계](/integration/retries)를 보세요.
+
+## 고객과 미터 등록: Idempotency-Key
+
+고객 등록(`POST /v1/customers`)과 미터 등록(`POST /v1/billable-metrics`)은 `Idempotency-Key` 헤더를 받습니다. 헤더는 선택이지만, 응답을 받지 못했을 때 안전하게 다시 보내려면 넣으세요.
+
+<Steps>
+<Step title="요청마다 키를 만든다">
+등록할 때마다 새 키를 만들어 요청과 함께 연동 쪽에 저장합니다. 1자에서 255자까지 받습니다. UUID를 쓰면 편합니다.
+</Step>
+<Step title="키를 넣어 보낸다">
+```bash
+curl -i https://meterengine.com/v1/customers \
+  -H "Authorization: Bearer me_test_xxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: 6b2f9d84-1c3e-4a57-8e0b-2d9f4c6a1b73" \
+  -d '{ "name": "가나다 주식회사", "external_id": "cus_1001" }'
+```
+</Step>
+<Step title="응답을 받지 못했으면 같은 키와 같은 본문으로 다시 보낸다">
+첫 요청이 처리됐다면 MeterEngine은 처리하지 않고 첫 응답을 HTTP 상태까지 그대로 돌려주고 `Idempotency-Replayed: true` 헤더를 붙입니다. 첫 요청이 처리되지 않았다면 이번 요청을 처리합니다.
+
+```http
+HTTP/2 201
+content-type: application/json
+idempotency-replayed: true
+```
+</Step>
+</Steps>
+
+키의 규칙은 아래와 같습니다.
+
+- **범위는 도입사, 업무 환경, 요청 종류입니다.** 고객 등록과 미터 등록은 같은 키를 써도 서로 영향이 없습니다. 테스트 환경과 실제 환경도 따로입니다.
+- **같은 키에 다른 본문을 보내면 `409 idempotency_conflict`입니다.** 본문을 고쳐 새로 등록하려면 새 키를 쓰세요. 공백이나 필드 순서만 다른 본문은 같은 본문으로 봅니다.
+- **첫 응답은 기한 없이 보관합니다.** 그 뒤에 고객이나 미터를 고치거나 보관해도, 같은 키로 다시 보내면 등록 당시의 첫 응답이 옵니다. 지금 상태는 조회 요청으로 확인하세요.
+- **비었거나 공백뿐인 키, 255자를 넘는 키는 `400 validation_error`입니다.** `errors[].field`가 `Idempotency-Key`입니다.
+- 같은 키로 동시에 두 번 보내도 한 번만 등록되고 두 요청 모두 같은 응답을 받습니다.
+
+고객 등록은 `external_id`로도 같은 고객을 알아봅니다. 같은 `external_id`로 다시 보내면 새로 만들지 않고 기존 고객을 `200`으로 돌려주며 이름과 이메일은 바꾸지 않습니다. `external_id`를 빼고 `Idempotency-Key`도 없이 다시 보내면 고객이 하나 더 만들어집니다. read 권한이 없는 키로 받은 `200` 응답에는 `id`, `external_id`, `version`만 채워져 있습니다. 고객 id를 잃었을 때 찾는 방법은 [고객 등록과 ID 대응](/integration/customers)을 보세요.
+
+## 결제 취소: Idempotency-Key
+
+결제 취소 요청(`POST /v1/payment-attempts/{id}/cancellations`)의 `Idempotency-Key`는 고객과 미터 등록의 키와 규칙이 다릅니다.
+
+| 항목 | 고객과 미터 등록 | 결제 취소 |
+| --- | --- | --- |
+| 키 형식 | 1자에서 255자 문자열 | UUID만 받습니다. UUID가 아니면 `400 validation_error` |
+| 다시 보냈을 때 | 첫 응답을 그대로 | 그 취소를 지금 상태로 `201` |
+| 같은 키로 다른 요청 | 본문이 다르면 `409 idempotency_conflict` | 결제 시도, 금액, 사유 중 하나라도 다르면 `409 payment_cancellation_idempotency_conflict` |
+| `Idempotency-Replayed` 헤더 | 붙습니다 | 붙지 않습니다 |
+
+결제 취소는 응답을 받지 못했을 때 같은 키로 다시 보내야 같은 취소가 두 번 일어나지 않습니다. 취소 절차는 [결제 취소](/payments/cancellations)를 보세요.
+
+## 단가와 요금제: 같은 자리 덮어쓰기
+
+단가 등록과 요금제 등록은 키 없이도 다시 보내도 됩니다. 같은 자리(단가는 미터, 차원 값 조합, 고객 범위, 시작 월이 같은 것, 요금제는 고객 범위와 시작 월이 같은 것)에 다시 보내면 새로 만들지 않고 요청 값으로 덮어쓰고 `201`로 답합니다.
+
+<Warning>
+`effective_from`을 빼면 이번 달(KST)이 시작 월이 됩니다. 달이 바뀐 뒤에 같은 요청을 다시 보내면 지난 단가를 덮어쓰지 않고 새 달의 단가가 하나 더 생깁니다. 다시 보낼 수 있는 요청에는 `effective_from`을 적어 두세요. 다만 시작 월이 지난달 이전이면 `409 price_rate_history_immutable`(요금제는 `409 price_plan_history_immutable`)로 거절됩니다.
+</Warning>
+
+덮어쓰기는 마지막 요청이 이깁니다. 다른 사람이 콘솔에서 그 사이에 바꾼 값도 덮어쓰니, 오래전에 실패한 요청을 나중에 다시 보내지 마세요. 단가와 요금제의 시작 월과 이력 규칙은 [단가 모델과 버전](/pricing/price-models)과 [기본료와 최소 사용료](/pricing/price-plans)를 보세요.
+
+## 인보이스 확정
+
+`POST /v1/invoices?month=YYYY-MM`은 그 달이 이미 확정된 고객을 건너뛰므로 같은 달로 다시 불러도 인보이스가 겹치지 않습니다. 확정하지 못한 고객은 다시 부르면 다시 시도합니다. 자세한 내용은 [인보이스 수동 확정](/billing/finalize-invoices)을 보세요.

@@ -1,0 +1,203 @@
+---
+title: "수납 상태와 대사 확인"
+description: "인보이스별 수납 상태를 조회하고, MeterEngine 결제 기록과 토스페이먼츠 거래를 맞춰 본 대사 결과를 확인하는 방법을 설명합니다."
+---
+
+필요 권한: read(조회)
+
+결제가 끝난 뒤 도입사는 아래를 확인합니다.
+
+- 수납 상태: 인보이스마다 결제가 됐는지, 실패했는지, 취소됐는지
+- 대사 결과: MeterEngine의 결제와 취소 기록이 토스페이먼츠의 실제 거래와 맞는지
+
+## 수납 상태 조회
+
+콘솔에서는 '수납과 취소' 화면에서 달을 고르면 인보이스마다 '수납 상태', '청구액', '취소액', '결제 모드', '실패 코드', '다음 재시도'가 나옵니다.
+
+API로는 `GET /v1/invoice-payments`를 부릅니다.
+
+<CodeGroup>
+
+```bash cURL
+curl "https://meterengine.com/v1/invoice-payments?month=2026-10" \
+  -H "Authorization: Bearer me_test_xxxxxxxx"
+```
+
+```javascript Node
+const res = await fetch(
+  "https://meterengine.com/v1/invoice-payments?month=2026-10",
+  { headers: { Authorization: "Bearer me_test_xxxxxxxx" } },
+);
+const { invoice_payments } = await res.json();
+```
+
+</CodeGroup>
+
+| 쿼리 | 뜻 |
+| --- | --- |
+| `month` | 인보이스의 달(`YYYY-MM`, KST). 생략하면 모든 달입니다 |
+| `customer_id` | 고객 id(UUID)로 좁힙니다. 없는 고객이면 404 `customer_not_found`입니다 |
+
+```json 응답 200
+{
+  "invoice_payments": [
+    {
+      "invoice_id": "7b0c2f4e-5a1d-4c8e-9f3b-2d6a8e1c4b70",
+      "status": "partially_canceled",
+      "mode": "test",
+      "amount": 55000,
+      "canceled_amount": 11000,
+      "attempt_count": 2,
+      "last_failure_code": null,
+      "next_retry_at": null,
+      "completed_at": "2026-11-02T10:20:11+09:00"
+    }
+  ]
+}
+```
+
+- 인보이스마다 한 줄이고, 달 내림차순, 같은 달은 고객 이름 순입니다. 페이지를 나누지 않습니다.
+- 상태는 지금 결제 모드에서 가장 늦게 요청한 결제 시도로 정합니다. 테스트 환경은 `test`, 실제 환경은 `live`만 봅니다.
+- 시각은 KST(`+09:00`)로 나옵니다.
+
+`status`는 수납 상태입니다. 콘솔 '수납 상태' 열에는 아래 표기로 보입니다.
+
+| status | 콘솔 표기 | 뜻 |
+| --- | --- | --- |
+| `not_required` | 결제 불필요 | `total_amount`가 0원입니다 |
+| `unpaid` | 결제 전 | 지금 결제 모드의 결제 시도가 없습니다 |
+| `pending` | 결과 확인 중 | 가장 늦은 시도의 결과를 MeterEngine이 다시 확인하고 있습니다 |
+| `paid` | 수납 완료 | 가장 늦은 시도가 승인됐고 취소한 금액이 없습니다 |
+| `failed` | 결제 실패 | 가장 늦은 시도가 실패했습니다 |
+| `partially_canceled` | 부분 취소 | 승인된 결제의 일부를 취소했습니다 |
+| `canceled` | 전액 취소 | 승인된 결제 금액 전부를 취소했습니다 |
+
+<ResponseField name="amount" type="integer">
+  인보이스의 `total_amount`(세금 포함, 원)입니다.
+</ResponseField>
+<ResponseField name="canceled_amount" type="integer">
+  가장 늦은 시도가 승인(`done`)이면 그 시도에서 취소를 마친 금액의 합입니다. 그 밖에는 0입니다.
+</ResponseField>
+<ResponseField name="attempt_count" type="integer">
+  지금 결제 모드로 이 인보이스에 한 결제 시도 수입니다.
+</ResponseField>
+<ResponseField name="last_failure_code" type="string">
+  가장 늦은 시도가 실패했을 때만 있는 실패 코드입니다.
+</ResponseField>
+<ResponseField name="next_retry_at" type="string">
+  자동 재시도 예정 시각입니다. 조건은 [결제 실패와 재시도](/payments/retries)에 있습니다.
+</ResponseField>
+<ResponseField name="completed_at" type="string">
+  가장 늦은 시도가 끝난 시각입니다. 시도가 없거나 결과 확인 중이면 `null`입니다.
+</ResponseField>
+
+결과 확인 중(`pending`)인 결제는 다시 요청하지 마세요. 확인 방식은 [첫 결제 요청과 결과 확인](/payments/charging)에 있습니다.
+
+## 대사
+
+대사는 MeterEngine이 토스페이먼츠의 거래 목록을 받아 MeterEngine의 승인된 결제와 마친 취소를 하나씩 맞춰 보는 작업입니다. 매일 04:00 KST에 돌고 보통 직전 하루치 거래를 맞춥니다. 대사가 실패했거나 돌지 못한 날이 있으면 다음 대사가 마지막으로 성공한 때부터 최대 7일 전까지 이어서 맞춥니다. 예약 작업 시각은 [시간 규칙](/concepts/time-rules)에 모았습니다.
+
+- 업무 환경과 결제 모드마다 저장한 토스페이먼츠 키로 따로 맞춥니다.
+- 맞지 않는 거래를 찾으면 불일치로 기록합니다. 같은 불일치는 여러 번 맞춰도 한 번만 남습니다.
+- 대사는 기록만 합니다. 결제 시도의 상태나 수납 상태를 바꾸지 않고, 불일치를 자동으로 고치지 않습니다.
+
+<Note>
+콘솔에는 대사 결과를 보는 화면이 없습니다. 불일치는 아래 API로만 조회합니다.
+</Note>
+
+### 불일치 조회
+
+`GET /v1/payment-reconciliation-mismatches`에 기간을 넣어 부릅니다. 기간은 불일치를 찾은 시각(`detected_at`)의 KST 날짜로 거르고, `from` 날짜 0시부터 `to` 날짜가 끝날 때까지입니다. 둘 다 필수입니다.
+
+<CodeGroup>
+
+```bash cURL
+curl "https://meterengine.com/v1/payment-reconciliation-mismatches?from=2026-11-01&to=2026-11-05" \
+  -H "Authorization: Bearer me_test_xxxxxxxx"
+```
+
+```javascript Node
+const params = new URLSearchParams({ from: "2026-11-01", to: "2026-11-05" });
+const res = await fetch(
+  `https://meterengine.com/v1/payment-reconciliation-mismatches?${params}`,
+  { headers: { Authorization: "Bearer me_test_xxxxxxxx" } },
+);
+const { payment_reconciliation_mismatches } = await res.json();
+```
+
+</CodeGroup>
+
+```json 응답 200
+{
+  "payment_reconciliation_mismatches": [
+    {
+      "id": "e5c80b16-af7d-4ec0-9051-9d6f2cbe4057",
+      "mode": "test",
+      "kind": "missing_in_meterengine",
+      "order_id": "shop-order-20261104-0001",
+      "payment_key": "토스페이먼츠 결제 키",
+      "transaction_key": "토스페이먼츠 거래 키",
+      "meterengine_amount": null,
+      "toss_payments_amount": 33000,
+      "transacted_at": "2026-11-04T15:42:10+09:00",
+      "detected_at": "2026-11-05T04:00:12+09:00"
+    }
+  ]
+}
+```
+
+- 지금 업무 환경의 불일치만 나옵니다. 찾은 시각이 늦은 것부터이고 페이지를 나누지 않습니다.
+- 기간 안에 불일치가 없으면 빈 배열입니다.
+- `from`이나 `to`가 없거나 `YYYY-MM-DD`가 아니거나 `from`이 `to`보다 늦으면 400 `validation_error`입니다.
+
+`kind`는 불일치 종류입니다.
+
+| kind | 뜻 |
+| --- | --- |
+| `missing_in_meterengine` | 토스페이먼츠에만 있는 승인이나 취소 거래입니다 |
+| `missing_in_toss_payments` | MeterEngine에만 있는 승인된 결제나 마친 취소입니다 |
+| `amount_mismatch` | 양쪽에 있지만 금액이 다른 거래입니다 |
+| `status_mismatch` | 토스페이먼츠는 승인했는데 MeterEngine 결제 시도가 승인이 아니거나, MeterEngine은 승인인데 토스페이먼츠 결제가 승인 상태가 아닌 경우입니다 |
+
+<ResponseField name="order_id" type="string">
+  토스페이먼츠 거래에서 찾았으면 토스페이먼츠가 준 `orderId` 원문이고, MeterEngine 기록에서 찾았으면(`missing_in_toss_payments` 등) MeterEngine 결제 시도 id입니다. MeterEngine이 요청한 결제의 `orderId`는 결제 시도 id이므로 어느 쪽이든 MeterEngine 결제면 결제 시도 id가 나옵니다.
+</ResponseField>
+<ResponseField name="payment_key" type="string">
+  결제 키입니다. 모르면 `null`입니다.
+</ResponseField>
+<ResponseField name="transaction_key" type="string">
+  거래 키입니다. 취소 거래이거나 토스페이먼츠 거래에서 찾았을 때만 있습니다.
+</ResponseField>
+<ResponseField name="meterengine_amount" type="integer">
+  MeterEngine 쪽 금액(원)입니다. MeterEngine에 기록이 없으면 `null`입니다.
+</ResponseField>
+<ResponseField name="toss_payments_amount" type="integer">
+  토스페이먼츠 쪽 금액(원)입니다. 토스페이먼츠에 거래가 없으면 `null`입니다.
+</ResponseField>
+<ResponseField name="transacted_at" type="string">
+  토스페이먼츠 거래 시각이거나, `missing_in_toss_payments`면 MeterEngine이 결제나 취소를 마친 시각입니다.
+</ResponseField>
+<ResponseField name="detected_at" type="string">
+  대사가 불일치를 찾은 시각입니다.
+</ResponseField>
+
+<Warning>
+MeterEngine에 저장한 토스페이먼츠 키로 MeterEngine 밖에서 받은 결제와 취소도 토스페이먼츠 거래 목록에 함께 나오므로 `missing_in_meterengine`으로 기록됩니다. 같은 키로 다른 결제를 받는다면 `order_id`가 MeterEngine 결제 시도 id가 아닌 불일치는 MeterEngine 밖 거래인지 먼저 확인하세요.
+</Warning>
+
+### 불일치를 처리하는 순서
+
+<Steps>
+<Step title="매일 대사 뒤 불일치를 조회한다">
+04:00 KST 대사가 끝난 뒤 그날 날짜를 `from`과 `to`에 넣어 조회합니다. 불일치는 지울 수 없고 처리했다는 표시도 없으니, 이미 본 `id`는 도입사 쪽에 기록해 둡니다.
+</Step>
+<Step title="토스페이먼츠 기록과 비교한다">
+`payment_key`나 `order_id`로 토스페이먼츠 쪽 거래 내역에서 같은 거래를 찾아 금액과 상태를 확인합니다.
+</Step>
+<Step title="MeterEngine 결제 시도와 비교한다">
+MeterEngine이 요청한 결제는 토스페이먼츠 결제 기록에 고객 식별값(`customerKey`)으로 MeterEngine 고객 id가, 주문명으로 `<청구 월> 사용료`(예: `2026-10 사용료`)가 남습니다. 이 둘로 `GET /v1/invoice-payments?month=2026-10&customer_id=<고객 id>`를 불러 인보이스 id를 찾고, `GET /v1/invoices/{id}/payment-attempts`에서 `id`가 `order_id`와 같은 시도를, `GET /v1/payment-attempts/{id}/cancellations`에서 그 시도의 취소를 봅니다.
+</Step>
+<Step title="고객과 정산을 맞춘다">
+MeterEngine은 불일치를 고치지 않으므로, 실제로 더 받거나 덜 받은 금액은 토스페이먼츠 쪽 처리와 고객 응대로 맞춥니다. 확정 인보이스는 고칠 수 없습니다.
+</Step>
+</Steps>

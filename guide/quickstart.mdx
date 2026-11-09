@@ -1,0 +1,322 @@
+---
+title: "빠른 시작"
+description: "가입부터 테스트 환경에서 사용량 이벤트를 보내 청구 예정액을 확인하기까지 따라 합니다."
+---
+
+이 페이지를 따라 하면 테스트 환경에 미터와 단가를 만들고, 고객 한 명에게 사용량 이벤트 두 건을 보내 청구 예정액 2,000원을 확인합니다. 단계마다 하는 곳을 표시했습니다.
+
+- **[화면]**: 브라우저에서 콘솔 https://meterengine.com 에 로그인해 합니다.
+- **[API]**: 도입사 서버나 터미널에서 HTTP 요청을 보냅니다.
+- **[운영자]**: MeterEngine 팀이 처리합니다. 도입사는 요청만 남깁니다.
+
+준비물은 가입에 쓸 이메일, 그리고 curl 또는 Node.js 18 이상입니다. MeterEngine은 SDK를 배포하지 않으므로 예시는 HTTP 요청과 코드 조각으로 보여 줍니다.
+
+{/* 확인 필요: 외부 가입을 받는지와 미리 보기 단계 표현 */}
+MeterEngine은 지금 미리 보기 단계라 테스트 환경에서 연동을 검증하는 용도로 씁니다. 자세한 내용은 [MeterEngine 소개](/index)를 보세요.
+
+{/* 확인 필요: 테스트 키 정의와 mode 설명 */}
+<Warning>
+테스트 환경도 보낸 이벤트와 확정한 인보이스는 되돌릴 수 없습니다. 이벤트가 들어온 미터는 이름만 바꿀 수 있고 계산 기준을 바꿀 수 없습니다. 이 페이지의 미터 코드, 이벤트 타입, 고객 외부 ID는 빠른 시작 전용 값이니, 실제 연동에 쓸 이름을 여기에 쓰지 마세요. 테스트 환경의 뜻은 [업무 환경](/concepts/environments), 미터의 제약은 [미터 설계](/pricing/meters)에 있습니다.
+</Warning>
+
+## 시작 전 연결 확인
+
+{/* 확인 필요: 공개 API 주소 */}
+API는 콘솔과 같은 도메인의 `https://meterengine.com/v1/` 아래에 있고, 어느 환경에 기록될지는 API 키가 정합니다. 키 없이 요청을 하나 보내 주소가 맞는지 확인하세요.
+
+```bash
+curl -i https://meterengine.com/v1/customers
+```
+
+401과 함께 아래 본문이 오면 주소가 맞습니다.
+
+```json
+{"code":"authentication_required","message":"인증 정보가 없습니다"}
+```
+
+## 따라 하기
+
+<Steps>
+  <Step title="[화면] 가입을 신청합니다">
+    {/* 확인 필요: 외부 가입을 받는지와 미리 보기 단계 표현 */}
+    https://meterengine.com/signup 의 '도입사 가입 신청' 화면에서 도입사 이름, 담당자 이름, 이메일, 비밀번호를 입력합니다. 가입 신청은 콘솔의 가입 화면에서 합니다.
+
+    {/* 확인 필요: 검증용 동의 안내 */}
+    필수 동의 항목인 '이용 안내'와 '개인정보 처리 안내'에 체크하고 '가입 신청'을 누르면 '가입 신청을 접수했습니다' 화면이 나옵니다. 입력 규칙과 오류는 [가입과 승인](/account/signup)에 있습니다.
+  </Step>
+  <Step title="[운영자] 승인을 요청합니다">
+    {/* 확인 필요: 승인 알림 없음과 처리 시간 */}
+    신청은 MeterEngine 팀이 승인해야 쓸 수 있습니다. 승인 알림 메일은 가지 않고 MeterEngine 팀도 신청 알림을 받지 않으므로, 신청한 뒤 승인 요청을 남겨 주세요. 처리 시간은 정해져 있지 않습니다.
+
+    {/* 확인 필요: 문의 경로(GitHub 이슈) */}
+    승인 요청은 GitHub 이슈로 남깁니다. 제목 형식과 적으면 안 되는 정보는 [MeterEngine 소개](/index)의 문의 절을 보세요.
+  </Step>
+  <Step title="[화면] 로그인합니다">
+    https://meterengine.com/login 에서 신청한 이메일과 비밀번호로 로그인합니다.
+
+    {/* 확인 필요: 승인 알림 없음과 처리 시간 */}
+    승인 전에 로그인하면 '사용 가능한 도입사가 없습니다'라는 안내가 나오고, 같은 상태에서 API는 403 `organization_not_active`를 돌려줍니다. 승인된 뒤에는 동의 화면 없이 '개요' 화면으로 들어갑니다. 신청한 사람은 그 도입사의 대표관리자가 됩니다.
+  </Step>
+  <Step title="[화면] 업무 환경을 테스트 환경으로 바꿉니다">
+    {/* 확인 필요: 새 도입사 기본 환경이 기존 데이터 */}
+    로그인하면 화면 위 '업무 환경'이 '기존 데이터'로 열립니다. '업무 환경'에서 '테스트 환경'을 고르고 확인 창에서 '전환'을 누르세요. 주소에 `environment=test`가 붙고, 화면 위 안내에 '테스트 환경입니다'가 보이면 바뀐 것입니다.
+
+    새로 로그인한 직후나 주소에 `environment`가 없으면 '기존 데이터'로 열립니다. 아래 단계를 하기 전마다 화면 위 표시가 '테스트 환경'인지 확인하세요. 기존 데이터에서는 API 키를 발급하지 마세요. 이유는 [업무 환경](/concepts/environments)에 있습니다.
+  </Step>
+  <Step title="[화면] 미터를 만듭니다">
+    왼쪽 메뉴 '미터' 화면에서 '미터 등록'을 누르고 아래처럼 입력한 뒤 '저장'을 누릅니다.
+
+    | 입력란 | 값 |
+    | --- | --- |
+    | 코드 | `quickstart-api-calls` |
+    | 이름 | `빠른 시작 API 호출` |
+    | 이벤트 타입 | `quickstart_api_call` |
+    | 집계 함수 | '합계 (SUM)' |
+    | 집계 대상 속성 | `units` |
+    | 차원 키 | 비워 둡니다 |
+    | 과금 단위 크기 | `1` (기본값) |
+    | 반올림 방식 | '추가 반올림 없음' (기본값) |
+
+    이 미터는 `type`이 `quickstart_api_call`인 이벤트의 `properties.units` 값을 더해 청구 수량으로 씁니다. 미터 코드는 등록 뒤 바꿀 수 없습니다.
+  </Step>
+  <Step title="[화면] 이번 달 단가를 등록합니다">
+    왼쪽 메뉴 '요금 설계' 화면의 '무엇을 과금하나요'에서 '빠른 시작 API 호출'을 고르고 '단가 버전 등록'을 누릅니다. 창 위에 '모든 고객 공통'이 보이는지 확인하고 아래처럼 입력한 뒤 '이 단가 버전 저장'을 누릅니다.
+
+    | 입력란 | 값 |
+    | --- | --- |
+    | 적용 시작 월 | 이번 달 (기본값) |
+    | 적용 종료 월 (선택) | 비워 둡니다 |
+    | 계산 방식 | '단일 단가: 수량에 같은 단가 적용' |
+    | 과금 수량 1당 단가 (원) | `100` |
+
+    단가는 이번 달 이후에만 넣을 수 있습니다. 단가가 없으면 이벤트를 보내도 청구 예정액이 0원입니다. 단가 방식은 [단가 모델과 버전](/pricing/price-models)에 있습니다.
+  </Step>
+  <Step title="[화면] API 키를 발급합니다">
+    왼쪽 메뉴 'API 키와 통보' 화면의 '서버 연동 키'에서 'API 키 발급'을 누릅니다.
+
+    1. '키 이름'에 `빠른 시작`처럼 알아볼 이름을 넣습니다.
+    2. 'API 권한'은 '조회 (read)'만 체크되어 있습니다. '수집 (ingest)'도 체크합니다. 고객 등록과 이벤트 전송에는 ingest, 청구 예정액 조회에는 read가 필요합니다.
+    3. '분당 요청 한도'는 비워 두면 무제한입니다.
+    4. 'API 키 발급'을 누르고, 나온 키를 '비밀값 복사'로 복사해 안전한 곳에 저장합니다.
+
+    테스트 환경에서 발급한 키는 `me_test_`로 시작하고 테스트 환경에 고정되어, 요청에 환경 헤더를 따로 넣지 않아도 됩니다.
+
+    <Warning>
+    키 원문은 발급 직후 한 번만 보이니 바로 비밀 저장소에 옮깁니다. 창을 닫으면 다시 볼 수 없습니다.
+    </Warning>
+
+    키와 권한의 자세한 내용은 [API 키 발급과 첫 호출](/authentication/api-keys)과 [화면과 API, 권한](/authentication/scopes)에 있습니다. 아래 예시의 `me_test_xxxxxxxx`를 방금 복사한 키로 바꿔 보내세요.
+  </Step>
+  <Step title="[API] 고객을 등록합니다">
+    `POST /v1/customers`로 고객을 등록합니다. `external_id`에는 도입사 시스템의 고객 ID를 넣습니다.
+
+    <CodeGroup>
+    ```bash curl
+    curl -X POST https://meterengine.com/v1/customers \
+      -H "Authorization: Bearer me_test_xxxxxxxx" \
+      -H "Content-Type: application/json" \
+      -d '{"external_id": "quickstart-customer-1", "name": "빠른 시작 고객"}'
+    ```
+
+    ```javascript Node
+    const response = await fetch("https://meterengine.com/v1/customers", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer me_test_xxxxxxxx",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ external_id: "quickstart-customer-1", name: "빠른 시작 고객" }),
+    });
+    console.log(response.status, await response.json());
+    ```
+    </CodeGroup>
+
+    Node 예시는 최상위 `await`를 쓰므로 `.mjs` 파일로 저장해 실행합니다. 처음 등록하면 201과 함께 등록된 고객이 옵니다.
+
+    ```json
+    {
+      "id": "3f6c2a1e-8b4d-4c7a-9e2f-5d1b7a9c0e42",
+      "name": "빠른 시작 고객",
+      "billing_email": null,
+      "created_at": "2026-11-05T01:00:00Z",
+      "external_id": "quickstart-customer-1",
+      "archived_at": null,
+      "version": 0
+    }
+    ```
+
+        응답의 `id`를 저장하세요. 이벤트의 `customer_id`에는 외부 고객 ID가 아니라 이 `id`(UUID)를 넣습니다. 같은 `external_id`로 다시 보내면 새 고객을 만들지 않고 기존 고객을 200으로 돌려주므로, `id`를 잃었으면 같은 요청을 다시 보내면 됩니다. 자세한 내용은 [고객 등록과 ID 대응](/integration/customers)에 있습니다.
+  </Step>
+  <Step title="[API] 사용량 이벤트를 보냅니다">
+    `POST /v1/events`로 이벤트 두 건을 보냅니다. 첫 건은 `units` 12, 둘째 건은 `transaction_id`를 `quickstart-tx-002`로, `units`를 8로 바꿔 한 번 더 보냅니다. `customer_id`는 앞 단계에서 받은 `id`로 바꿉니다.
+
+    <CodeGroup>
+    ```bash curl
+    curl -X POST https://meterengine.com/v1/events \
+      -H "Authorization: Bearer me_test_xxxxxxxx" \
+      -H "Content-Type: application/json" \
+      --data @- <<EOF
+    {
+      "transaction_id": "quickstart-tx-001",
+      "customer_id": "3f6c2a1e-8b4d-4c7a-9e2f-5d1b7a9c0e42",
+      "type": "quickstart_api_call",
+      "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+      "properties": { "units": 12 }
+    }
+    EOF
+    ```
+
+    ```javascript Node
+    const response = await fetch("https://meterengine.com/v1/events", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer me_test_xxxxxxxx",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        transaction_id: "quickstart-tx-001",
+        customer_id: "3f6c2a1e-8b4d-4c7a-9e2f-5d1b7a9c0e42",
+        type: "quickstart_api_call",
+        timestamp: new Date().toISOString(),
+        properties: { units: 12 },
+      }),
+    });
+    console.log(response.status, await response.json());
+    ```
+    </CodeGroup>
+
+    `timestamp`는 사용량이 생긴 시각이고 지금 시각을 넣었습니다. 저장되면 200과 함께 아래 응답이 옵니다.
+
+    ```json
+    {"transaction_id": "quickstart-tx-001", "duplicate": false}
+    ```
+
+    - `type`은 미터의 이벤트 타입과 글자까지 같아야 집계됩니다.
+    - `units`는 따옴표 없는 숫자로 보냅니다. `"12"`처럼 문자열로 보내면 저장은 되지만 합계에서 빠집니다.
+    - 같은 `transaction_id`로 다시 보내면 처음 것이 남고 응답의 `duplicate`가 `true`입니다. 규칙은 [멱등 규칙](/api-basics/idempotency)에 있습니다.
+
+    이벤트 형식과 묶어 보내기는 [사용량 이벤트 보내기](/integration/events)에 있습니다.
+  </Step>
+  <Step title="[API] 청구 예정액을 확인합니다">
+    `GET /v1/invoices/draft`로 이번 달 청구 예정액을 조회합니다. `month`를 생략하면 이번 달(KST)입니다. 콘솔에서는 왼쪽 메뉴 '청구 검토' 화면에서 같은 금액을 볼 수 있습니다.
+
+    <CodeGroup>
+    ```bash curl
+    curl https://meterengine.com/v1/invoices/draft \
+      -H "Authorization: Bearer me_test_xxxxxxxx"
+    ```
+
+    ```javascript Node
+    const response = await fetch("https://meterengine.com/v1/invoices/draft", {
+      headers: { Authorization: "Bearer me_test_xxxxxxxx" },
+    });
+    console.log(response.status, JSON.stringify(await response.json(), null, 2));
+    ```
+    </CodeGroup>
+
+    ```json
+    {
+      "month": "2026-11",
+      "calculated_at": "2026-11-05T10:05:00+09:00",
+      "auto_finalize_enabled": false,
+      "auto_finalize_at": null,
+      "auto_finalize_running": false,
+      "total_amount": 2000,
+      "customers": [
+        {
+          "customer_id": "3f6c2a1e-8b4d-4c7a-9e2f-5d1b7a9c0e42",
+          "customer_name": "빠른 시작 고객",
+          "amount": 2000,
+          "lines": [
+            {
+              "billable_metric_code": "quickstart-api-calls",
+              "target_property": "units",
+              "dimension_values": {},
+              "quantity": 20,
+              "unit_price": 100,
+              "amount": 2000,
+              "line_type": "per_unit",
+              "tier_index": 0,
+              "quantity_numerator": 20,
+              "quantity_denominator": 1
+            }
+          ],
+          "unpriced_usages": [],
+          "negative_usages": [],
+          "auto_finalize_held": false
+        }
+      ]
+    }
+    ```
+
+    두 이벤트의 `units` 합 20에 단가 100원을 곱해 2,000원입니다. 청구 예정액은 세금을 뺀 공급가액이고, 결제는 세금을 포함한 확정 금액으로 합니다. 금액은 라인마다 10원 미만을 버립니다. 금액의 뜻은 [예정액, 확정액, 수납액](/concepts/amounts)에 있습니다.
+
+    <Check>
+    `total_amount`가 2000이면 빠른 시작을 마친 것입니다.
+    </Check>
+
+    {/* 확인 필요: 배포 서버 자동 확정 켜는 시점 */}
+    빠른 시작에서는 인보이스를 확정하지 않습니다. 다만 응답의 `auto_finalize_enabled`가 `true`인 서버에서는 다음 달 1일 14:00 KST 이후 이번 달이 테스트 환경에서도 자동으로 확정되고, 확정한 인보이스는 되돌릴 수 없습니다. 자동 확정은 [자동 확정과 보류](/billing/auto-finalization), 직접 확정은 [인보이스 수동 확정](/billing/finalize-invoices)에 있습니다.
+  </Step>
+</Steps>
+
+{/* 확인 필요: 시험 화면 proxy와 테스트 키 안내 */}
+<Tip>
+[API 참조](/api-reference/introduction)의 시험 화면에서도 같은 요청을 보낼 수 있습니다. 시험 화면에는 테스트 환경 키(me_test_)만 넣으세요.
+</Tip>
+
+## 결과가 다를 때
+
+응답의 `code`로 원인을 고릅니다. 오류 형식은 [오류 응답과 X-Request-ID](/api-basics/errors), 원인을 찾는 순서는 [이벤트가 청구에 안 보일 때](/troubleshooting/events-not-billed)에 있습니다.
+
+<AccordionGroup>
+  <Accordion title="401 authentication_required 또는 invalid_credentials">
+    `authentication_required`는 `Authorization` 헤더가 없을 때, `invalid_credentials`는 키의 형식이 틀렸거나 모르는 키이거나 폐기 또는 만료된 키일 때 옵니다. `Authorization: Bearer ` 뒤에 복사한 키 전체를 넣었는지 확인하세요.
+  </Accordion>
+  <Accordion title="403 permission_denied">
+    키에 필요한 권한이 없습니다. 고객 등록과 이벤트 전송에는 ingest, 청구 예정액 조회에는 read가 필요합니다. 'API 키와 통보' 화면의 '키 권한 변경'으로 권한을 더하면 같은 키로 다음 요청부터 적용됩니다.
+  </Accordion>
+  <Accordion title="403 organization_not_active">
+    {/* 확인 필요: 승인 알림 없음과 처리 시간 */}
+    도입사가 아직 승인되지 않았거나 거절, 정지된 상태입니다. 승인 요청을 남겼는지 확인하세요. 자세한 내용은 [가입과 승인](/account/signup)에 있습니다.
+  </Accordion>
+  <Accordion title="404 customer_not_found">
+    `customer_id`가 가리키는 고객이 이 키의 업무 환경에 없습니다. 고객 등록 응답의 `id`를 넣었는지, 외부 고객 ID를 넣지 않았는지 확인하세요.
+  </Accordion>
+  <Accordion title="400 event_too_old">
+    35일보다 오래된 이벤트는 거절됩니다. 같은 이벤트를 다시 보내도 받지 않습니다. `timestamp`에 지금 시각을 넣었는지 확인하세요. 기준은 [시간 규칙](/concepts/time-rules)에 있습니다.
+  </Accordion>
+  <Accordion title="200으로 저장됐는데 청구 예정액이 0원">
+    이벤트는 저장됐지만 청구 수량이나 단가와 이어지지 않은 경우입니다. 다음을 차례로 봅니다.
+
+    - 업무 환경: 미터와 단가를 '테스트 환경'에서 만들었는지 봅니다. 고객, 미터, 단가는 업무 환경마다 따로 만들어야 합니다.
+    - 단가: 응답의 `unpriced_usages`에 사용량이 나오면 그 미터에 이번 달 단가가 없습니다.
+    - 이벤트 타입: 이벤트의 `type`이 미터의 이벤트 타입과 다르면 어느 미터에도 집계되지 않습니다.
+    - 속성 값: `units`를 문자열로 보냈거나 키 이름이 다르면 합계에서 빠집니다.
+  </Accordion>
+</AccordionGroup>
+
+## 개요 화면의 준비 목록
+
+{/* 확인 필요: 개요 체크리스트 완료 조건 */}
+개요 화면의 '청구 전 준비' 목록(과금할 고객 연결, 사용량과 요금 정의, 서버 연동 키 발급, 공급자와 결제 설정)은 진행 상황 표시입니다. 이 가이드는 금액이 바로 보이도록 미터와 단가를 먼저 만들고 고객과 이벤트를 보내는 순서로 안내합니다. 화면 순서대로 고객부터 등록해도 결과는 같습니다.
+
+- '사용량과 요금 정의'는 미터를 하나 만들면 완료로 표시되지만 단가가 없으면 청구 예정액이 0원이니 단가도 등록했는지 확인하세요.
+- '공급자와 결제 설정'은 빠른 시작에서 하지 않아도 됩니다. 토스페이먼츠 키는 결제를 요청할 때 필요하고, 공급자 정보가 쓰이는 곳은 [공급자 정보](/account/supplier)에 있습니다.
+
+## 다음 단계
+
+<CardGroup cols={2}>
+  <Card title="전체 흐름" icon="route" href="/concepts/how-it-works">
+    실제 연동 전에 되돌릴 수 없는 제약과 준비 순서를 봅니다.
+  </Card>
+  <Card title="미터 설계" icon="gauge" href="/pricing/meters">
+    실제 서비스의 사용량에 맞는 미터를 설계합니다.
+  </Card>
+  <Card title="재전송 설계" icon="rotate" href="/integration/retries">
+    응답을 받지 못한 이벤트를 안전하게 다시 보냅니다.
+  </Card>
+  <Card title="결제 연동 한눈에 보기" icon="credit-card" href="/payments/overview">
+    확정한 인보이스를 카드로 결제받는 순서를 봅니다.
+  </Card>
+</CardGroup>

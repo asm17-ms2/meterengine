@@ -1,0 +1,190 @@
+---
+title: "서버 조회와 CSV 내보내기"
+description: "목록을 조건으로 검색하고, 같은 조건의 전체 결과를 CSV로 내려받아 자기 기록과 맞추는 방법을 설명합니다."
+---
+
+고객, 미터, 가격, 사용량, 청구 예정액, 인보이스는 조건으로 검색하는 `/search`와 같은 조건의 전체 결과를 CSV로 내려받는 `/export`가 있습니다. 이벤트는 목록 API와 CSV 내보내기가 있습니다. 모두 read(조회) 권한 키로 부를 수 있고, 키가 고정된 업무 환경의 데이터만 돌려줍니다.
+
+## 자원별 경로
+
+| 자원 | 검색 | CSV 내보내기 | `page` 시작 | `size` 기본, 최대 |
+| --- | --- | --- | --- | --- |
+| 고객 | `GET /v1/customers/search` | `GET /v1/customers/export` | 1 | 25, 200 |
+| 미터 | `GET /v1/billable-metrics/search` | `GET /v1/billable-metrics/export` | 1 | 25, 200 |
+| 월별 가격 | `GET /v1/billable-metric-prices/search` | `GET /v1/billable-metric-prices/export` | 1 | 25, 200 |
+| 사용량 | `GET /v1/usage/search` | `GET /v1/usage/export` | 1 | 25, 200 |
+| 청구 예정액 | `GET /v1/invoices/draft/search` | `GET /v1/invoices/draft/export` | 1 | 25, 200 |
+| 인보이스 | `GET /v1/invoices/search` | `GET /v1/invoices/export` | 1 | 25, 200 |
+| 이벤트 | `GET /v1/events` | `GET /v1/events/export` | 0 | 20, 100 |
+| 수집 거절 | `GET /v1/event-rejections/search` | 없음 | 0 | 20, 100 |
+| 이벤트 매핑 진단 | `GET /v1/event-issues/search` | 없음 | 0 | 20, 100 |
+
+<Warning>
+페이지 번호의 시작이 자원마다 다릅니다. 고객, 미터, 월별 가격, 사용량, 청구 예정액, 인보이스의 `/search`는 `page=1`이 첫 페이지이고, 이벤트 목록과 수집 거절, 이벤트 매핑 진단은 `page=0`이 첫 페이지입니다. 같은 코드로 모든 목록을 넘기면 0부터 세는 목록의 첫 페이지를 건너뛰거나, 1부터 세는 `/search`에 `page=0`을 보내 400 `validation_error`를 받습니다.
+</Warning>
+
+자원마다 받는 조건(`q`, `status`, `month`, `customer_id`, `billable_metric_code`, 금액 범위 등)과 정렬 필드는 [API 참조](/api-reference/introduction)의 각 경로 설명에 있습니다. `/search`의 정렬 순서 `order`는 생략하면 `asc`이고, 인보이스 검색만 `desc`입니다. 이벤트 목록은 생략하면 발생 시각 최신순입니다.
+
+## 모르는 조건을 다루는 방식
+
+| 경로 | 모르는 조회 조건 |
+| --- | --- |
+| `/search`, `/export`, 월 목록(`/months`), `GET /v1/event-rejections/search`, `GET /v1/event-issues/search` | 400 `validation_error`로 거절합니다. `errors[0].field`는 `query`입니다 |
+| `GET /v1/events`, `GET /v1/events/lookup`, `GET /v1/usage`, `GET /v1/invoices/draft`, `GET /v1/unbilled-events` | 무시하고 나머지 조건으로 답합니다 |
+
+<Warning>
+무시하는 경로에서는 조건 이름의 오타가 오류 없이 지나갑니다. 예를 들어 `GET /v1/events?months=2026-10`은 `months`를 무시하고 이번 달 이벤트를 돌려줍니다. 결과의 `month` 값이 요청한 달과 같은지 확인하세요.
+</Warning>
+
+## 검색 응답
+
+고객, 미터, 월별 가격, 사용량, 청구 예정액, 인보이스의 `/search`는 모두 같은 형태로 답합니다.
+
+<ResponseField name="items" type="array">
+이번 페이지의 항목입니다. 항목의 필드는 자원마다 다릅니다.
+</ResponseField>
+<ResponseField name="total" type="integer">
+조건을 적용한 전체 건수입니다.
+</ResponseField>
+<ResponseField name="total_unfiltered" type="integer">
+조건을 적용하기 전, 현재 업무 환경의 전체 건수입니다.
+</ResponseField>
+<ResponseField name="page" type="integer">
+이번 페이지 번호입니다. 1부터 셉니다.
+</ResponseField>
+<ResponseField name="size" type="integer">
+한 페이지에 담은 최대 개수입니다.
+</ResponseField>
+<ResponseField name="summary" type="object">
+페이지와 관계없이 조건 전체로 계산한 요약입니다. 키는 자원마다 다르며 API 참조의 각 경로 설명에 있습니다.
+</ResponseField>
+
+<CodeGroup>
+```bash curl
+curl -sS "https://meterengine.com/v1/invoices/draft/search?month=2026-10&min_amount=10000&page=1&size=50" \
+  -H "Authorization: Bearer me_test_xxxxxxxx"
+```
+
+```javascript Node
+const params = new URLSearchParams({ month: "2026-10", min_amount: "10000", page: "1", size: "50" });
+const response = await fetch(`https://meterengine.com/v1/invoices/draft/search?${params}`, {
+  headers: { Authorization: "Bearer me_test_xxxxxxxx" },
+});
+const { items, total, page, size } = await response.json();
+const hasNext = page * size < total;
+```
+</CodeGroup>
+
+이벤트 목록(`GET /v1/events`), 수집 거절 검색, 이벤트 매핑 진단 검색은 형태가 다릅니다. 이 검색들은 `page`, `size`, `total`과 함께 항목 배열을 각각 `events`, `rejections`, `issues`에 담고, `total_unfiltered`가 없습니다. 다음 페이지가 있는지는 `(page + 1) * size < total`로 판단합니다.
+
+## CSV 내보내기
+
+`/export`는 같은 경로의 `/search`나 이벤트 목록과 같은 조건을 받아, 현재 페이지가 아니라 조건에 맞는 전체 결과를 한 파일로 돌려줍니다. `page`와 `size`를 보내도 내보내기 범위에는 적용하지 않습니다.
+
+<Steps>
+<Step title="조건을 정한다">
+검색 API나 콘솔 목록에서 원하는 결과가 나오는 조건을 먼저 찾습니다. 한 번에 내보낼 수 있는 행은 최대 10,000행입니다.
+</Step>
+<Step title="내려받는다">
+<CodeGroup>
+```bash curl
+curl -sS -o invoices-2026-10.csv \
+  "https://meterengine.com/v1/invoices/export?month=2026-10" \
+  -H "Authorization: Bearer me_test_xxxxxxxx"
+```
+
+```javascript Node
+const response = await fetch("https://meterengine.com/v1/invoices/export?month=2026-10", {
+  headers: { Authorization: "Bearer me_test_xxxxxxxx" },
+});
+if (!response.ok) throw new Error((await response.json()).code);
+// text()는 UTF-8로 읽으면서 첫 BOM을 뗀다.
+const csv = await response.text();
+```
+</CodeGroup>
+</Step>
+<Step title="10,000행을 넘으면 범위를 좁힌다">
+조건 전체가 10,000행을 넘으면 파일 대신 400이 옵니다. 달, 고객, 금액 범위 같은 조건을 더해 나눠 내려받습니다.
+
+```json 400 응답
+{
+  "code": "validation_error",
+  "message": "요청 값이 올바르지 않습니다",
+  "errors": [
+    { "field": "export", "message": "10000행 이하가 되도록 검색 범위를 좁혀 주세요" }
+  ]
+}
+```
+</Step>
+</Steps>
+
+### 파일 형식
+
+- 응답의 `Content-Type`은 `text/csv;charset=UTF-8`이고 `Content-Disposition`에 파일 이름(`customers.csv`, `billable-metrics.csv`, `billable-metric-prices.csv`, `usage.csv`, `draft-invoices.csv`, `invoices.csv`, `events.csv`)이 붙습니다.
+- 파일은 UTF-8 BOM으로 시작하고 줄 끝은 CRLF입니다. 프로그램으로 읽을 때는 첫 BOM 문자를 떼고 읽으세요.
+- 모든 칸을 큰따옴표로 감쌉니다. 값 안의 큰따옴표는 두 번 겹쳐 씁니다.
+- 결과가 없어도 열 제목 줄은 나옵니다.
+
+<Warning>
+스프레드시트가 수식으로 읽을 수 있는 문자열(앞의 공백을 뺀 첫 글자가 `=`, `+`, `-`, `@`이거나, 첫 글자가 탭이나 줄바꿈)은 앞에 작은따옴표 `'`를 붙여 내보냅니다. 예를 들어 이름이 `-테스트`인 고객은 `'-테스트`로 나옵니다. 자기 기록과 문자열을 맞춰 볼 때는 이 작은따옴표를 떼고 비교하세요. 검색 결과 CSV의 숫자와 불리언 칸에는 붙지 않습니다.
+</Warning>
+
+### 검색 결과 CSV의 열
+
+고객, 미터, 월별 가격, 사용량, 청구 예정액, 인보이스 CSV의 열 이름은 검색 응답 `items` 안 필드 이름입니다.
+
+- 안쪽 객체는 점으로 이어 붙인 이름의 열이 됩니다. 인보이스 CSV는 `invoice.invoice_number`, `invoice.total_amount`, `payment.status`처럼 나옵니다.
+- 배열은 한 칸에 JSON 문자열로 들어갑니다. 인보이스의 `invoice.lines`, 청구 예정액의 `lines`, 사용량의 `metrics`가 그렇습니다.
+- 사용량과 청구 예정액 CSV는 한 행이 고객 하나입니다.
+
+### 이벤트 CSV
+
+`GET /v1/events/export`는 이벤트 목록과 같은 조건을 받습니다: `month` 또는 `from`과 `to`, `customer_id`, `type`, `q`, `properties`, `sort`, `order`. 달과 기간은 발생 시각 기준입니다.
+
+| 열 | 내용 |
+| --- | --- |
+| `transaction_id` | 전송 ID |
+| `customer_id`, `customer_name` | 고객 id와 이름 |
+| `type` | 이벤트 유형 |
+| `occurred_at` | 발생 시각. KST로 초까지 씁니다(예: `2026-10-31T23:59:59+09:00`) |
+| `received_at` | MeterEngine이 받은 시각. 같은 형식입니다 |
+| `request_id` | 처음 저장한 요청의 `X-Request-ID` |
+| `actor_type`, `actor_id` | 보낸 주체와 그 id |
+| `properties` | `include_properties=true`일 때만 붙는 원본 속성 JSON. 숫자 자릿수를 그대로 둡니다 |
+
+`include_properties=true`로 내보낼 때는 조건 전체의 원본 속성 합계가 32MB를 넘으면 400 `validation_error`(`errors[0].field`는 `export`, 메시지는 "원본 속성이 32MB 이하가 되도록 검색 범위를 좁혀 주세요")로 거절합니다. 행 수 제한 10,000행도 같이 적용됩니다.
+
+```bash curl
+curl -sS -o events-2026-10.csv \
+  "https://meterengine.com/v1/events/export?month=2026-10&sort=received_at&order=desc&include_properties=true" \
+  -H "Authorization: Bearer me_test_xxxxxxxx"
+```
+
+## 콘솔에서 내려받기
+
+'고객', '미터', '요금 설계', '사용량', '수집 로그', '청구 검토', '확정 인보이스' 화면에 '조건 전체 CSV 내보내기' 버튼이 있습니다. 화면에 건 조건 그대로 전체 결과를 내려받습니다. '수집 로그'에서는 '원본 속성 포함 (JSON)'에 체크하면 `properties` 열이 붙습니다.
+
+'수집 거절'과 '이벤트 매핑 진단' 화면은 검색만 되고 CSV 내보내기가 없습니다.
+
+## 자기 기록과 맞추기
+
+한 달이 끝난 뒤 도입사 시스템의 사용 기록과 MeterEngine의 숫자를 맞추는 순서의 예입니다.
+
+<Steps>
+<Step title="이벤트를 내려받는다">
+`GET /v1/events/export?month=YYYY-MM&sort=received_at&order=desc`로 그 달 이벤트를 내려받습니다. 10,000행을 넘으면 `customer_id`나 `from`, `to`로 나눕니다.
+</Step>
+<Step title="빠진 이벤트를 찾는다">
+도입사 시스템에 기록한 `transaction_id` 목록과 CSV의 `transaction_id` 열을 비교합니다. CSV에 없으면 저장되지 않았거나 발생 시각이 다른 달입니다. `GET /v1/events/lookup?transaction_id=값`으로 하나씩 확인할 수 있습니다. 원인은 [이벤트가 청구에 안 보일 때](/troubleshooting/events-not-billed)를 보세요.
+</Step>
+<Step title="마감 뒤에 받은 이벤트를 찾는다">
+`received_at`이 다음 달 1일 13:00 KST 이후인 행은 저장은 됐지만 그 달 청구에 들지 않았습니다. 마감 규칙은 [시간 규칙](/concepts/time-rules)을 보세요.
+</Step>
+<Step title="사용량과 금액을 맞춘다">
+확정 전이면 `GET /v1/usage/export`와 `GET /v1/invoices/draft/export`로, 확정 뒤면 `GET /v1/invoices/export`로 고객별 수량과 금액을 내려받아 도입사 쪽 계산과 비교합니다. 청구 예정액은 세금을 뺀 공급가액이고 인보이스의 `total_amount`는 세금을 포함합니다. 금액 용어는 [예정액, 확정액, 수납액](/concepts/amounts)을 보세요.
+</Step>
+</Steps>
+
+<Note>
+인보이스 검색과 내보내기의 결제 상태는 키의 업무 환경에 맞는 결제 모드 기준입니다. 테스트 환경 키로는 테스트 결제 기준이고, 다른 `mode`를 보내면 403 `environment_mismatch`를 받습니다. 결제 상태 값과 수납 대사는 [수납 상태와 대사 확인](/payments/reconciliation)을 보세요.
+</Note>

@@ -1,0 +1,238 @@
+---
+title: "첫 결제 요청과 결과 확인"
+description: "확정 인보이스의 결제를 요청하고, 응답과 결제 시도, 수납 상태로 결과를 확인하는 방법을 설명합니다."
+---
+
+{/* 확인 필요: 확정 뒤 자동 첫 결제 없음 */}
+<Warning>
+인보이스를 확정해도 결제는 자동으로 시작되지 않습니다. 확정한 뒤 인보이스마다 결제를 요청해야 합니다.
+</Warning>
+
+{/* 확인 필요: 확정 뒤 자동 첫 결제 없음 */}
+첫 결제는 콘솔의 고객별 수납 화면에서 요청하거나, admin 권한 API 키로 `POST /v1/invoices/{id}/payment-attempts`를 부릅니다. 인보이스가 자동으로 확정된 경우에도 같습니다. MeterEngine이 스스로 하는 결제 작업은 도입사가 한 번 요청한 결제를 이어서 처리하는 것뿐입니다. [결제 연동 한눈에 보기](/payments/overview)
+
+## 시작하기 전에
+
+<Check>지금 업무 환경에 토스페이먼츠 키를 저장했습니다. [토스페이먼츠 상점 준비와 키 저장](/payments/toss-setup)</Check>
+<Check>결제할 고객이 지금 결제 모드로 카드를 등록했습니다. [고객 카드 등록 링크](/payments/card-registration)</Check>
+<Check>결제할 달의 인보이스를 확정했습니다. [인보이스 수동 확정](/billing/finalize-invoices)</Check>
+
+결제 금액은 인보이스의 `total_amount`(세금 포함)입니다. 청구 예정액은 세금을 뺀 공급가액이고, 결제는 세금을 포함한 확정 금액으로 합니다. [예정액, 확정액, 수납액](/concepts/amounts)
+
+## 인보이스 id 찾기
+
+결제는 인보이스 단위로 요청합니다. read 권한 API 키로 `GET /v1/invoices?month=YYYY-MM`을 부르면 그 청구 월의 확정 인보이스가 고객마다 한 줄씩 나오고, 각 항목의 `id`가 인보이스 id입니다. `customer_id`를 함께 주면 그 고객의 인보이스만 나옵니다.
+
+```bash
+curl "https://meterengine.com/v1/invoices?month=2026-10&customer_id=3f2b8c1e-5d4a-4e6f-9a7b-1c2d3e4f5a6b" \
+  -H "Authorization: Bearer me_test_xxxxxxxx"
+```
+
+## 결제 요청
+
+<Tabs>
+  <Tab title="콘솔">
+    <Steps>
+      <Step title="수납과 취소 화면을 연다">
+        왼쪽 메뉴 '사용량에서 수납까지'에서 '수납과 취소'를 열고, 결제할 달을 고릅니다.
+      </Step>
+      <Step title="고객을 고른다">
+        고객 이름을 누르면 그 인보이스의 수납 화면이 열립니다. '현재 결제 상태'에 결제 모드와 수납 상태가 보입니다.
+      </Step>
+      <Step title="결제를 요청한다">
+        '등록 카드로 결제'를 누르고, 열린 창에서 결제 모드와 금액, 카드를 확인한 뒤 '등록 카드로 결제'를 한 번 더 누릅니다. 이전 결제가 실패한 인보이스에는 같은 자리에 '결제 다시 시도'가 나옵니다. admin(전체 관리) 권한이 필요합니다.
+      </Step>
+    </Steps>
+
+    결제 버튼은 수납 상태가 '결제 전'이거나 '결제 실패'일 때만 나옵니다. 등록 카드가 없으면 버튼 대신 '카드 등록 링크 만들기'가, 토스페이먼츠 키가 없으면 '설정에서 토스페이먼츠 키 저장' 링크가 나옵니다.
+  </Tab>
+  <Tab title="API">
+    admin 권한 API 키로 부릅니다. 본문은 보내지 않습니다.
+
+    <CodeGroup>
+    ```bash curl
+    curl -X POST https://meterengine.com/v1/invoices/9b1d7f3a-2c4e-4a6b-8d0f-1e3a5c7b9d2f/payment-attempts \
+      -H "Authorization: Bearer me_test_xxxxxxxx" \
+      --max-time 90
+    ```
+
+    ```javascript Node
+    const invoiceId = "9b1d7f3a-2c4e-4a6b-8d0f-1e3a5c7b9d2f";
+    const response = await fetch(
+      `https://meterengine.com/v1/invoices/${invoiceId}/payment-attempts`,
+      {
+        method: "POST",
+        headers: { Authorization: "Bearer me_test_xxxxxxxx" },
+        signal: AbortSignal.timeout(90_000),
+      },
+    );
+    const attempt = await response.json();
+    if (response.status === 201) {
+      // attempt.status는 done, failed, pending 중 하나다
+    } else {
+      // attempt.code로 분기한다
+    }
+    ```
+    </CodeGroup>
+  </Tab>
+</Tabs>
+
+<Warning>
+결제 요청에는 멱등 키(`Idempotency-Key`)가 없습니다. 응답을 받지 못했거나 시간이 초과됐으면 같은 요청을 바로 다시 보내지 말고, 먼저 `GET /v1/invoices/{id}/payment-attempts`로 결제 시도가 생겼는지 확인하세요. MeterEngine은 결제 중이거나 결제된 시도가 있는 인보이스의 새 결제를 `409 invoice_already_paid`로 막지만, 결과를 확인하는 것이 먼저입니다.
+</Warning>
+
+결제 요청은 토스페이먼츠의 승인 응답을 기다렸다가 답하므로 길게는 1분이 넘게 걸릴 수 있습니다. HTTP 클라이언트의 대기 시간을 넉넉히 잡으세요. 위 예시는 90초입니다. 대기 시간이 지나거나 연결이 끊기면 위 경고대로 결제 시도 목록부터 확인합니다.
+
+## 응답 읽기
+
+결제 시도가 만들어지면 결과와 관계없이 `201`입니다. 결과는 본문의 `status`로 구분합니다.
+
+```json 응답 201 (승인)
+{
+  "id": "5e8a2c4d-6f1b-4d3e-a7c9-0b2d4f6a8c1e",
+  "invoice_id": "9b1d7f3a-2c4e-4a6b-8d0f-1e3a5c7b9d2f",
+  "mode": "test",
+  "status": "done",
+  "amount": 13750,
+  "payment_key": "tviva20261105103002Ab1c2",
+  "failure_code": null,
+  "failure_message": null,
+  "requested_at": "2026-11-05T10:30:00+09:00",
+  "completed_at": "2026-11-05T10:30:02+09:00"
+}
+```
+
+<ResponseField name="id" type="string">
+  결제 시도 id(UUID)입니다. 토스페이먼츠에는 이 값이 주문번호(orderId)로 기록됩니다.
+</ResponseField>
+<ResponseField name="status" type="string">
+  `done`(승인), `failed`(거절), `pending`(결과 확인 중) 중 하나입니다.
+</ResponseField>
+<ResponseField name="amount" type="integer">
+  청구한 금액(원)입니다. 인보이스의 `total_amount`와 같습니다.
+</ResponseField>
+<ResponseField name="payment_key" type="string">
+  토스페이먼츠가 승인한 결제의 키입니다. `done`일 때만 있습니다.
+</ResponseField>
+<ResponseField name="failure_code" type="string">
+  `failed`일 때만 있습니다. 토스페이먼츠의 승인 거절 코드, 주문 조회로 확인한 토스페이먼츠 결제 상태(`ABORTED`, `EXPIRED`), 또는 MeterEngine이 정한 값입니다.
+  <Expandable title="MeterEngine이 정한 값">
+    - `NOT_FOUND_PAYMENT`: 결제를 요청하고 10분이 지나도 토스페이먼츠에 그 주문이 없습니다. 토스페이먼츠의 거절이 아니라 MeterEngine의 판정입니다.
+    - `HTTP_<상태>`: 토스페이먼츠 거절 응답에 코드가 없을 때 그 HTTP 상태입니다.
+    - `toss_payments_credential_missing`, `payment_method_missing`: 토스페이먼츠를 부르기 직전에 키나 카드가 없었습니다.
+  </Expandable>
+</ResponseField>
+<ResponseField name="failure_message" type="string">
+  `failed`일 때만 있습니다. 토스페이먼츠의 거절 문구이거나 MeterEngine 오류 문구입니다.
+</ResponseField>
+<ResponseField name="requested_at" type="string">
+  요청 시각(KST)입니다. `completed_at`은 결과가 정해진 시각이며 `pending`이면 `null`입니다.
+</ResponseField>
+
+| status | 뜻 | 할 일 |
+| --- | --- | --- |
+| `done` | 토스페이먼츠가 승인했습니다. | 끝났습니다. 같은 인보이스는 다시 결제할 수 없습니다. |
+| `failed` | 토스페이먼츠가 거절했거나 결제를 시작하지 못했습니다. | `failure_code`를 봅니다. 조건에 맞으면 MeterEngine이 자동으로 다시 시도합니다. [결제 실패와 재시도](/payments/retries) |
+| `pending` | 토스페이먼츠 응답으로 결과를 확인하지 못했습니다. | 다시 요청하지 말고 기다립니다. 아래 절을 보세요. |
+
+토스페이먼츠 상점관리자에서 이 결제를 찾을 때는 주문번호(결제 시도 `id`), 주문명(`<청구 월> 사용료`, 예: `2026-10 사용료`), 고객 식별값(고객 id)으로 찾습니다.
+
+## pending은 실패가 아니다
+
+`pending`은 토스페이먼츠가 승인했는지 아직 모르는 상태입니다. 승인됐을 수도 있으므로 실패로 보고 다시 결제하면 이중 청구가 될 수 있습니다.
+
+- MeterEngine은 요청하고 2분이 지난 `pending` 시도를 1분마다 토스페이먼츠에 다시 조회해 `done`이나 `failed`로 바꿉니다. 토스페이먼츠 웹훅을 등록했다면 그보다 먼저 반영될 수 있습니다.
+- 요청하고 10분이 지나도 토스페이먼츠에 그 주문이 없으면 `failed`(`failure_code`가 `NOT_FOUND_PAYMENT`)로 끝냅니다.
+- {/* 확인 필요: 문의 경로(GitHub 이슈) */}주기적으로 다시 조회하는 것은 요청하고 7일까지입니다. 7일이 지나도 `pending`이면 MeterEngine은 더 조회하지 않습니다. 토스페이먼츠 상점관리자에서 주문번호로 결제 여부를 확인하세요. 처리가 필요하면 [MeterEngine 소개](/index)의 문의 방법으로 결제 시도 `id`를 알려 주세요.
+
+`pending` 시도가 있는 동안 같은 인보이스에 새 결제를 요청하면 `409 invoice_already_paid`로 거절됩니다. 콘솔에서는 "요청을 접수했습니다. 결과를 확인 중이므로 다시 청구하지 말고 상태를 새로고침하세요."라는 안내가 나오고, 수납 상태가 '결과 확인 중'으로 보입니다.
+
+## 거절되는 요청
+
+결제 시도를 만들지 않고 거절하면 `code`와 `message`가 담긴 오류 응답이 옵니다. `code`로 분기하세요. 오류 형식은 [오류 응답과 X-Request-ID](/api-basics/errors)에 있습니다.
+
+```json 응답 409
+{
+  "code": "invoice_already_paid",
+  "message": "이미 결제했거나 결제 중인 인보이스입니다"
+}
+```
+
+| 상태 | code | 뜻 | 할 일 |
+| --- | --- | --- | --- |
+| 409 | `invoice_already_paid` | 이 결제 모드로 결제 중(`pending`)이거나 결제된(`done`) 시도가 이미 있습니다. | 결제 시도 목록을 조회합니다. `pending`이면 기다립니다. |
+| 409 | `payment_result_unconfirmed` | 이전 시도가 `NOT_FOUND_PAYMENT`로 끝났는데, 그 주문이 청구되지 않았음을 토스페이먼츠에서 확인하지 못했습니다. 이중 청구를 막으려고 새 결제를 만들지 않습니다. 그 시도가 끝난 지 7일이 지났으면 더 확인하지 않으므로 이 거절이 계속됩니다. | 토스페이먼츠 상점관리자에서 이전 주문번호를 확인합니다. [결제 실패와 재시도](/payments/retries) |
+| 409 | `invoice_amount_zero` | 인보이스의 `total_amount`가 0원입니다. | 결제할 금액이 없습니다. |
+| 409 | `toss_payments_credential_missing` | 지금 결제 모드의 토스페이먼츠 키가 없습니다. | 키를 저장합니다. [토스페이먼츠 상점 준비와 키 저장](/payments/toss-setup) |
+| 409 | `payment_method_missing` | 고객이 지금 결제 모드로 등록한 카드가 없습니다. | 카드 등록 링크를 보냅니다. [고객 카드 등록 링크](/payments/card-registration) |
+| 409 | `payment_mode_mismatch` | API 키의 모드가 결제 모드와 다릅니다. | [테스트 결제와 실결제](/payments/test-and-live) |
+| 400 | `toss_payments_test_code_in_live_mode` | 실제 환경에서 `TossPayments-Test-Code` 헤더를 보냈습니다. | 헤더를 뺍니다. 실패를 재현하려면 테스트 결제에서 이 헤더를 씁니다. [테스트 결제와 실결제](/payments/test-and-live) |
+| 400 | `validation_error` | 경로의 id가 UUID가 아닙니다. | 인보이스 id를 확인합니다. |
+| 404 | `invoice_not_found` | 지금 업무 환경에 그런 인보이스가 없습니다. | 업무 환경과 인보이스 id를 확인합니다. |
+
+## 결과 확인
+
+결제 결과는 아래 방법으로 확인합니다.
+
+**결제 시도 목록.** read 권한 API 키로 `GET /v1/invoices/{id}/payment-attempts`를 부르면 그 인보이스의 결제 시도가 요청 시각이 늦은 것부터 나옵니다. 모든 결제 모드의 시도가 함께 나오니 `mode`를 같이 보세요.
+
+```json 응답 200
+{
+  "payment_attempts": [
+    {
+      "id": "5e8a2c4d-6f1b-4d3e-a7c9-0b2d4f6a8c1e",
+      "invoice_id": "9b1d7f3a-2c4e-4a6b-8d0f-1e3a5c7b9d2f",
+      "mode": "test",
+      "status": "done",
+      "amount": 13750,
+      "payment_key": "tviva20261105103002Ab1c2",
+      "failure_code": null,
+      "failure_message": null,
+      "requested_at": "2026-11-05T10:30:00+09:00",
+      "completed_at": "2026-11-05T10:30:02+09:00"
+    }
+  ]
+}
+```
+
+**수납 상태.** read 권한 API 키로 `GET /v1/invoice-payments?month=YYYY-MM`을 부르면 인보이스마다 지금 결제 모드의 수납 상태가 한 줄씩 나옵니다. `customer_id`로 좁힐 수 있습니다. 콘솔 '수납과 취소' 화면의 '수납 상태' 열과 같은 값입니다.
+
+```json 응답 200
+{
+  "invoice_payments": [
+    {
+      "invoice_id": "9b1d7f3a-2c4e-4a6b-8d0f-1e3a5c7b9d2f",
+      "status": "paid",
+      "mode": "test",
+      "amount": 13750,
+      "canceled_amount": 0,
+      "attempt_count": 1,
+      "last_failure_code": null,
+      "next_retry_at": null,
+      "completed_at": "2026-11-05T10:30:02+09:00"
+    }
+  ]
+}
+```
+
+수납 상태(`status`)는 지금 결제 모드에서 가장 늦게 요청한 시도로 정합니다. 승인됐으면 `paid`(수납 완료), 실패했으면 `failed`(결제 실패)이고, 이때 `last_failure_code`에 실패 코드가, 자동 재시도 예정이면 `next_retry_at`에 그 시각이 있습니다. 상태 값 전체와 콘솔 표기는 [수납 상태와 대사 확인](/payments/reconciliation)에 있습니다.
+
+{/* 확인 필요: 웹훅 data 공개 형태와 확정 통보 없음 */}
+결제 결과는 MeterEngine 통보(`payment_succeeded`, `payment_failed`)로도 받을 수 있습니다. 통보는 `type`으로 분기하고 모르는 필드는 무시하세요. 실패 사유는 통보에 실리지 않으니 결제 시도 목록이나 수납 상태로 확인합니다. [웹훅 이벤트 유형과 data](/webhooks/events)
+
+## 다음 단계
+
+<CardGroup cols={2}>
+  <Card title="결제 실패와 재시도" href="/payments/retries">
+    자동 재시도 조건과 다시 하지 않는 실패
+  </Card>
+  <Card title="결제 취소" href="/payments/cancellations">
+    승인된 결제의 전부 또는 일부 취소
+  </Card>
+  <Card title="고객에게 인보이스 보여 주기" href="/payments/invoice-links">
+    인보이스 조회 링크 만들기와 전달
+  </Card>
+  <Card title="수납 상태와 대사 확인" href="/payments/reconciliation">
+    토스페이먼츠 기록과 맞춰 보기
+  </Card>
+</CardGroup>
