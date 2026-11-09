@@ -23,7 +23,7 @@ run "server_reads_only_listed_parameters" {
   assert {
     condition = toset(jsondecode(aws_iam_role_policy.monitoring.policy).Statement[0].Resource) == toset([
       for name in concat(local.monitoring_parameter_names, local.environment_parameter_names) : "arn:aws:ssm:ap-northeast-2:928618307647:parameter${name}"
-    ]) && length(local.environment_parameter_names) == 16
+    ]) && length(local.environment_parameter_names) == 20
     error_message = "The server reads exactly the names in parameters.json."
   }
   assert {

@@ -13,11 +13,7 @@ import sys
 
 AWS_REGION = "ap-northeast-2"
 SERVICE_ENVIRONMENTS = ("staging", "production")
-SUT_ENVIRONMENTS = ("test-storage",)
-# 이 커밋의 compose는 Caddy가 없어 HTTPS를 Caddy에 맡기는 서버에서는 뜨지 못한다.
-UNSUPPORTED_ENVIRONMENTS = {
-    "test-sjpark": "test-sjpark는 HTTPS를 서버의 Caddy가 맡는다. Caddy가 있는 마지막 릴리스 커밋으로 배포한다",
-}
+SUT_ENVIRONMENTS = ("test-storage", "test-sjpark-m7g", "test-sjpark-t4g")
 PROFILES = {"agents"}
 FIELDS = {"autoscaling_group_name", "database_identifier", "parameter_path", "site_domain", "site_aliases", "compose_profiles",
           "image_repository_prefix", "backend_mem_limit", "backend_max_ram_percentage"}
@@ -26,8 +22,6 @@ IMDS = "http://169.254.169.254/latest"
 
 
 def load_target(name: str, directory: Path) -> dict:
-    if name in UNSUPPORTED_ENVIRONMENTS:
-        raise ValueError(UNSUPPORTED_ENVIRONMENTS[name])
     if name not in (*SERVICE_ENVIRONMENTS, *SUT_ENVIRONMENTS):
         raise ValueError(f"환경 이름은 {', '.join((*SERVICE_ENVIRONMENTS, *SUT_ENVIRONMENTS))} 중 하나여야 한다: {name}")
     target = json.loads((directory / f"{name}.json").read_text())

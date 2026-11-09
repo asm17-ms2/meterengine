@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # sut/scripts의 스크립트가 source 한다. macOS 기본 bash 3.2에서 돌아야 하므로 bash 4 문법을 쓰지 않는다.
-# tf_out이 읽는 TF_DIR은 부르는 스크립트가 정한다.
+# tf_out이 읽는 TF_DIR은 부르는 스크립트가 target.sh의 select_target으로 정한다.
 
 set -euo pipefail
 
@@ -31,6 +31,8 @@ readonly HTTP_OK=200
 readonly DB_USABLE_STATUSES="available backing-up storage-optimization"
 readonly DB_USABLE_WAIT_LIMIT_SECONDS=1800
 readonly DB_USABLE_POLL_INTERVAL_SECONDS=30
+readonly ASG_EMPTY_WAIT_LIMIT_SECONDS=900
+readonly ASG_POLL_INTERVAL_SECONDS=15
 
 # terraform은 ~/.local/bin에 있고, 비대화형 셸의 PATH에는 빠져 있을 수 있다.
 if ! command -v terraform >/dev/null 2>&1 && [ -x "$HOME/.local/bin/terraform" ]; then
@@ -78,87 +80,45 @@ tf_out() {
 	printf '%s' "$value"
 }
 
-ec2_state() {
-	local instance_id="$1"
-	aws ec2 describe-instances \
-		--instance-ids "$instance_id" \
-		--query 'Reservations[0].Instances[0].State.Name' \
-		--output text || die "EC2 $instance_id 상태를 읽지 못했다"
+# 오토스케일링 그룹에서 일하는(InService) 서버 ID를 한 줄에 하나씩 찍는다. 없으면 아무것도 찍지 않는다.
+asg_in_service_instances() {
+	local asg_name="$1" instances
+	instances=$(aws autoscaling describe-auto-scaling-groups \
+		--auto-scaling-group-names "$asg_name" \
+		--query "AutoScalingGroups[0].Instances[?LifecycleState=='InService'].InstanceId" \
+		--output text) || die "오토스케일링 그룹 $asg_name 을 읽지 못했다"
+	[ "$instances" != None ] || die "오토스케일링 그룹 $asg_name 이 없다"
+	local instance
+	for instance in $instances; do
+		printf '%s\n' "$instance"
+	done
 }
 
-# 중지 중인 인스턴스는 start-instances가 거절하므로 중지가 끝날 때까지 먼저 기다린다.
-start_ec2_instance() {
-	local instance_id="$1" state
-	state=$(ec2_state "$instance_id") || exit 1
-	case "$state" in
-	running | pending)
-		log "EC2 $instance_id 는 이미 $state 라 시작 요청을 건너뛴다"
-		;;
-	stopping | stopped)
-		if [ "$state" = stopping ]; then
-			log "EC2 $instance_id 가 멈출 때까지 기다린다"
-			aws ec2 wait instance-stopped --instance-ids "$instance_id" ||
-				die "EC2 $instance_id 가 stopped 가 되지 않았다"
+require_in_service_instances() {
+	local asg_name="$1" instances
+	instances=$(asg_in_service_instances "$asg_name") || exit 1
+	[ -n "$instances" ] ||
+		die "오토스케일링 그룹 $asg_name 에 일하는 서버가 없다. sut-deploy.sh로 버전을 기록한 뒤 terraform -chdir=$TF_DIR apply -var asg_min_size=1 -var asg_max_size=1 로 띄운다"
+	printf '%s\n' "$instances"
+}
+
+# 종료 중인 서버까지 다 빠질 때까지 기다린다.
+wait_asg_empty() {
+	local asg_name="$1" count=""
+	local deadline=$(($(date +%s) + ASG_EMPTY_WAIT_LIMIT_SECONDS))
+	while :; do
+		count=$(aws autoscaling describe-auto-scaling-groups \
+			--auto-scaling-group-names "$asg_name" \
+			--query 'length(AutoScalingGroups[0].Instances)' \
+			--output text) || die "오토스케일링 그룹 $asg_name 을 읽지 못했다"
+		if [ "$count" = 0 ]; then
+			log "오토스케일링 그룹 $asg_name 에 서버가 없다"
+			return 0
 		fi
-		aws ec2 start-instances --instance-ids "$instance_id" >/dev/null ||
-			die "EC2 $instance_id 시작 요청이 실패했다"
-		log "EC2 $instance_id 시작 요청"
-		;;
-	*)
-		die "EC2 $instance_id 상태가 $state 라 시작할 수 없다"
-		;;
-	esac
-	aws ec2 wait instance-running --instance-ids "$instance_id" ||
-		die "EC2 $instance_id 가 running 이 되지 않았다"
-	log "EC2 $instance_id 가 running 이다"
-}
-
-# 켜지는 중인 인스턴스는 stop-instances가 거절할 수 있으므로 running이 될 때까지 먼저 기다린다.
-stop_ec2_instance() {
-	local instance_id="$1" state
-	state=$(ec2_state "$instance_id") || exit 1
-	case "$state" in
-	stopped)
-		log "EC2 $instance_id 는 이미 stopped 라 건너뛴다"
-		return 0
-		;;
-	stopping)
-		log "EC2 $instance_id 가 이미 중지 중이다"
-		;;
-	running | pending)
-		if [ "$state" = pending ]; then
-			log "EC2 $instance_id 가 running 이 될 때까지 기다린다"
-			aws ec2 wait instance-running --instance-ids "$instance_id" ||
-				die "EC2 $instance_id 가 running 이 되지 않았다"
-		fi
-		aws ec2 stop-instances --instance-ids "$instance_id" >/dev/null ||
-			die "EC2 $instance_id 중지 요청이 실패했다"
-		log "EC2 $instance_id 중지 요청"
-		;;
-	*)
-		die "EC2 $instance_id 상태가 $state 라 멈출 수 없다"
-		;;
-	esac
-	aws ec2 wait instance-stopped --instance-ids "$instance_id" ||
-		die "EC2 $instance_id 가 stopped 가 되지 않았다"
-	log "EC2 $instance_id 가 stopped 다"
-}
-
-# pending은 곧 running이 되므로 통과시키고, 뒤따르는 wait_ssm_online이 기다린다.
-require_ec2_started() {
-	local instance_id="$1" state
-	state=$(ec2_state "$instance_id") || exit 1
-	case "$state" in
-	running | pending)
-		log "EC2 $instance_id 가 $state 다"
-		;;
-	stopped | stopping)
-		die "EC2 $instance_id 상태가 $state 다. sut-start.sh 먼저 실행한다"
-		;;
-	*)
-		die "EC2 $instance_id 상태가 $state 다"
-		;;
-	esac
+		[ "$(date +%s)" -lt "$deadline" ] ||
+			die "오토스케일링 그룹 $asg_name 의 서버가 ${ASG_EMPTY_WAIT_LIMIT_SECONDS}초 안에 다 빠지지 않았다(남은 서버: $count대)"
+		sleep "$ASG_POLL_INTERVAL_SECONDS"
+	done
 }
 
 rds_status() {
@@ -191,7 +151,7 @@ require_db_usable() {
 	fi
 	case "$db_status" in
 	stopped | stopping | starting)
-		die "RDS $db_identifier 상태가 $db_status 다. sut-start.sh 먼저 실행한다"
+		die "RDS $db_identifier 상태가 $db_status 다. sut-start.sh ${TF_DIR##*/} 먼저 실행한다"
 		;;
 	*)
 		die "RDS $db_identifier 상태가 $db_status 다. 쓸 수 있는 상태($DB_USABLE_STATUSES)가 되면 다시 실행한다"

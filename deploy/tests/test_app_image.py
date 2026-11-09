@@ -18,7 +18,8 @@ COMPOSE_INSTALL_WORDS = ("docker-compose-linux-aarch64", "sha256sum --check", "i
 COMPOSE_PLUGIN = "/usr/libexec/docker/cli-plugins/docker-compose"
 FLEET_IMAGE_SETTINGS = ((ROOT / "deploy/terraform/staging/main.tf", "module", "app_fleet", "ami_id"),
                         (ROOT / "deploy/terraform/production/main.tf", "module", "app_fleet", "ami_id"),
-                        (ROOT / "measurements/test-storage/sut/terraform/variables.tf", "variable", "ami_id", "default"))
+                        (ROOT / "measurements/test-storage/sut/terraform/variables.tf", "variable", "ami_id", "default"),
+                        (ROOT / "measurements/test-sjpark/sut/module/variables.tf", "variable", "ami_id", "default"))
 BUILD = MODULE / "image/build-app-image.sh"
 BASE_IMAGE = "ami-0f4109eb491b0476f"
 SOURCE_COMMIT = "c" * 40

@@ -11,13 +11,13 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
 | staging | develop 머지 | staging.meterengine.com | agents |
 | production | main 머지 | meterengine.com | agents |
 | test-storage | `sut-deploy.sh`가 `rollout.sh`를 부른다 | test-storage.meterengine.com | agents |
+| test-sjpark-m7g, test-sjpark-t4g | `sut-deploy.sh <사양>`이 `rollout.sh`를 부른다 | test-sjpark-<사양>.meterengine.com | agents |
 
 | 프로필 | 서비스 |
 | --- | --- |
 | 없음(항상) | backend, frontend |
 | agents | node-exporter, cAdvisor |
 
-- test-sjpark는 HTTPS를 서버의 Caddy가 맡아 이 구성으로는 뜨지 않는다. `environment.py`가 이유와 함께 거절하고, `sut-deploy.sh`는 Caddy가 있는 커밋만 고른다([`measurements/test-sjpark/README.md`](../measurements/test-sjpark/README.md) "다시 배포").
 - `deploy.sh`는 env 파일과 컨테이너를 건드리기 전에 Parameter Store `db-host`의 RDS 식별자를 환경 파일과 대조하고, staging과 production은 이 서버가 환경 파일의 오토스케일링 그룹(`autoscaling_group_name`) 서버인지도 인스턴스 메타데이터 태그로 대조한다. 다르면 멈춘다.
 
 아래 그림과 항목은 production 기준이다.
@@ -39,7 +39,7 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
 - 앱 서버: 오토스케일링 그룹 `meterengine-production-app`(t4g.medium, arm64, Amazon Linux 2023, ap-northeast-2). "앱 서버 오토스케일링 그룹" 참조.
 - DB: RDS `meterengine-db` (db.t4g.small, PostgreSQL 18, 단일 AZ).
 - staging은 ALB, 오토스케일링 그룹 `meterengine-staging-app`, DB `meterengine-staging-db`(db.t4g.small)를 따로 쓴다.
-- production과 staging은 실사용자가 없는 흐름 확인용이다. t4g 계열은 CPU 크레딧을 넘겨 쓰면 요금이 붙어, 부하 시험은 측정 환경(test-sjpark, test-storage)에서만 한다.
+- production과 staging은 실사용자가 없는 흐름 확인용이다. t4g 계열은 CPU 크레딧을 넘겨 쓰면 요금이 붙어, 부하 시험은 측정 환경(test-sjpark-m7g, test-sjpark-t4g, test-storage)에서만 한다.
 - 이미지: ECR `meterengine-backend`, `meterengine-frontend`(staging은 `meterengine-staging-backend`, `meterengine-staging-frontend`). 태그는 배포한 커밋의 git SHA 40자.
   - 레지스트리 `928618307647.dkr.ecr.ap-northeast-2.amazonaws.com`.
 - 설정과 비밀값: SSM Parameter Store `/meterengine/<환경>/*`.
@@ -447,7 +447,7 @@ aws ssm put-parameter --name /meterengine/production/frontend-api-key --type Sec
 aws ssm get-parameter --name /meterengine/production/operator-password --with-decryption --query Parameter.Value --output text
 ```
 
-- test-sjpark와 test-storage는 각자의 `sut/terraform/parameters.tf`가 같은 이름의 파라미터를 만든다.
+- 측정 환경은 Terraform이 같은 이름의 파라미터를 만든다. test-sjpark 두 환경은 `measurements/test-sjpark/sut/module/parameters.tf`, test-storage는 `measurements/test-storage/sut/terraform/parameters.tf`다.
 
 - 값을 고쳤으면 서버를 다시 띄워야 반영된다. 같은 SHA로 `rollout.sh`를 다시 부르면 서버를 새로 바꾼다("수동 배포").
 - **값에 개행이 섞이면 `deploy.sh`가 배포를 멈춘다.** 콘솔에서 복사할 때 줄바꿈이 딸려 오지 않았는지 본다.
@@ -664,7 +664,6 @@ GRANT pg_monitor TO meterengine_exporter;
 EC2 `meterengine-monitoring` 한 대가 모든 환경의 앱 서버와 DB를 긁는다. 서버와 권한은 `deploy/terraform/monitoring`이 정한다.
 
 - 앱 서버는 태그 `Role=app`인 실행 중 서버를 30초마다 다시 찾아 백엔드 `8080`, node exporter `9100`, cAdvisor `9101`을 긁는다. `Environment` 태그가 `env` 라벨, 인스턴스 ID가 `instance` 라벨이 된다.
-- 측정 환경 test-sjpark은 백엔드가 블루그린이라 호스트에 8080이 없어 node exporter와 cAdvisor만 긁는다.
 - DB는 환경마다 postgres exporter를 하나씩 띄워 `env`를 붙이고, RDS 지표는 DB 식별자에서 `env`를 만든다.
 - 서버나 DB 보안 그룹이 보안 그룹 `meterengine-monitoring`을 들여야 긁힌다. 들이지 않은 대상은 down으로 보인다. 다른 루트가 이 이름으로 찾으므로 이름을 바꾸지 않는다.
 - 들어오는 규칙은 운영 ALB에서 오는 3000 하나다. Prometheus는 서버의 127.0.0.1:9090, Grafana는 3000에 뜬다.

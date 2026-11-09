@@ -55,9 +55,16 @@ class LoadTargetTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "필드"):
             environment.load_target("test-storage", self.directory)
 
-    def test_load_rejects_test_sjpark_with_the_reason(self):
-        with self.assertRaisesRegex(ValueError, "Caddy가 있는 마지막 릴리스 커밋"):
+    def test_load_rejects_removed_test_sjpark(self):
+        with self.assertRaisesRegex(ValueError, "환경 이름은"):
             environment.load_target("test-sjpark", ENVIRONMENTS)
+
+    def test_measurement_targets_match_their_module(self):
+        for name in ("test-sjpark-m7g", "test-sjpark-t4g"):
+            target = environment.load_target(name, ENVIRONMENTS)
+            self.assertEqual(target["database_identifier"], f"meterengine-{name}-db")
+            self.assertEqual(target["parameter_path"], f"/meterengine/{name}")
+            self.assertEqual(target["site_domain"], f"{name}.meterengine.com")
 
     def test_load_rejects_monitoring_profile(self):
         write_target(self.directory, "staging", compose_profiles=["agents", "monitoring"])
@@ -89,7 +96,7 @@ class LoadTargetTest(unittest.TestCase):
                 environment.load_target("test-storage", self.directory)
 
     def test_every_environment_file_loads(self):
-        for name in ("staging", "production", "test-storage"):
+        for name in ("staging", "production", "test-storage", "test-sjpark-m7g", "test-sjpark-t4g"):
             self.assertEqual(environment.load_target(name, ENVIRONMENTS)["parameter_path"], f"/meterengine/{name}")
 
     def test_database_identifier_rejects_full_address(self):
@@ -104,8 +111,9 @@ class LoadTargetTest(unittest.TestCase):
 
     def test_test_storage_measures_develop_images(self):
         prefixes = {name: environment.load_target(name, ENVIRONMENTS)["image_repository_prefix"]
-                    for name in ("staging", "production", "test-storage")}
-        self.assertEqual(prefixes, {"staging": "meterengine-staging", "production": "meterengine", "test-storage": "meterengine-staging"})
+                    for name in ("staging", "production", "test-storage", "test-sjpark-m7g", "test-sjpark-t4g")}
+        self.assertEqual(prefixes, {"staging": "meterengine-staging", "production": "meterengine", "test-storage": "meterengine-staging",
+                                    "test-sjpark-m7g": "meterengine-staging", "test-sjpark-t4g": "meterengine-staging"})
 
     def test_production_memory_fits_the_current_server(self):
         # 서버 메모리에 맞춘 값이다. 사양을 바꾸면 같이 바꾼다.
