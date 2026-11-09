@@ -59,10 +59,10 @@ public class BusinessEnvironmentInterceptor implements HandlerInterceptor {
       } else {
         if (requested != null && !Objects.equals(principal.mode(), requested))
           throw new ForbiddenException(ErrorCode.ENVIRONMENT_MISMATCH);
+        // api_key_environment_mode_fk가 키의 도입사, 환경, 모드 조합을 보장하므로 DB에 다시 묻지 않는다.
         environment =
-            organizationEnvironments.resolve(principal.organizationId(), principal.mode());
-        if (!Objects.equals(environment.environmentId(), principal.environmentId()))
-          throw new ForbiddenException(ErrorCode.ENVIRONMENT_MISMATCH);
+            new BusinessEnvironment(
+                principal.organizationId(), principal.environmentId(), principal.mode());
       }
     } else {
       environment =
