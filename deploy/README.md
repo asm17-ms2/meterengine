@@ -53,7 +53,7 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
 | `deploy.sh` | 서버 한 대에 커밋 하나를 띄운다. 부팅 스크립트와 사람이 서버 안에서 root로 부른다 |
 | `rollout.sh` | 버전 파라미터에 SHA를 쓰고 오토스케일링 그룹 서버를 새로 바꾼다. CD와 사람이 서버 밖에서 부른다 |
 | `environment.py`, `environments/` | 환경별 값과 이 서버가 그 환경의 서버인지 확인 |
-| `server/` | 서버마다 systemd로 도는 10초 수집량 지표 스크립트와 유닛 |
+| `server/` | 서버마다 systemd로 도는 10초 CPU 지표 스크립트와 유닛 |
 | `compose.monitoring.yml`, `monitoring/` | 공용 모니터링 서버의 스택, 수집 설정, 기동 스크립트, 읽을 파라미터 이름 목록. "공용 모니터링 서버" 참조 |
 | `cloudwatch/config.yml` | 공용 모니터링 서버의 cloudwatch exporter가 읽을 RDS와 ALB 지표 목록 |
 | `grafana/provisioning/`, `grafana/dashboards/` | Grafana 데이터 소스, 대시보드, 경보의 정본 |
@@ -155,7 +155,7 @@ deploy/rollout.sh meterengine-<환경>-app /meterengine/<환경>/app-version <gi
 5. 백엔드 `/actuator/health`(DB 포함)가 UP인지 최대 180초 기다리고, 그 컨테이너의 이미지가 새 SHA인지 확인한다.
 6. 프론트 `/health`가 ok를 돌려주는지 최대 90초 기다린다.
 7. agents 프로필이 켜진 환경은 node exporter와 cAdvisor를 띄운다. 실패해도 경고만 남기고 앱은 그대로 둔다.
-8. `deploy/server/ingest-rate.service`를 `meterengine-ingest-rate.service`로 설치하고 enable과 restart를 한다. checkout으로 바뀐 스크립트를 읽게 하려고 매번 다시 띄운다. 실패해도 경고만 남긴다.
+8. `deploy/server/cpu-metric.service`를 `meterengine-cpu-metric.service`로 설치하고 enable과 restart를 한다. checkout으로 바뀐 스크립트를 읽게 하려고 매번 다시 띄운다. 실패해도 경고만 남긴다.
 9. 336시간보다 오래된 이미지를 정리한다.
 
 - 어느 단계든 실패하면 컨테이너 로그나 실패 줄을 찍고 0이 아닌 코드로 끝난다. 부팅 중이면 서버가 healthy가 되지 못해 오토스케일링 그룹이 서버를 바꾼다.
@@ -497,7 +497,7 @@ aws ssm delete-parameter --name /meterengine/<환경>/ingest-warmup-api-key
   - 예열 도입사와 고객이 운영자 도입사 목록과 그 도입사의 고객 목록에 보인다.
   - 인보이스 자동 확정이 켜진 환경에서는 달마다 예열 고객의 `no_events` 확정 시도 행이 남는다. 미터와 단가가 없어 청구는 생기지 않는다.
   - 서버를 바꿀 때마다 백엔드 요청 로그에 `127.0.0.1`에서 온 예열 요청 줄이 요청 수만큼 남는다.
-  - 서버를 바꿀 때마다 요청 지표와 수집 중복 수가 예열 요청만큼 오른다. 확장 지표는 readiness가 200인 칸만 세어 새 서버의 예열이 들어가지 않는다.
+  - 서버를 바꿀 때마다 요청 지표와 수집 중복 수가 예열 요청만큼 오른다. 확장이 보는 10초 CPU 지표는 readiness가 200이 되고 1분 뒤부터 올라가 새 서버의 예열이 들어가지 않는다.
 
 ## Terraform
 
@@ -536,7 +536,7 @@ aws ssm delete-parameter --name /meterengine/<환경>/ingest-warmup-api-key
   1. 버전 파라미터를 읽는다. 40자 커밋 SHA가 아니면 저장소를 받기 전에 실패한다.
   2. 이미지에 docker, git, python3, compose가 있는지 본다. 하나라도 없으면 그 이름을 찍고 실패한다.
   3. 저장소를 그 커밋으로 받는다.
-  4. `deploy/deploy.sh <환경> <SHA>`를 부른다. 앱과 감시 에이전트를 띄우고 수집량 지표 유닛 `meterengine-ingest-rate.service`를 설치한다.
+  4. `deploy/deploy.sh <환경> <SHA>`를 부른다. 앱과 감시 에이전트를 띄우고 CPU 지표 유닛 `meterengine-cpu-metric.service`를 설치한다.
 - 배포는 `rollout.sh`가 버전 파라미터에 SHA를 쓰고 새로 고침(최소 건강 100%, 최대 200%)을 시작하는 것이다. 새 서버가 대상 그룹에서 healthy가 된 뒤 옛 서버가 빠진다.
 - 측정 환경 test-storage도 이 부팅 스크립트를 사본 없이 읽는다. 바꾸면 다음 test-storage apply에서 시작 템플릿 새 버전이 나온다([`measurements/test-storage/README.md`](../measurements/test-storage/README.md)).
 - 최소 대수는 1, 최대는 3이다(`<환경>/main.tf`의 `min_size`).
@@ -545,8 +545,9 @@ aws ssm delete-parameter --name /meterengine/<환경>/ingest-warmup-api-key
 - 최소 대수를 바꾸는 apply는 두 대상 그룹 모두에서 그만큼 healthy가 될 때까지 최대 20분 기다린다. 도메인 레코드는 그 뒤에 바뀐다.
   - 시간이 지나 실패하면 바로 다시 apply하지 않는다. 다시 돌리면 기다리지 않고 지나가 healthy 서버 없이 도메인이 넘어갈 수 있다. "문제 해결"의 `describe-target-health`로 두 대상 그룹에 healthy 서버가 있는지 먼저 본다.
   - 대기는 healthy 수가 최소 대수와 같아야 끝난다. 확장으로 대수가 늘어난 동안 최소 대수를 바꾸면 끝나지 않으니, 원하는 대수가 최소일 때 바꾼다.
-- 확장: 서버마다 `deploy/server/ingest-rate.sh`가 10초마다 (초당 수집 요청 / 원하는 대수)를 `MeterEngine/Scaling`에 올리고, 확장 정책은 그 10초 합을 서버당 초당 450건에 맞춘다. 450은 측정 환경 숫자로 잡은 추정값이다.
-  - 백엔드 readiness가 200인 칸만 센다. 503(기동이나 종료 중)이면 기준값을 버리고, 그 밖의 코드나 답이 없으면 그 칸만 건너뛴다.
+- 확장: 서버마다 `deploy/server/cpu-metric.sh`가 10초마다 (CPU 사용률 / 원하는 대수)를 `MeterEngine/Scaling`의 `CPUUtilizationPerDesiredInstance`에 올리고, 확장 정책은 같은 칸의 합을 60%에 맞춘다. 3칸(30초) 연속 넘으면 늘린다. 서버별 평균을 쓰면 부팅 중인 서버가 빠져 대수를 부풀린다. 60은 test-storage 측정(서버 한 대가 초당 900건에 60%에서 65%)으로 잡은 추정값이다.
+  - 백엔드 readiness가 200이 아니면 올리지 않고, 200이 된 뒤 1분도 올리지 않는다. 기동 직후 JIT로 튀는 CPU가 평균을 올려 한 대 더 띄우지 않게 하려는 것이다.
+  - EC2의 `CPUUtilization`은 1분 값이라 판단에 3분이 걸려 쓰지 않는다.
 - 배포 역할이 버전 파라미터를 쓰고 롤링을 시작한다. Terraform은 버전 값과 원하는 대수를 되돌리지 않는다.
 - CD가 도는 동안 apply하지 않는다. 시작 템플릿이 바뀌는 apply는 롤링을 시작해, 배포가 시작한 롤링과 겹치면 실패한다.
 
@@ -590,7 +591,7 @@ sudo bash /opt/meterengine/measurements/test-storage/sut/scripts/remote/upsert-e
 - `terraform/modules/app_fleet/image/provision.sh`가 이미지에 넣을 것을 정하고, `build-app-image.sh`가 그 스크립트로 이미지를 굽는다.
 - 부팅 스크립트가 쓰는 도구를 늘리면 provision.sh에도 넣고 다시 굽는다.
 - 기본 이미지(Amazon Linux 2023 arm64)에 docker, git, python3, openssl과 compose 플러그인을 더한다. docker는 부팅 때 시작하게 등록만 하고 굽는 동안 띄우지 않는다.
-- 저장소 체크아웃, 수집량 지표 유닛, `/etc/meterengine` 설정은 넣지 않는다. `/etc/machine-id`를 비워 두어 이 이미지로 뜬 서버마다 새 값을 만든다.
+- 저장소 체크아웃, CPU 지표 유닛, `/etc/meterengine` 설정은 넣지 않는다. `/etc/machine-id`를 비워 두어 이 이미지로 뜬 서버마다 새 값을 만든다.
 - 이미지 태그는 `Role=app-image`, `BaseImage`(기본 AMI), `ComposeVersion`, `SourceCommit`(구운 커밋)이다.
 
 #### 굽기
@@ -800,9 +801,9 @@ git -C /opt/meterengine rev-parse HEAD
 curl -s http://127.0.0.1:8080/actuator/health
 curl -s http://127.0.0.1:3000/health
 
-# 10초 수집량 지표
-systemctl status meterengine-ingest-rate.service
-journalctl -u meterengine-ingest-rate.service --since -10min
+# 10초 CPU 지표
+systemctl status meterengine-cpu-metric.service
+journalctl -u meterengine-cpu-metric.service --since -10min
 ```
 
 - compose 명령을 파일 경로로 직접 부를 때는 `--env-file`이 반드시 필요하다.

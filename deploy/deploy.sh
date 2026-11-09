@@ -6,7 +6,7 @@ set -euo pipefail
 # 환경별 값은 deploy/environments/<환경>.json에 있다.
 REPO_DIR=/opt/meterengine
 ENV_FILE=/etc/meterengine/prod.env
-UNIT_FILE=/etc/systemd/system/meterengine-ingest-rate.service
+UNIT_FILE=/etc/systemd/system/meterengine-cpu-metric.service
 
 # 옛 스크립트가 FD 9와 deploy.lock을 다시 열어도 호출부의 잠금은 유지한다.
 LOCK_FILE=/etc/meterengine/deploy-command.lock
@@ -114,16 +114,16 @@ http_ok() {
 	body=$(curl -fsS --max-time 3 "$1" 2>/dev/null) && grep -qi "$2" <<<"$body"
 }
 
-# 10초 수집량 지표는 서버마다 systemd가 띄운다. checkout으로 바뀐 스크립트를 읽도록 매번 다시 띄운다.
+# 10초 CPU 지표는 서버마다 systemd가 띄운다. checkout으로 바뀐 스크립트를 읽도록 매번 다시 띄운다.
 # 앱은 이미 떠 있으므로 실패해도 배포를 멈추지 않는다. 지표가 없으면 확장만 늦어진다.
-install_ingest_rate_unit() {
-	if install -m 0644 "$REPO_DIR/deploy/server/ingest-rate.service" "$UNIT_FILE" &&
+install_cpu_metric_unit() {
+	if install -m 0644 "$REPO_DIR/deploy/server/cpu-metric.service" "$UNIT_FILE" &&
 		systemctl daemon-reload &&
 		systemctl enable --quiet "$(basename "$UNIT_FILE")" &&
 		systemctl restart "$(basename "$UNIT_FILE")"; then
-		log "수집량 지표 유닛을 다시 띄웠다"
+		log "CPU 지표 유닛을 다시 띄웠다"
 	else
-		log "경고: 수집량 지표 유닛을 띄우지 못했다. 확장 정책이 이 서버의 요청을 세지 못한다"
+		log "경고: CPU 지표 유닛을 띄우지 못했다. 확장 정책의 평균에 이 서버가 빠진다"
 	fi
 }
 
@@ -196,7 +196,7 @@ main() {
 		fi
 	fi
 
-	install_ingest_rate_unit
+	install_cpu_metric_unit
 
 	# 지운 이미지도 ECR에 남아 있어 롤백할 수 있다.
 	docker image prune -af --filter "until=336h" >/dev/null 2>&1 || true

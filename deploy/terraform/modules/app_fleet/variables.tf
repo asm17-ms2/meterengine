@@ -68,8 +68,12 @@ variable "min_size" {
   }
 }
 
-variable "scaling_target_requests_per_second" {
+variable "scaling_target_average_cpu_percent" {
   type = number
+  validation {
+    condition     = var.scaling_target_average_cpu_percent > 0 && var.scaling_target_average_cpu_percent < 100
+    error_message = "Average CPU target must be between 0 and 100 percent."
+  }
 }
 
 variable "monitoring_security_group_id" {

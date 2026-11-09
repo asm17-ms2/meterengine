@@ -111,17 +111,16 @@ data "aws_ssm_parameter" "app_version" {
   name = aws_ssm_parameter.app_version.name
 }
 
-# 서버당 초당 600건(한 대 CPU 80% 지점 약 810건보다 낮게)을 넘으면 늘린다. ALB 1분 지표는 늦어 서버가 10초마다 올리는 값을 쓴다.
-# 각 서버가 자기 초당 요청을 원하는 대수로 나눠 올리고 그 합을 본다. 계산식으로 나누면 공급자가 period를 60초로 보내 거절된다.
-resource "aws_autoscaling_policy" "sut_requests" {
-  name                   = "${local.prefix}-requests-per-server"
+# 서버마다 10초마다 (CPU / 원하는 대수)를 올리고(deploy/server/cpu-metric.sh) 같은 칸의 합이 60%를 넘으면 늘린다.
+resource "aws_autoscaling_policy" "sut_average_cpu" {
+  name                   = "${local.prefix}-average-cpu"
   autoscaling_group_name = aws_autoscaling_group.sut.name
   policy_type            = "TargetTrackingScaling"
 
   target_tracking_configuration {
     customized_metric_specification {
       namespace   = "MeterEngine/Scaling"
-      metric_name = "IngestRequestsPerSecondPerDesiredInstance"
+      metric_name = "CPUUtilizationPerDesiredInstance"
       statistic   = "Sum"
       period      = 10
       metric_dimension {
@@ -129,6 +128,6 @@ resource "aws_autoscaling_policy" "sut_requests" {
         value = aws_autoscaling_group.sut.name
       }
     }
-    target_value = 600
+    target_value = 60
   }
 }
