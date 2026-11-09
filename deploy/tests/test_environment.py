@@ -55,7 +55,7 @@ class LoadTargetTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "필드"):
             environment.load_target("test-storage", self.directory)
 
-    def test_load_rejects_test_slo_with_the_reason(self):
+    def test_load_rejects_test_sjpark_with_the_reason(self):
         with self.assertRaisesRegex(ValueError, "Caddy가 있는 마지막 릴리스 커밋"):
             environment.load_target("test-sjpark", ENVIRONMENTS)
 
