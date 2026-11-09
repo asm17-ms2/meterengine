@@ -190,6 +190,7 @@ class ApiKeyScopesIntegrationTest {
     Key expired = create(admin, "read");
     jdbcTemplate.update(
         "UPDATE api_key SET expires_at=now()-interval '1 second' WHERE id=?", expired.id());
+    TestCredentials.refreshApiKeyTable(jdbcTemplate);
     for (Key key : List.of(revoked, expired)) {
       Map<String, Object> before = identity(key.id());
       assertThat(update(admin, key.id(), "[\"admin\"]"))

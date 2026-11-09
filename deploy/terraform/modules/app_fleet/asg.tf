@@ -69,7 +69,7 @@ resource "aws_autoscaling_group" "app" {
   wait_for_elb_capacity     = var.min_size > 0 ? var.min_size : null
   wait_for_capacity_timeout = "20m"
 
-  # 기본 이미지에 설치부터 하는 부팅이라 이미지를 복제한 측정 환경(약 2분)보다 넉넉히 기다린다.
+  # 새 서버가 저장소를 받고 배포를 마칠 때까지 헬스 체크로 바꾸지 않게 넉넉히 기다린다.
   health_check_type         = "ELB"
   health_check_grace_period = 600
   default_instance_warmup   = 180

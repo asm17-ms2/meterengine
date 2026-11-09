@@ -56,10 +56,11 @@ class EventIngestDatabaseOperationIntegrationTest {
         "UPDATE api_key SET environment_id = ? WHERE key_hash = sha256(convert_to(?, 'UTF8'))",
         environmentId,
         TestCredentials.rawKeyOf(authorization));
+    TestCredentials.refreshApiKeyTable(jdbcTemplate);
   }
 
   @Test
-  void 환경_키로_이벤트를_저장하면_인증부터_커밋까지_DB_왕복마다_한_번씩_잰다() {
+  void 환경_키로_이벤트를_저장하면_인증과_도입사_확인은_DB를_읽지_않고_고객_조회부터_커밋까지_왕복마다_한_번씩_잰다() {
     UUID customerId = insertCustomer(environmentId);
     long apiKeySelects = count("select", "api_key");
     long environmentSelects = count("select", "organization_environment");
@@ -70,9 +71,9 @@ class EventIngestDatabaseOperationIntegrationTest {
 
     assertThat(post(customerId)).hasStatusOk();
 
-    assertThat(count("select", "api_key")).isEqualTo(apiKeySelects + 1);
-    assertThat(count("select", "organization_environment")).isEqualTo(environmentSelects + 1);
-    assertThat(count("select", "organization")).isEqualTo(organizationSelects + 1);
+    assertThat(count("select", "api_key")).isEqualTo(apiKeySelects);
+    assertThat(count("select", "organization_environment")).isEqualTo(environmentSelects);
+    assertThat(count("select", "organization")).isEqualTo(organizationSelects);
     assertThat(count("select", "customer")).isEqualTo(customerSelects + 1);
     assertThat(count("insert", "event")).isEqualTo(eventInserts + 1);
     assertThat(count("commit", "event")).isEqualTo(eventCommits + 1);

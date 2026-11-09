@@ -20,6 +20,7 @@ SAMPLE_VALUES = {
     "repository_url": "https://github.com/asm17-ms2/meterengine.git",
 }
 TEMPLATE_REFERENCE = re.compile(r"(?<!\$)\$\{([^}]*)\}")
+IMAGE_TOOL_LOOP = "for tool in "
 
 
 def template_references():
@@ -34,6 +35,11 @@ def boot_template_keys(path):
 def render():
     rendered = TEMPLATE_REFERENCE.sub(lambda match: SAMPLE_VALUES[match.group(1)], TEMPLATE.read_text())
     return rendered.replace("$${", "${").replace("%%{", "%{")
+
+
+def image_tool_checks():
+    script = render()
+    return script[script.index(IMAGE_TOOL_LOOP):script.index("git clone")]
 
 
 class BootTemplateTest(unittest.TestCase):
@@ -57,10 +63,27 @@ class BootTemplateTest(unittest.TestCase):
         result = subprocess.run(["bash", "-n"], input=render(), text=True, capture_output=True)
         self.assertEqual(result.returncode, 0, result.stderr)
 
-    def test_unset_version_stops_before_installing(self):
+    def test_unset_version_stops_before_cloning(self):
         script = render()
-        self.assertLess(script.index("exit 1"), script.index("dnf install"))
+        self.assertLess(script.index("exit 1"), script.index("git clone"))
         self.assertIn('"$version" =~ ^[0-9a-f]{40}$', script)
+
+    def test_boot_installs_nothing(self):
+        script = render()
+        for word in ("dnf", "curl", "install -D"):
+            self.assertNotIn(word, script)
+
+    def test_boot_checks_image_tools_before_cloning(self):
+        script = render()
+        self.assertLess(script.index('"$version" =~'), script.index(IMAGE_TOOL_LOOP))
+        self.assertIn('command -v "$tool"', image_tool_checks())
+        self.assertIn("docker compose version", image_tool_checks())
+
+    def test_missing_image_tool_points_at_the_launch_template_image(self):
+        messages = [line for line in image_tool_checks().splitlines() if line.lstrip().startswith("echo")]
+        self.assertTrue(messages)
+        for message in messages:
+            self.assertIn("image_id", message)
 
 
 if __name__ == "__main__":

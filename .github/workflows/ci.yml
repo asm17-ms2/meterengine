@@ -56,6 +56,7 @@ jobs:
               - 'measurements/*/sut/scripts/remote/upsert-exporter-user.sh'
               - 'measurements/*/sut/terraform/iam.tf'
               - 'measurements/*/sut/terraform/locals.tf'
+              - 'measurements/*/sut/terraform/variables.tf'
               - '.github/workflows/ci.yml'
             rds_auto_stop:
               - 'measurements/terraform/modules/rds-auto-stop/**'

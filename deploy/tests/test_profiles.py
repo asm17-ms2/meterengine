@@ -16,6 +16,8 @@ import environment as deploy_environment  # noqa: E402
 COMPOSE_FILE = Path(__file__).resolve().parents[1] / "compose.prod.yml"
 CORE = {"frontend", "backend"}
 AGENTS = {"node-exporter", "cadvisor"}
+# 예열은 값이 없으면 건너뛰는 선택 기능이라 빈 값을 그대로 넘긴다.
+OPTIONAL_EMPTY = {"INGEST_WARMUP_API_KEY", "INGEST_WARMUP_ORGANIZATION_ID", "INGEST_WARMUP_CUSTOMER_ID"}
 CORE_ENV = {
     "DB_HOST": "db", "DB_PORT": "5432", "DB_NAME": "app", "DB_USERNAME": "owner", "DB_PASSWORD": "secret",
     "CRYPTO_ENCRYPTION_KEY": "key", "OPERATOR_EMAIL": "a@example.invalid", "OPERATOR_PASSWORD": "secret",
@@ -44,7 +46,7 @@ class ProfilesTest(unittest.TestCase):
         self.assertEqual(declared, deploy_environment.PROFILES)
 
     def test_no_value_is_left_optional_for_deploy_to_check(self):
-        self.assertEqual(re.findall(r"\$\{([A-Z0-9_]+):-\}", COMPOSE_FILE.read_text()), [])
+        self.assertEqual(set(re.findall(r"\$\{([A-Z0-9_]+):-\}", COMPOSE_FILE.read_text())) - OPTIONAL_EMPTY, set())
 
     def test_no_profile_lists_core_services(self):
         self.assertEqual(services(), CORE)

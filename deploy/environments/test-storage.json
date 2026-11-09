@@ -4,7 +4,7 @@
   "site_domain": "test-storage.meterengine.com",
   "site_aliases": [],
   "compose_profiles": ["agents"],
-  "image_repository_prefix": "meterengine",
+  "image_repository_prefix": "meterengine-staging",
   "backend_mem_limit": "768m",
   "backend_max_ram_percentage": 50
 }

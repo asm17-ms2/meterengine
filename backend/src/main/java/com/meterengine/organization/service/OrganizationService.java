@@ -7,6 +7,7 @@ import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
 import com.meterengine.global.security.AuthenticatedPrincipal;
 import com.meterengine.global.security.BusinessEnvironmentContext;
+import com.meterengine.global.security.OrganizationStatusChangedEvent;
 import com.meterengine.organization.dto.SupplierResponse;
 import com.meterengine.organization.dto.UpdateSupplierRequest;
 import com.meterengine.organization.entity.Organization;
@@ -14,6 +15,7 @@ import com.meterengine.organization.repository.OrganizationRepository;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,14 +26,17 @@ public class OrganizationService {
   private final OrganizationRepository organizationRepository;
   private final AuditLogService auditLogService;
   private final JdbcTemplate jdbcTemplate;
+  private final ApplicationEventPublisher applicationEventPublisher;
 
   OrganizationService(
       OrganizationRepository organizationRepository,
       AuditLogService auditLogService,
-      JdbcTemplate jdbcTemplate) {
+      JdbcTemplate jdbcTemplate,
+      ApplicationEventPublisher applicationEventPublisher) {
     this.organizationRepository = organizationRepository;
     this.auditLogService = auditLogService;
     this.jdbcTemplate = jdbcTemplate;
+    this.applicationEventPublisher = applicationEventPublisher;
   }
 
   @Transactional(readOnly = true)
@@ -62,6 +67,8 @@ public class OrganizationService {
     }
     String previousStatus = organization.getStatus();
     organization.transitionTo(status);
+    applicationEventPublisher.publishEvent(
+        new OrganizationStatusChangedEvent(organizationId, Organization.ACTIVE.equals(status)));
     auditLogService.record(
         AuditActor.from(principal).withOrganizationId(organizationId),
         "organization_status_updated",

@@ -19,7 +19,7 @@
 | `lib/common.sh` | 스크립트가 같이 쓰는 함수 |
 
 - 자원 이름 접두는 `meterengine-test-storage`, 도메인은 `test-storage.meterengine.com`, 파라미터 경로는 `/meterengine/test-storage`다.
-- 도메인은 ALB를 가리킨다. 앱 서버는 오토스케일링 그룹이 기본 이미지(Amazon Linux 2023 arm64)로 띄우고, 부팅 스크립트가 버전 파라미터 `/meterengine/test-storage/app-version`의 커밋으로 배포한다. 앱과 수집 에이전트(node-exporter, cAdvisor)만 돈다.
+- 도메인은 ALB를 가리킨다. 앱 서버는 오토스케일링 그룹이 staging, production과 같은 미리 구운 앱 서버 이미지로 띄우고, 부팅 스크립트가 버전 파라미터 `/meterengine/test-storage/app-version`의 커밋으로 배포한다. 앱과 수집 에이전트(node-exporter, cAdvisor)만 돈다.
 - 부팅 스크립트는 staging, production과 같은 [`app-user-data.sh.tftpl`](../../deploy/terraform/modules/app_fleet/templates/app-user-data.sh.tftpl)을 사본 없이 읽는다. 그 파일이 바뀌면 다음 apply에서 시작 템플릿이 새 버전이 되고, 떠 있는 서버는 새 서버로 바뀐다. 측정 중에는 apply 하지 않는다.
 - 이 환경에는 모니터링 서버가 없다. 공용 모니터링 서버가 앱 서버와 DB를 긁는다("Grafana" 참고).
 - 매일 04:00(서울)에 RDS가 꺼지고 오토스케일링 그룹은 0대로 내려간다.
@@ -86,9 +86,9 @@ measurements/test-storage/sut/scripts/sut-deploy.sh <SHA 40자>
 [sut-deploy] https://test-storage.meterengine.com/usage -> https://test-storage.meterengine.com/usage 가 200 을 돌려줬다(1회 시도)
 ```
 
-- SHA를 빼면 ECR 두 저장소 모두에 이미지가 있고 `deploy/rollout.sh`가 있는 가장 최근 main 커밋을 쓴다.
-- 저장소는 `deploy/environments/test-storage.json`의 `image_repository_prefix`로 정한다. 지금은 운영 저장소(`meterengine-backend`, `meterengine-frontend`)라 main 릴리스에 들어간 커밋만 잴 수 있다.
-- SUT에는 CD가 없다. main이 바뀌어도 직접 배포할 때까지 그대로다.
+- SHA를 빼면 ECR 두 저장소 모두에 이미지가 있고 `deploy/rollout.sh`가 있는 가장 최근 develop 커밋을 쓴다.
+- 저장소는 `deploy/environments/test-storage.json`의 `image_repository_prefix`로 정한다. staging 저장소(`meterengine-staging-backend`, `-frontend`)라 릴리스 전에 develop 커밋을 잰다. 옛 main 커밋은 이 값을 `meterengine`으로 되돌린 커밋으로 띄운다.
+- SUT에는 CD가 없다. develop이 바뀌어도 직접 배포할 때까지 그대로다.
 - ECR은 태그 이미지를 최근 10개만 남긴다. 같은 SHA로 다시 재려면 이미지가 남아 있는지 먼저 본다.
 
 ```bash
@@ -122,7 +122,7 @@ for tg in backend frontend; do
 done
 ```
 
-- 서버는 기본 이미지에 docker와 레포를 설치하고 배포까지 하므로 `healthy`까지 몇 분 걸린다. 헬스 체크 유예는 600초다. 늦으면 서버의 `/var/log/cloud-init-output.log`를 본다.
+- 서버는 미리 구운 이미지로 떠 레포를 받고 배포까지 마친 뒤에 `healthy`가 된다. 헬스 체크 유예는 600초다. 늦으면 서버의 `/var/log/cloud-init-output.log`를 본다.
 - 켜 둔 동안의 apply에는 모두 `-var asg_min_size=1`을 붙인다. 빼면 최소가 0으로 돌아간다.
 - 끌 때는 `sut-stop.sh`로 최소와 원하는 대수를 0으로 내리고, 서버가 다 빠지면 RDS를 멈춘다. 지우지는 않는다. 최소 0은 Terraform 기본값이라 다음 `-var` 없는 apply와 어긋나지 않는다.
 
@@ -243,6 +243,8 @@ measurements/test-storage/load-generator/scripts/lg-stop.sh
 - `run-ingest-steps.sh`와 `run-fault.sh`는 `API_KEY` 환경변수가 없으면 시작하지 않는다. 대조(`reconcile.sh`)는 키를 쓰지 않는다.
 - test-storage 전용 키를 쓴다. 운영자로 로그인한 세션에서 SUT 도입사에 `ingest`, `read` 스코프 키를 발급한다(`POST /v1/api-keys`, 절차는 [`backend/README.md`](../../backend/README.md#배포-환경의-운영-키-발급)). 원문은 발급 응답에만 나온다.
 - 셸 기록에 남지 않게 아래 실험 명령의 `read`로 입력받는다. 세션을 새로 열면 다시 입력한다.
+- 백엔드 예열 값(`ingest-warmup-api-key`, `ingest-warmup-organization-id`, `ingest-warmup-customer-id`)은 Terraform이 만들지 않는다. 실험 키와 다른 예열 도입사를 [`deploy/README.md`](../../deploy/README.md#수집-경로-예열) "수집 경로 예열" 절차로 만들고 `/meterengine/test-storage/` 아래에 넣은 뒤 `sut-deploy.sh`로 다시 배포한다. 요청 수만 바꿔 다시 잴 때는 `ingest-warmup-requests`를 넣고 다시 배포한다.
+- RDS를 새로 만들면 예열 도입사와 키도 사라진다. 다시 만들어 예열 값을 고칠 때까지 부팅마다 401 WARN이 남고 예열 없이 잰다. 측정 전에 백엔드 로그에 `Ingest warm-up finished` 줄이 있는지 본다.
 
 ## 부하 실험
 

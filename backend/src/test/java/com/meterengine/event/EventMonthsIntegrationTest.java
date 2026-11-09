@@ -147,6 +147,7 @@ class EventMonthsIntegrationTest {
         environment(mode),
         organizationId,
         TestCredentials.rawKeyOf(token));
+    TestCredentials.refreshApiKeyTable(jdbcTemplate);
     return token;
   }
 

@@ -58,6 +58,7 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
 | `cloudwatch/config.yml` | 공용 모니터링 서버의 cloudwatch exporter가 읽을 RDS와 ALB 지표 목록 |
 | `grafana/provisioning/`, `grafana/dashboards/` | Grafana 데이터 소스, 대시보드, 경보의 정본 |
 | `terraform/` | staging, production, 공용 모니터링의 Terraform 루트와 모듈 |
+| `terraform/modules/app_fleet/image/` | 앱 서버 이미지에 넣을 것을 설치하는 스크립트와 그 이미지를 굽는 스크립트. "앱 서버 이미지" 참조 |
 
 - 루트의 `docker-compose.yml`은 로컬 개발용이고 배포 스택과 무관하다.
 - Grafana의 데이터 소스, 대시보드, 경보는 파일이 정본이다. 공용 모니터링 서버의 `start.sh`가 반영한다.
@@ -90,7 +91,7 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
 
 ### 서버 준비
 
-앱 서버는 손으로 셋업하지 않는다. 부팅 스크립트가 설치부터 배포까지 한다("앱 서버 오토스케일링 그룹").
+앱 서버는 손으로 셋업하지 않는다. 미리 구운 이미지로 뜨고 부팅 스크립트가 배포까지 한다("앱 서버 오토스케일링 그룹").
 
 - 부팅 스크립트가 `/etc/meterengine/instance.env`에 `ENVIRONMENT`, `PARAMETER_PATH`, `APP_VERSION_PARAMETER`, `AWS_REGION`을 적는다.
 - `/etc/meterengine/prod.env`는 배포할 때마다 `deploy.sh`가 Parameter Store 값으로 새로 쓴다.
@@ -416,6 +417,9 @@ ALB는 받은 `X-Forwarded-For` 뒤에 접속 주소를 붙이므로 맨 오른�
 | `operator-password` | SecureString | 첫 운영자 비밀번호. 값을 바꾸고 재배포하면 새 비밀번호가 된다 |
 | `meterengine-auth-rate-limit-login-ip-limit`, `-login-account-limit`, `-login-window`, `-signup-ip-limit`, `-signup-account-limit`, `-signup-window` | String | 선택. 로그인과 가입 한도와 구간. 없으면 compose가 백엔드 기본값(100, 10, 5m, 20, 3, 30m)을 넣는다 |
 | `invoice-auto-finalize-enabled` | String | 선택. `true`면 인보이스 자동 확정이 매시 정각에 돈다. 없으면 compose가 `false`를 넣는다. 켜면 첫 정시가 확정 시각이 지난 과거 달을 모두 확정하므로 켜기 전에 팀에 알린다 |
+| `ingest-warmup-api-key` | SecureString | 선택. 백엔드가 기동할 때 수집 경로를 데우는 예열 도입사의 ingest 키 원문. 없으면 예열을 건너뛴다("수집 경로 예열") |
+| `ingest-warmup-organization-id`, `ingest-warmup-customer-id` | String | 선택. 예열 도입사와 예열 고객의 id. 없으면 compose가 빈 값을 넣는다 |
+| `ingest-warmup-requests`, `ingest-warmup-time-limit` | String | 선택. 예열 요청 수와 시간 상한. 없으면 compose가 `1000`, `20s`를 넣는다. 숫자나 기간 형식이 아니면 백엔드가 뜨지 못한다. 시간 상한은 늘리지 않는다. 예열 중에는 readiness가 503이고 ALB는 15초 간격 5번 실패면 빼므로, 컨테이너가 죽고 빠르면 60초 뒤 서버가 교체된다. 스스로 다시 뜨는 데 약 23초, 상한 20초, 마지막 요청 대기 5초를 더하면 약 48초다. 상한은 예열을 시작한 때부터 재므로 다시 뜨는 데 35초를 넘기면 서버가 교체될 수 있다 |
 | `frontend-api-key` | SecureString | 이 버전의 compose는 읽지 않는다. 옛 프론트가 백엔드를 부르던 API 키 원문이고, 옛 버전으로 되돌리는 배포가 요구해 남긴다 |
 | `app-version` | String | 앱 서버가 띄울 커밋 SHA 40자. CD와 `rollout.sh`가 쓰고 서버가 부팅 때 읽는다. Terraform은 자리 값 `unset`만 만들고 되돌리지 않는다. `prod.env`에는 들어가지 않는다 |
 
@@ -447,6 +451,53 @@ aws ssm get-parameter --name /meterengine/production/operator-password --with-de
 
 - 값을 고쳤으면 서버를 다시 띄워야 반영된다. 같은 SHA로 `rollout.sh`를 다시 부르면 서버를 새로 바꾼다("수동 배포").
 - **값에 개행이 섞이면 `deploy.sh`가 배포를 멈춘다.** 콘솔에서 복사할 때 줄바꿈이 딸려 오지 않았는지 본다.
+
+### 수집 경로 예열
+
+새 서버의 백엔드는 readiness를 열기 전에 자기 수집 API를 불러 데운다. 동작은 [`backend/README.md`](../backend/README.md#수집-경로-예열)에 있다. 환경마다 예열 도입사, 고객, ingest 키를 한 번 만들어 Parameter Store에 넣는다. 넣기 전에는 예열 없이 뜬다.
+
+- staging도 이 세 값은 Terraform이 만들지 않고 손으로 넣는다. 키는 비밀값이고 도입사 id와 고객 id는 그 환경 DB에서 만들어야 생긴다.
+
+1. 가입 화면(`https://<호스트>/signup`)에서 도입사 이름을 `MeterEngine 예열 (삭제 금지)`로 가입한다. 비밀번호는 무작위로 만들고 보관하지 않는다.
+2. [`backend/README.md`](../backend/README.md#배포-환경의-운영-키-발급) "배포 환경의 운영 키 발급"의 1, 2단계로 운영자 세션을 열고, 그 도입사를 active로 승인한다.
+3. 같은 절의 3단계로 운영자를 그 도입사에 소속시키고 세션의 도입사를 바꾼다.
+4. 키와 고객을 만들고 Parameter Store에 넣은 뒤 로그아웃한다.
+
+```bash
+# 2. pending 목록에서 예열 도입사 id를 찾아 승인한다
+api "$BASE/v1/organizations?status=pending"
+api -X PUT $BASE/v1/organizations/<도입사 id>/status -d '{"status":"active"}'
+
+# 4. live 모드에 ingest 스코프만 주고 분당 한도는 두지 않는다. 응답의 secret이 원문이다
+api $BASE/v1/api-keys -d '{"label":"수집 경로 예열","mode":"live","scopes":["ingest"]}'
+read -rsp '예열 키: ' WARMUP_KEY && echo
+# 고객은 그 키로 만들어야 키와 같은 live 환경에 들어간다. 응답의 id가 고객 id다
+curl -s $BASE/v1/customers -H @<(printf 'Authorization: Bearer %s\n' "$WARMUP_KEY") \
+  -H 'Content-Type: application/json' -d '{"name":"MeterEngine 예열","external_id":"meterengine-warmup"}'
+aws ssm put-parameter --name /meterengine/<환경>/ingest-warmup-api-key --type SecureString --overwrite --value "$WARMUP_KEY"
+aws ssm put-parameter --name /meterengine/<환경>/ingest-warmup-organization-id --type String --overwrite --value '<도입사 id>'
+aws ssm put-parameter --name /meterengine/<환경>/ingest-warmup-customer-id --type String --overwrite --value '<고객 id>'
+unset WARMUP_KEY
+api -X DELETE $BASE/v1/sessions/current
+unset SESSION
+```
+
+- zsh에서는 4의 `read`를 `read -rs '?예열 키: ' WARMUP_KEY`로 바꾼다.
+
+5. 같은 SHA로 `rollout.sh`를 불러 서버를 바꾼다. 새 서버의 백엔드 로그에 `Ingest warm-up finished: requests=..., elapsed=...ms`가 남는다.
+
+- 끌 때는 `ingest-warmup-api-key`를 지우고 같은 SHA로 `rollout.sh`를 부른다. Parameter Store는 빈 값을 담지 못한다.
+
+```bash
+aws ssm delete-parameter --name /meterengine/<환경>/ingest-warmup-api-key
+```
+
+- 예열 도입사를 정지하면 예열도 멈춘다.
+- 받아들인 부작용
+  - 예열 도입사와 고객이 운영자 도입사 목록과 그 도입사의 고객 목록에 보인다.
+  - 인보이스 자동 확정이 켜진 환경에서는 달마다 예열 고객의 `no_events` 확정 시도 행이 남는다. 미터와 단가가 없어 청구는 생기지 않는다.
+  - 서버를 바꿀 때마다 백엔드 요청 로그에 `127.0.0.1`에서 온 예열 요청 줄이 요청 수만큼 남는다.
+  - 서버를 바꿀 때마다 요청 지표와 수집 중복 수가 예열 요청만큼 오른다. 확장 지표는 readiness가 200인 칸만 세어 새 서버의 예열이 들어가지 않는다.
 
 ## Terraform
 
@@ -481,13 +532,13 @@ aws ssm get-parameter --name /meterengine/production/operator-password --with-de
 
 - ALB는 `/v1/*`를 backend(8080)로, 나머지를 frontend(3000)로 보낸다. 도메인이 아닌 Host는 404, http는 https로 301, production의 www는 apex로 301이다.
   - idle 130초, X-Forwarded-For는 append, 접속 로그는 끈다(토큰이 실린 URL이 남는다). production ALB는 삭제 보호가 켜져 있다.
-- 서버는 기본 이미지로 뜨고 부팅 스크립트(`modules/app_fleet/templates/app-user-data.sh.tftpl`)가 배포까지 한다.
-  1. 버전 파라미터를 읽는다. 40자 커밋 SHA가 아니면 설치 전에 실패한다.
-  2. docker, git, compose를 설치하고 저장소를 그 커밋으로 받는다.
-  3. `deploy/deploy.sh <환경> <SHA>`를 부른다. 앱과 감시 에이전트를 띄우고 수집량 지표 유닛 `meterengine-ingest-rate.service`를 설치한다.
+- 서버는 미리 구운 앱 서버 이미지("앱 서버 이미지")로 뜨고 부팅 스크립트(`modules/app_fleet/templates/app-user-data.sh.tftpl`)가 배포까지 한다. 부팅 때는 패키지와 도구를 설치하지 않는다.
+  1. 버전 파라미터를 읽는다. 40자 커밋 SHA가 아니면 저장소를 받기 전에 실패한다.
+  2. 이미지에 docker, git, python3, compose가 있는지 본다. 하나라도 없으면 그 이름을 찍고 실패한다.
+  3. 저장소를 그 커밋으로 받는다.
+  4. `deploy/deploy.sh <환경> <SHA>`를 부른다. 앱과 감시 에이전트를 띄우고 수집량 지표 유닛 `meterengine-ingest-rate.service`를 설치한다.
 - 배포는 `rollout.sh`가 버전 파라미터에 SHA를 쓰고 새로 고침(최소 건강 100%, 최대 200%)을 시작하는 것이다. 새 서버가 대상 그룹에서 healthy가 된 뒤 옛 서버가 빠진다.
 - 측정 환경 test-storage도 이 부팅 스크립트를 사본 없이 읽는다. 바꾸면 다음 test-storage apply에서 시작 템플릿 새 버전이 나온다([`measurements/test-storage/README.md`](../measurements/test-storage/README.md)).
-- 부팅이 느리거나 설치 실패가 잦으면 릴리스마다 이미지를 미리 굽는 방식으로 옮긴다. 그때는 시작 템플릿의 image_id와 부팅 스크립트만 바뀌고 롤링, 버전 파라미터, 확장 정책은 그대로다.
 - 최소 대수는 1, 최대는 3이다(`<환경>/main.tf`의 `min_size`).
   - 최소 대수가 1 이상이면 버전 파라미터가 40자 SHA인지 plan에서 본다. `unset`이면 plan이 멈춘다.
   - 형식만 보므로, 그 커밋이 Caddy를 걷어낸 커밋인지는 apply 전에 `git cat-file -e <값>:deploy/caddy/Caddyfile`가 실패하는지로 본다. Caddy가 있는 커밋이면 서버가 ALB 헬스 체크를 통과하지 못해 교체만 되풀이한다.
@@ -495,6 +546,7 @@ aws ssm get-parameter --name /meterengine/production/operator-password --with-de
   - 시간이 지나 실패하면 바로 다시 apply하지 않는다. 다시 돌리면 기다리지 않고 지나가 healthy 서버 없이 도메인이 넘어갈 수 있다. "문제 해결"의 `describe-target-health`로 두 대상 그룹에 healthy 서버가 있는지 먼저 본다.
   - 대기는 healthy 수가 최소 대수와 같아야 끝난다. 확장으로 대수가 늘어난 동안 최소 대수를 바꾸면 끝나지 않으니, 원하는 대수가 최소일 때 바꾼다.
 - 확장: 서버마다 `deploy/server/ingest-rate.sh`가 10초마다 (초당 수집 요청 / 원하는 대수)를 `MeterEngine/Scaling`에 올리고, 확장 정책은 그 10초 합을 서버당 초당 450건에 맞춘다. 450은 측정 환경 숫자로 잡은 추정값이다.
+  - 백엔드 readiness가 200인 칸만 센다. 503(기동이나 종료 중)이면 기준값을 버리고, 그 밖의 코드나 답이 없으면 그 칸만 건너뛴다.
 - 배포 역할이 버전 파라미터를 쓰고 롤링을 시작한다. Terraform은 버전 값과 원하는 대수를 되돌리지 않는다.
 - CD가 도는 동안 apply하지 않는다. 시작 템플릿이 바뀌는 apply는 롤링을 시작해, 배포가 시작한 롤링과 겹치면 실패한다.
 
@@ -531,6 +583,70 @@ aws ssm start-session --target <staging 서버 ID>
 ```bash
 sudo bash /opt/meterengine/measurements/test-storage/sut/scripts/remote/upsert-exporter-user.sh /meterengine/staging
 ```
+
+### 앱 서버 이미지
+
+- staging, production, test-storage의 앱 서버가 이 이미지로 뜬다. 값은 `<환경>/main.tf`의 app_fleet `ami_id`와 test-storage의 `ami_id` 기본값이고, 서로 다르면 deploy 시험이 실패한다.
+- `terraform/modules/app_fleet/image/provision.sh`가 이미지에 넣을 것을 정하고, `build-app-image.sh`가 그 스크립트로 이미지를 굽는다.
+- 부팅 스크립트가 쓰는 도구를 늘리면 provision.sh에도 넣고 다시 굽는다.
+- 기본 이미지(Amazon Linux 2023 arm64)에 docker, git, python3, openssl과 compose 플러그인을 더한다. docker는 부팅 때 시작하게 등록만 하고 굽는 동안 띄우지 않는다.
+- 저장소 체크아웃, 수집량 지표 유닛, `/etc/meterengine` 설정은 넣지 않는다. `/etc/machine-id`를 비워 두어 이 이미지로 뜬 서버마다 새 값을 만든다.
+- 이미지 태그는 `Role=app-image`, `BaseImage`(기본 AMI), `ComposeVersion`, `SourceCommit`(구운 커밋)이다.
+
+#### 굽기
+
+- 계정 928618307647의 관리자 자격과 AWS CLI v2로, develop을 받은 체크아웃에서 돌린다. 리전은 스크립트가 ap-northeast-2로 정한다.
+  - provision.sh에 커밋하지 않은 변경이 있거나 지금 커밋이 origin/develop에 없으면 아무것도 만들지 않고 멈춘다.
+  - 쓰는 권한: `sts:GetCallerIdentity`, EC2의 보안 그룹 만들기와 송신 규칙 바꾸기와 지우기, 인스턴스 시작과 조회와 콘솔 출력과 종료, 이미지 만들기와 조회와 삭제 보호, 태그 달기.
+
+- 기본 AMI는 인수로 준다. provision.sh만 바꿔 다시 구울 때는 가장 최근 이미지의 `BaseImage` 태그 값을, 보안 공지로 다시 구울 때는 최신 기본 AMI를 준다. 시작 템플릿의 `ami_id`는 이미 구운 이미지라 인수로 주지 않는다.
+
+```bash
+git switch develop && git pull
+# 최신 기본 AMI로 다시 구울 때
+base=$(aws ssm get-parameter --name /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64 \
+  --query Parameter.Value --output text)
+deploy/terraform/modules/app_fleet/image/build-app-image.sh "$base"
+```
+
+- 약 10분 걸린다. staging 공용 서브넷에 빌더(t4g.medium)를 띄워 provision.sh를 돌리고, 빌더가 스스로 꺼지면 이미지를 만든다. 빌더에는 역할이 없고, 임시 보안 그룹은 송신 443만 연다.
+- 표준 출력은 `image_id=<AMI ID>` 한 줄이고, 그 이미지에는 삭제 보호가 켜진다. 진행 기록은 표준 오류로 나온다.
+- 빌더가 시간 안에 꺼지지 않으면 콘솔 출력을 찍고 이미지 없이 실패한다.
+- 이미지가 failed가 되면 바로 실패한다. 시간 안에 available이 되지 않으면 그 이미지를 삭제 보호 없이 남기고 실패한다.
+- 결과 이미지가 시작 템플릿에 맞지 않으면(arm64, 루트 `/dev/xvda`, 30GiB 이하) 실패한다. 그 이미지는 삭제 보호 없이 남으니 deregister-image로 지우고 스냅숏도 delete-snapshot으로 지운다.
+- 성공해도 실패해도 빌더와 임시 보안 그룹을 지운다. 지우지 못하면 진행 기록에 지울 명령을 찍는다. 스크립트가 강제로 끊겼으면 남은 것을 찾아 지운다.
+
+```bash
+aws ec2 describe-instances --filters Name=tag:Name,Values=meterengine-app-image-builder \
+  Name=instance-state-name,Values=pending,running,stopping,stopped --query 'Reservations[].Instances[].InstanceId' --output text
+aws ec2 describe-security-groups --filters Name=tag:Name,Values=meterengine-app-image-builder \
+  --query 'SecurityGroups[].GroupId' --output text
+```
+
+- 이 이미지로 뜬 서버의 `/var/log/cloud-init-output.log` 앞부분은 굽던 때 기록이다. `[app-image] 굽기 끝` 줄 아래부터가 그 서버의 부팅 기록이다.
+- 옛 이미지는 지금 쓰는 것과 그 직전 것만 남긴다. 지울 때는 삭제 보호를 끄고 이미지를 지운 뒤 스냅숏도 지운다.
+
+```bash
+aws ec2 disable-image-deregistration-protection --image-id <AMI ID>
+aws ec2 deregister-image --image-id <AMI ID>
+aws ec2 delete-snapshot --snapshot-id <스냅숏 ID>
+```
+
+#### 다시 굽는 계기
+
+- 날짜가 아니라 계기가 생기면 굽는다.
+  - provision.sh를 바꾸는 PR이 머지되면 같은 날 굽고 ami 값을 바꾸는 PR을 낸다. provision.sh만 머지하면 어느 서버에도 반영되지 않는다.
+  - AL2023 보안 공지(ALAS)에 이미지 안 패키지(kernel, docker, containerd, runc, git, openssl, openssh, glibc)의 Critical이나 Important가 나오면 한 주 안에 새 기본 AMI로 굽는다.
+- 스프린트를 시작할 때 최신 기본 AMI와 가장 최근 이미지의 `BaseImage` 태그를 비교하고 ALAS를 훑는다.
+
+```bash
+aws ssm get-parameter --name /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64 \
+  --query Parameter.Value --output text
+aws ec2 describe-images --owners self --filters Name=tag:Role,Values=app-image \
+  --query 'sort_by(Images, &CreationDate)[-1].[ImageId, Tags[?Key==`BaseImage`].Value | [0]]' --output text
+```
+
+- compose 버전을 올릴 때는 provision.sh와 `terraform/monitoring/bootstrap.sh`를 같이 고친다. 각 파일이 같은 버전과 sha256을 따로 고정하고, 서로 다르면 deploy 시험이 실패한다.
 
 ## 모니터링
 
@@ -657,6 +773,7 @@ GitHub 로그인이 안 되면 공용 모니터링 서버의 9090을 포트 포�
 ## 문제 해결
 
 - 서버는 부팅 때 배포까지 끝낸다. 부팅 배포의 출력은 서버의 `/var/log/cloud-init-output.log`에 남는다.
+- 그 기록에 `서버 이미지에 ... 없다`가 있으면 시작 템플릿의 image_id가 미리 구운 앱 서버 이미지가 아니다. `<환경>/main.tf`의 app_fleet `ami_id`를 본다("앱 서버 이미지").
 - CD가 실패하면 먼저 서버 밖에서 새로 고침과 대상 그룹 상태를 본다.
 
 ```bash

@@ -11,6 +11,7 @@ readonly NAMESPACE=MeterEngine/Scaling
 readonly SCALING_METRIC=IngestRequestsPerSecondPerDesiredInstance
 readonly OBSERVED_METRIC=IngestRequestsPerSecond
 readonly PROMETHEUS_URL=http://127.0.0.1:8080/actuator/prometheus
+readonly READINESS_URL=http://127.0.0.1:8080/actuator/health/readiness
 readonly IMDS=http://169.254.169.254/latest
 
 imds() {
@@ -19,10 +20,18 @@ imds() {
 		curl -sf -H "X-aws-ec2-metadata-token: $token" "$IMDS/meta-data/$1"
 }
 
+prometheus_scrape() {
+	curl -sf --max-time 3 "$PROMETHEUS_URL"
+}
+
 # 백엔드가 기동한 뒤 받은 수집 요청 수의 합. 상태 코드와 결과 라벨을 모두 더한다.
 ingest_request_total() {
-	curl -sf --max-time 3 "$PROMETHEUS_URL" |
-		awk '/^http_server_requests_seconds_count\{/ && /method="POST"/ && /uri="\/v1\/(events|event-batches)"/ {sum += $NF} END {printf "%.0f", sum + 0}'
+	awk '/^http_server_requests_seconds_count\{/ && /method="POST"/ && /uri="\/v1\/(events|event-batches)"/ {sum += $NF} END {printf "%.0f", sum + 0}'
+}
+
+# 백엔드 readiness의 HTTP 코드. 연결이 안 되거나 시간이 지나면 000이다.
+readiness_code() {
+	curl -s -o /dev/null -w '%{http_code}' --max-time 3 "$READINESS_URL"
 }
 
 desired_capacity() {
@@ -55,6 +64,35 @@ put_metrics() {
 		echo "지표 올리기 실패, 다음 칸에 다시 한다"
 }
 
+# 두 칸 사이의 초당 증가량. 건너뛴 칸이 있어도 실제로 지난 초로 나눈다.
+rate_between() {
+	local total="$1" slot="$2" baseline_total="$3" baseline_slot="$4"
+	awk -v a="$total" -v b="$baseline_total" -v s="$slot" -v bs="$baseline_slot" 'BEGIN {printf "%.1f", (a - b) / (s - bs)}'
+}
+
+# main의 rate와 기준값(previous_total, previous_slot)을 고친다. 올릴 값이 없는 칸이면 rate가 빈다.
+measure_slot() {
+	local slot="$1" total
+	rate=""
+	case "$(readiness_code)" in
+	200) ;;
+	503)
+		# 준비 전 요청이 다음 차이에 섞이지 않게 기준값을 버린다.
+		previous_total=""
+		previous_slot=""
+		return 0
+		;;
+	*) return 0 ;;
+	esac
+	total=$(prometheus_scrape | ingest_request_total) || return 0
+	# 백엔드가 다시 떠 카운터가 0부터 다시 세면 그 칸은 건너뛴다.
+	if [ -n "$previous_total" ] && [ "$total" -ge "$previous_total" ]; then
+		rate=$(rate_between "$total" "$slot" "$previous_total" "$previous_slot")
+	fi
+	previous_total=$total
+	previous_slot=$slot
+}
+
 main() {
 	# 옛 서버처럼 ASG 밖이면 태그가 없다. 실패로 끝내면 systemd가 계속 다시 띄운다.
 	ASG_NAME=$(imds tags/instance/aws:autoscaling:groupName) || {
@@ -64,20 +102,13 @@ main() {
 	REGION=$(imds placement/region) || exit 1
 	echo "$ASG_NAME 의 $NAMESPACE 지표를 ${PERIOD_SECONDS}초 칸마다 올린다"
 
-	local previous_total="" slot capacity rate total
+	local previous_total="" previous_slot="" rate="" slot capacity
 	while true; do
 		slot=$(sleep_until_next_slot)
 		capacity=$(desired_capacity) || continue
 		[ "$capacity" -gt 0 ] 2>/dev/null || continue
-		rate=""
-		if total=$(ingest_request_total) && [ -n "$total" ]; then
-			# 백엔드가 다시 떠 카운터가 0부터 다시 세면 그 칸은 건너뛴다.
-			if [ -n "$previous_total" ] && [ "$total" -ge "$previous_total" ]; then
-				rate=$(awk -v a="$total" -v b="$previous_total" -v p="$PERIOD_SECONDS" 'BEGIN {printf "%.1f", (a - b) / p}')
-			fi
-			previous_total=$total
-		fi
-		# 백엔드가 아직 안 뜬 서버는 올리지 않는다. 합에는 0으로 들어가는 것과 같다.
+		measure_slot "$slot"
+		# 준비되지 않은 서버는 올리지 않는다. 합에는 0으로 들어가는 것과 같다.
 		[ -n "$rate" ] && put_metrics "$slot" "$capacity" "$rate"
 	done
 }
