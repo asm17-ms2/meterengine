@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 버전 파라미터에 커밋 SHA를 쓰고 앱 서버를 그 커밋으로 바꾼다. staging, production과 같은 deploy/rollout.sh를 쓴다.
-# 사용법: sut-deploy.sh [SHA]  (없으면 ECR에 이미지가 있고 rollout.sh가 있는 가장 최근 main 커밋)
+# 사용법: sut-deploy.sh [SHA]  (없으면 ECR에 이미지가 있고 rollout.sh가 있는 가장 최근 develop 커밋)
 
 set -euo pipefail
 
@@ -59,7 +59,7 @@ require_deployable_commit() {
 	[ -z "$problem" ] || die "$sha 는 $problem"
 }
 
-# CD는 main 커밋 SHA로만 태그를 올리므로, 두 저장소에 다 있는 태그를 최근부터 보며 배포할 수 있는 첫 커밋을 고른다.
+# staging CD는 develop 커밋 SHA로만 태그를 올리므로, 두 저장소에 다 있는 태그를 최근부터 보며 배포할 수 있는 첫 커밋을 고른다.
 latest_deployable_sha() {
 	local backend_repository="$1" frontend_repository="$2" backend_tags frontend_tags sha problem
 	backend_tags=$(ecr_sha_tags_newest_first "$backend_repository") || exit 1
@@ -76,15 +76,15 @@ latest_deployable_sha() {
 	die "ECR $backend_repository, $frontend_repository 둘 다에 이미지가 있으면서 $ROLLOUT_PATH 가 있는 커밋이 없다. SHA를 직접 준다"
 }
 
-log_when_behind_main() {
-	local sha="$1" main_sha
-	main_sha=$(git ls-remote "$REPO_URL" refs/heads/main | cut -f1) || main_sha=""
-	if [ -z "$main_sha" ]; then
-		warn "main 최신 커밋을 읽지 못해 비교를 건너뛴다"
+log_when_behind_develop() {
+	local sha="$1" develop_sha
+	develop_sha=$(git ls-remote "$REPO_URL" refs/heads/develop | cut -f1) || develop_sha=""
+	if [ -z "$develop_sha" ]; then
+		warn "develop 최신 커밋을 읽지 못해 비교를 건너뛴다"
 		return 0
 	fi
-	[ "$main_sha" = "$sha" ] ||
-		log "main 최신 $main_sha 는 아직 이미지가 없다(CD가 도는 중이거나 CD가 이미지를 올리지 않는 커밋). 이미지가 있는 가장 최근 커밋 $sha 를 쓴다"
+	[ "$develop_sha" = "$sha" ] ||
+		log "develop 최신 $develop_sha 는 아직 이미지가 없다(CD가 도는 중이거나 CD가 이미지를 올리지 않는 커밋). 이미지가 있는 가장 최근 커밋 $sha 를 쓴다"
 }
 
 require_ecr_images() {
@@ -127,7 +127,7 @@ main() {
 		# shellcheck disable=SC2086 # 저장소 이름 두 개로 나눈다.
 		sha=$(latest_deployable_sha $repositories) || exit 1
 		log "SHA를 주지 않아 ECR에 이미지가 있는 가장 최근 커밋을 쓴다: $sha"
-		log_when_behind_main "$sha"
+		log_when_behind_develop "$sha"
 	fi
 	require_full_sha "$sha"
 	require_deployable_commit "$sha"
