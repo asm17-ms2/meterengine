@@ -45,7 +45,7 @@ resource "aws_iam_role_policy" "app" {
     { Effect = "Allow", Action = ["ssm:UpdateInstanceInformation"], Resource = "*" },
     { Effect = "Allow", Action = ["ecr:GetAuthorizationToken"], Resource = "*" },
     { Effect = "Allow", Action = ["ecr:BatchCheckLayerAvailability", "ecr:GetDownloadUrlForLayer", "ecr:BatchGetImage", "ecr:DescribeImages"], Resource = local.ecr_repository_arns },
-    # 10초 지표 스크립트가 쓴다. PutMetricData는 자원으로 못 좁혀 이름공간으로 막는다.
+    # 10초 CPU 지표 스크립트가 쓴다. PutMetricData는 자원으로 못 좁혀 이름공간으로 막는다.
     {
       Effect    = "Allow"
       Action    = ["cloudwatch:PutMetricData"]

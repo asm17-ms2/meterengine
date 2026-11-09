@@ -129,7 +129,7 @@ class ProvisionTest(unittest.TestCase):
 
     def test_provision_carries_no_checkout_unit_or_config(self):
         source = PROVISION.read_text()
-        for word in ("git clone", "/opt/meterengine", "meterengine-ingest-rate", "/etc/meterengine"):
+        for word in ("git clone", "/opt/meterengine", "meterengine-cpu-metric", "/etc/meterengine"):
             self.assertNotIn(word, source)
 
 

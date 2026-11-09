@@ -49,7 +49,7 @@ module "app_fleet" {
   # 버전 파라미터에 40자 SHA가 기록되기 전에는 모듈의 precondition이 plan을 멈춘다.
   min_size = 1
   # 측정 환경 숫자로 잡은 추정값이다.
-  scaling_target_requests_per_second = 450
+  scaling_target_average_cpu_percent = 60
   alb_deletion_protection            = false
   monitoring_security_group_id       = data.aws_security_group.monitoring.id
 }

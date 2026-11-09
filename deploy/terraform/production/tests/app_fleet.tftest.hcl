@@ -72,7 +72,7 @@ run "production_fleet_configuration" {
     ecr_repository_names               = ["meterengine-backend", "meterengine-frontend"]
     ami_id                             = "ami-0f4109eb491b0476f"
     min_size                           = 0
-    scaling_target_requests_per_second = 450
+    scaling_target_average_cpu_percent = 60
     alb_deletion_protection            = true
     app_egress_ports                   = [443]
     monitoring_security_group_id       = "sg-33333333333333333"
@@ -139,7 +139,7 @@ run "unset_version_keeps_servers_off" {
     ecr_repository_names               = ["meterengine-backend", "meterengine-frontend"]
     ami_id                             = "ami-0f4109eb491b0476f"
     min_size                           = 1
-    scaling_target_requests_per_second = 450
+    scaling_target_average_cpu_percent = 60
     alb_deletion_protection            = true
     app_egress_ports                   = [443]
     monitoring_security_group_id       = "sg-33333333333333333"
@@ -168,7 +168,7 @@ run "recorded_sha_starts_one_server_and_waits_for_it" {
     ecr_repository_names               = ["meterengine-backend", "meterengine-frontend"]
     ami_id                             = "ami-0f4109eb491b0476f"
     min_size                           = 1
-    scaling_target_requests_per_second = 450
+    scaling_target_average_cpu_percent = 60
     alb_deletion_protection            = true
     app_egress_ports                   = [443]
     monitoring_security_group_id       = "sg-33333333333333333"

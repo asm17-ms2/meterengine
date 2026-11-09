@@ -61,9 +61,9 @@ class DeployEnvironmentTest(unittest.TestCase):
         self.root = Path(temp.name)
         self.repo = self.root / "repo"
         (self.repo / "deploy/server").mkdir(parents=True)
-        (self.repo / "deploy/server/ingest-rate.service").write_text("[Unit]\n")
+        (self.repo / "deploy/server/cpu-metric.service").write_text("[Unit]\n")
         self.env_file = self.root / "prod.env"
-        self.unit_file = self.root / "meterengine-ingest-rate.service"
+        self.unit_file = self.root / "meterengine-cpu-metric.service"
         self.trace = self.root / "trace"
         self.trace.touch()
         source = SOURCE.read_text()
@@ -188,19 +188,19 @@ class DeployEnvironmentTest(unittest.TestCase):
         self.assertIn("logs --tail 50 backend", self.traced())
         self.assertNotIn("systemctl", self.traced())
 
-    def test_ingest_rate_unit_is_installed_and_restarted_after_checkout(self):
+    def test_cpu_metric_unit_is_installed_and_restarted_after_checkout(self):
         result = self.deploy("staging", SHA)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.unit_file.read_text(), "[Unit]\n")
-        for command in ("systemctl daemon-reload", "systemctl enable --quiet meterengine-ingest-rate.service",
-                        "systemctl restart meterengine-ingest-rate.service"):
+        for command in ("systemctl daemon-reload", "systemctl enable --quiet meterengine-cpu-metric.service",
+                        "systemctl restart meterengine-cpu-metric.service"):
             self.assertIn(command + "\n", self.traced())
         self.assertLess(self.trace_index("git checkout"), self.trace_index("systemctl restart"))
 
     def test_unit_failure_keeps_the_app(self):
         result = self.deploy("staging", SHA, SYSTEMCTL_EXIT="1")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("수집량 지표", result.stdout)
+        self.assertIn("CPU 지표 유닛을 띄우지 못했다", result.stdout)
 
     def test_image_prefix_reaches_env_file_and_image_check(self):
         self.set_preflight(image_prefix="meterengine-staging")

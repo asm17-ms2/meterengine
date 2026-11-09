@@ -126,15 +126,15 @@ resource "aws_autoscaling_group" "app" {
   }
 }
 
-# 서버마다 (초당 수집 요청 / 원하는 대수)를 올리고 그 합을 본다. 계산식은 공급자가 period를 못 보내 60초로 가서 쓰지 않는다.
-resource "aws_autoscaling_policy" "ingest_requests" {
-  name                   = "${local.name}-ingest-requests-per-server"
+# 서버마다 10초마다 (CPU / 원하는 대수)를 올리고(deploy/server/cpu-metric.sh) 같은 칸의 합이 60%를 넘으면 늘린다.
+resource "aws_autoscaling_policy" "average_cpu" {
+  name                   = "${local.name}-average-cpu"
   autoscaling_group_name = aws_autoscaling_group.app.name
   policy_type            = "TargetTrackingScaling"
   target_tracking_configuration {
     customized_metric_specification {
       namespace   = "MeterEngine/Scaling"
-      metric_name = "IngestRequestsPerSecondPerDesiredInstance"
+      metric_name = "CPUUtilizationPerDesiredInstance"
       statistic   = "Sum"
       period      = 10
       metric_dimension {
@@ -142,6 +142,6 @@ resource "aws_autoscaling_policy" "ingest_requests" {
         value = aws_autoscaling_group.app.name
       }
     }
-    target_value = local.scaling_target_requests_per_second
+    target_value = local.scaling_target_average_cpu_percent
   }
 }

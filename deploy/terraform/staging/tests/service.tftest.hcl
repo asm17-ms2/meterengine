@@ -282,7 +282,7 @@ run "fleet_starts_empty_beside_the_old_server" {
     ecr_repository_names               = ["meterengine-staging-backend", "meterengine-staging-frontend"]
     ami_id                             = "ami-0f4109eb491b0476f"
     min_size                           = 0
-    scaling_target_requests_per_second = 450
+    scaling_target_average_cpu_percent = 60
     alb_deletion_protection            = false
     monitoring_security_group_id       = "sg-33333333333333333"
   }
@@ -313,11 +313,12 @@ run "fleet_starts_empty_beside_the_old_server" {
   }
   assert {
     condition = (
-      aws_autoscaling_policy.ingest_requests.target_tracking_configuration[0].target_value == 450 &&
-      aws_autoscaling_policy.ingest_requests.target_tracking_configuration[0].customized_metric_specification[0].period == 10 &&
-      aws_autoscaling_policy.ingest_requests.target_tracking_configuration[0].customized_metric_specification[0].statistic == "Sum"
+      aws_autoscaling_policy.average_cpu.target_tracking_configuration[0].target_value == 60 &&
+      aws_autoscaling_policy.average_cpu.target_tracking_configuration[0].customized_metric_specification[0].metric_name == "CPUUtilizationPerDesiredInstance" &&
+      aws_autoscaling_policy.average_cpu.target_tracking_configuration[0].customized_metric_specification[0].period == 10 &&
+      aws_autoscaling_policy.average_cpu.target_tracking_configuration[0].customized_metric_specification[0].statistic == "Sum"
     )
-    error_message = "Scaling sums the ten second per-desired metric against the target."
+    error_message = "Scaling sums the ten second CPU per desired server against the target."
   }
   assert {
     condition     = aws_lb.app.idle_timeout == 130 && aws_lb.app.xff_header_processing_mode == "append" && !aws_lb.app.enable_deletion_protection && length(aws_lb.app.access_logs) == 0
