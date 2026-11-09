@@ -1,3 +1,3 @@
 package com.meterengine.apikey.service;
 
-public record ApiKeyChangedEvent(ApiKeySnapshot snapshot) {}
+public record ApiKeyChangedEvent(ApiKeySnapshot snapshot, boolean organizationActive) {}

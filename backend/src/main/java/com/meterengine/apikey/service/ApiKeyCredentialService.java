@@ -30,6 +30,8 @@ public class ApiKeyCredentialService implements ApiKeyCredentials {
     return apiKeyTable
         .find(ApiKeyHash.of(token))
         .filter(snapshot -> snapshot.isUsableAt(now))
-        .map(ApiKeySnapshot::credential);
+        .map(
+            snapshot ->
+                snapshot.credential(apiKeyTable.isOrganizationActive(snapshot.organizationId())));
   }
 }

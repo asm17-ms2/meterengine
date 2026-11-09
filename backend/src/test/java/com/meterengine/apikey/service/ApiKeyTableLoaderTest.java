@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 import com.meterengine.TestClock;
 import com.meterengine.apikey.config.ApiKeyProperties;
 import com.meterengine.apikey.repository.ApiKeySnapshotRepository;
+import com.meterengine.global.security.ActiveOrganizations;
 import com.meterengine.global.security.SecureTokens;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;
@@ -31,12 +32,14 @@ class ApiKeyTableLoaderTest {
   private final ApiKeyTable apiKeyTable = new ApiKeyTable();
   private final ApiKeySnapshotRepository apiKeySnapshotRepository =
       mock(ApiKeySnapshotRepository.class);
+  private final ActiveOrganizations activeOrganizations = mock(ActiveOrganizations.class);
   private final TestClock clock = new TestClock();
   private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
   private final ApiKeyTableLoader apiKeyTableLoader =
       new ApiKeyTableLoader(
           apiKeyTable,
           apiKeySnapshotRepository,
+          activeOrganizations,
           new ApiKeyProperties(Duration.ofHours(24), Duration.ZERO, REFRESH_INTERVAL),
           clock,
           meterRegistry);
@@ -94,6 +97,19 @@ class ApiKeyTableLoaderTest {
     assertThat(meterRegistry.get(ApiKeyTableLoader.SIZE_GAUGE_NAME).gauge().value()).isEqualTo(1);
     assertThat(meterRegistry.get(ApiKeyTableLoader.REFRESH_AGE_GAUGE_NAME).gauge().value())
         .isEqualTo(45);
+  }
+
+  @Test
+  void 다시_읽을_때_활성_도입사_목록도_함께_넣는다() {
+    ApiKeySnapshot activeKey = snapshotOf(SecureTokens.generate("me_live_"));
+    ApiKeySnapshot suspendedKey = snapshotOf(SecureTokens.generate("me_live_"));
+    when(apiKeySnapshotRepository.findUsableAt(any())).thenReturn(List.of(activeKey, suspendedKey));
+    when(activeOrganizations.list()).thenReturn(Set.of(activeKey.organizationId()));
+
+    apiKeyTableLoader.refresh();
+
+    assertThat(apiKeyTable.isOrganizationActive(activeKey.organizationId())).isTrue();
+    assertThat(apiKeyTable.isOrganizationActive(suspendedKey.organizationId())).isFalse();
   }
 
   private static ApiKeySnapshot snapshotOf(String rawKey) {

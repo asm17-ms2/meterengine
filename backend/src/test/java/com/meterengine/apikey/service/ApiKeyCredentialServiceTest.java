@@ -3,6 +3,7 @@ package com.meterengine.apikey.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.meterengine.TestClock;
+import com.meterengine.global.security.OrganizationStatusChangedEvent;
 import com.meterengine.global.security.SecureTokens;
 import java.time.OffsetDateTime;
 import java.util.Set;
@@ -25,7 +26,18 @@ class ApiKeyCredentialServiceTest {
     ApiKeySnapshot snapshot = snapshotExpiringAt(null);
     apiKeyTable.put(snapshot);
 
-    assertThat(apiKeyCredentialService.authenticate(rawKey)).contains(snapshot.credential());
+    apiKeyTable.apply(new OrganizationStatusChangedEvent(snapshot.organizationId(), true));
+
+    assertThat(apiKeyCredentialService.authenticate(rawKey)).contains(snapshot.credential(true));
+  }
+
+  @Test
+  void 도입사가_정지된_키는_자격_증명에_정지를_싣는다() {
+    ApiKeySnapshot snapshot = snapshotExpiringAt(null);
+    apiKeyTable.put(snapshot);
+    apiKeyTable.apply(new OrganizationStatusChangedEvent(snapshot.organizationId(), false));
+
+    assertThat(apiKeyCredentialService.authenticate(rawKey)).contains(snapshot.credential(false));
   }
 
   @Test

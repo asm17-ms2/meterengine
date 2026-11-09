@@ -275,6 +275,7 @@ class SecurityIntegrationTest {
     String authorization = issueApiKey(jdbcTemplate, organizationId);
     jdbcTemplate.update(
         "UPDATE organization SET status = 'suspended' WHERE id = ?", organizationId);
+    TestCredentials.refreshApiKeyTable(jdbcTemplate);
 
     assertThat(list(authorization))
         .hasStatus(403)
