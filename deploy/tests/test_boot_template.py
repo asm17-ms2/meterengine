@@ -9,6 +9,7 @@ MODULE = ROOT / "deploy/terraform/modules/app_fleet"
 TEMPLATE = MODULE / "templates/app-user-data.sh.tftpl"
 ASG = MODULE / "asg.tf"
 TEST_STORAGE = ROOT / "measurements/test-storage/sut/terraform"
+MEASUREMENT_MODULE = ROOT / "measurements/test-sjpark/sut/module"
 
 # 부팅 계약. 측정 환경처럼 이 템플릿을 부르는 곳도 같은 키를 넘긴다.
 BOOT_TEMPLATE_VARS = {"environment", "parameter_path", "app_version_parameter_name", "aws_region", "repository_url"}
@@ -55,6 +56,13 @@ class BootTemplateTest(unittest.TestCase):
     def test_test_storage_reads_this_template(self):
         relative = re.search(r'^  boot_template_path = "\$\{path\.root\}/([^"]+)"$', (TEST_STORAGE / "locals.tf").read_text(), re.M).group(1)
         self.assertEqual((TEST_STORAGE / relative).resolve(), TEMPLATE)
+
+    def test_measurement_module_passes_exactly_the_contract_variables(self):
+        self.assertEqual(boot_template_keys(MEASUREMENT_MODULE / "asg.tf"), BOOT_TEMPLATE_VARS)
+
+    def test_measurement_module_reads_this_template(self):
+        relative = re.search(r'^  boot_template_path = "\$\{path\.module\}/([^"]+)"$', (MEASUREMENT_MODULE / "locals.tf").read_text(), re.M).group(1)
+        self.assertEqual((MEASUREMENT_MODULE / relative).resolve(), TEMPLATE)
 
     def test_template_has_no_directives(self):
         self.assertNotRegex(TEMPLATE.read_text(), r"(?<!%)%\{")

@@ -49,7 +49,6 @@ jobs:
               - '.github/workflows/cd-production.yml'
               - '.github/workflows/cd-staging.yml'
               - '.github/workflows/deploy.yml'
-              - 'measurements/test-sjpark/k6/README.md'
               - 'measurements/*/README.md'
               - 'measurements/*/lib/common.sh'
               - 'measurements/*/sut/scripts/sut-deploy.sh'
@@ -57,6 +56,8 @@ jobs:
               - 'measurements/*/sut/terraform/iam.tf'
               - 'measurements/*/sut/terraform/locals.tf'
               - 'measurements/*/sut/terraform/variables.tf'
+              - 'measurements/test-sjpark/sut/**'
+              - 'measurements/test-sjpark/k6/lib/config.js'
               - '.github/workflows/ci.yml'
             rds_auto_stop:
               - 'measurements/terraform/modules/rds-auto-stop/**'
@@ -156,11 +157,12 @@ jobs:
         with:
           terraform_version: 1.17.1
           terraform_wrapper: false
-      - run: terraform fmt -check -recursive deploy/terraform
+      - run: terraform fmt -check -recursive deploy/terraform measurements/test-sjpark/sut
       # AWS 자격 없이 mock으로만 돈다
       - name: Terraform 시험
         run: |
-          for dir in deploy/terraform/staging deploy/terraform/production deploy/terraform/monitoring; do
+          for dir in deploy/terraform/staging deploy/terraform/production deploy/terraform/monitoring \
+            measurements/test-sjpark/sut/module measurements/test-sjpark/sut/m7g measurements/test-sjpark/sut/t4g; do
             terraform -chdir="$dir" init -backend=false -input=false
             terraform -chdir="$dir" validate
             terraform -chdir="$dir" test

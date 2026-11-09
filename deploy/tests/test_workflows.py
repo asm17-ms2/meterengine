@@ -88,7 +88,9 @@ class WorkflowTest(unittest.TestCase):
         for pattern in (".github/workflows/deploy.yml", ".github/workflows/cd-staging.yml", ".github/workflows/cd-production.yml", "measurements/*/lib/common.sh",
                         "measurements/*/sut/terraform/iam.tf", "measurements/*/sut/terraform/locals.tf",
                         "measurements/*/sut/terraform/variables.tf",
-                        "measurements/*/sut/scripts/remote/upsert-exporter-user.sh", "measurements/*/README.md"):
+                        "measurements/*/sut/scripts/remote/upsert-exporter-user.sh", "measurements/*/sut/scripts/sut-deploy.sh",
+                        "measurements/*/README.md", "measurements/test-sjpark/sut/**",
+                        "measurements/test-sjpark/k6/lib/config.js"):
             self.assertIn(f"- '{pattern}'", source)
 
     def test_readme_manual_rollout_matches_the_cd_call(self):

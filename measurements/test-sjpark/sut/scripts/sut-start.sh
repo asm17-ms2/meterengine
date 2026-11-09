@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
-# SUT RDS를 먼저 켜고, 그다음 SUT EC2를 켜고, https 응답이 올 때까지 기다린다.
+# SUT RDS를 켠다. 앱 서버가 떠 있으면 https 응답이 올 때까지 기다린다. 앱 서버는 apply -var asg_min_size=1 -var asg_max_size=1로 띄운다.
+# 사용법: sut-start.sh <m7g|t4g>
 
 set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
-TF_DIR=$(cd "$SCRIPT_DIR/../terraform" && pwd)
 . "$SCRIPT_DIR/../../lib/common.sh"
+. "$SCRIPT_DIR/target.sh"
+select_target "${1:-}"
+shift
 
 start_db() {
 	local db_identifier="$1" db_status
@@ -33,15 +36,18 @@ start_db() {
 main() {
 	need_cmd aws terraform curl
 
-	local sut_instance_id db_identifier domain
-	sut_instance_id=$(tf_out sut_instance_id)
+	local asg_name db_identifier domain instances
+	asg_name=$(tf_out asg_name)
 	db_identifier=$(tf_out db_identifier)
 	domain=$(tf_out domain)
 
 	start_db "$db_identifier"
-	start_ec2_instance "$sut_instance_id"
-	wait_ssm_online "$sut_instance_id"
-	wait_for_usage_ok "$domain" "배포한 적이 없으면 sut-deploy.sh 를 돌린다"
+	instances=$(asg_in_service_instances "$asg_name") || exit 1
+	if [ -z "$instances" ]; then
+		log "앱 서버가 0대다. 버전을 기록한 적이 없으면 sut-deploy.sh $SPEC 을 먼저 돌리고, terraform -chdir=measurements/test-sjpark/sut/$SPEC apply -var asg_min_size=1 -var asg_max_size=1 로 띄운다"
+		return 0
+	fi
+	wait_for_usage_ok "$domain" "앱 서버가 부팅 중이면 몇 분 더 걸린다. 대상 그룹 상태와 서버의 /var/log/cloud-init-output.log 를 본다"
 	log "SUT를 켰다"
 }
 

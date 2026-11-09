@@ -19,10 +19,6 @@ scrape_configs:
           - name: instance-state-name
             values: [running]
     relabel_configs:
-      # test-sjpark은 백엔드가 블루그린이라 호스트에 8080이 없다.
-      - source_labels: [__meta_ec2_tag_Environment]
-        regex: test-sjpark
-        action: drop
       - &env_from_tag
         source_labels: [__meta_ec2_tag_Environment]
         target_label: env
@@ -59,8 +55,10 @@ scrape_configs:
         labels: { env: staging }
       - targets: ["postgres-exporter-test-storage:9187"]
         labels: { env: test-storage }
-      - targets: ["postgres-exporter-test-sjpark:9187"]
-        labels: { env: test-sjpark }
+      - targets: ["postgres-exporter-test-sjpark-m7g:9187"]
+        labels: { env: test-sjpark-m7g }
+      - targets: ["postgres-exporter-test-sjpark-t4g:9187"]
+        labels: { env: test-sjpark-t4g }
 
   # 계정의 모든 RDS와 ALB를 한 번에 읽으므로 env는 DB 식별자와 ALB 이름에서 만든다. 운영 DB만 이름에 환경이 없다.
   - job_name: cloudwatch

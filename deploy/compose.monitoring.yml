@@ -97,12 +97,19 @@ services:
       DATA_SOURCE_USER: meterengine_exporter
       DATA_SOURCE_PASS: ${TEST_STORAGE_DB_EXPORTER_PASSWORD:-}
 
-  postgres-exporter-test-sjpark:
+  postgres-exporter-test-sjpark-m7g:
     <<: *postgres-exporter
     environment:
-      DATA_SOURCE_URI: ${TEST_SJPARK_DB_HOST:-}:${TEST_SJPARK_DB_PORT:-}/${TEST_SJPARK_DB_NAME:-}?sslmode=require
+      DATA_SOURCE_URI: ${TEST_SJPARK_M7G_DB_HOST:-}:${TEST_SJPARK_M7G_DB_PORT:-}/${TEST_SJPARK_M7G_DB_NAME:-}?sslmode=require
       DATA_SOURCE_USER: meterengine_exporter
-      DATA_SOURCE_PASS: ${TEST_SJPARK_DB_EXPORTER_PASSWORD:-}
+      DATA_SOURCE_PASS: ${TEST_SJPARK_M7G_DB_EXPORTER_PASSWORD:-}
+
+  postgres-exporter-test-sjpark-t4g:
+    <<: *postgres-exporter
+    environment:
+      DATA_SOURCE_URI: ${TEST_SJPARK_T4G_DB_HOST:-}:${TEST_SJPARK_T4G_DB_PORT:-}/${TEST_SJPARK_T4G_DB_NAME:-}?sslmode=require
+      DATA_SOURCE_USER: meterengine_exporter
+      DATA_SOURCE_PASS: ${TEST_SJPARK_T4G_DB_EXPORTER_PASSWORD:-}
 
 volumes:
   prometheus-data:

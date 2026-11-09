@@ -14,7 +14,6 @@ COMPOSE_FILE = DEPLOY / "compose.monitoring.yml"
 PARAMETERS = json.loads((DEPLOY / "monitoring/parameters.json").read_text())
 SHARED_PROMETHEUS_CONFIG = DEPLOY / "monitoring/prometheus/prometheus.yml"
 START = DEPLOY / "monitoring/start.sh"
-TEST_SJPARK = DEPLOY.parent / "measurements/test-sjpark"
 SHA = "a" * 40
 CENTRAL = {"prometheus", "grafana", "cloudwatch-exporter"}
 EXPORTERS = {f"postgres-exporter-{env}" for env in PARAMETERS["environments"]}
@@ -80,26 +79,11 @@ class SharedPrometheusConfigTest(unittest.TestCase):
         self.assertIn("source_labels: [__meta_ec2_tag_Environment]\n        target_label: env", jobs["backend"])
         self.assertIn("- *env_from_tag\n      - *instance_from_id\n", jobs["node"])
 
-    def test_test_sjpark_backend_is_not_scraped(self):
-        jobs = scrape_jobs()
-        self.assertIn("- source_labels: [__meta_ec2_tag_Environment]\n        regex: test-sjpark\n        action: drop\n", jobs["backend"])
-        for job in ("node", "cadvisor"):
-            self.assertNotIn("action: drop", jobs[job], job)
-
-    def test_test_sjpark_opens_the_ports_its_jobs_scrape(self):
-        block = re.search(r"app_scrape_ports = \{(.*?)\}", (TEST_SJPARK / "sut/terraform/locals.tf").read_text(), re.S).group(1)
-        ports = {job: int(port) for job, port in re.findall(r"(\w+)\s*=\s*(\d+)", block)}
-        jobs = scrape_jobs()
-        self.assertEqual(set(ports), {"node", "cadvisor"})
-        for job, port in ports.items():
-            self.assertIn(f"port: {port}\n", jobs[job], job)
-
-    def test_test_sjpark_deploy_looks_for_a_marker_the_compose_file_has(self):
-        marker = re.search(r"^readonly NODE_EXPORTER_PORT_MARKER='(.+)'$", (TEST_SJPARK / "sut/scripts/sut-deploy.sh").read_text(), re.M).group(1)
-        self.assertIn(f"- {marker}\n", (DEPLOY / "compose.prod.yml").read_text())
+    def test_no_environment_backend_is_dropped(self):
+        self.assertNotIn("action: drop", scrape_jobs()["backend"])
 
     def test_every_environment_database_is_scraped_with_its_env(self):
-        targets = re.findall(r'targets: \["postgres-exporter-([a-z-]+):9187"\]\n\s+labels: \{ env: ([a-z-]+) \}', scrape_jobs()["postgres"])
+        targets = re.findall(r'targets: \["postgres-exporter-([a-z0-9-]+):9187"\]\n\s+labels: \{ env: ([a-z0-9-]+) \}', scrape_jobs()["postgres"])
         self.assertEqual(targets, [(env, env) for env in PARAMETERS["environments"]])
 
 
