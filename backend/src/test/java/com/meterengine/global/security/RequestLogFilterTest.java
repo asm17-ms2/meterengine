@@ -168,6 +168,7 @@ class RequestLogFilterTest {
     String authorization = TestCredentials.issueApiKey(jdbcTemplate, organizationId);
     UUID apiKeyId = apiKeyIdOf(authorization);
     jdbcTemplate.update("UPDATE api_key SET rate_limit_per_minute = 1 WHERE id = ?", apiKeyId);
+    TestCredentials.refreshApiKeyTable(jdbcTemplate);
 
     assertThat(mvc.get().uri("/v1/customers").header(AUTHORIZATION, authorization).exchange())
         .hasStatusOk();

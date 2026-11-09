@@ -8,7 +8,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 @TestConfiguration(proxyBeanMethods = false)
-@Import(TestClockConfiguration.class)
+@Import({TestClockConfiguration.class, TestApiKeyTableConfiguration.class})
 public class TestcontainersConfiguration {
 
   @Bean

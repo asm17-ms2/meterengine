@@ -1,6 +1,9 @@
 package com.meterengine.apikey.service;
 
 import com.meterengine.apikey.entity.ApiKey;
+import com.meterengine.global.security.AuthenticatedCredential;
+import com.meterengine.global.security.AuthenticatedPrincipal;
+import com.meterengine.global.security.PrincipalKind;
 import java.time.OffsetDateTime;
 import java.util.Set;
 import java.util.UUID;
@@ -59,5 +62,20 @@ public record ApiKeySnapshot(
 
   public boolean isUsableAt(OffsetDateTime now) {
     return revokedAt == null && (expiresAt == null || expiresAt.isAfter(now));
+  }
+
+  public AuthenticatedCredential credential() {
+    AuthenticatedPrincipal principal =
+        new AuthenticatedPrincipal(
+            PrincipalKind.API_KEY,
+            organizationId,
+            apiKeyId,
+            null,
+            null,
+            mode,
+            null,
+            scopes,
+            environmentId);
+    return new AuthenticatedCredential(principal, rateLimitPerMinute);
   }
 }

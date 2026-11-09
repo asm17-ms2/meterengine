@@ -135,6 +135,7 @@ docker build -t meterengine-backend .
 - V48은 기존 원장을 독립된 legacy 범위로 보존하고 같은 환경 참조를 FK로 검사한다. 기존 자료를 test/live에 배정하거나 복사하지 않는다. 운영 DB에는 백업 후 적용하고 원장 값과 관계를 대조한다.
 - 로그인 세션은 요청마다 환경을 지정한다. `X-MeterEngine-Organization-Id`를 보내면 현재 세션의 도입사와 같은지 확인한다. 환경 선택은 공유 세션 상태를 바꾸지 않는다. 기존 데이터의 결제 요청은 API 키 모드와 도입사의 현재 PG 모드가 같아야 한다.
 - 세션은 로그인 뒤 12시간에 끝난다(`meterengine.session.ttl`). 키를 교체하면 옛 키는 24시간 더 쓸 수 있다(`meterengine.api-key.replacement-grace`).
+- API 키 인증은 서버 메모리의 키 테이블로만 한다. 테이블에 없는 키는 DB에 묻지 않고 401이다. 발급, 폐기, 권한 변경은 그 요청을 처리한 서버에는 커밋 직후, 다른 서버에는 테이블을 다시 읽는 30초 안에 반영된다(`meterengine.api-key.table-refresh-interval`). 새 키는 발급 뒤 30초 안에 모든 서버에서 쓸 수 있다. 서버는 테이블을 다 채운 뒤에 트래픽을 받는다.
 
 ### 공개 인증 요청 제한
 

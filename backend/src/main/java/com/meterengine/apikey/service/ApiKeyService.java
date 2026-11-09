@@ -9,19 +9,14 @@ import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.ErrorResponse.FieldError;
 import com.meterengine.global.error.InvalidRequestException;
 import com.meterengine.global.error.NotFoundException;
-import com.meterengine.global.metrics.DatabaseOperationTimer;
 import com.meterengine.global.security.AccessScopes;
-import com.meterengine.global.security.AuthenticatedCredential;
-import com.meterengine.global.security.AuthenticatedPrincipal;
 import com.meterengine.global.security.BusinessEnvironmentContext;
-import com.meterengine.global.security.PrincipalKind;
 import com.meterengine.global.security.SecureTokens;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Predicate;
@@ -36,38 +31,20 @@ public class ApiKeyService {
 
   public static final String CREATED_ACTION = "api_key_created";
 
-  private static final String API_KEY_TABLE = "api_key";
-
   private final ApiKeyRepository apiKeyRepository;
   private final ApiKeyProperties apiKeyProperties;
   private final AuditLogService auditLogService;
-  private final DatabaseOperationTimer databaseOperationTimer;
   private final ApplicationEventPublisher applicationEventPublisher;
 
   ApiKeyService(
       ApiKeyRepository apiKeyRepository,
       ApiKeyProperties apiKeyProperties,
       AuditLogService auditLogService,
-      DatabaseOperationTimer databaseOperationTimer,
       ApplicationEventPublisher applicationEventPublisher) {
     this.apiKeyRepository = apiKeyRepository;
     this.apiKeyProperties = apiKeyProperties;
     this.auditLogService = auditLogService;
-    this.databaseOperationTimer = databaseOperationTimer;
     this.applicationEventPublisher = applicationEventPublisher;
-  }
-
-  @Transactional(readOnly = true)
-  public Optional<AuthenticatedCredential> authenticate(String rawKey) {
-    if (!SecureTokens.isApiKey(rawKey)) {
-      return Optional.empty();
-    }
-    OffsetDateTime now = OffsetDateTime.now();
-    byte[] keyHash = SecureTokens.hash(rawKey);
-    return databaseOperationTimer
-        .timeSelect(API_KEY_TABLE, () -> apiKeyRepository.findByKeyHash(keyHash))
-        .filter(apiKey -> apiKey.isUsableAt(now))
-        .map(ApiKeyService::credentialOf);
   }
 
   @Transactional(readOnly = true)
@@ -207,21 +184,6 @@ public class ApiKeyService {
         .filter(key -> BusinessEnvironmentContext.matches(key.getEnvironmentId()))
         .filter(apiKey -> apiKey.getRevokedAt() == null)
         .orElseThrow(() -> new NotFoundException(ErrorCode.API_KEY_NOT_FOUND));
-  }
-
-  private static AuthenticatedCredential credentialOf(ApiKey apiKey) {
-    AuthenticatedPrincipal principal =
-        new AuthenticatedPrincipal(
-            PrincipalKind.API_KEY,
-            apiKey.getOrganizationId(),
-            apiKey.getId(),
-            null,
-            null,
-            apiKey.getMode(),
-            null,
-            Set.copyOf(apiKey.getScopes()),
-            apiKey.getEnvironmentId());
-    return new AuthenticatedCredential(principal, apiKey.getRateLimitPerMinute());
   }
 
   private void publishChanged(ApiKey apiKey) {

@@ -2,8 +2,9 @@ package com.meterengine.global;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
-import com.meterengine.apikey.service.ApiKeyService;
+import com.meterengine.apikey.service.ApiKeyCredentialService;
 import com.meterengine.global.security.AuthenticatedPrincipal;
 import com.meterengine.global.security.PrincipalKind;
 import java.io.IOException;
@@ -45,12 +46,13 @@ class LocalCredentialsTest {
       List.of("organization", "user_account", "organization_member", "api_key");
 
   @Autowired private JdbcTemplate jdbcTemplate;
-  @Autowired private ApiKeyService apiKeyService;
+  @Autowired private ApiKeyCredentialService apiKeyCredentialService;
   @Autowired private PasswordEncoder passwordEncoder;
 
   @BeforeEach
   void setUp() {
     jdbcTemplate.execute(readLocalCredentialsScript());
+    TestCredentials.refreshApiKeyTable(jdbcTemplate);
   }
 
   @Test
@@ -64,10 +66,10 @@ class LocalCredentialsTest {
 
   @Test
   void README의_로컬_키는_데모_도입사의_admin_키로_인증된다() {
-    assertThat(apiKeyService.authenticate(LIVE_KEY))
+    assertThat(apiKeyCredentialService.authenticate(LIVE_KEY))
         .hasValueSatisfying(
             credential -> assertAdminKeyOfDemoOrganization(credential.principal(), "live"));
-    assertThat(apiKeyService.authenticate(TEST_KEY))
+    assertThat(apiKeyCredentialService.authenticate(TEST_KEY))
         .hasValueSatisfying(
             credential -> assertAdminKeyOfDemoOrganization(credential.principal(), "test"));
   }

@@ -11,7 +11,7 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 
 import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
-import com.meterengine.apikey.service.ApiKeyService;
+import com.meterengine.apikey.service.ApiKeyCredentialService;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.security.AuthenticatedCredential;
 import com.meterengine.global.security.AuthenticatedPrincipal;
@@ -47,7 +47,7 @@ class SecurityIntegrationTest {
   @Autowired private WebApplicationContext webApplicationContext;
   @Autowired private JdbcTemplate jdbcTemplate;
   @Autowired private JsonMapper jsonMapper;
-  @Autowired private ApiKeyService apiKeyService;
+  @Autowired private ApiKeyCredentialService apiKeyCredentialService;
 
   private MockMvcTester mvc;
 
@@ -171,6 +171,7 @@ class SecurityIntegrationTest {
     jdbcTemplate.update(
         "UPDATE api_key SET revoked_at = now() WHERE key_hash = sha256(convert_to(?, 'UTF8'))",
         rawKeyOf(authorization));
+    TestCredentials.refreshApiKeyTable(jdbcTemplate);
 
     assertThat(list(authorization))
         .hasStatus(401)
@@ -317,9 +318,10 @@ class SecurityIntegrationTest {
     jdbcTemplate.update(
         "UPDATE api_key SET rate_limit_per_minute = 30 WHERE key_hash = sha256(convert_to(?, 'UTF8'))",
         rawKeyOf(authorization));
+    TestCredentials.refreshApiKeyTable(jdbcTemplate);
 
     assertThat(
-            apiKeyService
+            apiKeyCredentialService
                 .authenticate(rawKeyOf(authorization))
                 .map(AuthenticatedCredential::rateLimitPerMinute))
         .contains(30);
@@ -418,7 +420,7 @@ class SecurityIntegrationTest {
   // --- 헬퍼 ---
 
   private AuthenticatedPrincipal authenticate(String authorization) {
-    return apiKeyService.authenticate(rawKeyOf(authorization)).orElseThrow().principal();
+    return apiKeyCredentialService.authenticate(rawKeyOf(authorization)).orElseThrow().principal();
   }
 
   private MvcTestResult list(String authorization) {
@@ -440,6 +442,7 @@ class SecurityIntegrationTest {
             + expression
             + " WHERE key_hash = sha256(convert_to(?, 'UTF8'))",
         rawKeyOf(authorization));
+    TestCredentials.refreshApiKeyTable(jdbcTemplate);
   }
 
   private void setRateLimitPerMinute(String authorization, int limitPerMinute) {
@@ -447,6 +450,7 @@ class SecurityIntegrationTest {
         "UPDATE api_key SET rate_limit_per_minute = ? WHERE key_hash = sha256(convert_to(?, 'UTF8'))",
         limitPerMinute,
         rawKeyOf(authorization));
+    TestCredentials.refreshApiKeyTable(jdbcTemplate);
   }
 
   private UUID insertOrganization() {

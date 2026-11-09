@@ -305,6 +305,7 @@ class ApiKeyIntegrationTest {
     entityManager.clear();
     jdbcTemplate.update(
         "UPDATE api_key SET expires_at = now() - interval '1 second' WHERE id = ?", oldId);
+    TestCredentials.refreshApiKeyTable(jdbcTemplate);
 
     assertThat(mvc.get().uri("/v1/usage").header(AUTHORIZATION, bearer(oldSecret)).exchange())
         .hasStatus(401)
@@ -567,12 +568,15 @@ class ApiKeyIntegrationTest {
   }
 
   private MvcTestResult createApiKey(String authorization, String body) {
-    return mvc.post()
-        .uri(API_KEYS)
-        .header(AUTHORIZATION, authorization)
-        .contentType(MediaType.APPLICATION_JSON)
-        .content(body)
-        .exchange();
+    MvcTestResult result =
+        mvc.post()
+            .uri(API_KEYS)
+            .header(AUTHORIZATION, authorization)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(body)
+            .exchange();
+    TestCredentials.refreshApiKeyTable(jdbcTemplate);
+    return result;
   }
 
   private MvcTestResult replace(String authorization, UUID replacedApiKeyId) {
@@ -583,7 +587,10 @@ class ApiKeyIntegrationTest {
   }
 
   private MvcTestResult deleteApiKey(String authorization, UUID id) {
-    return mvc.delete().uri(API_KEYS + "/{id}", id).header(AUTHORIZATION, authorization).exchange();
+    MvcTestResult result =
+        mvc.delete().uri(API_KEYS + "/{id}", id).header(AUTHORIZATION, authorization).exchange();
+    TestCredentials.refreshApiKeyTable(jdbcTemplate);
+    return result;
   }
 
   private OffsetDateTime expiresAtOf(UUID id) {
