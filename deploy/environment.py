@@ -21,6 +21,9 @@ FIELDS = {"autoscaling_group_name", "database_identifier", "parameter_path", "si
           "image_repository_prefix", "backend_mem_limit", "backend_max_ram_percentage"}
 REQUIRED_PARAMETERS = ["DB_HOST", "DB_PORT", "DB_NAME", "DB_USERNAME", "DB_PASSWORD", "CRYPTO_ENCRYPTION_KEY", "OPERATOR_EMAIL", "OPERATOR_PASSWORD"]
 IMDS = "http://169.254.169.254/latest"
+# 값은 backend의 meterengine.role과 같다. 태그가 없는 서버는 전부 맡는다.
+SERVER_ROLE_TAG = "ServerRole"
+SERVER_ROLES = ("all", "ingest", "consumer", "api")
 
 
 def load_target(name: str, directory: Path) -> dict:
@@ -63,13 +66,26 @@ def database_identifier(host: str) -> str:
     return host.split(".", 1)[0]
 
 
-def autoscaling_group_name() -> str:
-    """오토스케일링 그룹 밖 서버(옛 단일 서버)는 태그가 없어 빈 값이다."""
+def instance_tag(name: str) -> str:
+    """이 서버에 그 태그가 없으면 빈 값이다."""
     curl = ["curl", "-fsS", "--noproxy", "*", "--connect-timeout", "2", "--max-time", "5"]
     token = subprocess.check_output([*curl, "-X", "PUT", "-H", "X-aws-ec2-metadata-token-ttl-seconds: 60", f"{IMDS}/api/token"], text=True).strip()
-    result = subprocess.run([*curl, "-H", f"X-aws-ec2-metadata-token: {token}", f"{IMDS}/meta-data/tags/instance/aws:autoscaling:groupName"],
+    result = subprocess.run([*curl, "-H", f"X-aws-ec2-metadata-token: {token}", f"{IMDS}/meta-data/tags/instance/{name}"],
                             text=True, capture_output=True)
     return result.stdout.strip() if result.returncode == 0 else ""
+
+
+def autoscaling_group_name() -> str:
+    """오토스케일링 그룹 밖 서버(옛 단일 서버)는 태그가 없어 빈 값이다."""
+    return instance_tag("aws:autoscaling:groupName")
+
+
+def server_role() -> str:
+    """같은 파라미터 경로를 쓰는 수집 서버와 컨슈머 서버를 오토스케일링 그룹의 태그로 가른다."""
+    role = instance_tag(SERVER_ROLE_TAG) or "all"
+    if role not in SERVER_ROLES:
+        raise ValueError(f"{SERVER_ROLE_TAG} 태그는 {', '.join(SERVER_ROLES)} 중 하나여야 한다: {role}")
+    return role
 
 
 def observe_target(target: dict) -> dict:
@@ -108,10 +124,11 @@ def main() -> int:
             print(f"[deploy] 복구 배포: DB 식별자를 환경 파일 대신 {recovery_db_identifier}와 대조한다", file=sys.stderr)
             target["database_identifier"] = recovery_db_identifier
         validate_target(target, observe_target(target))
+        values = {**shell_values(target), "METERENGINE_ROLE": server_role()}
     except (OSError, ValueError, KeyError, subprocess.CalledProcessError) as error:
         print(f"[deploy] 환경 확인 실패: {error}", file=sys.stderr)
         return 2
-    for key, value in shell_values(target).items():
+    for key, value in values.items():
         print(f"{key}={shlex.quote(value)}")
     return 0
 

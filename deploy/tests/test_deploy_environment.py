@@ -210,6 +210,16 @@ class DeployEnvironmentTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("IMAGE_REPOSITORY_PREFIX=meterengine-staging\n", self.env_file.read_text())
 
+    def test_server_without_a_role_runs_every_role(self):
+        result = self.deploy("staging", SHA)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("METERENGINE_ROLE=all\n", self.env_file.read_text())
+
+    def test_server_role_reaches_env_file(self):
+        result = self.deploy("staging", SHA, METERENGINE_ROLE="consumer")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("METERENGINE_ROLE=consumer\n", self.env_file.read_text())
+
     def test_image_from_other_repository_stops_deploy(self):
         self.set_preflight(image_prefix="meterengine-staging")
         result = self.deploy("staging", SHA)

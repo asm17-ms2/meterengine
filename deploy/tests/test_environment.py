@@ -186,7 +186,7 @@ class PreflightTest(unittest.TestCase):
         self.target = write_target(self.root / "environments", "staging", site_aliases=["www.one.example", "www.two.example"])
         bin_dir = self.root / "bin"
         bin_dir.mkdir()
-        self.fake(bin_dir / "curl", 'case "$*" in *api/token*) echo token ;; *aws:autoscaling:groupName*) [ -n "$FAKE_GROUP" ] || exit 22; echo "$FAKE_GROUP" ;; *) exit 22 ;; esac\n')
+        self.fake(bin_dir / "curl", 'case "$*" in *api/token*) echo token ;; *aws:autoscaling:groupName*) [ -n "$FAKE_GROUP" ] || exit 22; echo "$FAKE_GROUP" ;; *tags/instance/ServerRole*) [ -n "$FAKE_ROLE" ] || exit 22; echo "$FAKE_ROLE" ;; *) exit 22 ;; esac\n')
         self.fake(bin_dir / "aws", 'echo "$FAKE_DB_HOST"\n')
         self.env = dict(os.environ, PATH=f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
                         FAKE_GROUP=self.target["autoscaling_group_name"], FAKE_DB_HOST=f"{self.target['database_identifier']}.example.invalid")
@@ -209,6 +209,22 @@ class PreflightTest(unittest.TestCase):
         result = self.preflight('printf "%s" "$IMAGE_REPOSITORY_PREFIX"')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout, "meterengine-staging")
+
+    def test_preflight_prints_all_role_without_the_tag(self):
+        result = self.preflight('printf "%s" "$METERENGINE_ROLE"')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "all")
+
+    def test_preflight_prints_the_tagged_role(self):
+        result = self.preflight('printf "%s" "$METERENGINE_ROLE"', FAKE_ROLE="consumer")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "consumer")
+
+    def test_unknown_role_tag_stops_before_printing(self):
+        result = self.preflight(FAKE_ROLE="consumr")
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(result.stdout, "")
+        self.assertIn("ServerRole", result.stderr)
 
     def test_preflight_prints_required_parameters(self):
         result = self.preflight('printf "%s" "$REQUIRED_PARAMETERS"')
