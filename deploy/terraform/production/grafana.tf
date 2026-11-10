@@ -134,3 +134,31 @@ resource "aws_vpc_security_group_ingress_rule" "grafana_from_alb" {
   to_port                      = local.grafana_port
   tags                         = { Environment = "production" }
 }
+
+# 경보를 보내는 Grafana가 이 서버 안에 있어, 서버가 굳으면 알림도 같이 멎는다. 서버 밖에서 따로 본다.
+# 받는 곳(Slack, 메일)은 공개 저장소에 적지 않고 이 주제에 손으로 구독을 건다.
+resource "aws_sns_topic" "monitoring_down" {
+  name = "meterengine-monitoring-down"
+  tags = { Environment = "production" }
+}
+
+resource "aws_cloudwatch_metric_alarm" "grafana_unhealthy" {
+  alarm_name          = "meterengine-monitoring-grafana-unhealthy"
+  alarm_description   = "The shared monitoring server stopped answering the ALB health check. Grafana alerts are not being sent."
+  namespace           = "AWS/ApplicationELB"
+  metric_name         = "UnHealthyHostCount"
+  statistic           = "Maximum"
+  period              = 60
+  evaluation_periods  = 2
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  threshold           = 1
+  # 대상이 빠져 지표가 끊겨도 Grafana가 닿지 않는 것이므로 울린다.
+  treat_missing_data = "breaching"
+  dimensions = {
+    LoadBalancer = module.app_fleet.alb_arn_suffix
+    TargetGroup  = aws_lb_target_group.grafana.arn_suffix
+  }
+  alarm_actions = [aws_sns_topic.monitoring_down.arn]
+  ok_actions    = [aws_sns_topic.monitoring_down.arn]
+  tags          = { Environment = "production" }
+}

@@ -22,3 +22,6 @@ output "https_listener_arn" {
 output "alb_security_group_id" {
   value = aws_security_group.alb.id
 }
+output "alb_arn_suffix" {
+  value = aws_lb.app.arn_suffix
+}

@@ -34,7 +34,7 @@ resource "aws_vpc_security_group_egress_rule" "scrape" {
 
 resource "aws_instance" "monitoring" {
   ami                    = "ami-0f4109eb491b0476f"
-  instance_type          = "t4g.small"
+  instance_type          = "t4g.medium"
   subnet_id              = "subnet-0348a18c1d399c193"
   vpc_security_group_ids = [aws_security_group.monitoring.id]
   iam_instance_profile   = aws_iam_instance_profile.monitoring.name
