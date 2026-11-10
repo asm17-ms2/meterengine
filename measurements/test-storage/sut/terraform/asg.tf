@@ -95,6 +95,14 @@ resource "aws_autoscaling_group" "sut" {
     propagate_at_launch = true
   }
 
+  # deploy.sh가 이 태그를 METERENGINE_ROLE로 넘긴다. 카프카 경로에서는 수집만 맡고 저장은 컨슈머 ASG가 한다.
+  # 이때는 예약 작업을 도는 서버가 없다. 태그는 새로 뜨는 서버부터 붙는다.
+  tag {
+    key                 = "ServerRole"
+    value               = var.kafka_enabled ? "ingest" : "all"
+    propagate_at_launch = true
+  }
+
   lifecycle {
     ignore_changes = [desired_capacity]
 

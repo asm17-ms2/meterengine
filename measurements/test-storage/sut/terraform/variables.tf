@@ -67,3 +67,40 @@ variable "auto_stop_state" {
     error_message = "auto_stop_state는 ENABLED나 DISABLED만 쓸 수 있다."
   }
 }
+
+variable "kafka_enabled" {
+  description = "MSK 클러스터를 만들고 수집 경로를 카프카로 돌린다. MSK는 멈출 수 없고 떠 있는 동안 과금되므로 실험하는 날만 켠다. 끄면 토픽과 메시지가 지워진다"
+  type        = bool
+  default     = false
+}
+
+# staging, production이 쓸 kafka.t3.small은 KRaft를 고를 수 없어 ZooKeeper 방식이고, 그 마지막 버전이 3.9다.
+# 브로커가 죽었을 때 새 리더를 뽑는 시간이 방식에 따라 달라, 운영과 같은 방식으로 잰다.
+variable "kafka_version" {
+  description = "MSK의 카프카 버전. 끝에 .kraft가 붙으면 KRaft, 없으면 ZooKeeper 방식이다. 4.2.x는 Express 브로커 전용이라 쓸 수 없다"
+  type        = string
+  default     = "3.9.x"
+}
+
+variable "kafka_broker_instance_type" {
+  description = "MSK 브로커 인스턴스 유형"
+  type        = string
+  default     = "kafka.m7g.large"
+}
+
+variable "kafka_broker_volume_size" {
+  description = "브로커 한 대의 저장 용량(GB)"
+  type        = number
+  default     = 100
+}
+
+variable "consumer_count" {
+  description = "카프카를 읽어 DB에 넣는 컨슈머 서버 대수. 04:00 예약이 0으로 내리므로 평소 0이고, 측정할 때만 -var로 올린다"
+  type        = number
+  default     = 0
+
+  validation {
+    condition     = var.consumer_count >= 0 && var.consumer_count <= 6
+    error_message = "consumer_count는 0에서 6 사이여야 한다. event.ingest 토픽의 파티션이 6개라 그보다 많으면 남는 서버가 논다."
+  }
+}

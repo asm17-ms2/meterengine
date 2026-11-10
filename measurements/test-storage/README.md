@@ -9,7 +9,7 @@
 
 | 경로 | 내용 |
 | --- | --- |
-| `sut/terraform/` | ALB(ACM 인증서), 오토스케일링 그룹(m7g.large, 최소 0, 최대 3), 버전 파라미터, RDS db.m7g.large(PostgreSQL 18.4, Single-AZ), 보안 그룹, IAM 역할, 파라미터, 도메인, 자동 중지 |
+| `sut/terraform/` | ALB(ACM 인증서), 오토스케일링 그룹(m7g.large, 최소 0, 최대 3), 버전 파라미터, RDS db.m7g.large(PostgreSQL 18.4, Single-AZ), 보안 그룹, IAM 역할, 파라미터, 도메인, 자동 중지. 켰을 때만 MSK 클러스터(브로커 3대)와 컨슈머 서버 오토스케일링 그룹("카프카 경로" 참고) |
 | `sut/scripts/` | 배포, exporter 사용자 만들기, 켜고 끄기, 앱 서버 목록, 부하 실험 중 CPU와 메모리 기록 켜기 |
 | `load-generator/terraform/` | 부하 발생기 EC2 m7g.large, 보안 그룹, IAM 역할, 자동 중지 |
 | `load-generator/k6/` | k6 스크립트 |
@@ -449,6 +449,48 @@ curl -fo work/<RUN_ID>/<RUN_ID>-backend.log http://localhost:8000/<RUN_ID>-backe
 - "RDS Multi-AZ" 절대로 `-var` 없이 apply 해 끈다. plan에 destroy가 없어야 한다.
 - `lg-stop.sh`와 `sut-stop.sh`로 끈다.
 
+## 카프카 경로
+
+수집 API가 요청 안에서 DB에 저장하지 않고 카프카에 발행하고, 컨슈머 서버가 읽어 DB에 넣는 경로를 잰다(MS2-519). 평소에는 꺼 둔다.
+
+| 무엇 | 내용 |
+| --- | --- |
+| MSK 클러스터 | `kafka.m7g.large` 브로커 3대, 가용 영역 세 곳(2a, 2b, 2c). 카프카 3.9, ZooKeeper 방식. TLS(9094 포트)만 열고 인증은 하지 않는다 |
+| 수집 서버 | 기존 오토스케일링 그룹. `ServerRole=ingest` 태그가 붙어 발행만 한다 |
+| 컨슈머 서버 | 오토스케일링 그룹 `meterengine-test-storage-consumer`. `ServerRole=consumer`, 대수 고정, ALB에 붙지 않는다 |
+| 서버가 읽는 값 | 파라미터 `event-write-path`, `kafka-bootstrap-servers`, `kafka-security-protocol`, `kafka-create-topics`. 켰을 때만 있다 |
+| 토픽 | `event.ingest`(파티션 6, 복제 3, 보관 7일), `event.dlq`(파티션 1, 복제 3, 보관 30일). 먼저 뜬 backend가 만든다 |
+
+- `deploy.sh`가 서버의 `ServerRole` 태그를 읽어 backend에 `METERENGINE_ROLE`로 넘긴다. 태그가 없거나 `all`이면 한 서버가 전부 맡는다.
+- 인증이 없는 것은 이 계정이 속한 조직의 정책이 IAM 인증에 쓰는 `kafka-cluster` 권한을 막기 때문이다. 브로커에 붙을 수 있는 쪽은 보안 그룹이 수집 서버와 컨슈머 서버로 좁힌다. 붙은 서버는 모든 토픽을 읽고 쓸 수 있다.
+- ZooKeeper 방식인 것은 staging, production이 쓸 `kafka.t3.small`이 KRaft를 고를 수 없어서다. KRaft로 재려면 `-var kafka_version=3.9.x.kraft`를 준다.
+- 켠 동안에는 예약 작업(집계, 인보이스 확정)을 도는 서버가 없다. 수집과 저장만 잰다.
+- 2c 프라이빗 서브넷(`10.0.160.0/20`)은 이 루트가 만들고, 카프카를 꺼도 남는다. 서브넷은 비용이 없다.
+
+### 켜기
+
+클러스터를 만드는 데 30분쯤 걸린다.
+
+```bash
+terraform -chdir=measurements/test-storage/sut/terraform apply \
+  -var kafka_enabled=true -var asg_min_size=1 -var consumer_count=2
+```
+
+- 서버 없이 클러스터만 먼저 만들려면 `-var kafka_enabled=true`만 준다.
+- 이미 떠 있던 서버는 태그와 파라미터를 다시 읽지 않는다. 0대로 내렸다가 다시 띄운다.
+- `consumer_count`는 6까지다. `event.ingest`의 파티션이 6개라 그보다 많으면 남는 서버가 논다.
+
+### 끄기
+
+**MSK는 멈출 수 없다.** 04:00 예약은 서버만 0대로 내리고 클러스터는 그대로 과금된다. 실험이 끝나면 직접 지운다. 토픽과 메시지도 같이 지워진다.
+
+```bash
+terraform -chdir=measurements/test-storage/sut/terraform apply
+```
+
+- 변수를 주지 않으면 `kafka_enabled=false`라 클러스터와 카프카 파라미터가 지워지고 서버는 0대가 된다.
+- 서버를 남긴 채(`-var asg_min_size=1`) 끄지 않는다. 떠 있는 서버는 지워진 브로커에 계속 발행하려 해 503을 낸다.
+
 ## 상태 파일과 지우기
 
 - 상태 파일은 apply한 컴퓨터에만 있고 커밋하지 않는다. 잃으면 Terraform으로 지울 수 없으니 지우지 않는다.
@@ -472,4 +514,5 @@ terraform -chdir=measurements/test-storage/sut/terraform destroy
 - 켜 둔 동안 시간당 약 $0.34(앱 서버 한 대 $0.10, RDS $0.23, 공인 IP $0.005). 앱 서버가 늘면 한 대에 약 $0.10씩 더 든다. RDS Multi-AZ를 켠 동안은 RDS 몫이 약 두 배다.
 - 꺼 둔 동안 앱 서버는 0대라 EC2, EBS, 공인 IP 비용이 없다. RDS 스토리지 월 약 $3에 ALB 고정비 월 약 $16(시간당 $0.0225)이 더 든다. ALB는 끌 수 없어 켜고 끄기와 상관없이 나간다.
 - 부하 발생기는 켜 둔 동안 시간당 약 $0.11(EC2 $0.10, 공인 IP $0.005), 꺼 둔 동안 월 약 $2(EBS).
+- 카프카를 켠 동안 MSK 브로커 3대와 저장소가 더 든다. 2026-11-04에 잡은 값은 20시간에 약 $15다. 컨슈머 서버는 한 대에 시간당 약 $0.10이다.
 - SUT RDS가 있는 동안 cloudwatch exporter의 CloudWatch API 호출이 RDS 한 대 몫만큼 늘어 월 약 $17이 더 든다. exporter 설정([`deploy/cloudwatch/config.yml`](../../deploy/cloudwatch/config.yml))이 계정의 RDS를 모두 읽기 때문이다.

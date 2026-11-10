@@ -47,3 +47,18 @@ output "app_version_parameter_name" {
   description = "sut-deploy.sh가 커밋 SHA를 쓰고 서버가 부팅 때 읽는 버전 파라미터 이름"
   value       = aws_ssm_parameter.app_version.name
 }
+
+output "consumer_asg_name" {
+  description = "컨슈머 서버 오토스케일링 그룹 이름"
+  value       = aws_autoscaling_group.consumer.name
+}
+
+output "kafka_cluster_arn" {
+  description = "MSK 클러스터 ARN. kafka_enabled가 false면 비어 있다"
+  value       = one(aws_msk_cluster.events[*].arn)
+}
+
+output "kafka_bootstrap_brokers" {
+  description = "TLS(9094)로 붙는 브로커 주소. 서버는 파라미터 kafka-bootstrap-servers로 읽는다"
+  value       = one(aws_msk_cluster.events[*].bootstrap_brokers_tls)
+}
