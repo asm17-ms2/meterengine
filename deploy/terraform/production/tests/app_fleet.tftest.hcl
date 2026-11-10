@@ -25,13 +25,13 @@ override_resource {
   target = aws_route53_record.public
   values = {}
 }
+override_resource {
+  target = aws_ssm_parameter.coded
+  values = {}
+}
 
-run "production_runs_one_server_beside_the_old_server" {
+run "production_runs_one_server" {
   command = plan
-  override_resource {
-    target = module.service.aws_instance.app[0]
-    values = { id = "i-0f47bb1f028cd29a9" }
-  }
   override_resource {
     target = module.service.aws_db_instance.app
     values = { id = "db-72GJNZYUHSQRXAKNQGC7ECV7UI" }
@@ -40,10 +40,6 @@ run "production_runs_one_server_beside_the_old_server" {
   assert {
     condition     = output.app_fleet.autoscaling_group_name == "meterengine-production-app" && output.app_fleet.app_version_parameter_name == "/meterengine/production/app-version"
     error_message = "Rollout reads the fleet and version parameter names from these outputs."
-  }
-  assert {
-    condition     = module.service.instance_id == "i-0f47bb1f028cd29a9"
-    error_message = "The old server stays so the domains can move back to it."
   }
   assert {
     condition     = module.app_fleet.min_size == 1
@@ -68,7 +64,7 @@ run "production_fleet_configuration" {
     ecr_repository_names               = ["meterengine-backend", "meterengine-frontend"]
     ami_id                             = "ami-0f4109eb491b0476f"
     min_size                           = 0
-    scaling_target_requests_per_second = 450
+    scaling_target_average_cpu_percent = 60
     alb_deletion_protection            = true
     app_egress_ports                   = [443]
     monitoring_security_group_id       = "sg-33333333333333333"
@@ -135,7 +131,7 @@ run "unset_version_keeps_servers_off" {
     ecr_repository_names               = ["meterengine-backend", "meterengine-frontend"]
     ami_id                             = "ami-0f4109eb491b0476f"
     min_size                           = 1
-    scaling_target_requests_per_second = 450
+    scaling_target_average_cpu_percent = 60
     alb_deletion_protection            = true
     app_egress_ports                   = [443]
     monitoring_security_group_id       = "sg-33333333333333333"
@@ -164,7 +160,7 @@ run "recorded_sha_starts_one_server_and_waits_for_it" {
     ecr_repository_names               = ["meterengine-backend", "meterengine-frontend"]
     ami_id                             = "ami-0f4109eb491b0476f"
     min_size                           = 1
-    scaling_target_requests_per_second = 450
+    scaling_target_average_cpu_percent = 60
     alb_deletion_protection            = true
     app_egress_ports                   = [443]
     monitoring_security_group_id       = "sg-33333333333333333"

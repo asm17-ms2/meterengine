@@ -3,20 +3,6 @@ data "aws_region" "current" {}
 
 module "service" {
   source                    = "../modules/service"
-  name                      = "meterengine-staging"
-  ami_id                    = "ami-0f4109eb491b0476f"
-  instance_type             = "t4g.medium"
-  subnet_id                 = "subnet-0348a18c1d399c193"
-  ec2_security_group_ids    = [aws_security_group.app.id]
-  iam_instance_profile_name = aws_iam_instance_profile.runtime.name
-  root_block_device = {
-    volume_size           = 30
-    volume_type           = "gp3"
-    iops                  = 3000
-    throughput            = 125
-    encrypted             = true
-    delete_on_termination = true
-  }
   db_identifier             = "meterengine-staging-db"
   db_instance_class         = "db.t4g.small"
   db_subnet_group_name      = "meterengine-rds-subnet-private"
@@ -30,7 +16,6 @@ module "service" {
   deletion_protection       = true
   skip_final_snapshot       = false
   final_snapshot_identifier = "meterengine-staging-final"
-  user_data                 = file("${path.module}/bootstrap.sh")
 
   database_apply_immediately = true
 }
@@ -45,11 +30,11 @@ module "app_fleet" {
   route53_zone_id            = "Z08728621CQ5R1K37A7N1"
   database_security_group_id = aws_security_group.database.id
   ecr_repository_names       = local.ecr_repository_names
-  ami_id                     = "ami-0f4109eb491b0476f"
+  ami_id                     = "ami-02b68e7eb6b798d63"
   # 버전 파라미터에 40자 SHA가 기록되기 전에는 모듈의 precondition이 plan을 멈춘다.
   min_size = 1
   # 측정 환경 숫자로 잡은 추정값이다.
-  scaling_target_requests_per_second = 450
+  scaling_target_average_cpu_percent = 60
   alb_deletion_protection            = false
   monitoring_security_group_id       = data.aws_security_group.monitoring.id
 }

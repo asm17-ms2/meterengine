@@ -95,6 +95,12 @@ class ApiKeyRateLimitIntegrationTest {
   }
 
   private MvcTestResult create(String session, String limit) {
+    MvcTestResult result = createWithoutRefresh(session, limit);
+    TestCredentials.refreshApiKeyTable(jdbcTemplate);
+    return result;
+  }
+
+  private MvcTestResult createWithoutRefresh(String session, String limit) {
     return mvc.post()
         .uri("/v1/api-keys")
         .header("Authorization", session)

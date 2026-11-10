@@ -87,7 +87,10 @@ class WorkflowTest(unittest.TestCase):
         source = CI.read_text()
         for pattern in (".github/workflows/deploy.yml", ".github/workflows/cd-staging.yml", ".github/workflows/cd-production.yml", "measurements/*/lib/common.sh",
                         "measurements/*/sut/terraform/iam.tf", "measurements/*/sut/terraform/locals.tf",
-                        "measurements/*/sut/scripts/remote/upsert-exporter-user.sh", "measurements/*/README.md"):
+                        "measurements/*/sut/terraform/variables.tf",
+                        "measurements/*/sut/scripts/remote/upsert-exporter-user.sh", "measurements/*/sut/scripts/sut-deploy.sh",
+                        "measurements/*/README.md", "measurements/test-sjpark/sut/**",
+                        "measurements/test-sjpark/k6/lib/config.js"):
             self.assertIn(f"- '{pattern}'", source)
 
     def test_readme_manual_rollout_matches_the_cd_call(self):
@@ -110,10 +113,6 @@ class WorkflowTest(unittest.TestCase):
         self.assertIn("aws autoscaling suspend-processes --auto-scaling-group-name meterengine-production-app", section)
         self.assertIn("aws autoscaling resume-processes --auto-scaling-group-name meterengine-production-app", section)
         self.assertIn("production.json", section)
-
-    def test_readme_restore_keeps_the_old_server_procedure_until_the_switch(self):
-        section = README.read_text().split("#### 운영 전환 전")[1].split("### 암호화 키 맞추기")[0]
-        self.assertIn("RECOVERY_DB_IDENTIFIER=$RESTORED_ID ./deploy/deploy.sh production <SHA>", section)
 
 
 class AwsParsingTest(unittest.TestCase):

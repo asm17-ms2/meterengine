@@ -1,4 +1,4 @@
-# 서버는 기본 이미지로 뜨고 staging, production과 같은 부팅 스크립트로 버전 파라미터의 커밋을 배포한다.
+# 서버는 staging, production과 같은 미리 구운 이미지와 부팅 스크립트로 버전 파라미터의 커밋을 배포한다.
 # 그 스크립트를 바꾸면 다음 apply에서 이 시작 템플릿도 새 버전이 되고 떠 있는 서버가 바뀐다.
 resource "aws_launch_template" "sut" {
   name_prefix            = "${local.prefix}-sut-"
@@ -49,7 +49,7 @@ resource "aws_autoscaling_group" "sut" {
   vpc_zone_identifier = [data.aws_subnet.public_2a.id]
   target_group_arns   = [aws_lb_target_group.backend.arn, aws_lb_target_group.frontend.arn]
 
-  # ALB 헬스 체크(backend readiness)로 살았는지 본다. 기본 이미지에 설치부터 하므로 staging, production과 같은 유예를 준다.
+  # ALB 헬스 체크(backend readiness)로 살았는지 본다. 부팅이 같으니 staging, production과 같은 유예를 준다.
   health_check_type         = "ELB"
   health_check_grace_period = 600
   default_instance_warmup   = 180
@@ -111,17 +111,16 @@ data "aws_ssm_parameter" "app_version" {
   name = aws_ssm_parameter.app_version.name
 }
 
-# 서버당 초당 600건(한 대 CPU 80% 지점 약 810건보다 낮게)을 넘으면 늘린다. ALB 1분 지표는 늦어 서버가 10초마다 올리는 값을 쓴다.
-# 각 서버가 자기 초당 요청을 원하는 대수로 나눠 올리고 그 합을 본다. 계산식으로 나누면 공급자가 period를 60초로 보내 거절된다.
-resource "aws_autoscaling_policy" "sut_requests" {
-  name                   = "${local.prefix}-requests-per-server"
+# 서버마다 10초마다 (CPU / 원하는 대수)를 올리고(deploy/server/cpu-metric.sh) 같은 칸의 합이 60%를 넘으면 늘린다.
+resource "aws_autoscaling_policy" "sut_average_cpu" {
+  name                   = "${local.prefix}-average-cpu"
   autoscaling_group_name = aws_autoscaling_group.sut.name
   policy_type            = "TargetTrackingScaling"
 
   target_tracking_configuration {
     customized_metric_specification {
       namespace   = "MeterEngine/Scaling"
-      metric_name = "IngestRequestsPerSecondPerDesiredInstance"
+      metric_name = "CPUUtilizationPerDesiredInstance"
       statistic   = "Sum"
       period      = 10
       metric_dimension {
@@ -129,6 +128,6 @@ resource "aws_autoscaling_policy" "sut_requests" {
         value = aws_autoscaling_group.sut.name
       }
     }
-    target_value = 600
+    target_value = 60
   }
 }

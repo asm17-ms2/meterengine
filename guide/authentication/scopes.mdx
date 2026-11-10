@@ -1,0 +1,115 @@
+---
+title: "화면과 API, 권한"
+description: "콘솔 로그인과 API 키의 차이, read, ingest, admin 권한이 허용하는 일과 콘솔에서만 되는 기능을 설명합니다."
+---
+
+MeterEngine은 사람이 쓰는 콘솔 로그인과 도입사 서버가 쓰는 API 키로 인증합니다. 둘 다 read, ingest, admin 권한으로 할 수 있는 일이 정해지지만, 몇몇 기능은 콘솔 로그인으로만 됩니다.
+
+## 콘솔 로그인과 API 키
+
+| | 콘솔 로그인 | API 키 |
+| --- | --- | --- |
+| 쓰는 주체 | 도입사 구성원(사람) | 도입사 서버 |
+| 얻는 법 | https://meterengine.com 에서 이메일과 비밀번호로 로그인 | 콘솔 'API 키와 통보' 화면에서 발급 |
+| 유지 기간 | 로그인한 때부터 12시간. 지나면 다시 로그인합니다 | 폐기하거나 교체해 만료될 때까지 |
+| 권한을 정하는 곳 | '사용자 관리' 화면의 사용자별 '업무 권한' | 키마다 'API 권한' |
+| 업무 환경 | 화면 위 '업무 환경'에서 고른 환경 | 키를 발급한 환경에 고정 |
+| 분당 요청 한도 | 없음 | 키에 정한 경우에만 |
+
+콘솔 화면에도 "API 키는 서버의 권한입니다. 사람의 관리 권한은 사용자 관리에서 정합니다."라고 쓰여 있습니다. 사람의 권한을 바꿔도 그 사람이 발급한 키의 권한은 바뀌지 않고, 키를 폐기해도 사람의 권한은 그대로입니다.
+
+키 발급 방법은 [API 키 발급과 첫 호출](/authentication/api-keys)을 보세요.
+
+## read, ingest, admin
+
+| API 값 | 화면 표기 | 할 수 있는 일 |
+| --- | --- | --- |
+| `read` | 조회 (read) | 고객, 미터, 단가, 사용량, 청구 예정액, 인보이스, 결제 기록 같은 업무 데이터 조회 |
+| `ingest` | 수집 (ingest) | 고객 등록, 사용량 이벤트 전송 |
+| `admin` | 전체 관리 (admin) | 조회와 수집을 포함한 모든 데이터 변경 |
+
+- `admin`은 `read`와 `ingest`를 포함합니다. `admin`만 준 키로도 조회와 이벤트 전송을 할 수 있습니다.
+- `read`와 `ingest`는 서로 포함하지 않습니다. `ingest`만 준 키는 조회 요청에 403 `permission_denied`를 받습니다. 둘이 다 필요하면 함께 체크하세요.
+- 권한이 모자라면 403 `permission_denied`가 옵니다.
+
+```json
+{"code":"permission_denied","message":"이 요청을 할 권한이 없습니다"}
+```
+
+## 어떤 요청에 어떤 권한이 필요한가
+
+규칙은 다음과 같습니다. 아래 "콘솔 로그인으로만 되는 기능"은 예외입니다.
+
+1. 조회(`GET`)는 `read`가 필요합니다.
+2. 고객 등록(`POST /v1/customers`)과 이벤트 전송(`POST /v1/events`, `POST /v1/event-batches`)은 `ingest`가 필요합니다.
+3. 그 밖의 변경(`POST`, `PUT`, `PATCH`, `DELETE`)은 `admin`이 필요합니다.
+
+자주 쓰는 요청으로 보면 다음과 같습니다.
+
+| 하는 일 | 요청 | 필요 권한 |
+| --- | --- | --- |
+| 고객, 사용량, 청구 예정액, 인보이스 조회 | `GET /v1/customers`, `GET /v1/usage`, `GET /v1/invoices/draft`, `GET /v1/invoices` 등 | `read` |
+| 고객 등록 | `POST /v1/customers` | `ingest` |
+| 이벤트 전송 | `POST /v1/events`, `POST /v1/event-batches` | `ingest` |
+| 고객 정보 변경, 보관 | `PUT /v1/customers/{id}`, `DELETE /v1/customers/{id}` | `admin` |
+| 미터와 단가 등록 | `POST /v1/billable-metrics`, `POST /v1/billable-metrics/{code}/price-rates` | `admin` |
+| 인보이스 확정 | `POST /v1/invoices` | `admin` |
+| 카드 등록 링크, 인보이스 조회 링크 발급 | `POST /v1/customers/{id}/payment-method-registrations`, `POST /v1/invoices/{id}/view-links` | `admin` |
+| 결제 요청, 결제 취소 | `POST /v1/invoices/{id}/payment-attempts`, `POST /v1/payment-attempts/{id}/cancellations` | `admin` |
+| 웹훅 수신 주소 등록 | `POST /v1/webhook-endpoints` | `admin` |
+
+<Note>
+`ingest`만 준 키로 이미 등록한 `external_id`의 고객을 다시 등록하면 200 응답에 `id`, `external_id`, `version`만 채워지고 나머지는 `null`입니다. 이벤트에 쓸 고객 `id`는 이 응답으로도 얻을 수 있습니다([고객 등록과 ID 대응](/integration/customers)).
+</Note>
+
+## 콘솔 로그인으로만 되는 기능
+
+{/* 확인 필요: API 참조에서 숨기는 범위 */}
+아래 기능은 콘솔에 로그인한 상태에서만 됩니다. API 키로 부르면 `admin` 권한이 있어도 403 `permission_denied`로 거절됩니다. 이 가이드도 이 기능들은 콘솔 화면 절차로 안내합니다.
+
+| 기능 | 콘솔 화면 | 콘솔 사용자에게 필요한 권한 |
+| --- | --- | --- |
+| API 키 목록 조회 | 'API 키와 통보' | 조회(read) |
+| API 키 발급, 권한 변경, 폐기 | 'API 키와 통보' | 전체 관리(admin) |
+| 토스페이먼츠 키 저장과 보관 | '도입사 설정' | 전체 관리(admin) |
+| 결제 모드 변경 | '도입사 설정' | 전체 관리(admin) |
+| 사용자 목록 조회 | '사용자 관리' | 조회(read) |
+| 사용자 추가, 권한과 역할 변경, 초대 | '사용자 관리' | 대표관리자 |
+| 감사 기록 조회 | '감사 기록' | 조회(read) |
+
+- 토스페이먼츠 키 목록과 지금 결제 모드는 `read` 권한 API 키로도 조회할 수 있습니다(`GET /v1/toss-payments-credentials`, `GET /v1/payment-setting`). 저장과 변경만 콘솔에서 합니다.
+- 사용자와 초대 관리는 대표관리자만 할 수 있습니다. 자세한 내용은 [구성원과 권한](/account/members)을 보세요.
+- 결제 모드를 바꿀 수 있는 경우는 [테스트 결제와 실결제](/payments/test-and-live)를 보세요.
+
+## API로만 되는 기능
+
+사용량 이벤트 전송은 API로만 합니다. 콘솔에는 이벤트를 입력하는 화면이 없고, '수집 로그' 화면에서 받은 이벤트를 조회만 합니다. 고객 등록은 콘솔과 API 둘 다 됩니다. 이벤트 보내는 법은 [사용량 이벤트 보내기](/integration/events)를 보세요.
+
+## MeterEngine 운영자만 하는 일
+
+가입 신청 승인과 거절, 도입사 정지는 MeterEngine 운영자가 합니다. 도입사의 콘솔 로그인이나 API 키로는 할 수 없습니다. 승인 전이거나 거절, 정지된 도입사는 403 `organization_not_active`를 받습니다([가입과 승인](/account/signup)).
+
+## 권한을 바꾸면
+
+- 사람의 업무 권한과 키의 권한 모두 바꾼 뒤 다음 요청부터 적용됩니다. 다시 로그인하거나 키를 새로 넣지 않아도 됩니다.
+- 키 권한을 바꾸는 법은 [키 교체, 권한 변경, 폐기](/authentication/key-rotation)를 보세요.
+- 구성원을 추가할 때 기본 권한은 조회(read)입니다([구성원과 권한](/account/members)).
+
+## 권장하는 키 배분
+
+키는 쓰는 서버마다 따로 발급하고, 그 서버가 하는 일에 필요한 권한만 주세요. 한 키가 새어 나가도 피해 범위가 그 권한으로 좁혀지고, 한 서버의 키만 바꿀 수 있습니다.
+
+<AccordionGroup>
+<Accordion title="사용량을 보내는 서버">
+고객 등록과 이벤트 전송만 하면 `ingest`만 줍니다. 등록한 고객을 `external_id`로 다시 찾는 조회(`GET /v1/customers?external_id=`)도 하려면 `read`를 더합니다.
+</Accordion>
+<Accordion title="청구 내역을 보여 주는 서버">
+고객 포털처럼 사용량, 청구 예정액, 인보이스를 읽기만 하면 `read`만 줍니다.
+</Accordion>
+<Accordion title="확정과 결제를 자동화하는 서버">
+인보이스 확정, 결제 요청, 링크 발급을 하면 `admin`이 필요합니다. `admin` 키는 고객 보관, 미터 변경 같은 모든 데이터 변경을 할 수 있으므로 이 서버에서만 쓰고 분당 요청 한도를 정해 두세요.
+</Accordion>
+<Accordion title="테스트 환경과 실제 환경">
+키는 발급한 업무 환경에 고정됩니다. 같은 서버라도 테스트 환경 키(`me_test_`)와 실제 환경 키(`me_live_`)를 따로 발급해 설정을 나눠 두세요([업무 환경](/concepts/environments)).
+</Accordion>
+</AccordionGroup>

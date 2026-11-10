@@ -3,7 +3,6 @@ output "deployment_target" {
     deployment_environment = "production"
     aws_account_id         = data.aws_caller_identity.current.account_id
     aws_region             = data.aws_region.current.region
-    instance_id            = module.service.instance_id
     database_identifier    = module.service.database_identifier
     database_host          = module.service.database_host
     parameter_path         = "/meterengine/production"

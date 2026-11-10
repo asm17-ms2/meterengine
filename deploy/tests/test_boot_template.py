@@ -9,6 +9,7 @@ MODULE = ROOT / "deploy/terraform/modules/app_fleet"
 TEMPLATE = MODULE / "templates/app-user-data.sh.tftpl"
 ASG = MODULE / "asg.tf"
 TEST_STORAGE = ROOT / "measurements/test-storage/sut/terraform"
+MEASUREMENT_MODULE = ROOT / "measurements/test-sjpark/sut/module"
 
 # 부팅 계약. 측정 환경처럼 이 템플릿을 부르는 곳도 같은 키를 넘긴다.
 BOOT_TEMPLATE_VARS = {"environment", "parameter_path", "app_version_parameter_name", "aws_region", "repository_url"}
@@ -20,6 +21,7 @@ SAMPLE_VALUES = {
     "repository_url": "https://github.com/asm17-ms2/meterengine.git",
 }
 TEMPLATE_REFERENCE = re.compile(r"(?<!\$)\$\{([^}]*)\}")
+IMAGE_TOOL_LOOP = "for tool in "
 
 
 def template_references():
@@ -36,6 +38,11 @@ def render():
     return rendered.replace("$${", "${").replace("%%{", "%{")
 
 
+def image_tool_checks():
+    script = render()
+    return script[script.index(IMAGE_TOOL_LOOP):script.index("git clone")]
+
+
 class BootTemplateTest(unittest.TestCase):
     def test_template_uses_exactly_the_contract_variables(self):
         self.assertEqual(template_references(), BOOT_TEMPLATE_VARS)
@@ -50,6 +57,13 @@ class BootTemplateTest(unittest.TestCase):
         relative = re.search(r'^  boot_template_path = "\$\{path\.root\}/([^"]+)"$', (TEST_STORAGE / "locals.tf").read_text(), re.M).group(1)
         self.assertEqual((TEST_STORAGE / relative).resolve(), TEMPLATE)
 
+    def test_measurement_module_passes_exactly_the_contract_variables(self):
+        self.assertEqual(boot_template_keys(MEASUREMENT_MODULE / "asg.tf"), BOOT_TEMPLATE_VARS)
+
+    def test_measurement_module_reads_this_template(self):
+        relative = re.search(r'^  boot_template_path = "\$\{path\.module\}/([^"]+)"$', (MEASUREMENT_MODULE / "locals.tf").read_text(), re.M).group(1)
+        self.assertEqual((MEASUREMENT_MODULE / relative).resolve(), TEMPLATE)
+
     def test_template_has_no_directives(self):
         self.assertNotRegex(TEMPLATE.read_text(), r"(?<!%)%\{")
 
@@ -57,10 +71,27 @@ class BootTemplateTest(unittest.TestCase):
         result = subprocess.run(["bash", "-n"], input=render(), text=True, capture_output=True)
         self.assertEqual(result.returncode, 0, result.stderr)
 
-    def test_unset_version_stops_before_installing(self):
+    def test_unset_version_stops_before_cloning(self):
         script = render()
-        self.assertLess(script.index("exit 1"), script.index("dnf install"))
+        self.assertLess(script.index("exit 1"), script.index("git clone"))
         self.assertIn('"$version" =~ ^[0-9a-f]{40}$', script)
+
+    def test_boot_installs_nothing(self):
+        script = render()
+        for word in ("dnf", "curl", "install -D"):
+            self.assertNotIn(word, script)
+
+    def test_boot_checks_image_tools_before_cloning(self):
+        script = render()
+        self.assertLess(script.index('"$version" =~'), script.index(IMAGE_TOOL_LOOP))
+        self.assertIn('command -v "$tool"', image_tool_checks())
+        self.assertIn("docker compose version", image_tool_checks())
+
+    def test_missing_image_tool_points_at_the_launch_template_image(self):
+        messages = [line for line in image_tool_checks().splitlines() if line.lstrip().startswith("echo")]
+        self.assertTrue(messages)
+        for message in messages:
+            self.assertIn("image_id", message)
 
 
 if __name__ == "__main__":

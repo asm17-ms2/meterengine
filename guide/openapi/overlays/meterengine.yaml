@@ -1,0 +1,204 @@
+# 생성 파일: guide/scripts/make_overlay.py 로 다시 만든다. 손으로 고치지 않는다.
+overlay: 1.0.0
+info:
+  title: "MeterEngine 도입사 가이드용 조정"
+  version: "1.0.0"
+actions:
+  # 경로가 모두 /v1/ 로 시작하므로 servers 에 /v1 을 붙이지 않는다.
+  - target: "$.servers[0]"
+    update:
+      url: "https://meterengine.com"
+      description: "MeterEngine API"
+  # x-excluded: 운영자 전용
+  - target: "$.paths['/v1/operations'].get"
+    update:
+      x-excluded: true
+  - target: "$.paths['/v1/operations/audit-logs'].get"
+    update:
+      x-excluded: true
+  - target: "$.paths['/v1/organizations'].get"
+    update:
+      x-excluded: true
+  - target: "$.paths['/v1/organizations/{id}/members'].post"
+    update:
+      x-excluded: true
+  - target: "$.paths['/v1/organizations/{id}/status'].put"
+    update:
+      x-excluded: true
+  - target: "$.paths['/v1/user-accounts'].post"
+    update:
+      x-excluded: true
+  - target: "$.paths['/v1/user-accounts'].get"
+    update:
+      x-excluded: true
+  - target: "$.paths['/v1/user-accounts/{id}/role'].put"
+    update:
+      x-excluded: true
+  # x-excluded: 콘솔 세션
+  - target: "$.paths['/v1/sessions/current'].get"
+    update:
+      x-excluded: true
+  - target: "$.paths['/v1/sessions/current'].delete"
+    update:
+      x-excluded: true
+  - target: "$.paths['/v1/sessions/current/organization'].put"
+    update:
+      x-excluded: true
+  - target: "$.paths['/v1/sessions/current/consents'].post"
+    update:
+      x-excluded: true
+  # x-excluded: 가입, 로그인, 초대
+  - target: "$.paths['/v1/signups'].post"
+    update:
+      x-excluded: true
+  - target: "$.paths['/v1/sessions'].post"
+    update:
+      x-excluded: true
+  - target: "$.paths['/v1/organization-invitations/{token}'].get"
+    update:
+      x-excluded: true
+  - target: "$.paths['/v1/organization-invitations/{token}/accept'].post"
+    update:
+      x-excluded: true
+  # x-excluded: MeterEngine 화면용 공개 경로
+  - target: "$.paths['/v1/payment-method-registrations/{token}'].get"
+    update:
+      x-excluded: true
+  - target: "$.paths['/v1/payment-method-registrations/{token}/billing-keys'].post"
+    update:
+      x-excluded: true
+  - target: "$.paths['/v1/public/invoice-links/lookup'].post"
+    update:
+      x-excluded: true
+  - target: "$.paths['/v1/public/invoice-links/payment-retries'].post"
+    update:
+      x-excluded: true
+  # x-excluded: 화면 보조 options
+  - target: "$.paths['/v1/customers/options'].get"
+    update:
+      x-excluded: true
+  - target: "$.paths['/v1/billable-metrics/options'].get"
+    update:
+      x-excluded: true
+  # x-hidden: 세션 전용 관리(관리자)
+  - target: "$.paths['/v1/api-keys'].post"
+    update:
+      x-hidden: true
+  - target: "$.paths['/v1/api-keys/{id}'].delete"
+    update:
+      x-hidden: true
+  - target: "$.paths['/v1/api-keys/{id}/scopes'].put"
+    update:
+      x-hidden: true
+  - target: "$.paths['/v1/organization/members'].post"
+    update:
+      x-hidden: true
+  - target: "$.paths['/v1/organization/invitations'].post"
+    update:
+      x-hidden: true
+  - target: "$.paths['/v1/organization/invitations'].get"
+    update:
+      x-hidden: true
+  - target: "$.paths['/v1/organization/members/{id}'].delete"
+    update:
+      x-hidden: true
+  - target: "$.paths['/v1/organization/invitations/{id}'].delete"
+    update:
+      x-hidden: true
+  - target: "$.paths['/v1/organization/members/{id}/role'].put"
+    update:
+      x-hidden: true
+  - target: "$.paths['/v1/organization/members/{id}/scopes'].put"
+    update:
+      x-hidden: true
+  - target: "$.paths['/v1/payment-setting'].put"
+    update:
+      x-hidden: true
+  - target: "$.paths['/v1/toss-payments-credentials/{mode}'].put"
+    update:
+      x-hidden: true
+  - target: "$.paths['/v1/toss-payments-credentials/{mode}'].delete"
+    update:
+      x-hidden: true
+  # x-hidden: 세션 전용 관리(조회)
+  - target: "$.paths['/v1/api-keys'].get"
+    update:
+      x-hidden: true
+  - target: "$.paths['/v1/audit-logs'].get"
+    update:
+      x-hidden: true
+  - target: "$.paths['/v1/organization/members'].get"
+    update:
+      x-hidden: true
+  # x-hidden: 토스페이먼츠 웹훅 수신
+  - target: "$.paths['/v1/toss-payments-webhooks/{organization_id}'].post"
+    update:
+      x-hidden: true
+  # 최상위 tags 가 원본에 없어 새로 만든다. x-group 은 탐색 그룹 표시 이름이다.
+  - target: "$"
+    update:
+      tags:
+        - name: "organization-environment-controller"
+          x-group: "업무 환경"
+        - name: "current-organization-controller"
+          x-group: "도입사 정보"
+        - name: "api-key-controller"
+          x-group: "API 키 (콘솔 전용)"
+        - name: "organization-people-controller"
+          x-group: "구성원과 초대 (콘솔 전용)"
+        - name: "audit-log-controller"
+          x-group: "감사 기록 (콘솔 전용)"
+        - name: "billable-metric-controller"
+          x-group: "미터"
+        - name: "billable-metric-price-controller"
+          x-group: "미터별 단가 조회"
+        - name: "price-rate-controller"
+          x-group: "단가"
+        - name: "price-plan-controller"
+          x-group: "요금제"
+        - name: "customer-controller"
+          x-group: "고객"
+        - name: "event-controller"
+          x-group: "이벤트"
+        - name: "event-batch-controller"
+          x-group: "이벤트 일괄 전송"
+        - name: "event-export-controller"
+          x-group: "이벤트 내보내기"
+        - name: "billable-metric-usage-controller"
+          x-group: "사용량 집계"
+        - name: "event-issue-controller"
+          x-group: "이벤트 매핑 진단"
+        - name: "event-rejection-controller"
+          x-group: "수집 거절"
+        - name: "unbilled-event-controller"
+          x-group: "청구 제외 사용량"
+        - name: "dashboard-controller"
+          x-group: "개요"
+        - name: "workspace-query-controller"
+          x-group: "검색과 내보내기"
+        - name: "draft-invoice-controller"
+          x-group: "청구 예정액"
+        - name: "invoice-controller"
+          x-group: "인보이스"
+        - name: "invoice-view-link-controller"
+          x-group: "인보이스 조회 링크"
+        - name: "payment-setting-controller"
+          x-group: "결제 설정"
+        - name: "toss-payments-credential-controller"
+          x-group: "토스페이먼츠 키"
+        - name: "payment-method-registration-controller"
+          x-group: "카드 등록 링크"
+        - name: "payment-method-controller"
+          x-group: "결제 수단"
+        - name: "payment-attempt-controller"
+          x-group: "결제 요청"
+        - name: "invoice-payment-controller"
+          x-group: "수납 상태"
+        - name: "payment-cancellation-controller"
+          x-group: "결제 취소"
+        - name: "payment-reconciliation-mismatch-controller"
+          x-group: "대사 불일치"
+        - name: "toss-payments-webhook-controller"
+          x-group: "토스페이먼츠 웹훅 수신"
+        - name: "webhook-endpoint-controller"
+          x-group: "웹훅"

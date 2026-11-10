@@ -1,0 +1,87 @@
+---
+title: "공급자 정보"
+description: "도입사 설정의 공급자 정보를 저장하는 방법과 지금 그 정보가 쓰이는 곳을 설명합니다."
+---
+
+공급자 정보는 청구하는 쪽, 곧 도입사의 사업자 정보입니다. 사업자등록번호, 대표자명, 사업장 주소를 저장합니다.
+
+## 지금 쓰이는 곳
+
+{/* 확인 필요: 공급자 정보 사용처 */}
+지금 공급자 정보는 '개요' 화면의 '청구 전 준비' 목록에서 '공급자와 결제 설정'을 완료로 표시하는 데만 쓰입니다. 이 항목은 같은 업무 환경에 공급자 정보와 그 환경의 결제 모드에 맞는 토스페이먼츠 키를 모두 저장해야 완료됩니다. 인보이스, 인보이스 API 응답, 고객이 보는 조회 화면에는 공급자 정보가 실리지 않습니다. 고객 조회 화면의 '공급자' 칸에는 도입사 이름이 나옵니다. 토스페이먼츠 키는 [토스페이먼츠 상점 준비와 키 저장](/payments/toss-setup)을 보세요.
+
+<Note>
+'도입사 설정' 화면은 공급자 정보를 청구에 사용한다고 안내하지만, 지금은 위의 준비 목록 표시에만 쓰입니다.
+</Note>
+
+## 저장하기
+
+공급자 정보는 업무 환경마다 따로 저장됩니다. 테스트 환경에 저장한 정보는 실제 환경에 복사되지 않으니 쓰는 환경마다 저장하세요. 업무 환경을 바꾸는 방법은 [업무 환경](/concepts/environments)을 보세요.
+
+| 입력란 | 제한 |
+| --- | --- |
+| 사업자등록번호 | 필수, 숫자 10자리. 하이픈 없이 저장합니다 |
+| 대표자명 | 필수, 255자 이내 |
+| 사업장 주소 | 필수, 1000자 이내 |
+
+사업자등록번호, 대표자명, 사업장 주소는 한 번에 함께 저장합니다. 하나만 바꿀 때도 모두 넣고, 저장한 뒤에는 빈 값으로 지울 수 없고 다른 값으로 덮어쓰기만 할 수 있습니다. 사업자등록번호는 자릿수만 확인하고 실제로 등록된 번호인지는 확인하지 않습니다.
+
+<Tabs>
+<Tab title="콘솔에서">
+<Steps>
+<Step title="업무 환경을 확인한다">
+화면 위 '업무 환경'이 저장할 환경인지 확인합니다.
+</Step>
+<Step title="공급자 정보를 넣는다">
+'도입사 설정' 화면의 '공급자 정보'에 '사업자등록번호', '대표자명', '사업장 주소'를 넣습니다. 사업자등록번호에 하이픈이나 공백을 넣어도 콘솔이 빼고 숫자만 저장합니다.
+</Step>
+<Step title="저장한다">
+'공급자 정보 저장'을 누릅니다. 저장하려면 전체 관리 (admin) 권한이 필요합니다. 조회 (read) 권한만 있으면 저장된 값을 보기만 하고, 저장 전인 값은 '미등록'으로 보입니다.
+</Step>
+</Steps>
+</Tab>
+<Tab title="API로">
+조회는 read 권한, 저장은 admin 권한 API 키가 필요합니다. 키가 발급된 업무 환경의 공급자 정보를 다룹니다. API는 하이픈을 빼 주지 않으므로 사업자등록번호는 숫자 10자리로만 보냅니다.
+
+```bash 저장
+curl -X PUT https://meterengine.com/v1/organization/supplier \
+  -H "Authorization: Bearer me_test_xxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "business_registration_number": "1234567890",
+    "representative_name": "홍길동",
+    "business_address": "서울특별시 강남구 테헤란로 123"
+  }'
+```
+
+```json 200 응답
+{
+  "business_registration_number": "1234567890",
+  "representative_name": "홍길동",
+  "business_address": "서울특별시 강남구 테헤란로 123"
+}
+```
+
+```bash 조회
+curl https://meterengine.com/v1/organization/supplier \
+  -H "Authorization: Bearer me_test_xxxxxxxx"
+```
+
+아직 저장하지 않은 환경에서 조회하면 모든 값이 `null`입니다.
+
+```json 저장 전 응답
+{
+  "business_registration_number": null,
+  "representative_name": null,
+  "business_address": null
+}
+```
+
+값이 제한을 벗어나면 `400 validation_error`를 받고, 응답의 `errors`에 틀린 필드 이름이 실립니다. 권한이 부족하면 `403 permission_denied`입니다. 오류 형식은 [오류 응답과 X-Request-ID](/api-basics/errors), 권한은 [화면과 API, 권한](/authentication/scopes)을 보세요.
+</Tab>
+</Tabs>
+
+## 세금계산서
+
+{/* 확인 필요: 공급자 정보 사용처 */}
+MeterEngine은 전자세금계산서를 발행하지 않습니다. 세금계산서가 필요하면 도입사가 따로 발행하세요. 인보이스의 `invoice_number`(예: `ME-202610-00000001`)는 고객에게 보여 주는 인보이스 번호이며 세금계산서 번호나 영수증 번호가 아닙니다.

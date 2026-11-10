@@ -1,7 +1,7 @@
-import json
 import os
 from pathlib import Path
 import re
+import shutil
 import stat
 import subprocess
 import tempfile
@@ -61,9 +61,9 @@ class DeployEnvironmentTest(unittest.TestCase):
         self.root = Path(temp.name)
         self.repo = self.root / "repo"
         (self.repo / "deploy/server").mkdir(parents=True)
-        (self.repo / "deploy/server/ingest-rate.service").write_text("[Unit]\n")
+        (self.repo / "deploy/server/cpu-metric.service").write_text("[Unit]\n")
         self.env_file = self.root / "prod.env"
-        self.unit_file = self.root / "meterengine-ingest-rate.service"
+        self.unit_file = self.root / "meterengine-cpu-metric.service"
         self.trace = self.root / "trace"
         self.trace.touch()
         source = SOURCE.read_text()
@@ -140,6 +140,15 @@ class DeployEnvironmentTest(unittest.TestCase):
         self.assertIn("BACKEND_MEM_LIMIT=2g\n", content)
         self.assertNotIn("BLUE", content)
 
+    def test_optional_warmup_parameters_reach_env_file(self):
+        self.set_parameters({**BASE_PARAMETERS, "ingest-warmup-api-key": "me_live_warmup",
+                             "ingest-warmup-organization-id": "org", "ingest-warmup-customer-id": "customer"})
+        result = self.deploy("staging", SHA)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        content = self.env_file.read_text()
+        for line in ("INGEST_WARMUP_API_KEY=me_live_warmup\n", "INGEST_WARMUP_ORGANIZATION_ID=org\n", "INGEST_WARMUP_CUSTOMER_ID=customer\n"):
+            self.assertIn(line, content)
+
     def test_log_shows_only_the_identifier(self):
         result = self.deploy("staging", SHA)
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -179,19 +188,19 @@ class DeployEnvironmentTest(unittest.TestCase):
         self.assertIn("logs --tail 50 backend", self.traced())
         self.assertNotIn("systemctl", self.traced())
 
-    def test_ingest_rate_unit_is_installed_and_restarted_after_checkout(self):
+    def test_cpu_metric_unit_is_installed_and_restarted_after_checkout(self):
         result = self.deploy("staging", SHA)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.unit_file.read_text(), "[Unit]\n")
-        for command in ("systemctl daemon-reload", "systemctl enable --quiet meterengine-ingest-rate.service",
-                        "systemctl restart meterengine-ingest-rate.service"):
+        for command in ("systemctl daemon-reload", "systemctl enable --quiet meterengine-cpu-metric.service",
+                        "systemctl restart meterengine-cpu-metric.service"):
             self.assertIn(command + "\n", self.traced())
         self.assertLess(self.trace_index("git checkout"), self.trace_index("systemctl restart"))
 
     def test_unit_failure_keeps_the_app(self):
         result = self.deploy("staging", SHA, SYSTEMCTL_EXIT="1")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("수집량 지표", result.stdout)
+        self.assertIn("CPU 지표 유닛을 띄우지 못했다", result.stdout)
 
     def test_image_prefix_reaches_env_file_and_image_check(self):
         self.set_preflight(image_prefix="meterengine-staging")
@@ -208,192 +217,132 @@ class DeployEnvironmentTest(unittest.TestCase):
 
 
 class SutDeployTest(unittest.TestCase):
-    SUTS = ("test-sjpark", "test-storage")
-    # test-storage는 서버에 SSM 명령을 보내지 않고 rollout.sh로 배포한다.
-    SSM_DEPLOY_SUTS = ("test-sjpark",)
-    SERVER_PROFILES = '"compose_profiles": ["agents", "monitoring"]'
-    SCRAPE_PORTS = 'deploy/compose.prod.yml "9100:9100"'
+    SUTS = ("test-sjpark-m7g", "test-sjpark-t4g", "test-storage")
+    SPEC_SCRIPTS = ("sut-deploy.sh", "sut-start.sh", "sut-stop.sh", "create-exporter-user.sh", "sut-instances.sh")
+    FAKE_TERRAFORM = r"""#!/bin/sh
+printf 'terraform %s\n' "$*" >>"$TRACE"
+name=$(basename "${1#-chdir=}")
+case "$4" in
+asg_name) echo "asg-$name" ;;
+app_version_parameter_name) echo "/meterengine/$name/app-version" ;;
+domain) echo "$name.example.invalid" ;;
+db_identifier) echo "db-$name" ;;
+*) exit 1 ;;
+esac
+"""
+    # MISSING_PATH가 든 cat-file 검사는 실패하고, NO_WEBHOOK이면 compose.prod.yml에 스위치가 없다.
+    FAKE_GIT = r"""#!/bin/sh
+case "$3" in
+cat-file) [ -n "${MISSING_PATH:-}" ] && case "$5" in *"$MISSING_PATH"*) exit 1 ;; esac ;;
+show) [ -n "${NO_WEBHOOK:-}" ] || echo "      WEBHOOK_ENABLED: x" ;;
+esac
+exit 0
+"""
+    FAKE_AWS = r"""#!/bin/sh
+printf 'aws %s\n' "$*" >>"$TRACE"
+case "$*" in *describe-db-instances*) echo available ;; esac
+"""
+
+    @staticmethod
+    def measurement(sut):
+        """SUT마다 (측정 폴더, Terraform 코드 폴더). 측정 두 환경은 모듈 하나를 같이 쓴다."""
+        if sut == "test-storage":
+            return "test-storage", "test-storage/sut/terraform"
+        return "test-sjpark", "test-sjpark/sut/module"
+
+    @staticmethod
+    def deploy_script(sut):
+        """SUT마다 (sut-deploy.sh 경로, 인자, 상태를 읽는 Terraform 폴더)."""
+        if sut == "test-storage":
+            return "measurements/test-storage/sut/scripts/sut-deploy.sh", [], "measurements/test-storage/sut/terraform"
+        spec = sut.rsplit("-", 1)[1]
+        return "measurements/test-sjpark/sut/scripts/sut-deploy.sh", [spec], f"measurements/test-sjpark/sut/{spec}"
 
     def setUp(self):
         temp = tempfile.TemporaryDirectory(prefix="meterengine-sut-")
         self.addCleanup(temp.cleanup)
         self.root = Path(temp.name)
+        # 스크립트가 자기 위치로 레포 루트를 찾으므로 레포 모양을 그대로 옮긴다.
         self.repo = self.root / "repo"
-        (self.repo / "deploy").mkdir(parents=True)
+        for directory in ("test-sjpark", "test-storage"):
+            for relative in ("lib", "sut/scripts"):
+                shutil.copytree(MEASUREMENTS / directory / relative, self.repo / "measurements" / directory / relative)
+        for sut in self.SUTS:
+            tf_dir = self.repo / self.deploy_script(sut)[2]
+            tf_dir.mkdir(parents=True, exist_ok=True)
+            (tf_dir / "terraform.tfstate").write_text("{}\n")
+            environment = Path("deploy/environments") / f"{sut}.json"
+            (self.repo / environment).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(MEASUREMENTS.parent / environment, self.repo / environment)
         self.trace = self.root / "trace"
         self.trace.touch()
         bin_dir = self.root / "bin"
         bin_dir.mkdir()
-        fake_git = '''#!/bin/sh
-printf 'git %s\\n' "$*" >>"$TRACE"
-case "$1" in cat-file) exit "$HAS_ENVIRONMENT_FILE" ;; esac
-'''
-        # deploy.sh가 돌 때의 환경 파일을 남겨 덮어쓰기가 그보다 먼저인지 본다.
-        fake_deploy = '#!/bin/sh\nprintf \'deploy %s\\n\' "$*" >>"$TRACE"\n[ ! -f "deploy/environments/$1.json" ] || cat "deploy/environments/$1.json" >>"$TRACE"\n'
-        for path, body in ((bin_dir / "git", fake_git), (bin_dir / "flock", "#!/bin/sh\nexit 0\n"),
-                           (bin_dir / "docker", '#!/bin/sh\nprintf \'docker %s\\n\' "$*" >>"$TRACE"\n'),
-                           (self.repo / "deploy/deploy.sh", fake_deploy)):
+        for path, body in ((bin_dir / "terraform", self.FAKE_TERRAFORM), (bin_dir / "aws", self.FAKE_AWS),
+                           (bin_dir / "git", self.FAKE_GIT), (bin_dir / "curl", '#!/bin/sh\nprintf \'curl %s\\n\' "$*" >>"$TRACE"\n'),
+                           (self.repo / "deploy/rollout.sh", '#!/bin/sh\nprintf \'rollout %s\\n\' "$*" >>"$TRACE"\necho recorded_only=true\n')):
             path.write_text(body)
             path.chmod(path.stat().st_mode | stat.S_IEXEC)
-        (self.repo / "deploy/environments").mkdir()
-        for sut in self.SUTS:
-            (self.repo / f"deploy/environments/{sut}.json").write_text(f'{{"site_domain": "{sut}.meterengine.com", {self.SERVER_PROFILES}}}\n')
-        self.config = self.root / "deploy.conf"
         self.env = dict(os.environ, PATH=f"{bin_dir}{os.pathsep}{os.environ['PATH']}", TRACE=str(self.trace))
 
-    def run_command(self, sut, has_environment_file):
+    def run_script(self, script, args):
         self.trace.write_text("")
-        source = (MEASUREMENTS / sut / "sut/scripts/sut-deploy.sh").read_text()
-        function = re.search(r"^deploy_command\(\) \{.*?^\}", source, re.M | re.S).group()
-        generate = (f"REMOTE_DEPLOY_CONFIG={self.config}\nREMOTE_REPO_DIR=/opt/meterengine\nFIRST_SHA_WITH_DEPLOY_CONF={'c' * 40}\n"
-                    f"{function}\ndeploy_command {SHA} /meterengine/{sut} {sut}.meterengine.com\n")
-        command = subprocess.run(["bash", "-c", generate], text=True, capture_output=True, check=True).stdout
-        command = command.replace("/etc/meterengine/deploy-command.lock", str(self.root / "lock")).replace("/opt/meterengine", str(self.repo))
-        return subprocess.run(["sh", "-c", command], env={**self.env, "HAS_ENVIRONMENT_FILE": "0" if has_environment_file else "1"},
-                              text=True, capture_output=True, timeout=10)
+        return subprocess.run(["bash", str(self.repo / script), *args], env=self.env, cwd=self.root,
+                              text=True, capture_output=True, timeout=30)
 
-    def test_sut_deploy_passes_environment(self):
-        for sut in self.SSM_DEPLOY_SUTS:
-            result = self.run_command(sut, has_environment_file=True)
-            self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertIn(f"deploy {sut} {SHA}\n", self.trace.read_text())
+    def test_each_sut_deploys_through_rollout(self):
+        for sut in self.SUTS:
+            with self.subTest(sut=sut):
+                script, args, tf_dir = self.deploy_script(sut)
+                result = self.run_script(script, [*args, SHA])
+                self.assertEqual(result.returncode, 0, result.stderr)
+                trace = self.trace.read_text()
+                name = Path(tf_dir).name
+                self.assertIn(f"rollout asg-{name} /meterengine/{name}/app-version {SHA}\n", trace)
+                self.assertIn(f"--repository-name meterengine-staging-backend --image-ids imageTag={SHA}", trace)
+                chdirs = set(re.findall(r"^terraform -chdir=(\S+) ", trace, re.M))
+                self.assertEqual(chdirs, {str(self.repo / tf_dir)})
 
-    def test_sut_old_commit_uses_old_call(self):
-        for sut in self.SSM_DEPLOY_SUTS:
-            self.config.write_text(f"PARAM_PATH=/meterengine/{sut}\nSITE_DOMAIN={sut}.meterengine.com\n")
-            result = self.run_command(sut, has_environment_file=False)
-            self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertIn(f"deploy {SHA}\n", self.trace.read_text())
+    def test_undeployable_commit_is_rejected_before_rollout(self):
+        cases = (("deploy/rollout.sh", {"MISSING_PATH": "deploy/rollout.sh"}, "deploy/rollout.sh 가 없는 옛 커밋"),
+                 ("environment file", {"MISSING_PATH": "deploy/environments/test-sjpark-m7g.json"},
+                  "deploy/environments/test-sjpark-m7g.json 이 없는 커밋"),
+                 ("webhook switch", {"NO_WEBHOOK": "1"}, "WEBHOOK_ENABLED 가 없는 커밋"))
+        script, args, _ = self.deploy_script("test-sjpark-m7g")
+        for name, extra, reason in cases:
+            with self.subTest(case=name):
+                self.env.update(extra)
+                try:
+                    result = self.run_script(script, [*args, SHA])
+                finally:
+                    for key in extra:
+                        del self.env[key]
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(reason, result.stderr)
+                self.assertNotIn("rollout ", self.trace.read_text())
 
-    def test_test_slo_deploy_turns_off_server_monitoring_before_deploy_sh(self):
-        result = self.run_command("test-sjpark", has_environment_file=True)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        seen_by_deploy = self.trace.read_text().split(f"deploy test-sjpark {SHA}\n")[1]
-        self.assertEqual(json.loads(seen_by_deploy), {"site_domain": "test-sjpark.meterengine.com", "compose_profiles": ["agents"]})
-
-    def test_test_slo_old_commit_keeps_the_environment_file(self):
-        self.config.write_text("PARAM_PATH=/meterengine/test-sjpark\nSITE_DOMAIN=test-sjpark.meterengine.com\n")
-        result = self.run_command("test-sjpark", has_environment_file=False)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn(self.SERVER_PROFILES, (self.repo / "deploy/environments/test-sjpark.json").read_text())
-
-    def test_sut_old_commit_needs_sut_deploy_conf(self):
-        for sut in self.SSM_DEPLOY_SUTS:
-            self.config.write_text("")
-            result = self.run_command(sut, has_environment_file=False)
-            self.assertNotEqual(result.returncode, 0)
-            self.assertNotIn("deploy ", self.trace.read_text().replace("deploy-", ""))
-            self.assertNotIn("git checkout", self.trace.read_text())
-
-    def test_sut_db_check_compares_identifiers(self):
-        source = (MEASUREMENTS / "test-sjpark/sut/scripts/sut-deploy.sh").read_text()
-        functions = re.search(r"^deployed_db_host\(\) \{.*?^require_sut_db\(\) \{.*?^\}", source, re.M | re.S).group()
-        script = f"die() {{ echo \"$1\" >&2; exit 1; }}\nlog() {{ :; }}\nDEPLOY_DB_LINE_PREFIX='[deploy] DB: '\n{functions}\nrequire_sut_db \"$1\" sut-db.abc.example.invalid\n"
-        for line, code in (("sut-db", 0), ("sut-db.abc.example.invalid", 0), ("other-db", 1)):
-            output = self.root / "deploy-output"
-            output.write_text(f"[deploy] DB: {line}\n")
-            result = subprocess.run(["bash", "-c", script, "bash", str(output)], text=True, capture_output=True)
-            self.assertEqual(result.returncode, code, (line, result.stderr))
-
-    def test_monitoring_cleanup_holds_the_lock_and_keeps_volumes(self):
-        source = (MEASUREMENTS / "test-sjpark/sut/scripts/sut-deploy.sh").read_text()
-        constants = "\n".join(re.findall(r"^readonly (?:[A-Z_]+)=.*$", source, re.M))
-        function = re.search(r"^monitoring_cleanup_command\(\) \{.*?^\}", source, re.M | re.S).group()
-        command = subprocess.run(["bash", "-c", f"{constants}\n{function}\nmonitoring_cleanup_command\n"],
-                                 text=True, capture_output=True, check=True).stdout
-        self.assertTrue(command.startswith("exec 8>/etc/meterengine/deploy-command.lock"))
-        command = command.replace("/etc/meterengine/deploy-command.lock", str(self.root / "lock")).replace("/opt/meterengine", str(self.repo))
-        result = subprocess.run(["sh", "-c", command], env=self.env, text=True, capture_output=True, timeout=10)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(self.trace.read_text(),
-                         "docker compose --env-file /etc/meterengine/prod.env -f deploy/compose.prod.yml --profile monitoring "
-                         "rm --stop --force prometheus grafana oauth2-proxy postgres-exporter cloudwatch-exporter\n")
-
-    def test_monitoring_cleanup_runs_only_after_the_deploy_is_confirmed(self):
-        main = re.search(r"^main\(\) \{.*?^\}", (MEASUREMENTS / "test-sjpark/sut/scripts/sut-deploy.sh").read_text(), re.M | re.S).group()
-        self.assertLess(main.index('require_sut_db "$deploy_output_file" "$db_address"\n'), main.index("$(monitoring_cleanup_command)"))
-
-    def run_commit_selection(self, call, commits):
-        """commits: SHA마다 그 트리에 있는 경로 목록. ECR에는 두 저장소 모두 이 순서(최신부터)로 있다."""
-        source = (MEASUREMENTS / "test-sjpark/sut/scripts/sut-deploy.sh").read_text()
-        constants = "\n".join(re.findall(r"^readonly (?:[A-Z_]+)=.*$", source, re.M))
-        functions = "\n".join(re.search(rf"^{name}\(\) \{{.*?^\}}", source, re.M | re.S).group()
-                              for name in ("ecr_sha_tags_newest_first", "commit_problem", "require_deployable_commit", "latest_deployable_sha"))
-        script = (f"set -euo pipefail\nSCRIPT_DIR=/operator\n{constants}\n"
-                  "log() { printf '[sut-deploy] %s\\n' \"$*\"; }\ndie() { echo \"$*\" >&2; exit 1; }\n"
-                  f"{functions}\n{call}\n")
-        tree = self.root / "tree"
-        tree.write_text("".join(f"{sha}:{path}\n" for sha, paths in commits.items() for path in paths)
-                        + "".join(f"{sha}^{{commit}}\n" for sha in commits))
-        fake_git = self.root / "bin/git"
-        fake_git.write_text('#!/bin/sh\nprintf \'git %s\\n\' "$*" >>"$TRACE"\ncase "$3" in\n'
-                            'cat-file) grep -Fxq -- "$5" "$TREE" ;;\n'
-                            'grep) grep -Fxq -- "$8:${10} $7" "$TREE" ;;\n'
-                            'esac\n')
-        fake_aws = self.root / "bin/aws"
-        fake_aws.write_text('#!/bin/sh\nprintf \'aws %s\\n\' "$*" >>"$TRACE"\nprintf \'%s\\n\' $COMMITS\n')
-        for path in (fake_git, fake_aws):
-            path.chmod(path.stat().st_mode | stat.S_IEXEC)
-        self.trace.write_text("")
-        return subprocess.run(["bash", "-c", script], env={**self.env, "TREE": str(tree), "COMMITS": " ".join(commits)},
-                              text=True, capture_output=True, timeout=10)
-
-    def test_selection_skips_commits_without_caddy_or_environment_file(self):
-        deployable = ["deploy/caddy/Caddyfile", "deploy/environments/test-sjpark.json", self.SCRAPE_PORTS]
-        commits = {"1" * 40: ["deploy/environments/test-sjpark.json", self.SCRAPE_PORTS], "2" * 40: ["deploy/caddy/Caddyfile", self.SCRAPE_PORTS],
-                   "3" * 40: deployable, "4" * 40: deployable}
-        result = self.run_commit_selection("latest_deployable_sha", commits)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(result.stdout, "3" * 40)
-        self.assertIn(f"{'1' * 40} 건너뜀: Caddy가 빠진 커밋", result.stderr)
-        self.assertIn(f"{'2' * 40} 건너뜀: test-sjpark 환경 파일이 없는 커밋", result.stderr)
-
-    def test_selection_skips_commits_without_scrape_ports(self):
-        caddy_and_environment = ["deploy/caddy/Caddyfile", "deploy/environments/test-sjpark.json"]
-        commits = {"1" * 40: caddy_and_environment, "2" * 40: [*caddy_and_environment, self.SCRAPE_PORTS]}
-        result = self.run_commit_selection("latest_deployable_sha", commits)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(result.stdout, "2" * 40)
-        self.assertIn(f"{'1' * 40} 건너뜀: 공용 감시가 긁을 포트가 없는 커밋이다", result.stderr)
-
-    def test_given_sha_without_scrape_ports_is_rejected(self):
-        result = self.run_commit_selection(f"require_deployable_commit {'1' * 40}",
-                                           {"1" * 40: ["deploy/caddy/Caddyfile", "deploy/environments/test-sjpark.json"]})
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("공용 감시가 긁을 포트가 없는 커밋이다", result.stderr)
-
-    def test_selection_without_any_caddy_commit_points_to_the_kept_images(self):
-        result = self.run_commit_selection("latest_deployable_sha", {"1" * 40: ["deploy/environments/test-sjpark.json"]})
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("보존 이미지", result.stderr)
-
-    def test_given_sha_without_caddy_is_rejected(self):
-        result = self.run_commit_selection(f"require_deployable_commit {'1' * 40}", {"1" * 40: ["deploy/environments/test-sjpark.json"]})
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("Caddy가 빠진 커밋이라 test-sjpark에 배포하지 않는다", result.stderr)
-
-    def test_given_sha_without_environment_file_is_rejected(self):
-        result = self.run_commit_selection(f"require_deployable_commit {'1' * 40}", {"1" * 40: ["deploy/caddy/Caddyfile"]})
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("test-sjpark 환경 파일이 없는 커밋이다", result.stderr)
-
-    def test_given_sha_is_checked_before_any_remote_command(self):
-        main = re.search(r"^main\(\) \{.*?^\}", (MEASUREMENTS / "test-sjpark/sut/scripts/sut-deploy.sh").read_text(), re.M | re.S).group()
-        self.assertLess(main.index("fetch_operator_checkout"), main.index("latest_deployable_sha"))
-        self.assertLess(main.index('require_deployable_commit "$sha"'), main.index("run_remote_command"))
-        self.assertLess(main.index('require_deployable_commit "$sha"'), main.index("wait_ssm_online"))
+    def test_unknown_spec_stops_before_aws(self):
+        for name in self.SPEC_SCRIPTS:
+            for args in (["x4g"], []):
+                with self.subTest(script=name, args=args):
+                    result = self.run_script(f"measurements/test-sjpark/sut/scripts/{name}", args)
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn("m7g나 t4g", result.stderr)
+                    self.assertEqual(self.trace.read_text(), "")
 
     def test_sut_cannot_read_either_production_path(self):
         for sut in self.SUTS:
-            iam = (MEASUREMENTS / sut / "sut/terraform/iam.tf").read_text()
-            locals_file = (MEASUREMENTS / sut / "sut/terraform/locals.tf").read_text()
+            directory, terraform = self.measurement(sut)
+            iam = (MEASUREMENTS / terraform / "iam.tf").read_text()
+            locals_file = (MEASUREMENTS / terraform / "locals.tf").read_text()
             for name, path in (("dev_param_path", "/meterengine/prod"), ("production_param_path", "/meterengine/production")):
-                self.assertIn(f'{name}', locals_file)
                 self.assertRegex(locals_file, rf'{name}\s*=\s*"{path}"')
-                self.assertIn(f"parameter${{local.{name}}}\"", iam)
-                self.assertIn(f"parameter${{local.{name}}}/*\"", iam)
+                self.assertIn(f"local.{name}", iam)
+                # test-storage는 경로마다 한 줄씩, 측정 모듈은 두 경로를 for로 돌며 같은 모양을 만든다.
+                self.assertRegex(iam, rf'parameter\$\{{(?:local\.{name}|path)\}}"')
+                self.assertRegex(iam, rf'parameter\$\{{(?:local\.{name}|path)\}}/\*"')
             for relative in ("lib/common.sh", "sut/scripts/remote/upsert-exporter-user.sh"):
-                check = (MEASUREMENTS / sut / relative).read_text()
+                check = (MEASUREMENTS / directory / relative).read_text()
                 self.assertIn("readonly PRODUCTION_PARAM_PATH=/meterengine/production", check)
                 self.assertIn('"$PRODUCTION_PARAM_PATH" | "$PRODUCTION_PARAM_PATH"/*', check)
 

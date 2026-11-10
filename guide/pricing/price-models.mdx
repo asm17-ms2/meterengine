@@ -1,0 +1,321 @@
+---
+title: "단가 모델과 버전"
+description: "per_unit, graduated, volume 단가를 등록하는 방법과 월 단위 버전, 고객 단가 규칙을 설명합니다."
+---
+
+단가는 미터의 한 조합에 "청구 수량 1당 얼마"를 정합니다. 단가는 월 단위 버전으로 관리하며, 모든 고객에게 쓰는 공통 단가와 특정 고객에게만 쓰는 고객 단가가 있습니다. 조합이 무엇인지는 [차원과 속성 조합](/pricing/dimensions)을 먼저 보세요.
+
+{/* 확인 필요: 개요 체크리스트 완료 조건 */}
+<Note>
+개요 화면의 '사용량과 요금 정의'는 미터를 하나 만들면 완료로 표시되지만, 단가가 없으면 청구 예정액은 0원입니다. 미터마다 단가를 등록했는지 '요금 설계' 화면에서 확인하세요.
+</Note>
+
+## 단가 등록하기
+
+`POST /v1/billable-metrics/{code}/price-rates`로 등록합니다. 필요 권한은 admin입니다([화면과 API, 권한](/authentication/scopes)).
+
+| 필드 | 필수 | 설명 |
+| --- | --- | --- |
+| `dimension_values` | 예 | 조합입니다. 키 집합이 미터의 `dimension_properties`와 같아야 하고, 차원 키가 없는 미터는 `{}`입니다. 값은 문자열, 숫자, 불리언만 됩니다. |
+| `model` | 아니요 | `per_unit`, `graduated`, `volume` 가운데 하나입니다. 생략하면 `per_unit`입니다. |
+| `unit_price` | `per_unit`만 예 | 청구 수량 1당 원 단가입니다. 0 이상이고 소수도 됩니다. `graduated`, `volume`에는 넣지 않습니다. |
+| `tiers` | `graduated`, `volume`만 예 | 구간 배열입니다. 아래 구간 규칙을 보세요. `per_unit`에는 넣지 않습니다. |
+| `effective_from` | 아니요 | 적용 시작 월(`YYYY-MM`, KST)입니다. 생략하면 이번 달입니다. |
+| `effective_until` | 아니요 | 적용 종료 월(`YYYY-MM`)입니다. 이 달은 포함하지 않습니다. 생략하면 끝없이 적용합니다. |
+| `customer_id` | 아니요 | 넣으면 그 고객에게만 쓰는 고객 단가입니다. 생략하면 공통 단가입니다. |
+
+<Tabs>
+<Tab title="콘솔">
+<Steps>
+<Step title="미터와 적용 대상을 고른다">
+왼쪽 메뉴 '요금 설계' 화면에서 '적용 월'과 '적용 대상'을 고르고 '조건 적용'을 누릅니다. '적용 대상'이 '모든 고객 공통'이면 공통 단가, 고객을 고르면 그 고객의 고객 단가를 등록합니다. '무엇을 과금하나요' 목록에서 미터를 고릅니다.
+</Step>
+<Step title="단가 버전을 입력한다">
+'단가 버전 등록'을 누르고 '적용 시작 월', '적용 종료 월 (선택)', 차원 키마다 값과 값 종류를 넣습니다. '계산 방식'에서 '단일 단가', '누진 구간', '총량 구간' 가운데 하나를 고릅니다.
+</Step>
+<Step title="단가나 구간을 넣고 저장한다">
+단일 단가는 '과금 수량 1당 단가 (원)'을, 구간 방식은 구간마다 '끝 수량'과 단가를 넣습니다. 마지막 구간은 '상한 없음'으로 고정되고 '구간 추가'로 구간을 늘립니다. '이 단가 버전 저장'을 누릅니다.
+</Step>
+</Steps>
+</Tab>
+<Tab title="API">
+<CodeGroup>
+```bash curl
+curl -X POST https://meterengine.com/v1/billable-metrics/llm-input-tokens/price-rates \
+  -H "Authorization: Bearer me_test_xxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "dimension_values": { "model": "lumen-fast" },
+    "model": "per_unit",
+    "unit_price": 500,
+    "effective_from": "2026-11"
+  }'
+```
+
+```javascript Node
+const response = await fetch(
+  "https://meterengine.com/v1/billable-metrics/llm-input-tokens/price-rates",
+  {
+    method: "POST",
+    headers: {
+      Authorization: "Bearer me_test_xxxxxxxx",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      dimension_values: { model: "lumen-fast" },
+      model: "per_unit",
+      unit_price: 500,
+      effective_from: "2026-11",
+    }),
+  },
+);
+const priceRate = await response.json();
+```
+</CodeGroup>
+
+성공하면 201과 함께 저장한 단가가 옵니다. 같은 자리의 버전을 덮어쓴 경우에도 201입니다.
+
+```json 201 응답
+{
+  "id": "3f6c1b8e-2a4d-4e7b-9c1a-5d8e7f601234",
+  "billable_metric_code": "llm-input-tokens",
+  "dimension_values": { "model": "lumen-fast" },
+  "unit_price": 500,
+  "customer_id": null,
+  "effective_from": "2026-11",
+  "effective_until": null,
+  "model": "per_unit",
+  "tiers": null,
+  "archived_at": null,
+  "archived_from": null
+}
+```
+</Tab>
+</Tabs>
+
+## 단가 모델
+
+어느 모델이든 미터에서 `unit_size`와 반올림을 적용한 청구 수량에 단가를 곱합니다. 구간의 끝 수량도 이 청구 수량 기준입니다. 금액은 인보이스 라인마다 10원 미만을 버립니다([예정액, 확정액, 수납액](/concepts/amounts)).
+
+아래 예시는 차원 키가 없는 미터(`dimension_values` `{}`)에 두 구간 `[{"up_to": 100, "unit_price": 10}, {"up_to": null, "unit_price": 8}]`을 쓴다고 봅니다.
+
+<Tabs>
+<Tab title="per_unit">
+청구 수량 전체에 한 단가를 곱합니다. 콘솔 표기는 '단일 단가'입니다.
+
+```json 요청 본문
+{
+  "dimension_values": {},
+  "model": "per_unit",
+  "unit_price": 2.5
+}
+```
+
+청구 수량이 1203이면 1203 x 2.5 = 3,007.5원이고 10원 미만을 버려 3,000원입니다. 라인 하나가 `line_type` `per_unit`으로 나옵니다.
+</Tab>
+<Tab title="graduated">
+수량을 구간별로 나눠 구간마다 그 구간의 단가를 곱하고 더합니다. 콘솔 표기는 '누진 구간'입니다.
+
+```json 요청 본문
+{
+  "dimension_values": {},
+  "model": "graduated",
+  "tiers": [
+    { "up_to": 100, "unit_price": 10 },
+    { "up_to": null, "unit_price": 8 }
+  ]
+}
+```
+
+청구 수량이 150이면 처음 100은 10원, 나머지 50은 8원입니다. 구간마다 라인이 따로 생기고 `line_type`은 `graduated_tier`, `tier_index`는 0부터 셉니다.
+
+```json 청구 예정액 응답의 lines
+[
+  {
+    "billable_metric_code": "api-calls",
+    "target_property": "calls",
+    "dimension_values": {},
+    "quantity": 100,
+    "unit_price": 10,
+    "amount": 1000,
+    "line_type": "graduated_tier",
+    "tier_index": 0,
+    "quantity_numerator": 100,
+    "quantity_denominator": 1
+  },
+  {
+    "billable_metric_code": "api-calls",
+    "target_property": "calls",
+    "dimension_values": {},
+    "quantity": 50,
+    "unit_price": 8,
+    "amount": 400,
+    "line_type": "graduated_tier",
+    "tier_index": 1,
+    "quantity_numerator": 50,
+    "quantity_denominator": 1
+  }
+]
+```
+
+10원 미만 버림도 구간 라인마다 따로 합니다. 청구 수량이 101이면 첫 구간 1,000원, 둘째 구간 1 x 8 = 8원이 0원이 되어 합계 1,000원입니다.
+</Tab>
+<Tab title="volume">
+전체 수량이 속한 구간 하나를 찾아 그 구간의 단가를 수량 전체에 곱합니다. 콘솔 표기는 '총량 구간'입니다.
+
+```json 요청 본문
+{
+  "dimension_values": {},
+  "model": "volume",
+  "tiers": [
+    { "up_to": 100, "unit_price": 10 },
+    { "up_to": null, "unit_price": 8 }
+  ]
+}
+```
+
+| 청구 수량 | 적용 구간 | 금액 |
+| --- | --- | --- |
+| 100 | 첫 구간(끝 수량 100 포함) | 100 x 10 = 1,000원 |
+| 101 | 둘째 구간 | 101 x 8 = 808원, 버려서 800원 |
+| 150 | 둘째 구간 | 150 x 8 = 1,200원 |
+
+라인 하나가 `line_type` `volume`으로 나옵니다.
+
+<Warning>
+volume은 구간 경계를 넘는 순간 수량 전체의 단가가 바뀌므로, 수량이 늘었는데 금액이 줄 수 있습니다. 위 예에서 100은 1,000원, 101은 800원입니다. 고객에게 이 방식을 설명할 수 있는지 확인하고 고르세요.
+</Warning>
+</Tab>
+</Tabs>
+
+### 구간 규칙
+
+- `tiers`는 1개 이상 100개 이하입니다.
+- 구간은 `up_to`가 커지는 순서로 씁니다. 각 `up_to`는 0보다 크고 앞 구간보다 커야 합니다.
+- 마지막 구간은 `up_to`를 `null`로 두거나 생략합니다. 마지막이 아닌 구간에는 `up_to`가 꼭 있어야 합니다.
+- 끝 수량 `up_to`는 그 구간에 포함됩니다. 수량이 정확히 100이면 `up_to` 100인 구간에 듭니다.
+- 구간 단가 `unit_price`는 0 이상입니다.
+
+구간의 순서나 마지막 구간 규칙이 맞지 않거나, 모델과 단가 필드가 맞지 않으면(예: `graduated`에 `unit_price`를 넣음) 400 `validation_error`이고 `errors`의 `field`는 `model`입니다. 구간 수, `up_to`, 구간 단가의 값 범위가 틀려도 400 `validation_error`이며 `errors`에 해당 필드가 나옵니다.
+
+숫자로 끝까지 따라가는 예시(구간 단가, 최소 사용료, 기본료, 세액)는 [금액 계산 따라가기](/pricing/calculation-example)에 있습니다. 월 기본료와 최소 사용료는 [기본료와 최소 사용료](/pricing/price-plans)에서 다룹니다.
+
+## 월 단위 버전
+
+단가는 "미터, 조합, 적용 대상(공통 또는 고객), 시작 월"마다 하나의 버전입니다. 청구 월은 KST 기준 달력 월입니다([시간 규칙](/concepts/time-rules)).
+
+<Steps>
+<Step title="그 달에 적용되는 버전을 고른다">
+어떤 달을 계산할 때, 같은 미터와 조합과 적용 대상의 버전 가운데 그 달에 적용되는 것(시작 월이 그 달이거나 그 전이고, 종료 월이 그 달보다 뒤이거나 없음)을 모읍니다.
+</Step>
+<Step title="시작 월이 가장 늦은 버전을 쓴다">
+그 가운데 `effective_from`이 가장 늦은 버전 하나만 씁니다. 그래서 다음 달부터 단가를 바꾸려면 이전 버전을 끝내지 않고 `effective_from`을 다음 달로 한 새 버전만 등록하면 됩니다.
+</Step>
+</Steps>
+
+예를 들어 `2026-11`부터 500원 버전과 `2026-12`부터 400원 버전이 있으면 2026-11은 500원, 2026-12부터는 400원입니다. `effective_until`을 둔 버전은 종료 월부터 쓰지 않고, 그 달에 적용되는 다른 버전이 있으면 그 가운데 시작 월이 가장 늦은 것을 씁니다. 보관은 다릅니다. 이미 적용 중인 가장 늦은 버전을 보관하면 다음 달부터 이전 버전으로 돌아가지 않습니다. 단가 적용을 멈추는 방법과 보관한 뒤 쓰이는 단가는 [바꾸기, 보관, 복원](/pricing/changes-and-archiving)을 보세요.
+
+### 같은 자리에 다시 등록하면 덮어쓴다
+
+미터, 조합, 적용 대상, `effective_from`이 모두 같은 버전을 다시 등록하면 새 버전을 만들지 않고 기존 버전을 덮어씁니다. 응답은 여전히 201입니다. `model`, `unit_price`, `tiers`, `effective_until`이 모두 요청 값으로 바뀌므로, 기존 버전에 종료 월이 있었는데 이번 요청에서 `effective_until`을 빼면 종료 월이 사라집니다.
+
+<Warning>
+이번 달을 시작 월로 하는 버전을 덮어쓰면 이번 달 전체의 금액이 바뀝니다. 청구 예정액은 조회할 때마다 계산하므로 이번 달 초부터 이미 받은 사용량에도 새 단가가 적용됩니다. 달 중간부터만 단가를 바꾸는 방법은 없으니 바꾼 단가를 다음 달부터 쓰려면 `effective_from`을 다음 달로 둔 새 버전을 등록하세요.
+</Warning>
+
+### 지난달은 바꿀 수 없다
+
+`effective_from`이 이번 달(KST)보다 앞이면 409 `price_rate_history_immutable`입니다. 단가는 이번 달 이후에만 넣을 수 있으므로, 달이 바뀐 뒤에는 지난달 단가를 새로 넣거나 고칠 수 없습니다. 기준 시각은 [시간 규칙](/concepts/time-rules)을 보세요.
+
+## 고객 단가
+
+`customer_id`를 넣으면 그 고객에게만 쓰는 단가입니다. 같은 조합에 그 고객의 단가가 그 달에 있으면 고객 단가를, 없으면 공통 단가를 씁니다. 고객 단가도 공통 단가와 같은 월 버전 규칙을 따릅니다.
+
+```bash curl
+curl -X POST https://meterengine.com/v1/billable-metrics/llm-input-tokens/price-rates \
+  -H "Authorization: Bearer me_test_xxxxxxxx" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "dimension_values": { "model": "lumen-fast" },
+    "model": "per_unit",
+    "unit_price": 400,
+    "customer_id": "8b0f4c2e-6d1a-4f3b-9a57-2c4e8d9b1f60"
+  }'
+```
+
+- 고객 단가는 조합을 대신하지 않습니다. 그 고객에게 `lumen-fast` 고객 단가만 있으면 `lumen-pro` 사용량에는 `lumen-pro` 공통 단가를 쓰고, 그것도 없으면 청구되지 않습니다.
+- `customer_id`는 MeterEngine 고객 id(UUID)입니다([고객 등록과 ID 대응](/integration/customers)). 없는 고객이면 404 `customer_not_found`, 보관한 고객이면 409 `customer_archived`입니다.
+
+## 단가 이력 조회
+
+`GET /v1/billable-metrics/{code}/price-rates`는 그 미터의 단가 버전을 시작 월이 늦은 순서로 돌려줍니다. 필요 권한은 read입니다. 이 업무 환경에 없는 `customer_id`를 넣으면 404 `customer_not_found`입니다.
+
+| 조회 조건 | 결과 |
+| --- | --- |
+| `customer_id` 없음 | 공통 단가만 |
+| `customer_id=고객 id` | 그 고객의 고객 단가만 |
+| `status` | `active`(기본), `archived`, `all` |
+
+```bash curl
+curl "https://meterengine.com/v1/billable-metrics/llm-input-tokens/price-rates?status=all" \
+  -H "Authorization: Bearer me_test_xxxxxxxx"
+```
+
+```json 200 응답
+{
+  "price_rates": [
+    {
+      "id": "6a2d9e41-0b7c-4f58-8e13-9c4b2a7d5e02",
+      "billable_metric_code": "llm-input-tokens",
+      "dimension_values": { "model": "lumen-fast" },
+      "unit_price": 400,
+      "customer_id": null,
+      "effective_from": "2026-12",
+      "effective_until": null,
+      "model": "per_unit",
+      "tiers": null,
+      "archived_at": null,
+      "archived_from": null
+    },
+    {
+      "id": "3f6c1b8e-2a4d-4e7b-9c1a-5d8e7f601234",
+      "billable_metric_code": "llm-input-tokens",
+      "dimension_values": { "model": "lumen-fast" },
+      "unit_price": 500,
+      "customer_id": null,
+      "effective_from": "2026-11",
+      "effective_until": null,
+      "model": "per_unit",
+      "tiers": null,
+      "archived_at": null,
+      "archived_from": null
+    }
+  ]
+}
+```
+
+어느 달에 실제로 얼마가 적용되는지는 '요금 설계' 화면에서 '적용 월'을 바꿔 보거나 그 달의 청구 예정액(`GET /v1/invoices/draft?month=YYYY-MM`)으로 확인합니다.
+
+## 단가 오류
+
+| 상태 | `code` | 원인 |
+| --- | --- | --- |
+| 400 | `validation_error` | `dimension_values`가 없거나, 모델과 단가, 구간이 맞지 않거나, 단가가 음수거나, `effective_until`이 시작 월보다 뒤가 아닙니다. |
+| 400 | `invalid_price_rate` | `dimension_values`의 키 집합이 미터의 차원 키와 다르거나, 값이 문자열, 숫자, 불리언이 아닙니다. |
+| 404 | `billable_metric_not_found` | 그런 `code`의 미터가 이 업무 환경에 없습니다. |
+| 404 | `customer_not_found` | `customer_id`의 고객이 이 업무 환경에 없습니다. |
+| 409 | `resource_archived` | 보관한 미터입니다. 미터를 복원한 뒤 등록합니다. |
+| 409 | `price_rate_history_immutable` | `effective_from`이 이번 달보다 앞입니다. |
+| 409 | `customer_archived` | 보관한 고객입니다. |
+| 409 | `archive_restoration_conflict` | 같은 자리의 버전을 보관했지만 그 버전이 이번 달에는 아직 적용됩니다([바꾸기, 보관, 복원](/pricing/changes-and-archiving)). |
+
+## 다음 단계
+
+<CardGroup cols={2}>
+<Card title="기본료와 최소 사용료" href="/pricing/price-plans">
+월 기본료와 최소 사용료를 더하는 방법
+</Card>
+<Card title="금액 계산 따라가기" href="/pricing/calculation-example">
+구간 단가부터 세액까지 숫자로 따라가기
+</Card>
+</CardGroup>

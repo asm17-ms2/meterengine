@@ -1,14 +1,14 @@
 # k6
 
-부하 발생기에서 test-sjpark SUT로 k6 스크립트를 돌린다.
+부하 발생기에서 test-sjpark-m7g나 test-sjpark-t4g SUT로 k6 스크립트를 돌린다. 아래 `<사양>`에는 `m7g`나 `t4g`를 넣는다.
 
 - SUT와 부하 발생기가 켜져 있어야 한다. 켜는 법과 아래의 `$LOADGEN`은 [`../README.md`](../README.md)와 [`../loadgen/README.md`](../loadgen/README.md)의 "켜고 끄기".
 - `smoke.js`는 초당 5건을 2분 보내 연결을 확인한다.
 
-## API 키
+## API 키와 대상 주소
 
-- 모든 스크립트는 `API_KEY` 환경변수가 없으면 시작하지 않는다.
-- test-sjpark 전용 키를 쓴다. 운영자로 로그인한 세션에서 SUT 도입사에 `ingest`, `read` 스코프 키를 발급한다(`POST /v1/api-keys`, 절차는 [`backend/README.md`](../../../backend/README.md#배포-환경의-운영-키-발급)). 원문은 발급 응답에만 나온다.
+- 모든 스크립트는 `API_KEY`와 `BASE_URL` 환경변수가 없으면 시작하지 않는다. 기본 대상이 없어 다른 환경으로 잘못 보내지 않는다.
+- 대상 환경 전용 키를 쓴다. 운영자로 로그인한 세션에서 SUT 도입사에 `ingest`, `read` 스코프 키를 발급한다(`POST /v1/api-keys`, 절차는 [`backend/README.md`](../../../backend/README.md#배포-환경의-운영-키-발급)). 원문은 발급 응답에만 나온다.
 - 셸 기록에 남지 않게 아래 `read`로 입력받는다. 세션을 새로 열면 다시 입력한다.
 
 ## 실행
@@ -22,6 +22,7 @@ git clone --depth 1 https://github.com/asm17-ms2/meterengine.git ~/meterengine
 cd ~/meterengine/measurements/test-sjpark/k6
 read -rsp 'API_KEY: ' API_KEY
 export API_KEY
+export BASE_URL=https://test-sjpark-<사양>.meterengine.com
 k6 run smoke.js
 ```
 
@@ -29,6 +30,7 @@ k6 run smoke.js
 
 ## 배포 중 실패 측정
 
+- 이 절은 없어진 한 대 환경(Caddy, 블루그린)의 배포를 잰 절차다. test-sjpark-m7g, test-sjpark-t4g에는 쓰지 않는다.
 - `deploy-ingest.js`는 수집 요청(`POST /v1/events`)을 초당 100건, 10분 보내고 요청마다 순번, 보낸 시각, 걸린 시간, status를 남긴다. 순번은 `X-Request-Seq` 헤더로도 보내 Caddy 요청 로그와 맞대어 본다.
 - 배포는 그 사이에 내 컴퓨터에서 한다. 숫자는 부하 발생기에서 [`../scripts/deploy-report.sh`](../scripts/deploy-report.sh)가 낸다: 배포 구간 길이, 구간 안 실패 건수, 가장 긴 끊김, 구간 밖 가용성(시간 기준, 요청 기준), 구간 안과 밖의 p99, 판정.
 - 끊김은 마지막 성공부터 그 뒤 첫 성공까지다. 요청 간격 때문에 실제보다 최대 20ms(초당 100건일 때) 길게 잡힌다.

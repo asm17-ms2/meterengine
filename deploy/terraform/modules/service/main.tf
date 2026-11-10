@@ -1,35 +1,3 @@
-resource "aws_instance" "app" {
-  count                  = var.create_instance ? 1 : 0
-  ami                    = var.ami_id
-  instance_type          = var.instance_type
-  subnet_id              = var.subnet_id
-  vpc_security_group_ids = var.ec2_security_group_ids
-  iam_instance_profile   = var.iam_instance_profile_name
-  user_data              = var.user_data
-  dynamic "root_block_device" {
-    for_each = var.root_block_device == null ? [] : [var.root_block_device]
-    content {
-      volume_size           = root_block_device.value.volume_size
-      volume_type           = root_block_device.value.volume_type
-      iops                  = root_block_device.value.iops
-      throughput            = root_block_device.value.throughput
-      encrypted             = root_block_device.value.encrypted
-      delete_on_termination = root_block_device.value.delete_on_termination
-    }
-  }
-  metadata_options {
-    http_endpoint               = "enabled"
-    http_tokens                 = "required"
-    http_put_response_hop_limit = 2
-    http_protocol_ipv6          = "disabled"
-    instance_metadata_tags      = "disabled"
-  }
-  tags = { Name = var.name }
-  lifecycle {
-    prevent_destroy = true
-  }
-}
-
 resource "aws_db_instance" "app" {
   identifier                            = var.db_identifier
   instance_class                        = var.db_instance_class

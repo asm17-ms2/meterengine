@@ -1,10 +1,10 @@
 [Unit]
-Description=MeterEngine ingest requests per second for the ASG target tracking policy
+Description=MeterEngine ten second CPU utilization for the ASG target tracking policy
 Wants=network-online.target
 After=network-online.target docker.service
 
 [Service]
-ExecStart=/opt/meterengine/deploy/server/ingest-rate.sh
+ExecStart=/opt/meterengine/deploy/server/cpu-metric.sh
 # ASG 밖 서버에서는 0으로 끝나므로 실패했을 때만 다시 띄운다.
 Restart=on-failure
 RestartSec=10

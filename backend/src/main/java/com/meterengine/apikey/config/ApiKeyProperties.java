@@ -5,4 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
 @ConfigurationProperties("meterengine.api-key")
-public record ApiKeyProperties(@DefaultValue("24h") Duration replacementGrace) {}
+public record ApiKeyProperties(
+    @DefaultValue("24h") Duration replacementGrace,
+    @DefaultValue("5s") Duration tableLoadRetryInterval,
+    @DefaultValue("30s") Duration tableRefreshInterval) {}

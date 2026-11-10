@@ -1,15 +1,5 @@
 module "service" {
-  source                    = "../modules/service"
-  name                      = "meterengine-server"
-  ami_id                    = "ami-0f4109eb491b0476f"
-  instance_type             = var.instance_type
-  subnet_id                 = "subnet-0348a18c1d399c193"
-  ec2_security_group_ids    = ["sg-0c2691d037bcdd8b1"]
-  iam_instance_profile_name = "meterengine-ec2-role"
-  root_block_device = {
-    volume_size = 20, volume_type = "gp3", iops = 3000, throughput = 125,
-    encrypted   = false, delete_on_termination = true
-  }
+  source                     = "../modules/service"
   db_identifier              = "meterengine-db"
   db_instance_class          = var.db_instance_class
   db_subnet_group_name       = "meterengine-rds-subnet-private"
@@ -27,7 +17,6 @@ module "service" {
   deletion_protection        = true
   skip_final_snapshot        = false
   final_snapshot_identifier  = "meterengine-production-final"
-  user_data                  = null
 }
 
 module "app_fleet" {
@@ -41,11 +30,11 @@ module "app_fleet" {
   route53_zone_id            = "Z08728621CQ5R1K37A7N1"
   database_security_group_id = "sg-068a54ab4cfa91730"
   ecr_repository_names       = ["meterengine-backend", "meterengine-frontend"]
-  ami_id                     = "ami-0f4109eb491b0476f"
+  ami_id                     = "ami-02b68e7eb6b798d63"
   # 버전 파라미터에 40자 SHA가 기록되기 전에는 모듈의 precondition이 plan을 멈춘다.
   min_size = 1
   # 측정 환경 숫자로 잡은 추정값이다.
-  scaling_target_requests_per_second = 450
+  scaling_target_average_cpu_percent = 60
   # main 체크아웃에서 잘못 apply해도 운영 ALB가 지워지지 않게 한다.
   alb_deletion_protection      = true
   app_egress_ports             = [443]

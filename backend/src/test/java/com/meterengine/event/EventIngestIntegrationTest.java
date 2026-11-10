@@ -652,6 +652,7 @@ class EventIngestIntegrationTest {
         "UPDATE api_key SET environment_id = ? WHERE key_hash = sha256(convert_to(?, 'UTF8'))",
         environmentId,
         TestCredentials.rawKeyOf(authorization));
+    TestCredentials.refreshApiKeyTable(jdbcTemplate);
     return authorization;
   }
 

@@ -432,6 +432,8 @@ class BootstrapServiceIntegrationTest {
             passwordEncoder,
             auditLogService)
         .run(new DefaultApplicationArguments());
+    // 운영에서는 이 러너 뒤에 테이블을 채우는 러너가 돌아 콘솔 키가 들어간다.
+    TestCredentials.refreshApiKeyTable(jdbcTemplate);
   }
 
   private MvcTestResult login(String email, String password) {

@@ -1,0 +1,156 @@
+---
+title: "고객 카드 등록 링크"
+description: "고객이 결제 카드를 등록하는 링크를 만들어 전달하고, 등록 결과를 확인하는 방법을 설명합니다."
+---
+
+{/* 확인 필요: 공개 인보이스 조회 API와 카드 등록 링크 권한 */}
+카드 등록은 MeterEngine이 제공하는 링크 화면에서만 합니다. 도입사는 고객마다 일회용 카드 등록 링크를 만들어 전달하고, 고객은 그 화면에서 자동결제에 동의한 뒤 토스페이먼츠 창에서 카드를 입력합니다. 카드 번호와 빌링키는 도입사 서버를 지나지 않으며, 도입사가 만든 화면에서 카드를 받는 방식은 지원하지 않습니다.
+
+## 시작하기 전에
+
+- 지금 업무 환경에 토스페이먼츠 키를 저장해 두어야 합니다. 없으면 `409 toss_payments_credential_missing`으로 거절됩니다. [토스페이먼츠 상점 준비와 키 저장](/payments/toss-setup)
+- 카드를 등록할 고객이 그 업무 환경에 등록되어 있어야 합니다. 보관한 고객에게는 링크를 만들 수 없습니다. [고객 등록과 ID 대응](/integration/customers)
+- 링크는 만드는 때의 업무 환경과 결제 모드에 묶입니다. 테스트 환경에서 만든 링크로 등록한 카드는 테스트 결제에만 쓰입니다.
+
+## 링크 만들기
+
+<Tabs>
+  <Tab title="콘솔">
+    <Steps>
+      <Step title="고객 상세 화면을 연다">
+        '고객' 화면에서 고객 이름을 눌러 고객 상세 화면을 엽니다.
+      </Step>
+      <Step title="카드 등록 링크를 만든다">
+        '카드 등록 링크 만들기'를 누르고, 열린 창에서 '카드 등록 링크 만들기'를 한 번 더 누릅니다. admin(전체 관리) 권한이 필요합니다. 보관한 고객의 상세 화면에는 이 버튼이 나오지 않습니다.
+      </Step>
+      <Step title="링크를 복사한다">
+        창에 "24시간 동안 한 번 사용할 수 있는 카드 등록 링크입니다."라는 안내와 함께 링크가 나옵니다. '카드 등록 링크 복사'를 눌러 복사한 뒤 창을 닫습니다. 창을 닫으면 같은 링크를 다시 볼 수 없습니다.
+      </Step>
+    </Steps>
+
+    '수납과 취소' 화면의 고객별 수납 화면에서도 결제 전이거나 결제에 실패한 인보이스에 등록 카드가 없으면 '카드 등록 링크 만들기'가 나옵니다.
+  </Tab>
+  <Tab title="API">
+    {/* 확인 필요: 공개 인보이스 조회 API와 카드 등록 링크 권한 */}
+    admin 권한 API 키로 `POST /v1/customers/{id}/payment-method-registrations`를 부릅니다. 경로의 `id`는 고객 id(UUID)이고 본문은 없습니다.
+
+    <CodeGroup>
+    ```bash curl
+    curl -X POST https://meterengine.com/v1/customers/3f2b8c1e-5d4a-4e6f-9a7b-1c2d3e4f5a6b/payment-method-registrations \
+      -H "Authorization: Bearer me_test_xxxxxxxx"
+    ```
+
+    ```javascript Node
+    const customerId = "3f2b8c1e-5d4a-4e6f-9a7b-1c2d3e4f5a6b";
+    const response = await fetch(
+      `https://meterengine.com/v1/customers/${customerId}/payment-method-registrations`,
+      { method: "POST", headers: { Authorization: "Bearer me_test_xxxxxxxx" } },
+    );
+    const registration = await response.json();
+    const link = `https://meterengine.com/payment-method-registrations/${registration.token}`;
+    ```
+    </CodeGroup>
+
+    ```json 응답 201
+    {
+      "token": "Qm9V3xL7aT2pK8sW1nR4yE6uH0jD5cF9gB2iZ7oM3vX",
+      "customer_id": "3f2b8c1e-5d4a-4e6f-9a7b-1c2d3e4f5a6b",
+      "customer_name": "주식회사 예시고객",
+      "organization_name": "예시 도입사",
+      "client_key": "test_ck_xxxxxxxxxxxxxxxx",
+      "customer_key": "3f2b8c1e-5d4a-4e6f-9a7b-1c2d3e4f5a6b",
+      "mode": "test",
+      "expires_at": "2026-11-06T10:00:00+09:00"
+    }
+    ```
+
+    <ResponseField name="token" type="string">
+      카드 등록 화면 주소에 넣을 일회용 토큰입니다. 이 응답에만 실립니다.
+    </ResponseField>
+    <ResponseField name="customer_key" type="string">
+      토스페이먼츠에 넘기는 고객 식별값이며 고객 id와 같습니다.
+    </ResponseField>
+    <ResponseField name="mode" type="string">
+      링크를 만든 때의 결제 모드입니다. `test` 또는 `live`.
+    </ResponseField>
+    <ResponseField name="expires_at" type="string">
+      링크가 만료되는 시각(KST)입니다. 만든 때부터 24시간 뒤입니다.
+    </ResponseField>
+
+    {/* 확인 필요: 공개 인보이스 조회 API와 카드 등록 링크 권한 */}
+    고객에게 전달할 주소는 `https://meterengine.com/payment-method-registrations/<token>` 입니다. API로 만들 때는 도입사가 이 주소를 직접 조합합니다.
+  </Tab>
+</Tabs>
+
+<Warning>
+`token`은 링크를 만든 응답에만 실리고 MeterEngine은 원문을 저장하지 않습니다. 응답을 잃으면 같은 링크를 다시 얻을 수 없으니 새 링크를 만드세요. 링크를 가진 사람은 누구나 그 고객의 카드를 등록할 수 있으므로 해당 고객에게만 전달하세요.
+</Warning>
+
+{/* 확인 필요: 승인 알림 없음과 처리 시간 */}
+MeterEngine은 메일을 보내지 않으니 링크는 도입사가 메일이나 메신저로 고객에게 직접 전달합니다.
+
+### 링크를 만들 때 거절되는 경우
+
+| 상태 | code | 뜻 |
+| --- | --- | --- |
+| 404 | `customer_not_found` | 지금 업무 환경에 그런 고객이 없습니다. |
+| 409 | `customer_archived` | 보관한 고객입니다. 복원한 뒤 만드세요. |
+| 409 | `toss_payments_credential_missing` | 지금 결제 모드의 토스페이먼츠 키가 없습니다. |
+| 409 | `payment_mode_mismatch` | API 키의 모드가 지금 결제 모드와 다릅니다. [테스트 결제와 실결제](/payments/test-and-live) |
+
+## 링크의 규칙
+
+- 만든 때부터 **24시간** 동안 유효합니다.
+- 카드 등록에 성공하면 그 링크는 다시 쓸 수 없습니다. 고객이 중간에 취소했거나 토스페이먼츠가 카드를 거절했으면 링크는 쓰이지 않은 채 남아 유효기간 안에 다시 시도할 수 있습니다.
+- 링크를 만든 뒤 고객을 보관하거나 토스페이먼츠 키를 보관하면 그 링크로 등록할 수 없습니다.
+- 새 링크를 만들어도 이전 링크는 만료 전까지 유효합니다. 어느 링크로 등록하든 마지막에 등록한 카드가 그 결제 모드의 카드가 됩니다.
+
+## 고객이 보는 화면
+
+<Steps>
+  <Step title="링크를 연다">
+    "결제에 사용할 카드를 등록해 주세요" 화면에 서비스 제공자(도입사 이름), 고객명, 링크 유효기간이 나옵니다. 테스트 결제 링크면 '테스트 카드 등록' 안내가, 실결제 링크면 '실제 결제용 카드 등록' 안내가 함께 나옵니다.
+  </Step>
+  <Step title="자동결제에 동의한다">
+    자동결제 안내를 읽고 "[필수] 위 자동결제 안내를 확인하고 카드 등록에 동의합니다."에 체크합니다. 안내에는 청구가 확정되면 도입사가 이 카드로 이용료를 결제하고, 결제할 때마다 따로 승인받지 않으며, 중단과 카드 변경은 도입사 담당자에게 요청한다는 내용이 있습니다.
+  </Step>
+  <Step title="토스페이먼츠 창에서 카드를 입력한다">
+    '토스에서 카드 등록하기'를 누르면 토스페이먼츠 창이 열리고, 고객이 카드 정보를 넣고 본인인증을 합니다. 이 단계에서 결제는 일어나지 않습니다.
+  </Step>
+  <Step title="결과를 확인한다">
+    등록되면 "카드를 등록했습니다" 화면에 일부를 가린 카드 번호가 나옵니다. 고객이 취소했거나 거절되었으면 '카드 등록 다시 시작'으로 같은 링크를 다시 쓸 수 있습니다.
+  </Step>
+</Steps>
+
+<Note>
+카드 등록은 링크를 연 브라우저에서 끝까지 진행하고, '토스에서 카드 등록하기'를 누른 뒤 15분 안에 마쳐야 합니다. 다른 브라우저에서 마치거나 15분이 지나면 "등록 요청을 확인하지 못했습니다."라는 안내가 나오고, 고객은 링크를 연 브라우저에서 처음부터 다시 시작해야 합니다. 링크가 유효하면 같은 링크를 다시 쓸 수 있습니다.
+</Note>
+
+## 등록 확인
+
+read 권한 API 키로 `GET /v1/customers/{id}/payment-method`를 부르면 지금 결제 모드로 등록한 카드가 나옵니다. 빌링키 원문은 응답에 없습니다. 콘솔에서는 고객 상세 화면의 '현재 등록 카드'에 보입니다. 고객 화면에 "등록 결과를 확인하지 못했습니다"가 나왔다면 이 조회로 등록 여부를 먼저 확인하세요.
+
+```bash
+curl https://meterengine.com/v1/customers/3f2b8c1e-5d4a-4e6f-9a7b-1c2d3e4f5a6b/payment-method \
+  -H "Authorization: Bearer me_test_xxxxxxxx"
+```
+
+```json 응답 200
+{
+  "customer_id": "3f2b8c1e-5d4a-4e6f-9a7b-1c2d3e4f5a6b",
+  "card_issuer_code": "61",
+  "card_number": "43301234****123*",
+  "mode": "test",
+  "authenticated_at": "2026-11-05T10:20:00+09:00",
+  "archived_at": null
+}
+```
+
+아직 등록하지 않았으면 `404 payment_method_not_found`, 그런 고객이 없으면 `404 customer_not_found`입니다. 보관한 카드도 `archived_at`에 보관 시각이 찬 채로 나오니, 결제에 쓸 수 있는 카드인지는 `archived_at`이 `null`인지로 판단하세요. 고객 카드를 한꺼번에 보려면 `GET /v1/payment-methods`를 씁니다(`customer_id`로 좁힐 수 있고, 기본은 보관하지 않은 카드만 나옵니다).
+
+## 카드 바꾸기와 보관
+
+- **바꾸기**: 고객에게 새 카드 등록 링크를 보내 다시 등록받습니다. 같은 결제 모드에 카드가 있으면 새 카드로 바뀌고, 이전 빌링키는 토스페이먼츠에서 지워집니다. 이후 결제는 새 카드로 합니다.
+- **보관**: 고객 상세 화면의 '현재 결제 모드의 카드 관리'에서 '카드 보관'을 누르거나, admin 권한 API 키로 `DELETE /v1/customers/{id}/payment-method`를 부릅니다(성공하면 `204`, 카드가 없으면 `404 payment_method_not_found`). 그 결제 모드의 토스페이먼츠 키가 저장되어 있으면 MeterEngine이 토스페이먼츠에서도 그 빌링키를 지웁니다. 보관한 카드로는 새 결제를 하지 않고, 지난 결제와 취소 기록은 남습니다. 다시 결제하려면 고객이 카드를 다시 등록해야 합니다.
+
+카드가 없는 고객의 인보이스로 결제를 요청하면 `409 payment_method_missing`으로 거절됩니다. [첫 결제 요청과 결과 확인](/payments/charging)

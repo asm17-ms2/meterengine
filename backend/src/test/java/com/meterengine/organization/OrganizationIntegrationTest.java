@@ -230,6 +230,8 @@ class OrganizationIntegrationTest {
     String member = TestCredentials.issueMemberSession(jdbcTemplate, organizationId);
 
     assertThat(updateStatus(operator, organizationId, "suspended")).hasStatusOk();
+    // 시험 트랜잭션은 커밋하지 않아 커밋 뒤에 오는 상태 변경이 키 테이블에 닿지 않는다.
+    TestCredentials.refreshApiKeyTable(jdbcTemplate);
 
     for (String authorization : List.of(apiKey, member)) {
       assertThat(mvc.get().uri("/v1/customers").header(AUTHORIZATION, authorization).exchange())
@@ -240,6 +242,7 @@ class OrganizationIntegrationTest {
     }
 
     assertThat(updateStatus(operator, organizationId, "active")).hasStatusOk();
+    TestCredentials.refreshApiKeyTable(jdbcTemplate);
 
     for (String authorization : List.of(apiKey, member)) {
       assertThat(mvc.get().uri("/v1/customers").header(AUTHORIZATION, authorization).exchange())

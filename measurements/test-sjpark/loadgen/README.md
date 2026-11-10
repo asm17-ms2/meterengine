@@ -1,6 +1,6 @@
 # loadgen
 
-test-sjpark SUT에 k6로 요청을 보내는 부하 발생기 EC2다. 돌리는 법은 [`../k6/README.md`](../k6/README.md).
+test-sjpark-m7g, test-sjpark-t4g SUT에 k6로 요청을 보내는 부하 발생기 EC2다. 돌리는 법은 [`../k6/README.md`](../k6/README.md).
 
 - 접속은 SSM으로만 한다.
 - 매일 04:00(서울)에 자동으로 꺼진다.

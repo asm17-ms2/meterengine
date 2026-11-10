@@ -95,7 +95,7 @@ data "aws_iam_policy_document" "sut" {
     resources = ["*"]
   }
 
-  # 서버가 수집 요청 초당 값을 10초마다 올린다. 자원으로 못 막아 이름공간 조건으로 묶는다.
+  # 서버가 CPU 사용률을 10초마다 올린다. 자원으로 못 막아 이름공간 조건으로 묶는다.
   statement {
     sid       = "PutScalingMetric"
     actions   = ["cloudwatch:PutMetricData"]
@@ -107,7 +107,7 @@ data "aws_iam_policy_document" "sut" {
     }
   }
 
-  # 같은 스크립트가 초당 요청을 ASG 원하는 대수로 나눠 올린다. 조회 권한은 자원으로 못 좁힌다.
+  # 같은 스크립트가 CPU를 ASG 원하는 대수로 나눠 올린다. 조회 권한은 자원으로 못 좁힌다.
   statement {
     sid       = "ReadScalingCapacity"
     actions   = ["autoscaling:DescribeAutoScalingGroups"]

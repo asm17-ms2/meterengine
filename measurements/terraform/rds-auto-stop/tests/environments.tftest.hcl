@@ -18,16 +18,16 @@ mock_provider "aws" {
   }
 }
 
-run "both_environments_by_default" {
+run "every_environment_by_default" {
   command = plan
 
   assert {
-    condition     = toset(keys(module.rds_auto_stop)) == toset(["test-sjpark", "test-storage"])
-    error_message = "Both test environments must be detected by default."
+    condition     = toset(keys(module.rds_auto_stop)) == toset(["test-sjpark-m7g", "test-sjpark-t4g", "test-storage"])
+    error_message = "All test environments must be detected by default."
   }
 
   assert {
-    condition     = toset(keys(output.dead_letter_queue_urls)) == toset(["test-sjpark", "test-storage"])
+    condition     = toset(keys(output.dead_letter_queue_urls)) == toset(["test-sjpark-m7g", "test-sjpark-t4g", "test-storage"])
     error_message = "Operators need each environment's dead-letter queue URL to handle delivery alarms."
   }
 }

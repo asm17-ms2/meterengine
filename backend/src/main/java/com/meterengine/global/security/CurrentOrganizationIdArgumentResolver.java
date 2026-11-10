@@ -9,6 +9,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
+import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 
@@ -48,7 +49,22 @@ public class CurrentOrganizationIdArgumentResolver implements HandlerMethodArgum
     if (organizationId == null) {
       throw new ForbiddenException(ErrorCode.PERMISSION_DENIED);
     }
-    organizationAccessPolicy.check(organizationId);
+    checkOrganizationActive(organizationId, webRequest);
     return organizationId;
+  }
+
+  // 인증하며 키 테이블에서 도입사 상태까지 확인했으면 DB를 다시 읽지 않는다.
+  private void checkOrganizationActive(UUID organizationId, NativeWebRequest webRequest) {
+    Object organizationActive =
+        webRequest.getAttribute(
+            ApiCredentialAuthenticationFilter.ORGANIZATION_ACTIVE_ATTRIBUTE,
+            RequestAttributes.SCOPE_REQUEST);
+    if (!(organizationActive instanceof Boolean active)) {
+      organizationAccessPolicy.check(organizationId);
+      return;
+    }
+    if (!active) {
+      throw new ForbiddenException(ErrorCode.ORGANIZATION_NOT_ACTIVE);
+    }
   }
 }

@@ -27,9 +27,7 @@ class DeploymentLockTest(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
         self.repo = self.root / "repo"
-        (self.repo / "deploy/environments").mkdir(parents=True)
-        # sut-deploy는 /meterengine/test 경로로 불려 환경 test의 파일에서 서버 안 감시를 끈다.
-        (self.repo / "deploy/environments/test.json").write_text('{"compose_profiles": ["agents", "monitoring"]}\n')
+        (self.repo / "deploy").mkdir(parents=True)
         source = (ROOT / "deploy/deploy.sh").read_text()
         lock_path = re.findall(r"^LOCK_FILE=(.+)$", source, re.M)[-1]
         self.lock = self.root / Path(lock_path).name
@@ -62,25 +60,13 @@ class DeploymentLockTest(unittest.TestCase):
 
     def entrypoints(self):
         entries = {}
-        for relative in ("deploy/README.md", "measurements/test-sjpark/k6/README.md"):
+        for relative in ("deploy/README.md",):
             source = (ROOT / relative).read_text()
             for index, command in enumerate(re.findall(r'--parameters commands="([^"\n]+)"', source)):
                 entries[f"{relative}:{index}"] = command
             if relative == "deploy/README.md":
                 entries["manual"] = re.search(r"^(?:\(exec [89]>|cd /opt/meterengine &&).*deploy/deploy.sh.*$",
                                                source, re.M).group()
-        config = self.root / "deploy.conf"
-        config.write_text("PARAM_PATH=/meterengine/test\nSITE_DOMAIN=test.example\n")
-        for target in ("test-sjpark",):
-            source = (ROOT / f"measurements/{target}/sut/scripts/sut-deploy.sh").read_text()
-            generate = ('REMOTE_DEPLOY_CONFIG=' + shlex.quote(str(config)) + '\n'
-                        'REMOTE_REPO_DIR=/opt/meterengine\n'
-                        'FIRST_SHA_WITH_DEPLOY_CONF=' + 'c' * 40 + '\n'
-                        + function(source, "deploy_command") + '\n'
-                        'deploy_command "$SHA" /meterengine/test test.example\n')
-            command = subprocess.run(["bash", "-c", generate], env=self.env,
-                                     text=True, capture_output=True, check=True).stdout
-            entries[target] = command
         return {key: value.replace("/etc/meterengine/deploy-command.lock", str(self.root / "deploy-command.lock"))
                 .replace("/etc/meterengine/deploy.lock", str(self.legacy_lock))
                 .replace("/opt/meterengine", str(self.repo))
