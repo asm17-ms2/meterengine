@@ -77,10 +77,10 @@ class MonitoringComposeTest(unittest.TestCase):
         env = self.services["grafana"]["environment"]
         self.assertEqual({key: env[key] for key in (
             "GF_AUTH_GITHUB_ENABLED", "GF_AUTH_GITHUB_ALLOWED_ORGANIZATIONS", "GF_AUTH_DISABLE_LOGIN_FORM",
-            "GF_AUTH_BASIC_ENABLED", "GF_SERVER_ROOT_URL")}, {
+            "GF_AUTH_BASIC_ENABLED", "GF_SERVER_ROOT_URL", "GF_USERS_AUTO_ASSIGN_ORG_ROLE")}, {
             "GF_AUTH_GITHUB_ENABLED": "true", "GF_AUTH_GITHUB_ALLOWED_ORGANIZATIONS": "asm17-ms2",
             "GF_AUTH_DISABLE_LOGIN_FORM": "true", "GF_AUTH_BASIC_ENABLED": "false",
-            "GF_SERVER_ROOT_URL": "https://grafana.meterengine.com/"})
+            "GF_SERVER_ROOT_URL": "https://grafana.meterengine.com/", "GF_USERS_AUTO_ASSIGN_ORG_ROLE": "Admin"})
 
 
 class SharedPrometheusConfigTest(unittest.TestCase):
