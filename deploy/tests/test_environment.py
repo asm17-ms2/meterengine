@@ -26,7 +26,7 @@ def staging():
 
 def write_target(directory, name, **changes):
     target = {**staging(), "autoscaling_group_name": f"meterengine-{name}-app", **changes}
-    if name.startswith("test-"):
+    if name not in environment.GROUP_ENVIRONMENTS:
         del target["autoscaling_group_name"]
     (directory / f"{name}.json").write_text(json.dumps(target))
     return target
@@ -59,6 +59,19 @@ class LoadTargetTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "환경 이름은"):
             environment.load_target("test-sjpark", ENVIRONMENTS)
 
+    def test_load_requires_group_for_measurement_environments(self):
+        target = write_target(self.directory, "test-sjpark-t4g", parameter_path="/meterengine/test-sjpark-t4g")
+        del target["autoscaling_group_name"]
+        (self.directory / "test-sjpark-t4g.json").write_text(json.dumps(target))
+        with self.assertRaisesRegex(ValueError, "필드"):
+            environment.load_target("test-sjpark-t4g", self.directory)
+
+    def test_load_rejects_group_of_the_other_measurement_environment(self):
+        write_target(self.directory, "test-sjpark-t4g", parameter_path="/meterengine/test-sjpark-t4g",
+                     autoscaling_group_name="meterengine-test-sjpark-m7g-app")
+        with self.assertRaisesRegex(ValueError, "autoscaling_group_name"):
+            environment.load_target("test-sjpark-t4g", self.directory)
+
     def test_measurement_targets_match_their_module(self):
         for name in ("test-sjpark-m7g", "test-sjpark-t4g"):
             target = environment.load_target(name, ENVIRONMENTS)
@@ -76,8 +89,8 @@ class LoadTargetTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "autoscaling_group_name"):
             environment.load_target("production", self.directory)
 
-    def test_service_environments_name_their_own_group(self):
-        for name in ("staging", "production"):
+    def test_group_environments_name_their_own_group(self):
+        for name in ("staging", "production", "test-sjpark-m7g", "test-sjpark-t4g"):
             self.assertEqual(environment.load_target(name, ENVIRONMENTS)["autoscaling_group_name"], f"meterengine-{name}-app")
 
     def test_launch_template_exposes_tags_to_the_server(self):
@@ -109,11 +122,11 @@ class LoadTargetTest(unittest.TestCase):
         host = "meterengine-staging-db.abc.ap-northeast-2.rds.amazonaws.com"
         self.assertEqual(environment.database_identifier(host), "meterengine-staging-db")
 
-    def test_test_storage_measures_develop_images(self):
+    def test_each_environment_uses_its_image_repositories(self):
         prefixes = {name: environment.load_target(name, ENVIRONMENTS)["image_repository_prefix"]
                     for name in ("staging", "production", "test-storage", "test-sjpark-m7g", "test-sjpark-t4g")}
         self.assertEqual(prefixes, {"staging": "meterengine-staging", "production": "meterengine", "test-storage": "meterengine-staging",
-                                    "test-sjpark-m7g": "meterengine-staging", "test-sjpark-t4g": "meterengine-staging"})
+                                    "test-sjpark-m7g": "meterengine-test-sjpark", "test-sjpark-t4g": "meterengine-test-sjpark"})
 
     def test_production_memory_fits_the_current_server(self):
         # 서버 메모리에 맞춘 값이다. 사양을 바꾸면 같이 바꾼다.

@@ -49,6 +49,7 @@ jobs:
               - '.github/workflows/cd-production.yml'
               - '.github/workflows/cd-staging.yml'
               - '.github/workflows/deploy.yml'
+              - '.github/workflows/deploy-test-sjpark.yml'
               - 'measurements/*/README.md'
               - 'measurements/*/lib/common.sh'
               - 'measurements/*/sut/scripts/sut-deploy.sh'
@@ -162,7 +163,8 @@ jobs:
       - name: Terraform 시험
         run: |
           for dir in deploy/terraform/staging deploy/terraform/production deploy/terraform/monitoring \
-            measurements/test-sjpark/sut/module measurements/test-sjpark/sut/m7g measurements/test-sjpark/sut/t4g; do
+            measurements/test-sjpark/sut/module measurements/test-sjpark/sut/m7g measurements/test-sjpark/sut/t4g \
+            measurements/test-sjpark/sut/images; do
             terraform -chdir="$dir" init -backend=false -input=false
             terraform -chdir="$dir" validate
             terraform -chdir="$dir" test

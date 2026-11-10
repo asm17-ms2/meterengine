@@ -11,7 +11,7 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
 | staging | develop 머지 | staging.meterengine.com | agents |
 | production | main 머지 | meterengine.com | agents |
 | test-storage | `sut-deploy.sh`가 `rollout.sh`를 부른다 | test-storage.meterengine.com | agents |
-| test-sjpark-m7g, test-sjpark-t4g | `sut-deploy.sh <사양>`이 `rollout.sh`를 부른다 | test-sjpark-<사양>.meterengine.com | agents |
+| test-sjpark-m7g, test-sjpark-t4g | `deploy-test-sjpark.yml` 수동 실행이나 `sut-deploy.sh <사양>`이 `rollout.sh`를 부른다 | test-sjpark-<사양>.meterengine.com | agents |
 
 | 프로필 | 서비스 |
 | --- | --- |
