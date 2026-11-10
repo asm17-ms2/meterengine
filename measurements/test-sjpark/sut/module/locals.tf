@@ -5,8 +5,8 @@ locals {
   production_param_path = "/meterengine/production"
   availability_zone     = "ap-northeast-2a"
   db_port               = 5432
-  # 운영과 다름(이미지): develop 대상 실험과 비교
-  ecr_repository_names = ["meterengine-staging-backend", "meterengine-staging-frontend"]
+  # 운영과 다름(이미지): 머지 전 브랜치를 재려고 측정 전용 저장소를 쓴다. 저장소는 sut/images 루트가 만든다
+  ecr_repository_names = ["meterengine-test-sjpark-backend", "meterengine-test-sjpark-frontend"]
   # 운영 루트와 같은 값이다.
   scaling_target_average_cpu_percent = 60
   app_egress_ports                   = [443]

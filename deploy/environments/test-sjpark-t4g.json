@@ -1,10 +1,11 @@
 {
+  "autoscaling_group_name": "meterengine-test-sjpark-t4g-app",
   "database_identifier": "meterengine-test-sjpark-t4g-db",
   "parameter_path": "/meterengine/test-sjpark-t4g",
   "site_domain": "test-sjpark-t4g.meterengine.com",
   "site_aliases": [],
   "compose_profiles": ["agents"],
-  "image_repository_prefix": "meterengine-staging",
+  "image_repository_prefix": "meterengine-test-sjpark",
   "backend_mem_limit": "768m",
   "backend_max_ram_percentage": 50
 }

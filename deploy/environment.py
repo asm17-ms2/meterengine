@@ -14,6 +14,8 @@ import sys
 AWS_REGION = "ap-northeast-2"
 SERVICE_ENVIRONMENTS = ("staging", "production")
 SUT_ENVIRONMENTS = ("test-storage", "test-sjpark-m7g", "test-sjpark-t4g")
+# 오토스케일링 그룹 서버로 뜨고 deploy.yml이 그룹 이름을 환경 파일에서 읽는 환경이다.
+GROUP_ENVIRONMENTS = (*SERVICE_ENVIRONMENTS, "test-sjpark-m7g", "test-sjpark-t4g")
 PROFILES = {"agents"}
 FIELDS = {"autoscaling_group_name", "database_identifier", "parameter_path", "site_domain", "site_aliases", "compose_profiles",
           "image_repository_prefix", "backend_mem_limit", "backend_max_ram_percentage"}
@@ -25,10 +27,10 @@ def load_target(name: str, directory: Path) -> dict:
     if name not in (*SERVICE_ENVIRONMENTS, *SUT_ENVIRONMENTS):
         raise ValueError(f"환경 이름은 {', '.join((*SERVICE_ENVIRONMENTS, *SUT_ENVIRONMENTS))} 중 하나여야 한다: {name}")
     target = json.loads((directory / f"{name}.json").read_text())
-    is_service = name in SERVICE_ENVIRONMENTS
-    if not isinstance(target, dict) or set(target) != (FIELDS if is_service else FIELDS - {"autoscaling_group_name"}):
+    in_group = name in GROUP_ENVIRONMENTS
+    if not isinstance(target, dict) or set(target) != (FIELDS if in_group else FIELDS - {"autoscaling_group_name"}):
         raise ValueError(f"{name}.json의 필드가 다르다")
-    if is_service and target["autoscaling_group_name"] != f"meterengine-{name}-app":
+    if in_group and target["autoscaling_group_name"] != f"meterengine-{name}-app":
         raise ValueError(f"{name}.json의 autoscaling_group_name은 meterengine-{name}-app이어야 한다")
     if not re.fullmatch(r"[a-z][a-z0-9-]*", str(target["database_identifier"])):
         raise ValueError(f"{name}.json의 database_identifier는 전체 주소가 아니라 RDS 식별자다")
@@ -51,7 +53,7 @@ def load_target(name: str, directory: Path) -> dict:
 
 
 def validate_target(target: dict, observed: dict) -> None:
-    # 측정 서버는 DB만 대조한다. 서비스 환경은 그 환경의 오토스케일링 그룹 서버여야 한다.
+    # 환경 파일에 그룹 이름이 없는 test-storage는 DB만 대조한다. 나머지는 그 환경의 오토스케일링 그룹 서버여야 한다.
     for key in ("autoscaling_group_name", "database_identifier") if "autoscaling_group_name" in target else ("database_identifier",):
         if target.get(key) != observed.get(key):
             raise ValueError(f"{key}가 환경 파일과 다릅니다. 이 서버의 값: {observed.get(key) or '없음'}")

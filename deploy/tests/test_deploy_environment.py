@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 import re
@@ -231,10 +232,14 @@ db_identifier) echo "db-$name" ;;
 esac
 """
     # MISSING_PATH가 든 cat-file 검사는 실패하고, NO_WEBHOOK이면 compose.prod.yml에 스위치가 없다.
+    # 환경 파일은 체크아웃의 파일을 보여 주고, OLD_PREFIX면 이 PR 이전처럼 staging 접두를 보여 준다.
     FAKE_GIT = r"""#!/bin/sh
 case "$3" in
 cat-file) [ -n "${MISSING_PATH:-}" ] && case "$5" in *"$MISSING_PATH"*) exit 1 ;; esac ;;
-show) [ -n "${NO_WEBHOOK:-}" ] || echo "      WEBHOOK_ENABLED: x" ;;
+show) case "$4" in
+	*.json) if [ -n "${OLD_PREFIX:-}" ]; then sed 's/"image_repository_prefix": "[^"]*"/"image_repository_prefix": "meterengine-staging"/' "$2/${4#*:}"; else cat "$2/${4#*:}"; fi ;;
+	*) [ -n "${NO_WEBHOOK:-}" ] || echo "      WEBHOOK_ENABLED: x" ;;
+	esac ;;
 esac
 exit 0
 """
@@ -299,7 +304,8 @@ case "$*" in *describe-db-instances*) echo available ;; esac
                 trace = self.trace.read_text()
                 name = Path(tf_dir).name
                 self.assertIn(f"rollout asg-{name} /meterengine/{name}/app-version {SHA}\n", trace)
-                self.assertIn(f"--repository-name meterengine-staging-backend --image-ids imageTag={SHA}", trace)
+                prefix = json.loads((MEASUREMENTS.parent / f"deploy/environments/{sut}.json").read_text())["image_repository_prefix"]
+                self.assertIn(f"--repository-name {prefix}-backend --image-ids imageTag={SHA}", trace)
                 chdirs = set(re.findall(r"^terraform -chdir=(\S+) ", trace, re.M))
                 self.assertEqual(chdirs, {str(self.repo / tf_dir)})
 
@@ -307,7 +313,8 @@ case "$*" in *describe-db-instances*) echo available ;; esac
         cases = (("deploy/rollout.sh", {"MISSING_PATH": "deploy/rollout.sh"}, "deploy/rollout.sh 가 없는 옛 커밋"),
                  ("environment file", {"MISSING_PATH": "deploy/environments/test-sjpark-m7g.json"},
                   "deploy/environments/test-sjpark-m7g.json 이 없는 커밋"),
-                 ("webhook switch", {"NO_WEBHOOK": "1"}, "WEBHOOK_ENABLED 가 없는 커밋"))
+                 ("webhook switch", {"NO_WEBHOOK": "1"}, "WEBHOOK_ENABLED 가 없는 커밋"),
+                 ("image prefix", {"OLD_PREFIX": "1"}, "image_repository_prefix 가 지금과 다른 옛 커밋"))
         script, args, _ = self.deploy_script("test-sjpark-m7g")
         for name, extra, reason in cases:
             with self.subTest(case=name):

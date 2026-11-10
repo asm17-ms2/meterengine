@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # 버전 파라미터에 커밋 SHA를 쓰고 앱 서버를 그 커밋으로 바꾼다. staging, production과 같은 deploy/rollout.sh를 쓴다.
-# 사용법: sut-deploy.sh <m7g|t4g> [SHA]  (없으면 ECR에 이미지가 있고 rollout.sh가 있는 가장 최근 develop 커밋)
+# 사용법: sut-deploy.sh <m7g|t4g> [SHA]  (없으면 측정 ECR에 이미지가 있는 가장 최근 develop 커밋)
+# 측정 ECR 이미지는 .github/workflows/deploy-test-sjpark.yml이 올린다.
 
 set -euo pipefail
 
@@ -43,6 +44,15 @@ fetch_operator_checkout() {
 	git -C "$REPO_ROOT" fetch --quiet origin || die "운영자 체크아웃에서 git fetch origin이 실패했다"
 }
 
+# 서버의 deploy.sh는 배포 커밋의 환경 파일에서 접두를 읽으므로, 운영자 체크아웃의 접두와 같아야 확인한 ECR 이미지를 받는다.
+uses_current_repositories() {
+	local sha="$1" current deployed
+	current=$(jq -er .image_repository_prefix "$ENVIRONMENT_FILE") || return 1
+	deployed=$(git -C "$REPO_ROOT" show "$sha:deploy/environments/$ENVIRONMENT.json" 2>/dev/null |
+		jq -er .image_repository_prefix 2>/dev/null) || return 1
+	[ "$current" = "$deployed" ]
+}
+
 # 이 환경에 배포할 수 없는 커밋이면 이유를 찍는다. 버전 파라미터를 쓰기 전에 운영자 체크아웃에서 본다.
 commit_problem() {
 	local sha="$1"
@@ -54,6 +64,8 @@ commit_problem() {
 		echo "deploy/environments/$ENVIRONMENT.json 이 없는 커밋이라 서버의 deploy.sh가 이 환경을 배포하지 못한다"
 	elif ! git -C "$REPO_ROOT" show "$sha:deploy/compose.prod.yml" 2>/dev/null | grep -q 'WEBHOOK_ENABLED:'; then
 		echo "deploy/compose.prod.yml 에 WEBHOOK_ENABLED 가 없는 커밋이라 웹훅을 끌 수 없다"
+	elif ! uses_current_repositories "$sha"; then
+		echo "deploy/environments/$ENVIRONMENT.json 의 image_repository_prefix 가 지금과 다른 옛 커밋이라 서버가 다른 ECR에서 이미지를 찾는다. develop 위로 올린다"
 	fi
 }
 
@@ -63,13 +75,14 @@ require_deployable_commit() {
 	[ -z "$problem" ] || die "$sha 는 $problem"
 }
 
-# staging CD는 develop 커밋 SHA로만 태그를 올리므로, 두 저장소에 다 있는 태그를 최근부터 보며 배포할 수 있는 첫 커밋을 고른다.
+# 측정 ECR에는 실험 브랜치 이미지도 있어 develop에 들어간 커밋만 본다. 두 저장소에 다 있는 태그를 최근부터 보며 배포할 수 있는 첫 커밋을 고른다.
 latest_deployable_sha() {
 	local backend_repository="$1" frontend_repository="$2" backend_tags frontend_tags sha problem
 	backend_tags=$(ecr_sha_tags_newest_first "$backend_repository") || exit 1
 	frontend_tags=$(ecr_sha_tags_newest_first "$frontend_repository") || exit 1
 	for sha in $backend_tags; do
 		printf '%s\n' "$frontend_tags" | grep -Fxq "$sha" || continue
+		git -C "$REPO_ROOT" merge-base --is-ancestor "$sha" origin/develop 2>/dev/null || continue
 		problem=$(commit_problem "$sha")
 		if [ -z "$problem" ]; then
 			printf '%s' "$sha"
@@ -77,7 +90,7 @@ latest_deployable_sha() {
 		fi
 		log "$sha 건너뜀: $problem" >&2
 	done
-	die "ECR $backend_repository, $frontend_repository 둘 다에 이미지가 있으면서 $ROLLOUT_PATH 가 있는 커밋이 없다. SHA를 직접 준다"
+	die "ECR $backend_repository, $frontend_repository 둘 다에 이미지가 있는 배포할 수 있는 develop 커밋이 없다. 배포 워크플로로 develop을 빌드하거나 SHA를 직접 준다"
 }
 
 log_when_behind_develop() {
@@ -88,7 +101,7 @@ log_when_behind_develop() {
 		return 0
 	fi
 	[ "$develop_sha" = "$sha" ] ||
-		log "develop 최신 $develop_sha 는 아직 이미지가 없다(CD가 도는 중이거나 CD가 이미지를 올리지 않는 커밋). 이미지가 있는 가장 최근 커밋 $sha 를 쓴다"
+		log "develop 최신 $develop_sha 는 측정 ECR에 이미지가 없다. 이미지가 있는 가장 최근 develop 커밋 $sha 를 쓴다. 최신을 재려면 배포 워크플로로 develop을 빌드한다"
 }
 
 require_ecr_images() {
@@ -100,7 +113,7 @@ require_ecr_images() {
 			--image-ids "imageTag=$sha" 2>&1 >/dev/null); then
 			case "$aws_error" in
 			*ImageNotFoundException*)
-				die "ECR $repository 에 태그 $sha 이미지가 없다. CD가 아직 도는 중이거나, CD가 이미지를 올리지 않는 커밋이거나, ECR 수명 주기 정책으로 이미 지워진 커밋이다. SHA를 빼면 이미지가 있는 가장 최근 커밋을 쓴다"
+				die "ECR $repository 에 태그 $sha 이미지가 없다. 배포 워크플로로 빌드하지 않았거나 ECR 수명 주기 정책으로 이미 지워진 커밋이다. 배포 워크플로가 빌드하고 배포까지 한다"
 				;;
 			*)
 				die "ECR $repository 이미지를 확인하지 못했다: $aws_error"
@@ -143,7 +156,7 @@ main() {
 	require_ecr_images "$sha" $repositories
 	require_db_usable "$db_identifier"
 
-	log "$sha 를 버전 파라미터에 쓰고 앱 서버를 바꾼다. 서버의 deploy.sh가 DB 식별자를 deploy/environments/$ENVIRONMENT.json과 대조한다"
+	log "$sha 를 버전 파라미터에 쓰고 앱 서버를 바꾼다. 서버의 deploy.sh가 오토스케일링 그룹 이름과 DB 식별자를 deploy/environments/$ENVIRONMENT.json과 대조한다"
 	result=$(rollout "$sha") || die "rollout.sh가 실패했다. 위 출력을 확인한다"
 	if printf '%s\n' "$result" | grep -Fxq recorded_only=true; then
 		log "앱 서버가 0대라 버전만 기록했다. terraform -chdir=measurements/test-sjpark/sut/$SPEC apply -var asg_min_size=1 -var asg_max_size=1 로 띄우면 이 커밋으로 부팅한다"
