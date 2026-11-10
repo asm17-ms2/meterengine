@@ -59,8 +59,8 @@ run "server_shape" {
   command = plan
 
   assert {
-    condition     = aws_instance.monitoring.instance_type == "t4g.small" && aws_instance.monitoring.associate_public_ip_address && aws_instance.monitoring.subnet_id == "subnet-0348a18c1d399c193"
-    error_message = "The server is a t4g.small in the public 2a subnet with a public IP."
+    condition     = aws_instance.monitoring.instance_type == "t4g.medium" && aws_instance.monitoring.associate_public_ip_address && aws_instance.monitoring.subnet_id == "subnet-0348a18c1d399c193"
+    error_message = "The server is a t4g.medium in the public 2a subnet with a public IP."
   }
   assert {
     condition     = aws_instance.monitoring.metadata_options[0].http_tokens == "required" && aws_instance.monitoring.metadata_options[0].http_put_response_hop_limit == 2

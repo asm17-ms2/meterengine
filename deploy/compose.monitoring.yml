@@ -9,10 +9,13 @@ x-logging: &default-logging
     max-size: "10m"
     max-file: "3"
 
+# 한도가 없으면 한 컨테이너가 불어날 때 서버 전체가 디스크 재읽기로 굳는다. 넘은 컨테이너만 죽고 다시 뜨게 한다.
+# 한도의 합(2,816MB)은 t4g.medium 메모리에서 운영체제와 파일 캐시 몫 약 1GB를 남긴다.
 # 파라미터가 없는 환경의 exporter는 start.sh가 띄우지 않으므로 빈 값을 허용한다.
 x-postgres-exporter: &postgres-exporter
   image: quay.io/prometheuscommunity/postgres-exporter:v0.18.1
   restart: unless-stopped
+  mem_limit: 64m
   command:
     - --collector.stat_checkpointer
     - --collector.stat_user_tables
@@ -23,6 +26,10 @@ services:
   prometheus:
     image: prom/prometheus:v3.15.1
     restart: unless-stopped
+    mem_limit: 1024m
+    environment:
+      # 한도에 닿기 전에 GC가 먼저 줄이게 한도보다 낮게 둔다.
+      GOMEMLIMIT: 900MiB
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus
@@ -39,11 +46,14 @@ services:
   grafana:
     image: grafana/grafana:13.1.9
     restart: unless-stopped
+    mem_limit: 1024m
     environment:
+      GOMEMLIMIT: 900MiB
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD가 없다}
       GF_SERVER_ROOT_URL: https://grafana.meterengine.com/
       GF_USERS_ALLOW_SIGN_UP: "false"
-      GF_USERS_AUTO_ASSIGN_ORG_ROLE: Editor
+      # 역할 매핑이 없어 로그인할 때마다 이 역할로 다시 맞춘다.
+      GF_USERS_AUTO_ASSIGN_ORG_ROLE: Admin
       GF_AUTH_GITHUB_ENABLED: "true"
       GF_AUTH_GITHUB_CLIENT_ID: ${GRAFANA_GITHUB_CLIENT_ID:?GRAFANA_GITHUB_CLIENT_ID가 없다}
       GF_AUTH_GITHUB_CLIENT_SECRET: ${GRAFANA_GITHUB_CLIENT_SECRET:?GRAFANA_GITHUB_CLIENT_SECRET가 없다}
@@ -72,6 +82,9 @@ services:
   cloudwatch-exporter:
     image: prom/cloudwatch-exporter:v0.16.0
     restart: unless-stopped
+    mem_limit: 384m
+    environment:
+      JAVA_TOOL_OPTIONS: -Xmx256m
     volumes:
       - ./cloudwatch:/config:ro
     logging: *default-logging
