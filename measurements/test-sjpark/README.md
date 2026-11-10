@@ -28,7 +28,6 @@
 | `lib/common.sh` | 스크립트가 같이 쓰는 함수 |
 | [`loadgen/`](loadgen/README.md) | 부하 발생기 |
 | [`k6/`](k6/README.md) | k6 스크립트 |
-| [`scripts/deploy-report.sh`](scripts/deploy-report.sh) | 없어진 한 대 환경의 배포 중 실패 계산. 두 환경에는 쓰지 않는다 |
 
 - 자원 이름 접두는 `meterengine-test-sjpark-<사양>`, 도메인은 `test-sjpark-<사양>.meterengine.com`, 파라미터 경로는 `/meterengine/test-sjpark-<사양>`이다.
 - 두 DB는 같은 프로덕션 스냅샷에서 복원한다. 스냅샷은 두 루트의 `snapshot_identifier`이고, 바꾸면 DB가 그 스냅샷에서 다시 만들어진다.
