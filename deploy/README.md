@@ -35,7 +35,7 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
      \--3000-- 운영 ALB (grafana.meterengine.com)
 ```
 
-- 도메인: https://meterengine.com (Route 53 호스티드 존). apex, www, grafana 레코드는 ALB 별칭이고 Terraform이 관리한다. 아래 "도메인 전환과 옛 서버" 참조.
+- 도메인: https://meterengine.com (Route 53 호스티드 존). apex, www, grafana 레코드는 ALB 별칭이고 Terraform이 관리한다. 아래 "도메인" 참조.
 - 앱 서버: 오토스케일링 그룹 `meterengine-production-app`(t4g.medium, arm64, Amazon Linux 2023, ap-northeast-2). "앱 서버 오토스케일링 그룹" 참조.
 - DB: RDS `meterengine-db` (db.t4g.small, PostgreSQL 18, 단일 AZ).
 - staging은 ALB, 오토스케일링 그룹 `meterengine-staging-app`, DB `meterengine-staging-db`(db.t4g.small)를 따로 쓴다.
@@ -63,22 +63,10 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
 - 루트의 `docker-compose.yml`은 로컬 개발용이고 배포 스택과 무관하다.
 - Grafana의 데이터 소스, 대시보드, 경보는 파일이 정본이다. 공용 모니터링 서버의 `start.sh`가 반영한다.
 
-### 도메인 전환과 옛 서버
+### 도메인
 
 - 도메인 레코드는 staging `terraform/staging/dns.tf`, production `terraform/production/dns.tf`(apex, www, grafana)가 정한다. production의 세 레코드는 손으로 만든 것을 import 블록으로 가져온다.
-- 변수 `serve_domain_from_alb`(기본 true)가 true면 ALB 별칭, false면 옛 서버 탄력적 IP의 A 레코드(TTL 60)다. 어느 쪽으로 바꿔도 같은 레코드를 제자리에서 고치고, 레코드는 삭제 보호가 걸려 있다.
-- 처음 넘길 때는 두 번 apply한다.
-  1. `-var serve_domain_from_alb=false`로 서버만 켠다. 최소 대수가 1이 되고 healthy 1대를 기다린다. 도메인은 그대로라 `curl --connect-to <도메인>:443:<ALB 주소>:443`로 ALB를 거쳐 확인한다.
-  2. 같은 날 기본값으로 다시 apply해 도메인을 ALB로 넘긴다. plan은 레코드 제자리 수정뿐이어야 한다.
-- production은 1단계 전에 세 레코드의 TTL을 CLI로 300에서 60으로 낮추고 10분 넘게 기다린다. 그래야 1단계 plan의 import에 레코드 변경이 섞이지 않는다.
-- 되돌리기는 옛 서버를 켜고 `-var serve_domain_from_alb=false`로 apply하는 것이다. 급하면 저장해 둔 값으로 CLI UPSERT한다.
-  - 옛 서버 Caddy는 도메인이 ALB로 간 뒤 인증서를 갱신하지 못한다. 그 인증서가 유효한 동안만 되돌릴 수 있다.
-  - 되돌린 뒤에는 기본값을 false로 바꾸는 PR이 머지될 때까지 기본값으로 apply하지 않는다.
-  - git revert로 되돌리지 않는다. 레코드 삭제 plan이 나오고 import 블록도 사라진다.
-  - 도메인이 옛 서버를 가리키는 동안은 최소 대수를 0으로 내릴 수 있다. 레코드가 ALB를 가리킬 때만 최소 1대를 요구한다.
-- 옛 서버(production `meterengine-server` `i-0f47bb1f028cd29a9`, staging `meterengine-staging`)는 넘긴 뒤 정지한다. 지우지 않고 탄력적 IP와 볼륨을 남긴다. 두 서버가 같이 돌면 같은 DB에서 예약 작업을 둘 다 돌리므로 정지는 넘긴 날 한다.
-- 옛 서버는 Caddy와 블루그린으로 도는 마지막 커밋에 머물고, 그 구성은 그 커밋의 이 문서가 설명한다. CD는 옛 서버에 배포하지 않고, 지금 커밋의 `deploy.sh`는 오토스케일링 그룹 밖 서버에서 환경 확인을 통과하지 못한다.
-- `prometheus.meterengine.com` 레코드는 Terraform 밖이다. 넘긴 뒤 CLI로 지운다. 옛 운영 서버의 탄력적 IP를 반납하기 전에 지운다. 남겨 두면 반납한 주소를 받은 남의 서버를 가리킨다.
+- 레코드는 ALB 별칭이고 삭제 보호가 걸려 있다. ALB를 가리키므로 앱 서버를 최소 1대로 둔다.
 
 ## 사전 준비
 
@@ -228,7 +216,6 @@ aws rds wait db-snapshot-available --db-snapshot-identifier meterengine-db-befor
 ### 복원
 
 - **복원본에는 복원 시각 뒤에 원본에 쓰인 데이터가 없다.** 복원 시각부터 5의 배포로 백엔드가 복원본에 붙을 때까지 원본에 들어온 이벤트, 인보이스, 결제 시도가 복원본에서 빠진다.
-- 도메인이 아직 옛 서버를 가리키면 5는 아래 "운영 전환 전" 절차로 한다.
 - 먼저 main 머지를 멈추고 Actions에서 CD가 돌고 있지 않은지 본다. CD는 main HEAD를 그때의 `db-host`로 배포해서, 전환 전이면 백엔드가 원본 DB로 다시 뜨고 전환 뒤면 3에서 피한 마이그레이션이 복원본에 적용된다. 5를 마칠 때까지 멈추고, 6의 PR만 넣는다.
 - 원본이 살아 있는 채로 되돌린다면 1 전에 앱 서버마다 붙어 `sudo -i` 한 뒤 백엔드를 멈춘다. 그러면 빠지는 구간이 멈춘 시각에서 끝난다. 그동안 API는 응답하지 않고, 5의 배포가 다시 띄운다.
 
@@ -320,27 +307,6 @@ aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names metereng
 
 - 원본 인스턴스는 바로 지우지 않는다. 복원 시각과 멈춘 시각(멈추지 못했으면 전환한 시각) 사이에 들어온 행은 원본과 복원본을 대조해 찾는다. 삭제 방지가 켜져 있어 먼저 꺼야 지워진다.
 
-#### 운영 전환 전
-
-도메인이 아직 옛 서버 `meterengine-server`를 가리키는 동안은 5와 6을 아래처럼 한다.
-
-- `<SHA>`는 Caddy와 블루그린으로 도는 마지막 운영 커밋을 쓴다. 그 뒤 커밋의 `deploy.sh`는 오토스케일링 그룹 밖 서버에서 멈춘다.
-- 5. `db-host`를 복원본으로 바꾸고 옛 서버에서 다시 배포한다. 오토스케일링 그룹은 멈추지 않아도 된다.
-
-```bash
-aws ssm put-parameter --name /meterengine/production/db-host --type String --overwrite --value <복원본 엔드포인트>
-aws rds modify-db-instance --db-instance-identifier meterengine-db-restore-<YYYYMMDD> \
-  --deletion-protection --max-allocated-storage 50 \
-  --enable-performance-insights --performance-insights-retention-period 7
-RESTORED_ID=meterengine-db-restore-<YYYYMMDD>
-aws ssm send-command \
-  --instance-ids i-0f47bb1f028cd29a9 \
-  --document-name AWS-RunShellScript \
-  --parameters commands="exec 8>/etc/meterengine/deploy-command.lock && flock -n 8 && cd /opt/meterengine && git fetch --quiet origin 8>&- 9>&- && git checkout --quiet --force <SHA> 8>&- 9>&- && if test -f deploy/environments/production.json; then RECOVERY_DB_IDENTIFIER=$RESTORED_ID ./deploy/deploy.sh production <SHA>; else ./deploy/deploy.sh <SHA>; fi"
-```
-
-- 6. `production.json`을 고쳐 main에 넣는다. CD는 버전만 기록하고 옛 서버를 건드리지 않는다.
-
 ### 암호화 키 맞추기
 
 - 키는 바꾸지 않는 것이 원칙이다. 이력은 값을 찍지 않고 버전과 시각만 본다.
@@ -377,7 +343,6 @@ aws ssm start-session --target <서버 ID> \
   --parameters '{"portNumber":["3000"],"localPortNumber":["3000"]}'
 ```
 
-- 옛 운영 서버는 `i-0f47bb1f028cd29a9`다. 콘솔에서는 EC2 > 인스턴스 > `meterengine-server` > 연결 > Session Manager 탭.
 
 ## 공개 인증의 실제 IP
 
@@ -391,7 +356,6 @@ ALB는 받은 `X-Forwarded-For` 뒤에 접속 주소를 붙이므로 맨 오른�
   - 서버에 `172.30.0.0/24`와 겹치는 docker 네트워크가 있으면 compose가 `proxy` 네트워크를 만들지 못해 배포가 실패한다.
 - 백엔드는 `METERENGINE_AUTH_RATE_LIMIT_LOAD_BALANCERS`에 든 직접 연결(ALB)에서만 맨 오른쪽 값을 읽는다. compose 기본값은 ALB가 놓인 공용 서브넷 `10.0.0.0/20`, `10.0.16.0/20`이다. 서브넷을 바꾸면 이 기본값도 같이 바꾼다.
 - `X-Forwarded-For`가 여러 줄이거나 맨 오른쪽 값이 숫자 IP가 아니면 백엔드는 접속 상대 IP를 쓴다. 이때는 ALB 뒤 사용자들이 한도를 나눠 쓴다.
-- 옛 서버에서는 Caddy가 `X-MeterEngine-Client-IP`를 접속 IP로 덮어쓰고 `X-Forwarded-For`를 접속 IP 하나로 넘겨 결과가 같다.
 
 ## 설정값
 
@@ -410,8 +374,7 @@ ALB는 받은 `X-Forwarded-For` 뒤에 접속 주소를 붙이므로 맨 오른�
 | `db-exporter-password` | SecureString | 공용 모니터링 서버의 postgres exporter가 RDS에 붙을 읽기 전용 사용자 `meterengine_exporter`의 비밀번호 |
 | `organization-id` | String | 이 버전의 compose는 읽지 않는다. 옛 프론트가 조회하던 도입사이고, 옛 버전으로 되돌리는 배포가 요구해 남긴다 |
 | `organization-name` | String | 이 버전의 compose는 읽지 않는다. 옛 프론트 상단 바의 이름이고, 옛 버전으로 되돌리는 배포가 요구해 남긴다 |
-| `grafana-admin-password`, `slack-webhook-url` | SecureString | 옛 운영 서버 안 Grafana만 읽는다. 앱 서버는 읽지 않는다. 공용 모니터링 서버는 `/meterengine/monitoring/` 아래 같은 이름의 값을 쓴다 |
-| `oauth2-proxy-client-id`, `oauth2-proxy-client-secret`, `oauth2-proxy-cookie-secret` | SecureString | 옛 운영 서버의 oauth2-proxy만 읽는다. 앱 서버는 읽지 않는다. 앞의 둘은 공용 모니터링 Grafana 로그인 값으로 옮겨 쓴다("공용 모니터링 서버") |
+| `oauth2-proxy-client-id`, `oauth2-proxy-client-secret` | SecureString | 앱 서버는 읽지 않는다. 공용 모니터링 Grafana 로그인 값을 옮겨 올 원본이다("공용 모니터링 서버") |
 | `crypto-encryption-key` | SecureString | 백엔드가 토스페이먼츠 키, 빌링키, 웹훅 비밀값을 암호화하는 키. **값을 바꾸면 이미 저장한 암호문을 풀지 못한다** |
 | `operator-email` | String | 백엔드가 기동할 때 없으면 만드는 첫 운영자의 이메일 |
 | `operator-password` | SecureString | 첫 운영자 비밀번호. 값을 바꾸고 재배포하면 새 비밀번호가 된다 |
@@ -561,11 +524,10 @@ aws ssm delete-parameter --name /meterengine/<환경>/ingest-warmup-api-key
 
 ### production의 Terraform 밖 자원
 
-- 옛 서버의 보안 그룹 `meterengine-ec2-sg`와 역할 `meterengine-ec2-role`, DB 보안 그룹 `meterengine-rds-sg`, ECR `meterengine-backend`, `meterengine-frontend`는 Terraform이 만들지 않는다. DB 보안 그룹에는 새 앱 서버와 공용 모니터링에서 오는 5432 규칙만 Terraform이 더한다.
+- DB 보안 그룹 `meterengine-rds-sg`, ECR `meterengine-backend`, `meterengine-frontend`는 Terraform이 만들지 않는다. DB 보안 그룹에는 새 앱 서버와 공용 모니터링에서 오는 5432 규칙만 Terraform이 더한다.
 - 배포 역할 `meterengine-github-actions-role`도 Terraform 밖이다. 롤링에 필요한 권한은 인라인 정책 `meterengine-production-rollout`으로 손으로 더한다.
   - `meterengine-production-app` 그룹의 새로 고침 시작과 취소, 오토스케일링 그룹과 ALB 조회, `/meterengine/production/app-version` 읽기와 쓰기.
-- 운영 레코드 `prometheus.meterengine.com`은 Terraform 밖이다("도메인 전환과 옛 서버").
-- 새 운영 서버의 송신은 443과 DB 5432만 열린다. 옛 운영 서버는 송신이 모두 열려 있다. 다른 포트가 필요하면 `production/main.tf`의 `app_egress_ports`에 더한다.
+- 운영 서버의 송신은 443과 DB 5432만 열린다. 다른 포트가 필요하면 `production/main.tf`의 `app_egress_ports`에 더한다.
 
 ### 공용 모니터링 연결
 
@@ -652,7 +614,6 @@ aws ec2 describe-images --owners self --filters Name=tag:Role,Values=app-image \
 ## 모니터링
 
 - 모든 환경의 앱 서버와 DB를 공용 모니터링 서버 한 대가 긁는다. 앱 서버에는 agents 프로필의 node exporter와 cAdvisor만 뜬다.
-- 옛 운영 서버는 정지하기 전까지 서버 안 Prometheus, Grafana, oauth2-proxy, exporter로 자기 자신을 본다. 이 저장소의 대시보드와 경보 파일 변경은 거기에 반영되지 않는다.
 - postgres exporter는 RDS에 `pg_monitor` 권한의 읽기 전용 사용자 `meterengine_exporter`로 붙는다. 새 RDS에는 이 사용자를 먼저 만든다.
 
 ```sql
@@ -680,7 +641,7 @@ EC2 `meterengine-monitoring` 한 대가 모든 환경의 앱 서버와 DB를 긁
 | --- | --- | --- |
 | `grafana-admin-password` | 난수 | 없음 |
 | `grafana-github-client-id`, `grafana-github-client-secret` | `unset` | #526의 조직 `asm17-ms2` 소유 OAuth 앱 값을 그대로 쓴다. 운영 `/meterengine/production/oauth2-proxy-client-id`, `-client-secret` 값을 아래 명령으로 옮긴다. `unset`이 남아 있으면 `start.sh`가 멈춘다 |
-| `slack-webhook-url` | 받는 곳 없는 자리 주소 | 옛 운영 서버를 정지한 뒤 실제 주소를 넣는다. 그 전에는 공용 서버의 경보가 아무 데도 가지 않는다. 옛 서버 Grafana와 같이 돌 때 넣으면 같은 경보가 두 번 온다 |
+| `slack-webhook-url` | 받는 곳 없는 자리 주소 | 실제 주소를 넣는다. 자리 주소가 남아 있으면 경보가 아무 데도 가지 않는다 |
 
 - 값을 화면에 찍지 않고 옮긴다.
 
@@ -693,7 +654,6 @@ done
 
 - 그 앱의 리다이렉트 URI에 `https://grafana.meterengine.com/login/github`를 더한다. Grafana는 이 경로로 로그인을 시작하고 돌아온다. 조직 owner가 더하고, Grafana를 도메인으로 공개하는 apply 전에 더한다.
   - 지금 GitHub OAuth 앱은 wildcard를 켜지 않으면 등록한 경로만 받는다. 경로 없는 주소로 바꾸면 `/login/github`가 거절된다.
-  - 옛 운영 서버 oauth2-proxy의 `/oauth2/callback`은 옛 서버를 정리할 때 지운다.
 
 띄우거나 설정을 바꿀 때는 서버에 붙어 저장소를 원하는 SHA로 바꾼 뒤 `start.sh`를 부른다. `start.sh`는 스스로 체크아웃하지 않고 저장소 HEAD가 인자와 같은지만 본다.
 
@@ -768,7 +728,7 @@ GitHub 로그인이 안 되면 공용 모니터링 서버의 9090을 포트 포�
 
 - 임계값과 수신처를 바꾸려면 UI가 아니라 `grafana/provisioning/alerting/alerting.yml`을 고쳐 배포한다.
 - 새 경보를 만들었으면 임계값을 낮춰 한 번 발화시켜 Slack 수신을 확인하고 원복한다.
-- 경보는 백엔드를 직접 긁어 보는 것이라, 그 앞의 ALB(옛 서버는 Caddy)가 죽거나 인증서가 만료된 상황은 잡지 못한다.
+- 경보는 백엔드를 직접 긁어 보는 것이라, 그 앞의 ALB가 죽거나 인증서가 만료된 상황은 잡지 못한다.
 
 ## 문제 해결
 

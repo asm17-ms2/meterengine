@@ -1,32 +1,3 @@
-variable "name" {
-  type = string
-}
-
-variable "create_instance" {
-  type    = bool
-  default = true
-}
-
-variable "ami_id" {
-  type = string
-}
-
-variable "instance_type" {
-  type = string
-}
-
-variable "subnet_id" {
-  type = string
-}
-
-variable "ec2_security_group_ids" {
-  type = list(string)
-}
-
-variable "iam_instance_profile_name" {
-  type = string
-}
-
 variable "db_identifier" {
   type = string
 }
@@ -71,11 +42,6 @@ variable "final_snapshot_identifier" {
   type = string
 }
 
-variable "user_data" {
-  type    = string
-  default = null
-}
-
 variable "db_password_wo" {
   type      = string
   sensitive = true
@@ -92,17 +58,6 @@ variable "db_password_version" {
   }
 }
 
-variable "root_block_device" {
-  type = object({
-    volume_size           = number
-    volume_type           = string
-    iops                  = number
-    throughput            = number
-    encrypted             = bool
-    delete_on_termination = bool
-  })
-  default = null
-}
 variable "database_kms_key_id" {
   type    = string
   default = null

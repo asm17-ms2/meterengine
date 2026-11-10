@@ -37,9 +37,3 @@ variable "operator_email" {
     error_message = "Supply the operator email explicitly."
   }
 }
-# false면 도메인이 옛 서버 탄력적 IP로 돌아간다. 서버를 켜기만 하는 첫 apply와 되돌리기에 쓴다.
-variable "serve_domain_from_alb" {
-  type     = bool
-  default  = true
-  nullable = false
-}
