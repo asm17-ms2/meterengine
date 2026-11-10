@@ -46,7 +46,7 @@ final class LocalIngestWarmupClient implements IngestWarmupClient {
 
   private static final String BEARER_PREFIX = "Bearer ";
 
-  private static final Set<String> ACCEPTED_RESULTS = Set.of("stored", "duplicate");
+  private static final Set<String> ACCEPTED_RESULTS = Set.of("stored", "duplicate", "accepted");
 
   private final HttpClient httpClient;
   private final URI baseUri;

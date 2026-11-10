@@ -110,6 +110,8 @@ public enum ErrorCode {
 
   // 503 Service Unavailable
   REQUEST_TIMED_OUT(HttpStatus.SERVICE_UNAVAILABLE, "요청 처리 시간이 초과되었습니다"),
+  EVENT_INGEST_UNAVAILABLE(
+      HttpStatus.SERVICE_UNAVAILABLE, "이벤트를 받지 못했습니다. 같은 transaction_id로 다시 보내세요"),
   TOSS_PAYMENTS_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "토스페이먼츠 응답을 확인하지 못했습니다");
 
   private final HttpStatus status;
