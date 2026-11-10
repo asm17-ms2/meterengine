@@ -60,7 +60,8 @@ class EventBatchServiceTest {
             eventRepository,
             customerDirectory,
             new EventIngestMetrics(meterRegistry),
-            Validation.buildDefaultValidatorFactory().getValidator(),
+            new EventBatchParser(
+                Validation.buildDefaultValidatorFactory().getValidator(), jsonMapper),
             jsonMapper,
             platformTransactionManager);
   }
