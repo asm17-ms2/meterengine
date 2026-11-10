@@ -3,6 +3,7 @@ package com.meterengine.global.security;
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.servlet.DispatcherType;
 import java.time.Clock;
+import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -11,6 +12,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
 import org.springframework.security.web.firewall.RequestRejectedHandler;
 import org.springframework.security.web.session.DisableEncodeUrlFilter;
@@ -39,7 +41,8 @@ public class SecurityConfig {
       ErrorResponseWriter errorResponseWriter,
       RequestAuditRecorder requestAuditRecorder,
       MeterRegistry meterRegistry,
-      Clock clock)
+      Clock clock,
+      List<RequestBodyLimit> requestBodyLimits)
       throws Exception {
     return http.csrf(AbstractHttpConfigurer::disable)
         .formLogin(AbstractHttpConfigurer::disable)
@@ -98,6 +101,10 @@ public class SecurityConfig {
         .addFilterAfter(
             new RateLimitFilter(clock, errorResponseWriter, meterRegistry),
             ApiCredentialAuthenticationFilter.class)
+        // 인가 뒤에 두어 키가 없거나 틀린 요청은 본문 크기와 상관없이 401이다.
+        .addFilterAfter(
+            new RequestBodyLimitFilter(requestBodyLimits, errorResponseWriter),
+            AuthorizationFilter.class)
         .build();
   }
 }

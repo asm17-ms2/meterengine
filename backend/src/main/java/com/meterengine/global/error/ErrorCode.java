@@ -97,6 +97,7 @@ public enum ErrorCode {
 
   // 413 Content Too Large
   UPLOAD_SIZE_EXCEEDED(HttpStatus.CONTENT_TOO_LARGE, "업로드 크기가 상한을 넘었습니다"),
+  REQUEST_BODY_TOO_LARGE(HttpStatus.CONTENT_TOO_LARGE, "요청 본문이 상한을 넘었습니다"),
 
   // 415 Unsupported Media Type
   REQUEST_TYPE_NOT_SUPPORTED(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "지원하지 않는 요청 Content-Type입니다"),
