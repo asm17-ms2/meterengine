@@ -114,10 +114,6 @@ class WorkflowTest(unittest.TestCase):
         self.assertIn("aws autoscaling resume-processes --auto-scaling-group-name meterengine-production-app", section)
         self.assertIn("production.json", section)
 
-    def test_readme_restore_keeps_the_old_server_procedure_until_the_switch(self):
-        section = README.read_text().split("#### 운영 전환 전")[1].split("### 암호화 키 맞추기")[0]
-        self.assertIn("RECOVERY_DB_IDENTIFIER=$RESTORED_ID ./deploy/deploy.sh production <SHA>", section)
-
 
 class AwsParsingTest(unittest.TestCase):
     """AWS CLI는 commands= 값을 shorthand 문법으로 읽어, 대괄호나 쉼표가 있으면 요청을 보내기 전에 실패한다."""

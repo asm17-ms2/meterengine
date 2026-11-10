@@ -1,15 +1,5 @@
 module "service" {
-  source                    = "../modules/service"
-  name                      = "meterengine-server"
-  ami_id                    = "ami-0f4109eb491b0476f"
-  instance_type             = var.instance_type
-  subnet_id                 = "subnet-0348a18c1d399c193"
-  ec2_security_group_ids    = ["sg-0c2691d037bcdd8b1"]
-  iam_instance_profile_name = "meterengine-ec2-role"
-  root_block_device = {
-    volume_size = 20, volume_type = "gp3", iops = 3000, throughput = 125,
-    encrypted   = false, delete_on_termination = true
-  }
+  source                     = "../modules/service"
   db_identifier              = "meterengine-db"
   db_instance_class          = var.db_instance_class
   db_subnet_group_name       = "meterengine-rds-subnet-private"
@@ -27,7 +17,6 @@ module "service" {
   deletion_protection        = true
   skip_final_snapshot        = false
   final_snapshot_identifier  = "meterengine-production-final"
-  user_data                  = null
 }
 
 module "app_fleet" {

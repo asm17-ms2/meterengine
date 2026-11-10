@@ -30,12 +30,8 @@ override_resource {
   values = {}
 }
 
-run "production_runs_one_server_beside_the_old_server" {
+run "production_runs_one_server" {
   command = plan
-  override_resource {
-    target = module.service.aws_instance.app[0]
-    values = { id = "i-0f47bb1f028cd29a9" }
-  }
   override_resource {
     target = module.service.aws_db_instance.app
     values = { id = "db-72GJNZYUHSQRXAKNQGC7ECV7UI" }
@@ -44,10 +40,6 @@ run "production_runs_one_server_beside_the_old_server" {
   assert {
     condition     = output.app_fleet.autoscaling_group_name == "meterengine-production-app" && output.app_fleet.app_version_parameter_name == "/meterengine/production/app-version"
     error_message = "Rollout reads the fleet and version parameter names from these outputs."
-  }
-  assert {
-    condition     = module.service.instance_id == "i-0f47bb1f028cd29a9"
-    error_message = "The old server stays so the domains can move back to it."
   }
   assert {
     condition     = module.app_fleet.min_size == 1

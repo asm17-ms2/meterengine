@@ -26,10 +26,6 @@ override_resource {
   values = {}
 }
 override_resource {
-  target = module.service.aws_instance.app[0]
-  values = { id = "i-0f47bb1f028cd29a9" }
-}
-override_resource {
   target = module.service.aws_db_instance.app
   values = { id = "db-72GJNZYUHSQRXAKNQGC7ECV7UI" }
 }

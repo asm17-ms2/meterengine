@@ -60,11 +60,6 @@ run "staging_is_isolated" {
   command = plan
 
   override_resource {
-    target          = aws_security_group.app
-    override_during = plan
-    values          = { id = "sg-11111111111111111" }
-  }
-  override_resource {
     target          = aws_security_group.database
     override_during = plan
     values          = { id = "sg-22222222222222222" }
@@ -72,11 +67,7 @@ run "staging_is_isolated" {
 
 
   assert {
-    condition = alltrue(concat(
-      [aws_security_group.app.tags.Environment == "staging", aws_security_group.database.tags.Environment == "staging", aws_eip.app.tags.Environment == "staging"],
-      [for rule in values(aws_vpc_security_group_ingress_rule.web) : rule.tags.Environment == "staging"],
-      [aws_vpc_security_group_ingress_rule.database.tags.Environment == "staging", aws_vpc_security_group_egress_rule.database.tags.Environment == "staging", aws_vpc_security_group_egress_rule.https.tags.Environment == "staging"]
-    ))
+    condition     = aws_security_group.database.tags.Environment == "staging"
     error_message = "Staging network resources need enforceable ownership tags."
   }
   assert {
@@ -84,20 +75,12 @@ run "staging_is_isolated" {
     error_message = "Staging must stay in the verified account and region."
   }
   assert {
-    condition     = aws_vpc_security_group_ingress_rule.database.referenced_security_group_id == aws_security_group.app.id && aws_vpc_security_group_ingress_rule.database.security_group_id == aws_security_group.database.id
-    error_message = "Only the independent staging app SG can reach the staging DB SG."
-  }
-  assert {
-    condition     = aws_security_group.app.vpc_id == "vpc-07498f0672b7f3c9e" && aws_security_group.database.vpc_id == "vpc-07498f0672b7f3c9e"
+    condition     = aws_security_group.database.vpc_id == "vpc-07498f0672b7f3c9e"
     error_message = "Staging must use the verified VPC."
   }
   assert {
     condition     = output.deployment_target.deployment_environment == "staging" && output.deployment_target.parameter_path == "/meterengine/staging" && output.deployment_target.site_domain == "staging.meterengine.com"
     error_message = "Target output must preserve the isolated manifest contract."
-  }
-  assert {
-    condition     = jsondecode(aws_iam_role_policy.runtime.policy).Statement[1].Effect == "Deny" && toset(jsondecode(aws_iam_role_policy.runtime.policy).Statement[1].NotResource) == toset(local.runtime_path)
-    error_message = "Runtime reads must stay inside the staging path."
   }
   assert {
     condition     = jsondecode(aws_iam_role.github_deploy.assume_role_policy).Statement[0].Condition.StringEquals["token.actions.githubusercontent.com:sub"] == "repo:asm17-ms2@293532363/meterengine@1313421667:environment:staging"
@@ -111,12 +94,6 @@ run "service_is_protected" {
     source = "../modules/service"
   }
   variables {
-    name                      = "meterengine-staging"
-    ami_id                    = "ami-0f4109eb491b0476f"
-    instance_type             = "t4g.medium"
-    subnet_id                 = "subnet-0348a18c1d399c193"
-    ec2_security_group_ids    = ["sg-11111111111111111"]
-    iam_instance_profile_name = "meterengine-staging-ec2"
     db_identifier             = "meterengine-staging-db"
     db_instance_class         = "db.t4g.small"
     db_subnet_group_name      = "meterengine-rds-subnet-private"
@@ -128,15 +105,14 @@ run "service_is_protected" {
     deletion_protection       = true
     skip_final_snapshot       = false
     final_snapshot_identifier = "meterengine-staging-final"
-    user_data                 = "#!/bin/bash\ntrue\n"
   }
   assert {
-    condition     = aws_instance.app[0].instance_type == "t4g.medium" && aws_db_instance.app.instance_class == "db.t4g.small"
-    error_message = "Staging capacity must use the approved t4g classes."
+    condition     = aws_db_instance.app.instance_class == "db.t4g.small"
+    error_message = "Staging database must use the approved t4g class."
   }
   assert {
-    condition     = !aws_db_instance.app.publicly_accessible && aws_db_instance.app.storage_encrypted && aws_instance.app[0].metadata_options[0].http_tokens == "required"
-    error_message = "RDS must be private/encrypted and EC2 must require IMDSv2."
+    condition     = !aws_db_instance.app.publicly_accessible && aws_db_instance.app.storage_encrypted
+    error_message = "RDS must be private and encrypted."
   }
   assert {
     condition     = aws_db_instance.app.deletion_protection && !aws_db_instance.app.skip_final_snapshot && aws_db_instance.app.backup_retention_period == 7 && aws_db_instance.app.final_snapshot_identifier == "meterengine-staging-final" && !aws_db_instance.app.delete_automated_backups
@@ -163,11 +139,8 @@ run "staging_state_excludes_secrets" {
     error_message = "The shared monitoring server must be allowed to read the staging exporter password under the same name."
   }
   assert {
-    condition = jsondecode(aws_iam_role_policy.github_deploy.policy).Statement[0].Resource == [
-      "arn:aws:ec2:ap-northeast-2:928618307647:instance/${module.service.instance_id}",
-      "arn:aws:ssm:ap-northeast-2::document/AWS-RunShellScript"
-    ]
-    error_message = "SendCommand must be limited to the staging instance and approved document."
+    condition     = !strcontains(aws_iam_role_policy.github_deploy.policy, "ssm:SendCommand")
+    error_message = "The deploy role rolls the fleet and runs no commands on servers."
   }
 }
 
@@ -202,13 +175,6 @@ run "runtime_uses_single_account" {
     ]) && anytrue([for statement in jsondecode(aws_iam_role_policy.github_deploy.policy).Statement : contains(flatten([statement.Action]), "ecr:PutImage")])
     error_message = "The deploy role pushes images to the two ECR repositories only."
   }
-  assert {
-    condition = anytrue([
-      for statement in jsondecode(aws_iam_role_policy.runtime.policy).Statement :
-      statement.Effect == "Allow" && contains(flatten([statement.Action]), "ssm:GetParametersByPath") && toset(statement.Resource) == toset(["${local.ssm_arn}:parameter/meterengine/staging", "${local.ssm_arn}:parameter/meterengine/staging/*"])
-    ])
-    error_message = "deploy.sh reads the whole staging path."
-  }
 }
 
 run "images_are_separate_from_production" {
@@ -229,10 +195,6 @@ run "images_are_separate_from_production" {
   assert {
     condition     = !strcontains(aws_iam_role_policy.github_deploy.policy, "repository/meterengine-backend") && !strcontains(aws_iam_role_policy.github_deploy.policy, "repository/meterengine-frontend")
     error_message = "The deploy role must not write to production repositories."
-  }
-  assert {
-    condition     = !strcontains(aws_iam_role_policy.runtime.policy, "repository/meterengine-backend") && !strcontains(aws_iam_role_policy.runtime.policy, "repository/meterengine-frontend")
-    error_message = "The staging server must not read production repositories."
   }
 }
 
@@ -266,7 +228,7 @@ run "deploy_role_rolls_the_fleet" {
   }
 }
 
-run "fleet_starts_empty_beside_the_old_server" {
+run "fleet_can_start_empty" {
   command = plan
   module {
     source = "../modules/app_fleet"
@@ -338,7 +300,7 @@ run "fleet_starts_empty_beside_the_old_server" {
   }
   assert {
     condition     = aws_security_group.alb.name == "meterengine-staging-alb" && aws_security_group.asg.name == "meterengine-staging-asg" && toset(keys(aws_vpc_security_group_egress_rule.app_internet)) == toset(["443"])
-    error_message = "New groups must not collide with the old staging groups."
+    error_message = "Fleet groups are named after the environment."
   }
   assert {
     condition     = toset(keys(aws_vpc_security_group_ingress_rule.app_from_monitoring)) == toset(["8080", "9100", "9101"]) && aws_vpc_security_group_ingress_rule.database_from_monitoring.referenced_security_group_id == "sg-33333333333333333"
@@ -387,49 +349,6 @@ run "domain_points_at_the_alb" {
   assert {
     condition     = strcontains(file("${path.module}/dns.tf"), "depends_on = [module.app_fleet]") && strcontains(file("${path.module}/dns.tf"), "prevent_destroy = true")
     error_message = "The record changes after the fleet is healthy and is never deleted."
-  }
-}
-
-run "turning_on_keeps_the_domain_on_the_old_server" {
-  command = plan
-  # 앞의 apply가 만든 자원은 plan 덮어쓰기가 먹지 않아 빈 상태에서 본다.
-  state_key = "domain"
-  variables {
-    serve_domain_from_alb = false
-  }
-  override_resource {
-    target          = aws_eip.app
-    override_during = plan
-    values          = { public_ip = "3.34.216.111" }
-  }
-
-  assert {
-    condition     = length(aws_route53_record.app.alias) == 0 && aws_route53_record.app.ttl == 60 && aws_route53_record.app.records == toset(["3.34.216.111"])
-    error_message = "Without the switch the record stays an A record of the old server address, as it is now."
-  }
-}
-
-run "rollback_allows_an_empty_fleet" {
-  command   = plan
-  state_key = "fleet_outputs_overridden"
-  variables {
-    serve_domain_from_alb = false
-  }
-  override_module {
-    target = module.app_fleet
-    outputs = {
-      min_size                   = 0
-      alb_dns_name               = "meterengine-staging-alb-1.ap-northeast-2.elb.amazonaws.com"
-      alb_zone_id                = "ZWKZPGTI48KDX"
-      autoscaling_group_name     = "meterengine-staging-app"
-      autoscaling_group_arn      = "arn:aws:autoscaling:ap-northeast-2:928618307647:autoScalingGroup:00000000-0000-0000-0000-000000000000:autoScalingGroupName/meterengine-staging-app"
-      app_version_parameter_name = "/meterengine/staging/app-version"
-    }
-  }
-
-  assert {
-    condition     = length(aws_route53_record.app.alias) == 0
-    error_message = "Once the domain is back on the old server the fleet can drop to zero."
   }
 }
 
