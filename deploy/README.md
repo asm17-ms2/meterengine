@@ -694,7 +694,7 @@ aws ssm start-session --target <서버 ID> \
   - MeterEngine 예약 작업과 웹훅 발송은 예약 작업 실행과 웹훅 전달, 적체 지표다.
   - MeterEngine 앱 자원은 JVM, 톰캣, 커넥션 풀, 서버와 컨테이너 자원, 관측 시스템 상태다.
   - MeterEngine DB는 PostgreSQL과 RDS 지표다.
-- 처음 로그인하면 GitHub 로그인 이름으로 Grafana 사용자가 생기고 권한은 Editor다.
+- 처음 로그인하면 GitHub 로그인 이름으로 Grafana 사용자가 생기고, 권한은 로그인할 때마다 Admin으로 맞춘다.
   - 파일로 관리하는 대시보드와 경보 규칙은 화면에서 저장되지 않는다. 바꾸려면 파일을 고쳐 배포한다.
   - 화면에서 새로 만든 대시보드는 Grafana 볼륨에만 남는다. 오래 쓸 것은 JSON으로 내보내 `grafana/dashboards/`에 넣고 PR로 올린다.
 
