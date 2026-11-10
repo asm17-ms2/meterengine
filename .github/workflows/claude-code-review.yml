@@ -11,7 +11,10 @@ concurrency:
 jobs:
   review:
     name: review
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    # 릴리스 PR(develop -> main)은 develop에서 PR마다 리뷰했고, develop 머지마다 merge queue 봇이 갱신해 액션이 거부한다.
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository
+      && github.event.pull_request.head.ref != 'develop'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
