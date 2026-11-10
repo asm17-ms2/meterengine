@@ -44,6 +44,7 @@ import tools.jackson.databind.json.JsonMapper;
 @SpringBootTest(
     properties = {
       "meterengine.event.write-path=kafka",
+      "meterengine.role=ingest",
       "meterengine.event.kafka.create-topics=true",
       "meterengine.event.kafka.partitions=3",
       "meterengine.event.kafka.replicas=1",

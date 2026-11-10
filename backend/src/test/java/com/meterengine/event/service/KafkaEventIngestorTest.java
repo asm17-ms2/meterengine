@@ -54,7 +54,14 @@ class KafkaEventIngestorTest {
                 Validation.buildDefaultValidatorFactory().getValidator(), jsonMapper),
             new EventIngestMetrics(meterRegistry),
             new EventKafkaProperties(
-                "event.ingest", 6, (short) 3, false, Duration.ofSeconds(1), "test"));
+                "event.ingest",
+                6,
+                (short) 3,
+                false,
+                Duration.ofSeconds(1),
+                "test",
+                "event.dlq",
+                Duration.ofSeconds(1)));
   }
 
   @Test

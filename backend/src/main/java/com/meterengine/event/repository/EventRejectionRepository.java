@@ -46,6 +46,16 @@ public class EventRejectionRepository {
               case API_KEY -> principal.apiKeyId();
               case SESSION -> principal.userAccountId();
             };
+    insert(organizationId, actorType, actorId, requestId, rejections);
+  }
+
+  public void insert(
+      UUID organizationId,
+      String actorType,
+      UUID actorId,
+      UUID requestId,
+      List<EventRejection> rejections) {
+    if (rejections.isEmpty()) return;
     List<Object> values = new ArrayList<>();
     for (EventRejection rejection : rejections) {
       values.add(organizationId);
