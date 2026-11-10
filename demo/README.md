@@ -384,6 +384,30 @@ await client.ingestEvent({
   - `payload`는 받은 본문 문자열 그대로 넘긴다. JSON을 파싱해 다시 직렬화하면 서명이 맞지 않는다.
   - `signWebhookPayload`는 같은 규칙으로 서명을 만든다. 시험 전송에 쓴다.
 
+## cli
+
+도입사 개발자와 코딩 에이전트가 터미널에서 MeterEngine API를 부르는 명령 `meterengine`(`cli/`)이다. 아직 배포하지 않고 이 workspace에서 실행한다. 지금은 키 저장과 청구 예정액 조회만 있다.
+
+```bash
+cd demo && corepack pnpm install
+export METERENGINE_API_BASE_URL=http://localhost:8080   # 생략하면 https://meterengine.com
+node cli/src/main.ts login                              # 키를 화면에 보이지 않게 입력받아 저장
+node cli/src/main.ts invoices draft --month 2026-11
+```
+
+- 키
+  - `login`은 키를 `~/.config/meterengine/credentials.json`(`XDG_CONFIG_HOME`이 있으면 그 아래)에 권한 600으로 저장한다. 표준 입력이 터미널이 아니면 입력 전체를 키로 읽는다.
+  - `METERENGINE_API_KEY`가 있으면 저장한 키보다 먼저 쓴다.
+- 출력: 성공하면 서버 응답 JSON을 표준 출력에, 실패하면 `{code, message}` JSON을 표준 오류에 낸다.
+- 종료 코드
+
+| 코드 | 뜻 | 할 일 |
+|---|---|---|
+| 0 | 성공 | |
+| 1 | 서버가 거절했다 (429를 뺀 4xx) | 입력을 고친다 |
+| 2 | 명령이나 설정이 틀려 보내지 않았다 (모르는 옵션, 키 없음, 키 형식) | 명령이나 키를 고친다 |
+| 3 | 다시 실행하면 될 수 있다 (연결 오류, 시간 초과, 429, 5xx) | 같은 명령을 다시 실행한다 |
+
 ## 테스트 웹
 
 도입사 서버가 API를 조회해 고객의 사용량과 청구, 수납 화면을 그리는 Next.js 앱(`web/`)이다. 이벤트 전송과 웹훅 수신 도구도 함께 둔다. `127.0.0.1:3100`에만 붙는다.
