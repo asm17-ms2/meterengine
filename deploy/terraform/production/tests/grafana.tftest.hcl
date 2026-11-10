@@ -119,3 +119,27 @@ run "only_the_alb_reaches_grafana" {
     error_message = "Grafana is open on port 3000 to the ALB alone."
   }
 }
+
+run "a_frozen_monitoring_server_raises_an_alarm_from_outside" {
+  command = plan
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.grafana_unhealthy.namespace == "AWS/ApplicationELB" &&
+      aws_cloudwatch_metric_alarm.grafana_unhealthy.metric_name == "UnHealthyHostCount" &&
+      aws_cloudwatch_metric_alarm.grafana_unhealthy.threshold == 1 &&
+      aws_cloudwatch_metric_alarm.grafana_unhealthy.period == 60 &&
+      aws_cloudwatch_metric_alarm.grafana_unhealthy.evaluation_periods == 2 &&
+      aws_cloudwatch_metric_alarm.grafana_unhealthy.treat_missing_data == "breaching"
+    )
+    error_message = "Two minutes of an unhealthy or missing Grafana target raise the alarm."
+  }
+  assert {
+    condition     = toset(keys(aws_cloudwatch_metric_alarm.grafana_unhealthy.dimensions)) == toset(["LoadBalancer", "TargetGroup"])
+    error_message = "The alarm watches the Grafana target group behind the production ALB."
+  }
+  assert {
+    condition     = can(regex("^[ -~]+$", aws_cloudwatch_metric_alarm.grafana_unhealthy.alarm_description)) && aws_sns_topic.monitoring_down.name == "meterengine-monitoring-down"
+    error_message = "The alarm text is ASCII and goes to the monitoring-down topic."
+  }
+}

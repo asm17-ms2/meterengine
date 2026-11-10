@@ -15,6 +15,10 @@ PARAMETERS = json.loads((DEPLOY / "monitoring/parameters.json").read_text())
 SHARED_PROMETHEUS_CONFIG = DEPLOY / "monitoring/prometheus/prometheus.yml"
 START = DEPLOY / "monitoring/start.sh"
 SHA = "a" * 40
+MIB = 1024 * 1024
+# t4g.medium이 운영체제에 보여 주는 메모리와, 운영체제와 파일 캐시에 남길 몫이다.
+SERVER_MEMORY_BYTES = 3800 * MIB
+RESERVED_FOR_SERVER_BYTES = 900 * MIB
 CENTRAL = {"prometheus", "grafana", "cloudwatch-exporter"}
 EXPORTERS = {f"postgres-exporter-{env}" for env in PARAMETERS["environments"]}
 SECRETS = {"GRAFANA_ADMIN_PASSWORD": "admin", "GRAFANA_GITHUB_CLIENT_ID": "client",
@@ -56,6 +60,18 @@ class MonitoringComposeTest(unittest.TestCase):
     def test_prometheus_mounts_the_config_directory(self):
         sources = [volume["source"] for volume in self.services["prometheus"]["volumes"] if volume["target"] == "/etc/prometheus"]
         self.assertEqual(sources, [str(SHARED_PROMETHEUS_CONFIG.parent)])
+
+    def test_every_container_has_a_memory_limit_that_leaves_room_for_the_server(self):
+        limits = {name: int(service.get("mem_limit", 0)) for name, service in self.services.items()}
+        self.assertEqual([name for name, limit in limits.items() if limit == 0], [])
+        self.assertLessEqual(sum(limits.values()), SERVER_MEMORY_BYTES - RESERVED_FOR_SERVER_BYTES)
+
+    def test_runtimes_collect_garbage_before_the_container_limit(self):
+        for name in ("prometheus", "grafana"):
+            self.assertEqual(self.services[name]["environment"]["GOMEMLIMIT"], "900MiB", name)
+            self.assertLess(900 * MIB, int(self.services[name]["mem_limit"]), name)
+        self.assertEqual(self.services["cloudwatch-exporter"]["environment"]["JAVA_TOOL_OPTIONS"], "-Xmx256m")
+        self.assertLess(256 * MIB, int(self.services["cloudwatch-exporter"]["mem_limit"]))
 
     def test_grafana_admits_only_the_github_org(self):
         env = self.services["grafana"]["environment"]

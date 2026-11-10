@@ -623,7 +623,7 @@ GRANT pg_monitor TO meterengine_exporter;
 
 ### 공용 모니터링 서버
 
-EC2 `meterengine-monitoring` 한 대가 모든 환경의 앱 서버와 DB를 긁는다. 서버와 권한은 `deploy/terraform/monitoring`이 정한다.
+EC2 `meterengine-monitoring`(t4g.medium) 한 대가 모든 환경의 앱 서버와 DB를 긁는다. 서버와 권한은 `deploy/terraform/monitoring`이 정한다.
 
 - 앱 서버는 태그 `Role=app`인 실행 중 서버를 30초마다 다시 찾아 백엔드 `8080`, node exporter `9100`, cAdvisor `9101`을 긁는다. `Environment` 태그가 `env` 라벨, 인스턴스 ID가 `instance` 라벨이 된다.
 - DB는 환경마다 postgres exporter를 하나씩 띄워 `env`를 붙이고, RDS 지표는 DB 식별자에서 `env`를 만든다.
@@ -631,6 +631,11 @@ EC2 `meterengine-monitoring` 한 대가 모든 환경의 앱 서버와 DB를 긁
 - 들어오는 규칙은 운영 ALB에서 오는 3000 하나다. Prometheus는 서버의 127.0.0.1:9090, Grafana는 3000에 뜬다.
 - 운영 ALB가 `grafana.meterengine.com`을 이 서버의 3000으로 보낸다. 인증서는 사이트와 따로 발급해 리스너에 더하고, `/metrics`는 ALB가 404로 끝낸다.
   - 서버를 다시 만들면 다음 production apply가 새 서버를 대상 그룹에 붙일 때까지 Grafana가 503이다.
+- 컨테이너마다 메모리 한도가 있다(`compose.monitoring.yml`). 넘은 컨테이너만 죽고 다시 뜬다.
+  - Grafana 1,024MB, Prometheus 1,024MB, cloudwatch exporter 384MB, postgres exporter 각 64MB다. 합은 운영체제와 파일 캐시 몫 약 1GB를 남긴다.
+  - Grafana와 Prometheus는 `GOMEMLIMIT`, cloudwatch exporter는 자바 힙 상한을 한도보다 낮게 줘 한도에 닿기 전에 GC가 먼저 줄인다.
+  - 한도가 없던 때는 메모리가 차면 OOM 없이 디스크 재읽기로 서버 전체가 굳었다. EC2 상태 검사는 통과로 나오고 SSM도 붙지 않는다.
+  - 한도를 올릴 때는 합이 서버 메모리에서 1GB쯤 남는지 본다. 시험이 합을 확인한다.
 - 지표 보관은 15일 또는 20GB 중 먼저 닿는 쪽에서 오래된 것부터 지운다. 기록은 서버 디스크에만 있어 서버를 다시 만들면 지워진다.
 - 서버가 읽는 파라미터 이름은 `monitoring/parameters.json` 하나가 정한다. `start.sh`와 서버 역할이 이 파일을 같이 읽어, 목록 밖 파라미터는 읽지 못한다. 환경을 더하면 이 파일과 `compose.monitoring.yml`, `monitoring/prometheus/prometheus.yml`을 같이 고친다.
 - 환경의 `db-exporter-password`가 없으면 그 환경 exporter는 띄우지 않는다.
@@ -703,6 +708,10 @@ GitHub 로그인이 안 되면 공용 모니터링 서버의 9090을 포트 포�
 ### 경보
 
 - Slack으로 간다 (`slack-webhook-url`).
+- 경보는 공용 모니터링 서버의 Grafana가 보낸다. 그 서버가 죽으면 아래 경보가 모두 멎으므로, 서버 밖의 CloudWatch 경보 `meterengine-monitoring-grafana-unhealthy`가 따로 본다.
+  - 운영 ALB의 Grafana 대상 그룹이 2분 동안 unhealthy이거나 지표가 끊기면 울리고, SNS 주제 `meterengine-monitoring-down`으로 보낸다. 복구되면 복구 알림도 간다.
+  - 받는 곳은 코드에 없다. 그 주제에 메일이나 Slack 연동을 손으로 구독한다. 구독이 없으면 울려도 아무에게도 가지 않는다.
+  - 울리면 서버를 재부팅한다. 붙을 수 있으면 `docker stats`와 `sar -r`로 어느 컨테이너가 찼는지 먼저 본다.
 - 경보는 `env`마다 따로 울린다. 측정 환경(`test-`로 시작하는 `env`)은 모든 경보에서 뺀다. `env` 라벨이 없는 서버 안 Prometheus에서는 지금처럼 그 서버 하나를 본다.
 - 같은 경보의 재알림 주기는 4시간이다.
 
