@@ -12,6 +12,9 @@ import com.meterengine.event.repository.EventRepository;
 import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.security.BusinessEnvironment;
 import com.meterengine.global.security.BusinessEnvironmentContext;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
@@ -47,6 +50,7 @@ public class EventConsumeService {
   private final EventConsumeMetrics eventConsumeMetrics;
   private final JsonMapper jsonMapper;
   private final TransactionTemplate transactionTemplate;
+  private final Clock clock;
 
   EventConsumeService(
       EventRepository eventRepository,
@@ -55,7 +59,8 @@ public class EventConsumeService {
       EventDeadLetterPublisher eventDeadLetterPublisher,
       EventConsumeMetrics eventConsumeMetrics,
       JsonMapper jsonMapper,
-      PlatformTransactionManager platformTransactionManager) {
+      PlatformTransactionManager platformTransactionManager,
+      Clock clock) {
     this.eventRepository = eventRepository;
     this.eventRejectionRepository = eventRejectionRepository;
     this.customerDirectory = customerDirectory;
@@ -69,6 +74,7 @@ public class EventConsumeService {
             .enable(DeserializationFeature.USE_BIG_INTEGER_FOR_INTS)
             .build();
     this.transactionTemplate = new TransactionTemplate(platformTransactionManager);
+    this.clock = clock;
   }
 
   // 예외 없이 끝나야 호출한 쪽이 오프셋을 넘긴다. 다시 불려도 같은 결과가 되도록 저장은 ON CONFLICT로 한다.
@@ -83,10 +89,12 @@ public class EventConsumeService {
       }
     }
     StoreResult stored = store(readEvents);
+    // DLQ 발행을 기다리는 시간이 섞이지 않게 DB 커밋이 끝난 바로 뒤의 시각을 잡는다.
+    Instant storedAt = clock.instant();
     deadLetters.addAll(stored.unstorable());
     deadLetters.forEach(
         deadLetter -> eventDeadLetterPublisher.publish(deadLetter.record(), deadLetter.reason()));
-    record(stored.tally(), deadLetters);
+    record(stored.tally(), storedAt, deadLetters);
   }
 
   // 한 트랜잭션에 묶어 넣는다. 한 건이 제약에 걸리면 묶음 전체가 되돌려지므로 그때만 한 건씩 다시 넣어 그 건을 가려낸다.
@@ -168,9 +176,14 @@ public class EventConsumeService {
       }
     }
     insertions.sort(Comparator.comparing(insertion -> insertion.message().transactionId()));
-    int inserted = eventRepository.insertAllMessagesIfAbsent(insertions).size();
-    tally.stored += inserted;
-    tally.duplicate += insertions.size() - inserted;
+    Set<String> inserted = new HashSet<>(eventRepository.insertAllMessagesIfAbsent(insertions));
+    for (EventMessageInsertion insertion : insertions) {
+      if (inserted.contains(insertion.message().transactionId())) {
+        tally.storedAcceptedAts.add(insertion.message().acceptedAt());
+      } else {
+        tally.duplicate++;
+      }
+    }
     return tally;
   }
 
@@ -222,8 +235,9 @@ public class EventConsumeService {
     return complete ? Optional.of(message) : Optional.empty();
   }
 
-  private void record(Tally tally, List<DeadLetter> deadLetters) {
-    eventConsumeMetrics.recordStored(tally.stored);
+  private void record(Tally tally, Instant storedAt, List<DeadLetter> deadLetters) {
+    tally.storedAcceptedAts.forEach(
+        acceptedAt -> eventConsumeMetrics.recordStored(Duration.between(acceptedAt, storedAt)));
     eventConsumeMetrics.recordDuplicate(tally.duplicate);
     tally.rejectedCountByErrorCode.forEach(
         (errorCode, count) -> {
@@ -242,12 +256,13 @@ public class EventConsumeService {
   private record StoreResult(Tally tally, List<DeadLetter> unstorable) {}
 
   private static final class Tally {
-    private int stored;
+    // 저장한 이벤트마다 수집 서버가 받은 시각. 개수가 저장 건수다.
+    private final List<Instant> storedAcceptedAts = new ArrayList<>();
     private int duplicate;
     private final Map<ErrorCode, Integer> rejectedCountByErrorCode = new EnumMap<>(ErrorCode.class);
 
     private void add(Tally other) {
-      stored += other.stored;
+      storedAcceptedAts.addAll(other.storedAcceptedAts);
       duplicate += other.duplicate;
       other.rejectedCountByErrorCode.forEach(
           (errorCode, count) -> rejectedCountByErrorCode.merge(errorCode, count, Integer::sum));

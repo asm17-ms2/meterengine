@@ -4,6 +4,8 @@ import com.meterengine.event.dto.EventDeadLetterReason;
 import com.meterengine.global.error.ErrorCode;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import java.time.Duration;
 import java.util.List;
 import org.springframework.stereotype.Component;
 
@@ -12,6 +14,7 @@ import org.springframework.stereotype.Component;
 public class EventConsumeMetrics {
 
   static final String CONSUME_COUNTER_NAME = "meterengine.event.consume";
+  static final String STORAGE_DELAY_TIMER_NAME = "meterengine.event.storage.delay";
   static final String RESULT_TAG = "result";
   static final String REASON_TAG = "reason";
   static final String STORED = "stored";
@@ -22,11 +25,32 @@ public class EventConsumeMetrics {
 
   private static final List<ErrorCode> REJECTION_REASONS =
       List.of(ErrorCode.CUSTOMER_NOT_FOUND, ErrorCode.CUSTOMER_ARCHIVED);
+  // 평소(1초 안), 반영 목표(60초), 장애 뒤 밀린 것을 비우는 목표(10분)를 가를 만큼만 경계를 둔다.
+  private static final Duration[] STORAGE_DELAY_BOUNDARIES = {
+    Duration.ofMillis(100),
+    Duration.ofMillis(500),
+    Duration.ofSeconds(1),
+    Duration.ofSeconds(5),
+    Duration.ofSeconds(15),
+    Duration.ofSeconds(30),
+    Duration.ofMinutes(1),
+    Duration.ofMinutes(2),
+    Duration.ofMinutes(5),
+    Duration.ofMinutes(10),
+    Duration.ofMinutes(30),
+    Duration.ofHours(1)
+  };
 
   private final MeterRegistry meterRegistry;
+  private final Timer storageDelay;
 
   EventConsumeMetrics(MeterRegistry meterRegistry) {
     this.meterRegistry = meterRegistry;
+    this.storageDelay =
+        Timer.builder(STORAGE_DELAY_TIMER_NAME)
+            .description("저장한 이벤트의 수집 서버가 받은 시각부터 DB에 들어간 시각까지 걸린 시간")
+            .serviceLevelObjectives(STORAGE_DELAY_BOUNDARIES)
+            .register(meterRegistry);
     // 아직 세지 않은 조합도 0으로 내 두어야 첫 증가가 rate에 잡힌다.
     counter(STORED, NO_REASON);
     counter(DUPLICATE, NO_REASON);
@@ -36,8 +60,10 @@ public class EventConsumeMetrics {
     }
   }
 
-  public void recordStored(int eventCount) {
-    counter(STORED, NO_REASON).increment(eventCount);
+  public void recordStored(Duration storageDelay) {
+    counter(STORED, NO_REASON).increment();
+    // 수집 서버와 컨슈머 서버의 시계가 조금 어긋나 음수가 나오면 바로 저장한 것으로 본다.
+    this.storageDelay.record(storageDelay.isNegative() ? Duration.ZERO : storageDelay);
   }
 
   public void recordDuplicate(int eventCount) {
