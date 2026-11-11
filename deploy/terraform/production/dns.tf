@@ -27,3 +27,29 @@ resource "aws_route53_record" "public" {
     }
   }
 }
+
+# 도입사 가이드는 Mintlify가 서비스한다. TXT 값은 Mintlify 대시보드의 Custom domain 화면에 나온 그대로 둔다.
+locals {
+  guide_domain = "docs.meterengine.com"
+  guide_verification_records = {
+    "_acme-challenge.${local.guide_domain}"     = "kIoy6Pz3cLpE66P3uO_88Fmrns1KddfwqHDbKvH64ac"
+    "_cf-custom-hostname.${local.guide_domain}" = "a4c1d027-b38b-411b-9e1c-892bcc475669"
+  }
+}
+
+resource "aws_route53_record" "guide_verification" {
+  for_each = local.guide_verification_records
+  zone_id  = local.route53_zone_id
+  name     = each.key
+  type     = "TXT"
+  ttl      = 300
+  records  = [each.value]
+}
+
+resource "aws_route53_record" "guide" {
+  zone_id = local.route53_zone_id
+  name    = local.guide_domain
+  type    = "CNAME"
+  ttl     = 300
+  records = ["cname.mintlify.builders"]
+}

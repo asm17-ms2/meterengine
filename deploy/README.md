@@ -66,7 +66,8 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
 ### 도메인
 
 - 도메인 레코드는 staging `terraform/staging/dns.tf`, production `terraform/production/dns.tf`(apex, www, grafana)가 정한다. production의 세 레코드는 손으로 만든 것을 import 블록으로 가져온다.
-- 레코드는 ALB 별칭이고 삭제 보호가 걸려 있다. ALB를 가리키므로 앱 서버를 최소 1대로 둔다.
+- apex, www, grafana 레코드는 ALB 별칭이고 삭제 보호가 걸려 있다. ALB를 가리키므로 앱 서버를 최소 1대로 둔다.
+- production `dns.tf`는 도입사 가이드의 `docs.meterengine.com`도 정한다. ALB가 아니라 Mintlify를 가리키는 CNAME과 인증서 발급용 TXT 두 개이고 삭제 보호는 없다([`guide/README.md`](../guide/README.md) "배포").
 
 ## 사전 준비
 

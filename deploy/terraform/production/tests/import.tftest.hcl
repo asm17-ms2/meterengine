@@ -104,6 +104,19 @@ run "domains_point_at_the_alb" {
   }
 }
 
+run "guide_domain_points_at_mintlify" {
+  command = plan
+
+  assert {
+    condition     = aws_route53_record.guide.name == "docs.meterengine.com" && aws_route53_record.guide.type == "CNAME" && aws_route53_record.guide.records == toset(["cname.mintlify.builders"])
+    error_message = "The guide domain is a CNAME to Mintlify."
+  }
+  assert {
+    condition     = toset(keys(aws_route53_record.guide_verification)) == toset(["_acme-challenge.docs.meterengine.com", "_cf-custom-hostname.docs.meterengine.com"]) && alltrue([for record in values(aws_route53_record.guide_verification) : record.type == "TXT"])
+    error_message = "Mintlify needs both verification TXT records for the guide domain."
+  }
+}
+
 run "alb_domains_need_a_server" {
   command = plan
   override_module {
