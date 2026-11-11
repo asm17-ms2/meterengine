@@ -1,0 +1,27 @@
+.page { min-height: 100vh; color: var(--ink); background: var(--paper); }
+.page, .page * { box-sizing: border-box; }
+.header { max-width: 860px; margin: 0 auto; padding: 20px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
+.brand { display: flex; align-items: center; gap: 10px; color: var(--ink); font-size: 21px; font-weight: 700; letter-spacing: -.04em; text-decoration: none; }
+.navigation { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.navigation a { display: inline-flex; align-items: center; min-height: 44px; color: var(--muted); font-size: 14px; text-decoration: none; }
+.navigation a:hover, .navigation a[aria-current="page"] { color: var(--blue); text-decoration: underline; }
+.navigation a[aria-current="page"] { font-weight: 600; }
+.document { max-width: 860px; margin: 0 auto; padding: 48px 24px 96px; font-size: 15px; line-height: 1.8; word-break: keep-all; overflow-wrap: anywhere; }
+.document h1 { margin-bottom: 8px; }
+.effective { color: var(--muted); font-size: 14px; margin-bottom: 32px; }
+.toc { border: 1px solid var(--line); border-radius: 8px; padding: 20px 24px; margin: 32px 0 8px; }
+.toc h2 { font-size: 15px; margin: 0 0 8px; }
+.toc ol { margin: 0; padding-left: 22px; columns: 2; column-gap: 32px; }
+.toc a { color: var(--ink); }
+.document section { scroll-margin-top: 24px; }
+.document section > h2 { font-size: 19px; margin: 44px 0 12px; }
+.document p { margin-bottom: 12px; }
+.document :is(ul, ol) { margin: 0 0 12px; padding-left: 22px; }
+.document li { margin-bottom: 4px; }
+.document li > :is(ul, ol) { margin-top: 4px; }
+.tableScroll { overflow-x: auto; margin-bottom: 16px; }
+.document table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 14px; line-height: 1.7; }
+.document :is(th, td) { border: 1px solid var(--line); padding: 10px 12px; text-align: left; vertical-align: top; }
+.document thead th, .document tbody th { background: var(--canvas); font-weight: 600; }
+.document tbody th { width: 28%; }
+@media (max-width: 600px) { .document { padding-top: 32px; } .toc ol { columns: 1; } }

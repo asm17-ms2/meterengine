@@ -67,6 +67,6 @@ export default function Home() {
       </section>
       <section className={styles.startSection} aria-labelledby="start-title"><div><h2 id="start-title">첫 청구의 근거부터 준비하세요.</h2><p>도입사 가입을 신청하고 고객, 미터와 적용 요금을 연결하세요.</p></div><Link className={styles.primaryAction} href="/signup">도입사 가입 신청</Link></section>
     </main>
-    <footer className={styles.footer}><Link href="/" className={styles.footerBrand}>MeterEngine</Link><span>사용량 기반 과금 운영</span><div><Link href="/login">로그인</Link><Link href="/signup">가입 신청</Link></div></footer>
+    <footer className={styles.footer}><Link href="/" className={styles.footerBrand}>MeterEngine</Link><span>사용량 기반 과금 운영</span><div><Link href="/terms">이용약관</Link><Link href="/privacy" className={styles.footerPolicy}>개인정보 처리방침</Link><Link href="/login">로그인</Link><Link href="/signup">가입 신청</Link></div></footer>
   </div>;
 }
