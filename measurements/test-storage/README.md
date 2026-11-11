@@ -496,6 +496,16 @@ measurements/test-storage/sut/scripts/kafka-monitoring-targets.sh register
 - Prometheus에서 `up{job=~"kafka-.*", env="test-storage"}`가 브로커마다 1이면 긁히는 것이다.
 - 끄기 전에 `kafka-monitoring-targets.sh clear`로 대상 파일을 지운다. 남겨 두면 없는 브로커가 down으로 보인다.
 
+### 토픽과 컨슈머 들여다보기
+
+브로커 보안 그룹이 SUT 서버만 들여서, 일하는 서버 하나에서 카프카 명령줄 도구를 돌려 결과를 찍는다. 읽기만 한다.
+
+```bash
+measurements/test-storage/sut/scripts/kafka-tool.sh lag     # 파티션마다 읽은 자리, 밀린 양, 맡은 스레드
+measurements/test-storage/sut/scripts/kafka-tool.sh topics  # 파티션, 리더, 복제본, 토픽 설정
+measurements/test-storage/sut/scripts/kafka-tool.sh dlq 10  # DLQ의 앞에서부터 10건. 이유는 failure_reason 헤더
+```
+
 ### 값을 바꿔 가며 재기
 
 아래 값은 파라미터로 넣으면 다음에 뜨는 서버가 읽는다. 넣지 않으면 backend 기본값이다. 파라미터 이름은 환경변수 이름을 소문자와 하이픈으로 바꾼 것이다(`KAFKA_PRODUCER_LINGER_MS`는 `kafka-producer-linger-ms`).
