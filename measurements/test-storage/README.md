@@ -86,14 +86,14 @@ measurements/test-storage/sut/scripts/sut-deploy.sh <SHA 40자>
 [sut-deploy] https://test-storage.meterengine.com/usage -> https://test-storage.meterengine.com/usage 가 200 을 돌려줬다(1회 시도)
 ```
 
-- SHA를 빼면 ECR 두 저장소 모두에 이미지가 있고 `deploy/rollout.sh`가 있는 가장 최근 develop 커밋을 쓴다.
-- 저장소는 `deploy/environments/test-storage.json`의 `image_repository_prefix`로 정한다. staging 저장소(`meterengine-staging-backend`, `-frontend`)라 릴리스 전에 develop 커밋을 잰다. 옛 main 커밋은 이 값을 `meterengine`으로 되돌린 커밋으로 띄운다.
+- SHA를 빼면 ECR 두 저장소 모두에 이미지가 있고 `deploy/rollout.sh`가 있는 가장 최근 develop 커밋을 쓴다. 이미지를 직접 올린 커밋만 후보가 되므로 SHA를 주는 편이 분명하다.
+- 저장소는 `deploy/environments/test-storage.json`의 `image_repository_prefix`로 정한다. 이 환경만 쓰는 저장소(`meterengine-test-storage-backend`, `-frontend`)라 머지 전 브랜치도 잰다. CD가 올려 주지 않으므로 잴 커밋의 이미지를 `push-images.sh <SHA>`로 직접 올린다. 이 저장소를 쓰기 전의 커밋은 다른 저장소를 가리켜 띄우지 못한다.
 - SUT에는 CD가 없다. develop이 바뀌어도 직접 배포할 때까지 그대로다.
 - ECR은 태그 이미지를 최근 10개만 남긴다. 같은 SHA로 다시 재려면 이미지가 남아 있는지 먼저 본다.
 
 ```bash
-aws ecr describe-images --region ap-northeast-2 --repository-name meterengine-backend --image-ids imageTag=<SHA>
-aws ecr describe-images --region ap-northeast-2 --repository-name meterengine-frontend --image-ids imageTag=<SHA>
+aws ecr describe-images --region ap-northeast-2 --repository-name meterengine-test-storage-backend --image-ids imageTag=<SHA>
+aws ecr describe-images --region ap-northeast-2 --repository-name meterengine-test-storage-frontend --image-ids imageTag=<SHA>
 ```
 
 - 버전 파라미터가 커밋 SHA가 아니면(처음 만든 값 `unset`) `asg_min_size`를 1 이상으로 올리는 plan이 멈춘다. 서버가 부팅 중 실패해 교체만 되풀이하지 않게 막는다.

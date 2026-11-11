@@ -125,7 +125,7 @@ class LoadTargetTest(unittest.TestCase):
     def test_each_environment_uses_its_image_repositories(self):
         prefixes = {name: environment.load_target(name, ENVIRONMENTS)["image_repository_prefix"]
                     for name in ("staging", "production", "test-storage", "test-sjpark-m7g", "test-sjpark-t4g")}
-        self.assertEqual(prefixes, {"staging": "meterengine-staging", "production": "meterengine", "test-storage": "meterengine-staging",
+        self.assertEqual(prefixes, {"staging": "meterengine-staging", "production": "meterengine", "test-storage": "meterengine-test-storage",
                                     "test-sjpark-m7g": "meterengine-test-sjpark", "test-sjpark-t4g": "meterengine-test-sjpark"})
 
     def test_production_memory_fits_the_current_server(self):

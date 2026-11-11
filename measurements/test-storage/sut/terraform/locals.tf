@@ -11,7 +11,7 @@ locals {
   account_id            = data.aws_caller_identity.current.account_id
   region                = data.aws_region.current.region
   availability_zone     = "ap-northeast-2a"
-  ecr_repos             = ["meterengine-staging-backend", "meterengine-staging-frontend", "meterengine-backend", "meterengine-frontend"]
+  ecr_repos             = ["meterengine-test-storage-backend", "meterengine-test-storage-frontend"]
   db_name               = "meterengine"
   db_username           = "meterengine"
   db_port               = 5432
