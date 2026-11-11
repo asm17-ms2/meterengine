@@ -14,7 +14,7 @@ export async function BillingStatusTag({
 
   return (
     <StatusTag color={isFinalized ? "success" : "processing"}>
-      {isFinalized ? "확정됨 (finalized)" : "확정 전 (draft)"}
+      {isFinalized ? "확정됨" : "확정 전"}
     </StatusTag>
   );
 }

@@ -39,14 +39,14 @@ export default async function InvoicesPage({
   return (
     <CollapseProvider>
       <ScreenHeader
-        title={query.from || query.to ? "인보이스 - 직접 지정 기간" : isAllMonths ? "인보이스 - 전체 기간" : `인보이스 - ${formatKoreanMonth(month)}`}
-        tags={<StatusTag color="success">확정 (finalized)</StatusTag>}
+        title={query.from || query.to ? "확정 인보이스 - 직접 지정 기간" : isAllMonths ? "확정 인보이스 - 전체 기간" : `확정 인보이스 - ${formatKoreanMonth(month)}`}
+        tags={<StatusTag color="success">확정됨</StatusTag>}
       />
 
       <ScreenCard>
         <FilterBar end={<ExpandControls />}>
           <Suspense
-            fallback={<span role="status">조회 조건을 불러오는 중입니다.</span>}
+            fallback={<span role="status">조회 조건을 불러오는 중이에요.</span>}
           >
             <ListControlsLoader
               resource="invoices"

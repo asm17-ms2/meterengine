@@ -1,6 +1,7 @@
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { CONSENT_DOCUMENTS, CONSENT_VERSION } from "../src/lib/auth/consents";
+import { consoleHeaders } from "./console-environment";
 
 const API_URL = process.env.S1_API_URL ?? "http://127.0.0.1:38147";
 const PASSWORD = "local-events-e2e-password";
@@ -74,7 +75,7 @@ test("자유 기간과 초 단위 경계, 실제 유형과 검색, 페이지와 
       const token = (await login.json()).token;
       if (typeof token !== "string" || !token) throw new Error("대표관리자 검증 세션을 받지 못했습니다.");
       secrets.add(token);
-      const headers = { Authorization: `Bearer ${token}` };
+      const headers = consoleHeaders(token);
       for (let index = 0; index < 25; index++) {
         const filler = await request.post(`${API_URL}/v1/customers`, { headers, data: { name: `가 원격 조회 고객 ${String(index).padStart(2, "0")}`, external_id: `events-filler-${suffix}-${index}` } });
         expect(filler.status()).toBe(201);
@@ -144,7 +145,7 @@ test("자유 기간과 초 단위 경계, 실제 유형과 검색, 페이지와 
       await filters.getByLabel("종료 날짜 (해당 일 포함)", { exact: true }).fill(previousDate);
       await page.getByRole("button", { name: "조건 적용", exact: true }).click();
       const rangeError = filters.getByRole("alert");
-      await expect(rangeError).toContainText("종료는 시작보다 뒤여야 합니다.");
+      await expect(rangeError).toContainText("종료는 시작보다 뒤여야 해요.");
       await expect(filters.getByLabel("시작 날짜 (포함)", { exact: true })).toBeFocused();
       for (const name of ["시작 날짜 (포함)", "종료 날짜 (해당 일 포함)"]) {
         const field = filters.getByLabel(name, { exact: true });
@@ -174,7 +175,7 @@ test("자유 기간과 초 단위 경계, 실제 유형과 검색, 페이지와 
       await advanced.locator("summary").press("Enter");
       await filters.getByLabel(/^정렬 기준/).selectOption("transaction_id");
       await filters.getByLabel(/^정렬 순서/).selectOption("asc");
-      await filters.getByLabel(/^페이지당 표시/).selectOption("50");
+      await filters.getByLabel(/^표시 건수/).selectOption("50");
       const propertiesInput = filters.getByLabel("속성과 값 (JSON 객체)", { exact: true });
       await propertiesInput.fill("{invalid");
       await advanced.locator("summary").press("Enter");
@@ -189,7 +190,7 @@ test("자유 기간과 초 단위 경계, 실제 유형과 검색, 페이지와 
       await page.getByRole("button", { name: "조건 적용", exact: true }).click();
       await expectQuery(page, { ...dateQuery, page: null });
       await expect(eventLinks(page)).toHaveText(ids.slice(0, 50));
-      await expect(page.getByText("총 56건, 이 페이지 50줄", { exact: false })).toBeVisible();
+      await expect(page.getByText("총 56건, 이 페이지 50건", { exact: false })).toBeVisible();
       await expect(advanced.locator("summary")).toContainText(/적용\s*[1-9]/);
       await expect(filters.getByLabel("속성과 값 (JSON 객체)", { exact: true })).toBeVisible();
       await expect(periodSummary).toContainText("KST");
@@ -203,20 +204,20 @@ test("자유 기간과 초 단위 경계, 실제 유형과 검색, 페이지와 
       await page.getByRole("button", { name: "조건 적용", exact: true }).click();
       await expectQuery(page, { ...dateQuery, q: narrowedQuery, page: null });
       await expect(eventLinks(page)).toHaveText([ids[54]]);
-      await expect(filters.getByText("조건 변경됨. 조건 적용을 눌러 반영하세요.", { exact: true })).toHaveCount(0);
+      await expect(filters.getByText("조건이 바뀌었어요. 조건 적용을 눌러 반영하세요.", { exact: true })).toHaveCount(0);
       await expect(filters.getByLabel("이벤트 또는 고객 찾기", { exact: true })).toHaveValue(narrowedQuery);
       await filters.getByLabel("이벤트 또는 고객 찾기", { exact: true }).fill(queryText);
       await page.getByRole("button", { name: "조건 적용", exact: true }).click();
       await expectQuery(page, { ...dateQuery, page: null });
       await expect(eventLinks(page)).toHaveText(ids.slice(0, 50));
-      await expect(filters.getByText("조건 변경됨. 조건 적용을 눌러 반영하세요.", { exact: true })).toHaveCount(0);
+      await expect(filters.getByText("조건이 바뀌었어요. 조건 적용을 눌러 반영하세요.", { exact: true })).toHaveCount(0);
       const unchangedUrl = page.url();
       await filters.getByLabel("이벤트 또는 고객 찾기", { exact: true }).fill(`${queryText}-edited`);
       await filters.getByLabel("이벤트 또는 고객 찾기", { exact: true }).fill(queryText);
-      await expect(filters.getByText("조건 변경됨. 조건 적용을 눌러 반영하세요.", { exact: true })).toBeVisible();
+      await expect(filters.getByText("조건이 바뀌었어요. 조건 적용을 눌러 반영하세요.", { exact: true })).toBeVisible();
       await page.getByRole("button", { name: "조건 적용", exact: true }).click();
       await expect(filters).toHaveAttribute("aria-busy", "false");
-      await expect(filters.getByText("조건 변경됨. 조건 적용을 눌러 반영하세요.", { exact: true })).toHaveCount(0);
+      await expect(filters.getByText("조건이 바뀌었어요. 조건 적용을 눌러 반영하세요.", { exact: true })).toHaveCount(0);
       expect(page.url()).toBe(unchangedUrl);
     });
 
@@ -242,7 +243,7 @@ test("자유 기간과 초 단위 경계, 실제 유형과 검색, 페이지와 
       await filters.getByLabel("조회 월", { exact: true }).press("Enter");
       await expectQuery(page, { ...preserved, month: previousMonth, from: null, to: null, range_mode: null, page: null });
       await expect(eventLinks(page)).toHaveText(ids.slice(0, 50));
-      await expect(page.getByText("총 56건, 이 페이지 50줄", { exact: false })).toBeVisible();
+      await expect(page.getByText("총 56건, 이 페이지 50건", { exact: false })).toBeVisible();
       await page.getByRole("navigation", { name: "페이지", exact: true }).getByRole("link", { name: "다음", exact: true }).click();
       await expectQuery(page, { ...preserved, month: previousMonth, from: null, to: null, range_mode: null, page: "1" });
       await expect(eventLinks(page)).toHaveText([...ids.slice(50), beforeId]);
@@ -263,7 +264,7 @@ test("자유 기간과 초 단위 경계, 실제 유형과 검색, 페이지와 
       for (const [label, days] of [["최근 24시간", 1], ["최근 7일", 7]] as const) {
         const draftQuery = days === 1 ? `${queryText}-draft` : queryText;
         await filters.getByLabel("이벤트 또는 고객 찾기", { exact: true }).fill(draftQuery);
-        await expect(filters.getByText("조건 변경됨. 조건 적용을 눌러 반영하세요.", { exact: true })).toBeVisible();
+        await expect(filters.getByText("조건이 바뀌었어요. 조건 적용을 눌러 반영하세요.", { exact: true })).toBeVisible();
         await filters.getByRole("button", { name: label, exact: true }).click();
         await expectQuery(page, { ...preserved, q: draftQuery, month: null, range_mode: null, page: null });
         await expect(filters.getByRole("radio", { name: "직접 지정", exact: true })).toBeChecked();

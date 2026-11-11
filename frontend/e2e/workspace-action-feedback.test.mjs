@@ -5,9 +5,10 @@ import { operationResultCopy } from "../src/lib/workspace-operation-results.ts";
 
 test("each workspace action that shows a toast says what it did", () => {
   const messages = ["createMember", "updateMemberRole", "updateMemberScopes", "revokeOrganizationInvitation", "deleteApiKey", "updateApiKeyScopes"].map(successMessage);
-  for (const message of messages) assert.notEqual(message, "처리했습니다.");
+  for (const message of messages) assert.notEqual(message, "처리했어요.");
   assert.equal(new Set(messages).size, messages.length);
-  assert.equal(successMessage("unknownOperation"), "처리했습니다.");
+  assert.equal(successMessage("unknownOperation"), "처리했어요.");
+  for (const operation of ["updateSupplier", "updatePaymentSetting", "updateTossPaymentsCredential", "createWebhookEndpoint", "updateWebhookEndpoint"]) assert.notEqual(successMessage(operation), "처리했어요.", operation);
 });
 
 test("a whole number outside its range names the field instead of blaming JSON", () => {
@@ -32,16 +33,16 @@ test("an unconfirmed Toss key save points at the saved time, not at payment hist
   assert.match(message, /토스/);
   assert.match(message, /저장 시각/);
   assert.doesNotMatch(message, /결제와 취소 내역/);
-  assert.equal(operationResultCopy("updateTossPaymentsCredential").refreshLabel, "토스 키 상태 새로 조회");
+  assert.equal(operationResultCopy("updateTossPaymentsCredential").refreshLabel, "토스페이먼츠 키 상태 새로 조회");
   for (const operation of ["createPaymentAttempt", "createPaymentCancellation"]) {
-    assert.equal(unconfirmedMessage(operation), "처리 결과를 확인하지 못했습니다. 중복 요청을 피하려면 결제와 취소 내역을 먼저 새로 조회하세요.");
+    assert.equal(unconfirmedMessage(operation), "처리 결과를 확인하지 못했어요. 중복 요청을 피하려면 결제와 취소 내역을 먼저 새로 조회하세요.");
     assert.equal(operationResultCopy(operation).refreshLabel, "결제와 취소 내역 새로 조회");
   }
 });
 
 test("a cancellation rejected because another cancellation came first asks to refresh instead of retrying", () => {
   for (const code of ["payment_attempt_fully_canceled", "payment_cancellation_amount_exceeded"]) {
-    assert.match(staleCancellationMessage("createPaymentCancellation", code), /화면의 잔액이 최신이 아닙니다/);
+    assert.match(staleCancellationMessage("createPaymentCancellation", code), /화면의 잔액이 최신이 아니에요/);
   }
   assert.equal(staleCancellationMessage("createPaymentCancellation", "payment_cancellation_idempotency_conflict"), unconfirmedMessage("createPaymentCancellation"));
   assert.equal(staleCancellationMessage("createPaymentAttempt", "payment_attempt_fully_canceled"), undefined);
@@ -51,21 +52,21 @@ test("a cancellation rejected because another cancellation came first asks to re
 
 test("a missing Toss key says where to save it", () => {
   const message = errorMessageForCode("toss_payments_credential_missing");
-  assert.match(message, /도입사 설정/);
+  assert.match(message, /조직 설정/);
   assert.match(message, /토스페이먼츠 연동/);
   assert.equal(errorMessageForCode("unknown_code"), undefined);
 });
 
 test("re-registering an existing external customer id is reported as not created", () => {
   const input = { externalId: "customer-1", name: "새 고객", billingEmail: "new@example.com" };
-  assert.equal(existingCustomerMessage(input, { name: "카카오", billing_email: "old@example.com" }), "외부 고객 ID가 같은 기존 고객(이름: 카카오)이 있어 새로 등록하지 않았습니다.");
+  assert.equal(existingCustomerMessage(input, { name: "카카오", billing_email: "old@example.com" }), "외부 고객 ID가 같은 기존 고객(이름: 카카오)이 있어 새로 등록하지 않았어요.");
   assert.equal(existingCustomerMessage(input, { name: "새 고객", billing_email: "new@example.com" }), undefined);
   assert.equal(existingCustomerMessage({ ...input, externalId: "" }, { name: "기존 고객", billing_email: null }), undefined);
 });
 
 test("archiving a customer, a member or a receiver confirms what happened", () => {
-  assert.equal(successMessage("deleteCustomer"), "고객을 보관했습니다. 보관 목록에서 확인하세요.");
-  assert.equal(successMessage("archiveMember"), "사용자 소속을 보관했습니다. 보관 목록에서 확인하세요.");
-  assert.equal(successMessage("deleteWebhookEndpoint"), "수신 주소를 보관했습니다. 보관 목록에서 확인하세요.");
+  assert.equal(successMessage("deleteCustomer"), "고객을 보관했어요. 보관 목록에서 확인하세요.");
+  assert.equal(successMessage("archiveMember"), "사용자 소속을 보관했어요. 보관 목록에서 확인하세요.");
+  assert.equal(successMessage("deleteWebhookEndpoint"), "수신 주소를 보관했어요. 보관 목록에서 확인하세요.");
 });
 

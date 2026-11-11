@@ -7,19 +7,20 @@ test("month exports carry the month and the business environment", () => {
   assert.equal(exportFilename("usage", { month: "2026-10", environment: "test" }), "usage-2026-10-test.csv");
 });
 
-test("legacy exports leave the environment out and ranges replace the month", () => {
+test("an export without an environment is named as the test environment, legacy leaves it out, and ranges replace the month", () => {
   assert.equal(exportFilename("events", { month: "2026-10", environment: "legacy" }), "events-2026-10.csv");
-  assert.equal(exportFilename("events", { month: "2026-10", from: "2026-10-01", to: "2026-10-07" }), "events-2026-10-01_2026-10-07.csv");
-  assert.equal(exportFilename("customers", {}), "customers.csv");
+  assert.equal(exportFilename("events", { month: "2026-10", from: "2026-10-01", to: "2026-10-07" }), "events-2026-10-01_2026-10-07-test.csv");
+  assert.equal(exportFilename("customers", {}), "customers-test.csv");
+  assert.equal(exportFilename("customers", { environment: "unknown" }), "customers-test.csv");
 });
 
 test("a range with only one end names that end instead of the default month", () => {
   assert.equal(exportFilename("invoices", { month: "2026-10", from: "2026-08-01T00:00:00", environment: "live" }), "invoices-from-2026-08-01T00-00-00-live.csv");
-  assert.equal(exportFilename("invoices", { month: "2026-10", to: "2026-08-31" }), "invoices-to-2026-08-31.csv");
+  assert.equal(exportFilename("invoices", { month: "2026-10", to: "2026-08-31" }), "invoices-to-2026-08-31-test.csv");
 });
 
 test("unsafe characters never reach the file name", () => {
-  assert.equal(exportFilename("events", { from: "2026-10-01T00:00:00+09:00", to: "2026-10-02" }), "events-2026-10-01T00-00-00-09-00_2026-10-02.csv");
+  assert.equal(exportFilename("events", { from: "2026-10-01T00:00:00+09:00", to: "2026-10-02" }), "events-2026-10-01T00-00-00-09-00_2026-10-02-test.csv");
 });
 
 test("the download keeps the server file name and falls back to the resource name", () => {

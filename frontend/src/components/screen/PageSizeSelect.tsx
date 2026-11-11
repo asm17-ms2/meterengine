@@ -20,9 +20,9 @@ export function PageSizeSelect({
 
   return (
     <Select<number>
-      aria-label="페이지 크기"
+      aria-label="표시 건수"
       suffixIcon={<DownOutlined aria-hidden aria-label={undefined} />}
-      options={PAGE_SIZE_OPTIONS.map((size) => ({ value: size, label: `${size}건씩` }))}
+      options={PAGE_SIZE_OPTIONS.map((size) => ({ value: size, label: `${size}건` }))}
       value={liveQuery.size}
       onChange={(size) => push({ size })}
     />

@@ -23,7 +23,7 @@ function CreateOperatorDialog({ onClose }: { onClose: () => void }) {
     const result = await createOperatorAction(previous, data);
     if (result.isCreated) {
       setIsDirty(false);
-      message.success(result.message ?? "운영자 계정을 만들었습니다.");
+      message.success(result.message ?? "운영자 계정을 만들었어요.");
       onClose();
     }
     if (result.isUnconfirmed) setIsDirty(false);
@@ -73,8 +73,8 @@ function CreateOperatorDialog({ onClose }: { onClose: () => void }) {
       setDismissedErrors(current => ({ state, names: current.state === state ? [...current.names, name] : [name] }));
       setClientErrors(current => Object.fromEntries(Object.entries(current).filter(([key]) => key !== name)));
     }} className="workspace-form" aria-busy={isPending}>
-      <p className="muted">MeterEngine의 가입 승인과 플랫폼 권한을 관리할 계정을 만듭니다. 도입사 소속은 추가하지 않습니다.</p>
-      <p className="field-hint">새 운영자는 처음 로그인해 이용 안내에 동의한 뒤 운영을 시작합니다. 초기 로그인 정보는 본인에게 안전하게 전달하세요.</p>
+      <p className="muted">MeterEngine의 가입 승인과 플랫폼 권한을 관리할 계정을 만들어요. 조직 소속은 추가하지 않아요.</p>
+      <p className="field-hint">새 운영자는 처음 로그인할 때 약관과 개인정보 처리방침에 동의해야 운영을 시작할 수 있어요. 초기 로그인 정보는 그 운영자에게 안전하게 전달하세요.</p>
       {hasFeedback && <div ref={feedbackRef} tabIndex={-1} className="form-feedback"><Alert showIcon type={state.isUnconfirmed ? "warning" : "error"} title={state.message}
         description={Object.keys(errors).length ? <ul>{Object.entries(errors).map(([name, error]) => <li key={name}><a href={`#${formId}-${name}`} onClick={event => { event.preventDefault(); document.getElementById(`${formId}-${name}`)?.focus(); }}>{FIELDS.find(field => field.name === name)?.label}: {error}</a></li>)}</ul> : undefined} /></div>}
       <fieldset disabled={isPending || state.isUnconfirmed}>
@@ -86,7 +86,7 @@ function CreateOperatorDialog({ onClose }: { onClose: () => void }) {
           return <div className="workspace-field" key={field.name}>
             <label htmlFor={id}>{field.label}<span className="required-label"> (필수)</span></label>
             <input id={id} name={field.name} type={field.type} autoComplete={field.autoComplete} maxLength={field.maxLength} minLength={field.name === "password" ? 8 : undefined} required aria-invalid={Boolean(error)} aria-describedby={[hintId, errorId].filter(Boolean).join(" ") || undefined} spellCheck={field.name === "email" ? false : undefined} />
-            {hintId && <small className="field-hint" id={hintId}>8자 이상 72자 이하. 한글은 1자를 3자로 계산합니다.</small>}
+            {hintId && <small className="field-hint" id={hintId}>8자 이상 72자 이하예요. 한글은 1자를 3자로 계산해요.</small>}
             {error && <small className="field-error" id={errorId}>{error}</small>}
           </div>;
         })}

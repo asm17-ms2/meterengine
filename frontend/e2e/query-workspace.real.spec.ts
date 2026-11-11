@@ -2,6 +2,7 @@ import { expect, test, type APIRequestContext, type Page } from "@playwright/tes
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { CONSENT_DOCUMENTS, CONSENT_VERSION } from "../src/lib/auth/consents";
+import { consoleHeaders } from "./console-environment";
 
 const API_URL = process.env.S1_API_URL ?? "http://127.0.0.1:38147";
 const FRONTEND_URL = process.env.QUERY_FRONTEND_URL ?? "http://localhost:33147";
@@ -21,7 +22,7 @@ async function createTenant(request: APIRequestContext, operatorToken: string, s
   const session = await request.post(`${API_URL}/v1/sessions`, { data: { email, password: PASSWORD } });
   expect(session.status(), "격리 검증 도입사 로그인").toBe(201);
   const token = (await session.json()).token as string;
-  return { organizationId, token, email, headers: { Authorization: `Bearer ${token}` } };
+  return { organizationId, token, email, headers: consoleHeaders(token) };
 }
 
 async function expectScope(page: Page, expected: Record<string, string>) {
@@ -82,9 +83,9 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
       expect((await request.delete(`${API_URL}/v1/billable-metrics/${code}`, { headers: tenantA.headers })).status(), "미터 보관").toBe(204);
     }
     await context.addCookies([{ name: "me_session", value: tenantA.token, url: FRONTEND_URL, httpOnly: true, sameSite: "Lax" }]);
-    const preserved = { environment: "legacy", organization_id: tenantA.organizationId, month: currentMonth, metric_status: "archived", plan_status: "all", rate_status: "archived", metric: oldCodes[0], q: suffix, sort: "code", order: "asc" };
+    const preserved = { organization_id: tenantA.organizationId, month: currentMonth, metric_status: "archived", plan_status: "all", rate_status: "archived", metric: oldCodes[0], q: suffix, sort: "code", order: "asc" };
     await page.goto(`/pricing?${new URLSearchParams(preserved)}`);
-    const rail = page.getByRole("region", { name: "과금 미터 선택", exact: true });
+    const rail = page.getByRole("region", { name: "미터 선택", exact: true });
     await expect(rail.getByRole("button", { name: /보관 미터/ })).toHaveCount(20);
     await expect(rail.getByRole("button", { name: /등록 단가 \d+개/ }), "선택한 미터도 단가 개수를 보인다").toHaveCount(20);
     await rail.getByRole("link", { name: "다음", exact: true }).click();
@@ -92,7 +93,7 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
     await expect(rail.getByRole("button", { name: /보관 미터/ })).toHaveCount(1);
     const beforeFilterChange = page.url();
     await expandAdvanced(page);
-    await page.getByRole("combobox", { name: "페이지 크기", exact: true }).selectOption("50");
+    await page.getByRole("combobox", { name: "표시 건수", exact: true }).selectOption("50");
     expect(page.url(), "페이지 크기는 다른 조건과 함께 적용").toBe(beforeFilterChange);
     await page.getByRole("button", { name: "조건 적용", exact: true }).click();
     await expectScope(page, { ...preserved, size: "50" });
@@ -117,7 +118,7 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
 
     await test.step("작성 중인 검색, 고객, 미터, 금액과 기간을 한 번에 적용", async () => {
       for (const route of ["usage", "billing", "invoices"]) {
-        await page.goto(`/${route}?${new URLSearchParams({ environment: "legacy", organization_id: tenantA.organizationId, month: currentMonth })}`);
+        await page.goto(`/${route}?${new URLSearchParams({ organization_id: tenantA.organizationId, month: currentMonth })}`);
         const originalUrl = page.url();
         const advanced = await expandAdvanced(page);
         const form = page.getByRole("form", { name: "조회 조건", exact: true });
@@ -139,7 +140,7 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
           expect(page.url()).toBe(originalUrl);
           await form.getByLabel("최소 금액 (원)", { exact: true }).fill("0");
         }
-        await form.getByRole("combobox", { name: "페이지 크기", exact: true }).selectOption("50");
+        await form.getByRole("combobox", { name: "표시 건수", exact: true }).selectOption("50");
         await advanced.locator("summary").click();
         await form.getByRole("combobox", { name: "과금 미터", exact: true }).scrollIntoViewIfNeeded();
         await form.getByRole("combobox", { name: "과금 미터", exact: true }).fill(activeCode);
@@ -155,7 +156,7 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
         await expect(form.getByRole("searchbox", { name: "검색", exact: true })).toHaveValue(suffix);
         if (route !== "usage") await expect(form.getByLabel("최대 금액 (원)", { exact: true })).toHaveValue("10000");
         await form.getByRole("button", { name: "조건 적용", exact: true }).click();
-        await expectScope(page, { environment: "legacy", organization_id: tenantA.organizationId, customer_id: customerId, billable_metric_code: activeCode, q: suffix, size: "50", ...(route === "usage" ? {} : { min_amount: "0", max_amount: "10000" }), ...(route === "invoices" ? { from: "2026-01-01T00:00", to: "2027-01-01T00:00" } : { month: currentMonth }) });
+        await expectScope(page, { organization_id: tenantA.organizationId, customer_id: customerId, billable_metric_code: activeCode, q: suffix, size: "50", ...(route === "usage" ? {} : { min_amount: "0", max_amount: "10000" }), ...(route === "invoices" ? { from: "2026-01-01T00:00", to: "2027-01-01T00:00" } : { month: currentMonth }) });
       }
     });
     await test.step("서버의 50건 페이지를 PC와 모바일에서 다시 자르지 않음", async () => {
@@ -164,12 +165,12 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
         const created = await request.post(`${API_URL}/v1/customers`, { headers: tenantA.headers, data: { name: `${needle} ${index}` } });
         expect(created.status()).toBe(201);
       }
-      await page.goto(`/customers?${new URLSearchParams({ environment: "legacy", organization_id: tenantA.organizationId })}`);
+      await page.goto(`/customers?${new URLSearchParams({ organization_id: tenantA.organizationId })}`);
       const form = page.getByRole("form", { name: "조회 조건", exact: true });
       const advanced = await expandAdvanced(page);
       await form.getByRole("searchbox", { name: "이름, 외부 ID, 청구 이메일로 찾기", exact: true }).fill(needle);
       await form.getByRole("combobox", { name: "관리 상태", exact: true }).selectOption("all");
-      await form.getByRole("combobox", { name: "페이지 크기", exact: true }).selectOption("50");
+      await form.getByRole("combobox", { name: "표시 건수", exact: true }).selectOption("50");
       await advanced.locator("summary").click();
       await expect(form.getByRole("searchbox", { name: "이름, 외부 ID, 청구 이메일로 찾기", exact: true })).toHaveValue(needle);
       await form.getByRole("button", { name: "조건 적용", exact: true }).click();
@@ -180,7 +181,7 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
       await expect(page.locator(".workspace-mobile-records .workspace-mobile-record")).toHaveCount(25);
       await page.setViewportSize({ width: 1280, height: 900 });
     });
-    await page.goto(`/pricing?${new URLSearchParams({ environment: "legacy", organization_id: tenantA.organizationId, month: currentMonth, metric: activeCode })}`);
+    await page.goto(`/pricing?${new URLSearchParams({ organization_id: tenantA.organizationId, month: currentMonth, metric: activeCode })}`);
     await page.getByRole("searchbox", { name: "검색", exact: true }).fill(suffix);
     await chooseCustomer(page, "적용 대상", customerName);
     expect(new URL(page.url()).searchParams.has("customer_id"), "고객 선택은 제출 전 이동하지 않음").toBe(false);
@@ -188,27 +189,27 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
     await page.getByRole("button", { name: "조건 적용", exact: true }).click();
     await expectScope(page, { organization_id: tenantA.organizationId, customer_id: customerId, metric: activeCode, month: currentMonth });
     await expect(page.locator('section[aria-labelledby="current-prices-title"]')).toContainText("20원");
-    await page.goto(`/pricing?${new URLSearchParams({ environment: "legacy", organization_id: tenantA.organizationId, month: currentMonth, metric: activeCode })}`);
+    await page.goto(`/pricing?${new URLSearchParams({ organization_id: tenantA.organizationId, month: currentMonth, metric: activeCode })}`);
     await page.getByRole("button", { name: "단가 버전 등록", exact: true }).click();
     const dialog = page.getByRole("dialog");
     await dialog.getByLabel("계산 방식", { exact: true }).selectOption("graduated");
-    await dialog.getByLabel("구간 1 단가", { exact: true }).fill("10");
-    await dialog.getByLabel("구간 2 단가", { exact: true }).fill("10");
+    await dialog.getByLabel("구간 1 과금 수량 1당 단가 (원)", { exact: true }).fill("10");
+    await dialog.getByLabel("구간 2 과금 수량 1당 단가 (원)", { exact: true }).fill("10");
     const upper = dialog.getByLabel("구간 1 끝 수량", { exact: true });
     await upper.fill("0");
-    await dialog.getByRole("button", { name: "이 단가 버전 저장", exact: true }).click();
+    await dialog.getByRole("button", { name: "단가 버전 등록", exact: true }).click();
     await expect(upper).toBeFocused();
     await expect(upper).toHaveAttribute("aria-invalid", "true");
     const describedBy = await upper.getAttribute("aria-describedby");
-    const fieldError = dialog.getByText("끝 수량은 0보다 크고 앞 구간보다 커야 합니다.", { exact: true });
+    const fieldError = dialog.getByText("끝 수량은 0보다 크고 앞 구간보다 커야 해요.", { exact: true });
     await expect(fieldError).toHaveAttribute("id", describedBy!);
     await upper.fill("100");
     await expect(upper).toHaveAttribute("aria-invalid", "false");
     await dialog.getByLabel("계산 방식", { exact: true }).selectOption("per_unit");
     await dialog.getByLabel("과금 수량 1당 단가 (원)", { exact: true }).fill("999");
     await context.addCookies([{ name: "me_session", value: tenantB.token, url: FRONTEND_URL, httpOnly: true, sameSite: "Lax" }]);
-    await dialog.getByRole("button", { name: "이 단가 버전 저장", exact: true }).click();
-    await expect(dialog.getByRole("alert")).toContainText("도입사가 바뀌었습니다");
+    await dialog.getByRole("button", { name: "단가 버전 등록", exact: true }).click();
+    await expect(dialog.getByRole("alert")).toContainText("조직이 바뀌었어요");
     for (const tenant of [tenantA, tenantB]) {
       const rates = await request.get(`${API_URL}/v1/billable-metrics/${activeCode}/price-rates?status=all`, { headers: tenant.headers });
       expect(rates.status(), "조직별 단가 경계 조회").toBe(200);
@@ -216,7 +217,7 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
     }
     page.once("dialog", event => event.accept());
     await dialog.locator(".workspace-dialog-actions").getByRole("button", { name: "닫기", exact: true }).click();
-    const billingHref = await page.getByRole("link", { name: "청구 예정액 확인", exact: true }).getAttribute("href");
+    const billingHref = await page.getByRole("link", { name: "청구 검토로 이동", exact: true }).getAttribute("href");
     expect(billingHref).not.toBeNull();
     expect(new URL(billingHref!, FRONTEND_URL).searchParams.get("organization_id"), "공유 세션이 바뀌어도 다음 업무 링크는 렌더된 도입사 유지").toBe(tenantA.organizationId);
     const exportResponse = page.waitForResponse(response => new URL(response.url()).pathname === "/exports/billable-metric-prices");

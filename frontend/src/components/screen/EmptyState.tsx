@@ -12,7 +12,7 @@ export function EmptyState({
   action,
 }: {
   title: string;
-  body: string;
+  body?: string;
   resetHref?: string;
   resetLabel?: string;
   action?: React.ReactNode;
@@ -25,7 +25,7 @@ export function EmptyState({
       description={
         <Flex vertical gap={4}>
           <Typography.Text strong>{title}</Typography.Text>
-          <Typography.Text type="secondary">{body}</Typography.Text>
+          {body ? <Typography.Text type="secondary">{body}</Typography.Text> : null}
         </Flex>
       }
     >
