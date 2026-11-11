@@ -55,9 +55,8 @@ p { line-height: 1.7; }
 .form-field label { font-weight: 600; font-size: 14px; }
 .consent-fields { border: 1px solid var(--line); border-radius: 8px; padding: 16px; display: grid; gap: 16px; min-width: 0; }
 .consent-fields legend { padding: 0 6px; font-weight: 600; font-size: 14px; }
-.consent-fields details { font-size: 13px; margin-bottom: 10px; }
-.consent-fields summary { cursor: pointer; color: var(--blue); padding: 4px 0; }
-.consent-fields details p { margin-top: 10px; }
+.consent-document-link { display: inline-block; font-size: 13px; color: var(--blue); padding: 4px 0; margin-bottom: 10px; }
+.consent-document-link-note { color: var(--muted); }
 .consent-check { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; line-height: 1.7; cursor: pointer; }
 .consent-check input { width: 17px; height: 17px; margin: 3px 0 0; flex-shrink: 0; accent-color: var(--blue); }
 .auth-switch { text-align: center; font-size: 14px; color: var(--muted); margin: 0; }

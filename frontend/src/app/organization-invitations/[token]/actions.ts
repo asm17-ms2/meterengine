@@ -44,7 +44,7 @@ export async function acceptInvitationAction(_previous: InvitationState, data: F
     if (!name) return { message: "이름을 입력하세요." };
     if (name.length > NAME_MAX_LENGTH) return { message: "이름은 255자 이내로 입력하세요." };
     if (!isValidPassword(password)) return { message: PASSWORD_RULE_MESSAGE };
-    if (CONSENT_DOCUMENTS.some(({ document }) => data.get(document) !== "on")) return { message: "두 안내를 읽고 필수 동의에 체크하세요." };
+    if (CONSENT_DOCUMENTS.some(({ document }) => data.get(document) !== "on")) return { message: "이용약관과 개인정보 처리방침을 읽고 두 항목에 모두 체크하세요." };
     body = { name, password, consents: CONSENT_DOCUMENTS.map(({ document }) => ({ document, document_version: CONSENT_VERSION })) };
   }
   const accepted = await requestApi<{ user_account_id: string; organization_id: string }>(`${path}/accept`, { method: "POST", token: preview.data.account_exists ? sessionToken : undefined, body });

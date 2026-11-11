@@ -30,8 +30,8 @@ async function login(page: Page, email: string, returnTo = "/members") {
 }
 
 async function agree(page: Page) {
-  await page.getByRole("checkbox", { name: /^이용 안내/ }).check();
-  await page.getByRole("checkbox", { name: /^개인정보 처리 안내/ }).check();
+  await page.getByRole("checkbox", { name: /^이용약관/ }).check();
+  await page.getByRole("checkbox", { name: /^개인정보 처리방침/ }).check();
 }
 
 async function expectNoPeopleActions(page: Page) {
