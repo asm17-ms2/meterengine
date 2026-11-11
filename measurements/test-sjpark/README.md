@@ -119,7 +119,7 @@ measurements/test-sjpark/sut/scripts/create-exporter-user.sh <사양>
 GitHub Actions의 "측정 환경 배포"를 손으로 실행한다. 고른 브랜치의 최신 커밋을 빌드해 측정 ECR에 올리고 `deploy/rollout.sh`로 서버를 바꾼 뒤 `/usage`를 확인한다.
 
 1. "Use workflow from"에서 브랜치를, `environment`에서 환경을 고른다. 이미 올린 커밋을 다시 배포할 때만 `image_tag`에 SHA를 넣는다.
-2. GitHub Environment `test-sjpark-<사양>`의 필수 승인자(moonino, sjparkx1129, skytre0) 중 한 명이 승인한다. 승인해야 그 환경의 배포 역할 `meterengine-test-sjpark-<사양>-deploy`를 받는다.
+2. GitHub Environment `test-sjpark-<사양>`의 필수 승인자(moonino, sjparkx1129, skytre0) 중 한 명이 승인한다. 승인해야 그 환경의 배포 역할 `meterengine-test-sjpark-<사양>-deploy`를 받는다. 빌드 job과 배포 job이 따로 승인을 기다려 두 번 승인하고, `image_tag`를 넣으면 빌드 job이 돌지 않아 한 번 승인한다.
 
 - 브랜치는 이 워크플로가 들어간 develop 위에 있어야 한다. 서버는 배포 커밋의 `deploy/environments/test-sjpark-<사양>.json`에서 ECR 접두를 읽는다.
 - 배포한 동안 브랜치를 origin에서 지우지 않는다. 새 서버는 부팅 때 저장소를 clone해 그 커밋을 checkout한다. 포크의 커밋은 받지 못한다.
