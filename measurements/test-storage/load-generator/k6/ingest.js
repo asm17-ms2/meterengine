@@ -14,10 +14,14 @@ const DURATION_SECONDS = intEnv('DURATION_SECONDS');
 const PRE_ALLOCATED_VUS = Math.max(50, Math.ceil(RATE * 0.15));
 const MAX_VUS = Math.max(500, RATE);
 const DUPLICATE_PERIOD = 100;
+const STORED = 200;
+const ACCEPTED = 202;
 
 const started = new Counter('events_started');
 const stored = new Counter('events_stored');
 const duplicate = new Counter('events_duplicate');
+// 카프카 경로의 202. 받아서 발행했고 저장과 중복 판정은 컨슈머가 뒤에서 한다.
+const accepted = new Counter('events_accepted');
 const failed = new Counter('events_failed');
 
 const SUBMETRICS_IN_SUMMARY = {
@@ -56,7 +60,11 @@ export default function (data) {
     tags: { name: REQUEST },
     timeout: '30s',
   });
-  if (res.status !== 200) {
+  if (res.status === ACCEPTED) {
+    accepted.add(1);
+    return;
+  }
+  if (res.status !== STORED) {
     failed.add(1);
     if (!resend) {
       console.log(`FAILED_ID ${id} status=${res.status} error_code=${res.error_code}`);

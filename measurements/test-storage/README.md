@@ -286,6 +286,8 @@ scripts/run-ingest-steps.sh
 
 실험 뒤 보낸 것과 저장된 것을 대조한다. 보낸 이벤트의 1%는 같은 id로 다시 보내므로, 단계마다 `유실 0건, 재전송 N건 중 duplicate N건`이 나와야 한다.
 
+- 카프카 경로에서는 응답이 202이고 `duplicate`가 없다. 대조는 컨슈머가 다 저장할 때까지 최대 `STORE_WAIT_SECONDS`(기본 600초) 기다린 뒤 유실만 본다. 재전송을 중복으로 판정한 건수는 컨슈머 지표 `meterengine_event_consume_total{result="duplicate"}`로 본다.
+
 ```bash
 for f in k6/results/<RUN_ID>/*-ingest-r*.json; do scripts/reconcile.sh "$f"; done
 ```
