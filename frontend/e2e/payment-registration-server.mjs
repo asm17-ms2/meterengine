@@ -9,8 +9,8 @@ function reset() {
 }
 reset();
 
-createServer(async (request, response) => {
-  const path = new URL(request.url, "http://127.0.0.1:38149").pathname;
+const server = createServer(async (request, response) => {
+  const path = new URL(request.url, "http://127.0.0.1").pathname;
   let text = "";
   for await (const chunk of request) text += chunk;
   const body = text ? JSON.parse(text) : {};
@@ -37,4 +37,5 @@ createServer(async (request, response) => {
     return send(201, { customer_id: CUSTOMER_ID, mode: "test", card_issuer_code: "61", card_number: "43301234****123*", authenticated_at: new Date().toISOString() });
   }
   send(404, { code: "endpoint_not_found", message: "경로 없음" });
-}).listen(38149, "127.0.0.1");
+});
+server.listen(0, "127.0.0.1", () => console.log(`fixture listening on ${server.address().port}`));

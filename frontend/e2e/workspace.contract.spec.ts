@@ -1,8 +1,11 @@
 import { test, expect, type APIRequestContext, type Locator, type Page } from "@playwright/test";
 
 import { formatKstMonth, shiftMonth } from "../src/lib/month";
+import { fixtureUrl, frontendOrigin } from "./contract-stack";
 
-const FIXTURE_URL = "http://127.0.0.1:38150";
+const FIXTURE_URL = fixtureUrl();
+const FRONTEND_ORIGIN = frontendOrigin();
+test.use({ baseURL: FRONTEND_ORIGIN });
 const INVOICE_ID = "11111111-1111-4111-8111-111111111111";
 const ENDPOINT_ID = "33333333-3333-4333-8333-333333333333";
 type FixtureState = {
@@ -46,7 +49,7 @@ async function closeDialog(dialog: Locator) {
 
 test.beforeEach(async ({ context, request }) => {
   expect((await request.post(`${FIXTURE_URL}/__control`, { data: { reset: true } })).ok()).toBe(true);
-  await context.addCookies([{ name: "me_session", value: "workspace-contract-session", url: "http://localhost:33150" }]);
+  await context.addCookies([{ name: "me_session", value: "workspace-contract-session", url: FRONTEND_ORIGIN }]);
 });
 
 test("격리 계약: 6초 걸린 부분 취소가 성공하고 한 번만 전송된다", async ({ page, request }) => {
@@ -278,7 +281,7 @@ test("격리 계약: 최초 화면을 읽는 동안 소속이 바뀌어도 다�
   const next = page.getByRole("navigation", { name: "페이지", exact: true }).getByRole("link", { name: "다음", exact: true });
   const href = await next.getAttribute("href");
   expect(href).not.toBeNull();
-  expect(new URL(href!, "http://localhost:33150").searchParams.get("organization_id"), "최초 SSR의 페이지 링크도 렌더된 도입사를 유지").toBe(organizationId);
+  expect(new URL(href!, FRONTEND_ORIGIN).searchParams.get("organization_id"), "최초 SSR의 페이지 링크도 렌더된 도입사를 유지").toBe(organizationId);
   expect((await readState(request)).activeOrganizationId).toBe(switchedOrganizationId);
   await next.click();
   await expect(page.getByRole("alert").filter({ hasText: "도입사 선택이 바뀌어 조회를 중단했습니다." })).toBeVisible();
@@ -303,14 +306,14 @@ test("격리 계약: 확정된 월의 0원 고객을 구분하고 검색 페이�
   await expect(monthLink).toBeVisible();
   const monthHref = await monthLink.getAttribute("href");
   expect(monthHref).not.toBeNull();
-  const monthDestination = new URL(monthHref!, "http://localhost:33150");
+  const monthDestination = new URL(monthHref!, FRONTEND_ORIGIN);
   expect(monthDestination.searchParams.has("customer_id")).toBe(false);
   expect(monthDestination.searchParams.get("organization_id")).toBe("55555555-5555-4555-8555-555555555555");
   expect(monthDestination.searchParams.get("environment") ?? "legacy").toBe("legacy");
   await expect(page.getByText(/^다른 고객의 확정 청구/)).toHaveCount(0);
   const destinationHref = await page.getByRole("link", { name: "인보이스 보기", exact: true }).getAttribute("href");
   expect(destinationHref).not.toBeNull();
-  const destination = new URL(destinationHref!, "http://localhost:33150");
+  const destination = new URL(destinationHref!, FRONTEND_ORIGIN);
   expect(destination.pathname).toBe("/invoices");
   expect(destination.searchParams.get("customer_id")).toBe(customerId);
   expect(destination.searchParams.get("month")).toBe("2026-10");
@@ -464,7 +467,7 @@ test("격리 계약: 자동 확정이 켜진 이번 달은 다음 자동 확정 
   await expect(page.getByRole("row").filter({ hasText: "단가 있는 고객" }).getByText(/자동 확정 보류/)).toHaveCount(0);
   await expect(held).toHaveAccessibleDescription(/이 달이 끝나기 전에 단가를 등록하세요/);
   await expect(page.getByRole("row").filter({ has: held }).getByText(/이 달이 끝나기 전에 단가를 등록하세요/)).toBeVisible();
-  const destination = new URL((await held.getAttribute("href"))!, "http://localhost:33150");
+  const destination = new URL((await held.getAttribute("href"))!, FRONTEND_ORIGIN);
   expect(destination.pathname).toBe("/pricing");
   expect(destination.searchParams.get("month")).toBe(month);
   expect(destination.searchParams.get("customer_id")).toBe("17171717-1717-4717-8717-171717171717");

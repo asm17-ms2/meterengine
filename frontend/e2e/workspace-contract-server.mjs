@@ -244,5 +244,5 @@ const server = createServer(async (request, response) => {
   }
 });
 
-server.listen(38150, "127.0.0.1");
+server.listen(0, "127.0.0.1", () => console.log(`fixture listening on ${server.address().port}`));
 for (const signal of ["SIGINT", "SIGTERM"]) process.on(signal, () => server.close());
