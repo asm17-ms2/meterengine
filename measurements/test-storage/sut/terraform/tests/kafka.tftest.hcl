@@ -103,3 +103,17 @@ run "consumers_need_a_cluster" {
 
   expect_failures = [aws_autoscaling_group.consumer]
 }
+
+run "consumer_threads_cover_every_partition_once" {
+  command = plan
+
+  variables {
+    kafka_enabled  = true
+    consumer_count = 2
+  }
+
+  assert {
+    condition     = aws_ssm_parameter.kafka["kafka-consumer-threads"].value == "3"
+    error_message = "Two consumer servers must run three threads each so that each of the six partitions gets its own thread."
+  }
+}

@@ -4,6 +4,8 @@
 locals {
   # TLS로 붙는 포트. 인증은 하지 않는다.
   kafka_tls_port = 9094
+  # backend가 만드는 event.ingest 토픽의 파티션 수
+  kafka_ingest_partitions = 6
   # 브로커가 Prometheus에 내는 JMX 지표와 서버 지표의 포트
   kafka_exporter_ports = {
     jmx  = 11001
@@ -156,6 +158,8 @@ resource "aws_ssm_parameter" "kafka" {
     "kafka-bootstrap-servers" = aws_msk_cluster.events[0].bootstrap_brokers_tls
     # 먼저 뜬 서버가 토픽을 만들고 나머지는 있는 것을 그대로 쓴다.
     "kafka-create-topics" = "true"
+    # 파티션마다 스레드 하나가 붙게, 파티션 수를 컨슈머 서버 대수로 나눈 값을 서버마다 띄운다.
+    "kafka-consumer-threads" = tostring(ceil(local.kafka_ingest_partitions / max(var.consumer_count, 1)))
   } : {}
 
   name  = "${local.param_path}/${each.key}"

@@ -458,7 +458,8 @@ curl -fo work/<RUN_ID>/<RUN_ID>-backend.log http://localhost:8000/<RUN_ID>-backe
 | MSK 클러스터 | `kafka.m7g.large` 브로커 3대, 가용 영역 세 곳(2a, 2b, 2c). 카프카 3.9, ZooKeeper 방식. TLS(9094 포트)만 열고 인증은 하지 않는다 |
 | 수집 서버 | 기존 오토스케일링 그룹. `ServerRole=ingest` 태그가 붙어 발행만 한다 |
 | 컨슈머 서버 | 오토스케일링 그룹 `meterengine-test-storage-consumer`. `ServerRole=consumer`, 대수 고정, ALB에 붙지 않는다 |
-| 서버가 읽는 값 | 파라미터 `event-write-path`, `kafka-bootstrap-servers`, `kafka-security-protocol`, `kafka-create-topics`. 켰을 때만 있다 |
+| 서버가 읽는 값 | 파라미터 `event-write-path`, `kafka-bootstrap-servers`, `kafka-security-protocol`, `kafka-create-topics`, `kafka-consumer-threads`. 켰을 때만 있다 |
+| 컨슈머 스레드 | 서버마다 파티션 수를 컨슈머 서버 대수로 나눈 만큼 띄워 파티션마다 스레드 하나가 붙는다. 2대면 3개씩이다 |
 | 토픽 | `event.ingest`(파티션 6, 복제 3, 보관 7일), `event.dlq`(파티션 1, 복제 3, 보관 30일). 먼저 뜬 backend가 만든다 |
 
 - `deploy.sh`가 서버의 `ServerRole` 태그를 읽어 backend에 `METERENGINE_ROLE`로 넘긴다. 태그가 없거나 `all`이면 한 서버가 전부 맡는다.
@@ -479,6 +480,27 @@ terraform -chdir=measurements/test-storage/sut/terraform apply \
 - 서버 없이 클러스터만 먼저 만들려면 `-var kafka_enabled=true`만 준다.
 - 이미 떠 있던 서버는 태그와 파라미터를 다시 읽지 않는다. 0대로 내렸다가 다시 띄운다.
 - `consumer_count`는 6까지다. `event.ingest`의 파티션이 6개라 그보다 많으면 남는 서버가 논다.
+
+### 값을 바꿔 가며 재기
+
+아래 값은 파라미터로 넣으면 다음에 뜨는 서버가 읽는다. 넣지 않으면 backend 기본값이다. 파라미터 이름은 환경변수 이름을 소문자와 하이픈으로 바꾼 것이다(`KAFKA_PRODUCER_LINGER_MS`는 `kafka-producer-linger-ms`).
+
+| 환경변수 | 기본값 | 무엇 |
+| --- | --- | --- |
+| `KAFKA_PRODUCER_LINGER_MS` | 5 | 프로듀서가 묶으려고 기다리는 시간(ms) |
+| `KAFKA_PRODUCER_BATCH_SIZE` | 16384 | 프로듀서 묶음 하나의 상한(바이트) |
+| `KAFKA_PRODUCER_COMPRESSION_TYPE` | none | 프로듀서 압축. `lz4`, `zstd` |
+| `KAFKA_PRODUCER_DELIVERY_TIMEOUT_MS` | 15000 | 프로듀서가 재시도까지 합쳐 기다리는 시간(ms) |
+| `KAFKA_PUBLISH_TIMEOUT` | 20s | 요청 스레드가 발행을 기다리는 상한. 위 값보다 길게 둔다 |
+| `KAFKA_CONSUMER_MAX_POLL_RECORDS` | 500 | 컨슈머가 한 트랜잭션에 넣는 묶음 크기 |
+| `KAFKA_CONSUMER_SESSION_TIMEOUT_MS` | 45000 | 죽은 컨슈머의 파티션을 다른 서버에 넘기기까지 기다리는 시간(ms) |
+
+```bash
+aws ssm put-parameter --overwrite --type String --name /meterengine/test-storage/kafka-producer-linger-ms --value 25
+```
+
+- 떠 있는 서버는 다시 읽지 않는다. 0대로 내렸다가 다시 띄운다.
+- 실험이 끝나면 넣은 파라미터를 지운다. Terraform이 만든 것이 아니라 끄기 apply로 지워지지 않는다.
 
 ### 끄기
 

@@ -9,6 +9,17 @@ import unittest
 
 COMPOSE_FILE = Path(__file__).resolve().parents[1] / "compose.prod.yml"
 KAFKA_ENV = ("METERENGINE_ROLE", "EVENT_WRITE_PATH", "KAFKA_BOOTSTRAP_SERVERS", "KAFKA_SECURITY_PROTOCOL", "KAFKA_CREATE_TOPICS")
+# 측정에서 바꿔 가며 재는 값과, 넘기지 않았을 때 backend가 쓰는 값.
+KAFKA_TUNING_DEFAULTS = {
+    "KAFKA_CONSUMER_THREADS": "1",
+    "KAFKA_CONSUMER_MAX_POLL_RECORDS": "500",
+    "KAFKA_CONSUMER_SESSION_TIMEOUT_MS": "45000",
+    "KAFKA_PRODUCER_LINGER_MS": "5",
+    "KAFKA_PRODUCER_BATCH_SIZE": "16384",
+    "KAFKA_PRODUCER_COMPRESSION_TYPE": "none",
+    "KAFKA_PRODUCER_DELIVERY_TIMEOUT_MS": "15000",
+    "KAFKA_PUBLISH_TIMEOUT": "20s",
+}
 
 
 def required_names():
@@ -16,7 +27,8 @@ def required_names():
 
 
 def backend_environment(kafka_values):
-    environment = {name: value for name, value in os.environ.items() if name not in KAFKA_ENV}
+    environment = {name: value for name, value in os.environ.items()
+                   if name not in KAFKA_ENV and name not in KAFKA_TUNING_DEFAULTS}
     environment.update({name: "dummy" for name in required_names()})
     environment["BACKEND_MEM_LIMIT"] = "768m"
     environment["SITE_DOMAIN"] = "billing.example.com"
@@ -43,6 +55,21 @@ class KafkaEnvironmentTest(unittest.TestCase):
         values = {"METERENGINE_ROLE": "consumer", "EVENT_WRITE_PATH": "kafka",
                   "KAFKA_BOOTSTRAP_SERVERS": "b-1.example:9094,b-2.example:9094", "KAFKA_SECURITY_PROTOCOL": "SSL",
                   "KAFKA_CREATE_TOPICS": "true"}
+        backend = backend_environment(values)
+        for name, value in values.items():
+            self.assertEqual(backend.get(name), value, name)
+
+    # staging, production과 같이 쓰는 파일이라, 값을 넘기지 않으면 지금 동작과 같아야 한다.
+    def test_compose_keeps_the_current_tuning_when_unset(self):
+        backend = backend_environment({})
+        for name, value in KAFKA_TUNING_DEFAULTS.items():
+            self.assertEqual(backend.get(name), value, name)
+
+    def test_compose_passes_the_tuning_values_when_set(self):
+        values = {"KAFKA_CONSUMER_THREADS": "3", "KAFKA_CONSUMER_MAX_POLL_RECORDS": "1000",
+                  "KAFKA_CONSUMER_SESSION_TIMEOUT_MS": "15000", "KAFKA_PRODUCER_LINGER_MS": "25",
+                  "KAFKA_PRODUCER_BATCH_SIZE": "65536", "KAFKA_PRODUCER_COMPRESSION_TYPE": "lz4",
+                  "KAFKA_PRODUCER_DELIVERY_TIMEOUT_MS": "30000", "KAFKA_PUBLISH_TIMEOUT": "35s"}
         backend = backend_environment(values)
         for name, value in values.items():
             self.assertEqual(backend.get(name), value, name)
