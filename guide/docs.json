@@ -64,5 +64,10 @@
   },
   "search": {
     "prompt": "가이드와 API 검색"
+  },
+  "seo": {
+    "metatags": {
+      "canonical": "https://docs.meterengine.com"
+    }
   }
 }
