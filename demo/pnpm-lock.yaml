@@ -8,6 +8,31 @@ importers:
 
   .: {}
 
+  cli:
+    dependencies:
+      '@meterengine/sdk':
+        specifier: workspace:*
+        version: link:../sdk
+      commander:
+        specifier: 15.1.0
+        version: 15.1.0
+    devDependencies:
+      '@types/node':
+        specifier: ^24
+        version: 24.19.2
+      eslint:
+        specifier: ^9
+        version: 9.39.5(supports-color@7.2.0)
+      eslint-plugin-check-file:
+        specifier: 3.3.2
+        version: 3.3.2(eslint@9.39.5(supports-color@7.2.0))
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+      typescript-eslint:
+        specifier: ^8
+        version: 8.72.0(eslint@9.39.5(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
+
   llm-service:
     dependencies:
       '@ant-design/icons':
@@ -1214,6 +1239,10 @@ packages:
 
   color-name@1.1.4:
     resolution: {integrity: sha512-dOy+3AuW3a2wNbZHIuMZpTcgjGuLU/uBL/ubcZF9OXbDo8ff4O8yVp5Bf0efS8uEoYo5q4Fx7dY9OgQGXgAsQA==}
+
+  commander@15.1.0:
+    resolution: {integrity: sha512-cgnQ88TRrWcC7pVq46RzJVRMktu3W2RcbnoidnfBsl1bmDCBwJS/udcIZpKoCrbAYYaCqsz1yZCVIgbIaU3ddQ==}
+    engines: {node: '>=22.12.0'}
 
   compute-scroll-into-view@3.1.1:
     resolution: {integrity: sha512-VRhuHOLoKYOy4UbilLbUzbYg93XLjv2PncJC50EuTWPA3gaja1UjBsUP/D/9/juV3vQFr6XBEzn9KCAHdUvOHw==}
@@ -3454,6 +3483,8 @@ snapshots:
       color-name: 1.1.4
 
   color-name@1.1.4: {}
+
+  commander@15.1.0: {}
 
   compute-scroll-into-view@3.1.1: {}
 
