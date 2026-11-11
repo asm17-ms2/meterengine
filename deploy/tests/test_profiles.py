@@ -18,6 +18,8 @@ CORE = {"frontend", "backend"}
 AGENTS = {"node-exporter", "cadvisor"}
 # 예열은 값이 없으면 건너뛰는 선택 기능이라 빈 값을 그대로 넘긴다.
 OPTIONAL_EMPTY = {"INGEST_WARMUP_API_KEY", "INGEST_WARMUP_ORGANIZATION_ID", "INGEST_WARMUP_CUSTOMER_ID"}
+# 가입 메일과 캡차는 켤 때만 값이 필요하고, 켰는데 비어 있으면 백엔드가 뜨지 않는다.
+OPTIONAL_EMPTY |= {"MAIL_FROM", "TURNSTILE_SECRET_KEY", "TURNSTILE_ALLOWED_HOSTNAMES", "TURNSTILE_SITE_KEY"}
 CORE_ENV = {
     "DB_HOST": "db", "DB_PORT": "5432", "DB_NAME": "app", "DB_USERNAME": "owner", "DB_PASSWORD": "secret",
     "CRYPTO_ENCRYPTION_KEY": "key", "OPERATOR_EMAIL": "a@example.invalid", "OPERATOR_PASSWORD": "secret",

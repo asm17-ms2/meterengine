@@ -13,7 +13,7 @@ export type SessionResponse = {
   expires_at: string;
 };
 export type SessionTokenResponse = Omit<SessionResponse, "organizations"> & { token: string };
-export type SignupResponse = { organization: SessionOrganization; user_account: SessionUserAccount };
+export type SignupResponse = { organization: SessionOrganization; user_account: SessionUserAccount & { email_verified?: boolean } };
 export type OrganizationResponse = SessionOrganization & { created_at: string };
 export type UserAccountResponse = SessionUserAccount & {
   organizations: SessionOrganization[];

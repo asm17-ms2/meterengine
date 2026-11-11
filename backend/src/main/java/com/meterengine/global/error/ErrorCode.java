@@ -16,6 +16,7 @@ public enum ErrorCode {
   TOSS_PAYMENTS_TEST_CODE_IN_LIVE_MODE(HttpStatus.BAD_REQUEST, "실제 모드에서는 토스페이먼츠 테스트 코드를 쓸 수 없습니다"),
   INVALID_WEBHOOK_URL(HttpStatus.BAD_REQUEST, "올바른 웹훅 URL을 입력하세요"),
   INVALID_WEBHOOK_EVENT_TYPE(HttpStatus.BAD_REQUEST, "지원하지 않는 웹훅 이벤트 종류입니다"),
+  CAPTCHA_FAILED(HttpStatus.BAD_REQUEST, "자동 가입 방지 확인을 통과하지 못했습니다. 확인을 다시 마친 뒤 보내세요"),
 
   // 401 Unauthorized
   AUTHENTICATION_REQUIRED(HttpStatus.UNAUTHORIZED, "인증 정보가 없습니다"),
@@ -26,6 +27,7 @@ public enum ErrorCode {
   ORGANIZATION_NOT_ACTIVE(HttpStatus.FORBIDDEN, "활성 상태가 아닌 도입사입니다"),
   ENVIRONMENT_MISMATCH(HttpStatus.FORBIDDEN, "API 키의 환경과 요청 환경이 다릅니다"),
   CONSENT_REQUIRED(HttpStatus.FORBIDDEN, "서비스 이용 안내와 개인정보 처리 안내에 본인이 동의해야 합니다"),
+  EMAIL_NOT_VERIFIED(HttpStatus.FORBIDDEN, "이메일 인증을 마치지 않은 계정입니다"),
 
   // 404 Not Found
   CUSTOMER_NOT_FOUND(HttpStatus.NOT_FOUND, "고객을 찾을 수 없습니다"),
@@ -46,6 +48,7 @@ public enum ErrorCode {
   WEBHOOK_ENDPOINT_NOT_FOUND(HttpStatus.NOT_FOUND, "웹훅 엔드포인트를 찾을 수 없습니다"),
   WEBHOOK_DELIVERY_NOT_FOUND(HttpStatus.NOT_FOUND, "웹훅 전송 기록을 찾을 수 없습니다"),
   INVITATION_NOT_FOUND(HttpStatus.NOT_FOUND, "초대 링크를 찾을 수 없습니다"),
+  EMAIL_VERIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "인증 링크가 없거나 만료되었거나 이미 사용되었습니다"),
 
   // 405 Method Not Allowed
   METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "이 경로에서 허용하지 않는 메서드입니다"),
@@ -109,7 +112,8 @@ public enum ErrorCode {
 
   // 503 Service Unavailable
   REQUEST_TIMED_OUT(HttpStatus.SERVICE_UNAVAILABLE, "요청 처리 시간이 초과되었습니다"),
-  TOSS_PAYMENTS_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "토스페이먼츠 응답을 확인하지 못했습니다");
+  TOSS_PAYMENTS_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "토스페이먼츠 응답을 확인하지 못했습니다"),
+  CAPTCHA_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "자동 가입 방지 확인 결과를 받지 못했습니다. 잠시 뒤 다시 시도하세요");
 
   private final HttpStatus status;
   private final String code;

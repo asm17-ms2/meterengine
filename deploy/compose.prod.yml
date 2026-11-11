@@ -41,6 +41,14 @@ services:
       # SSM에 invoice-auto-finalize-enabled가 없으면 자동 확정은 꺼진 채로 뜬다.
       INVOICE_AUTO_FINALIZE_ENABLED: ${INVOICE_AUTO_FINALIZE_ENABLED:-false}
       WEBHOOK_ENABLED: ${WEBHOOK_ENABLED:-true}
+      # SSM에 값이 없으면 가입 메일 인증과 캡차는 꺼지고 메일은 로그로만 남는다.
+      EMAIL_VERIFICATION_ENABLED: ${EMAIL_VERIFICATION_ENABLED:-false}
+      METERENGINE_PUBLIC_ORIGIN: https://${SITE_DOMAIN:?SITE_DOMAIN이 없다}
+      MAIL_SENDER: ${MAIL_SENDER:-log}
+      MAIL_FROM: ${MAIL_FROM:-}
+      TURNSTILE_ENABLED: ${TURNSTILE_ENABLED:-false}
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
+      TURNSTILE_ALLOWED_HOSTNAMES: ${TURNSTILE_ALLOWED_HOSTNAMES:-}
       # 키가 없으면 백엔드가 예열을 건너뛴다.
       INGEST_WARMUP_API_KEY: ${INGEST_WARMUP_API_KEY:-}
       INGEST_WARMUP_ORGANIZATION_ID: ${INGEST_WARMUP_ORGANIZATION_ID:-}
@@ -69,6 +77,8 @@ services:
       METERENGINE_API_BASE_URL: http://backend:8080
       # 공개 인보이스 조회는 이 origin에서 온 요청만 받는다. 별칭은 ALB가 SITE_DOMAIN으로 리다이렉트한다.
       METERENGINE_PUBLIC_ORIGIN: https://${SITE_DOMAIN:?SITE_DOMAIN이 없다}
+      # 비어 있으면 가입 화면과 인증 메일 다시 받기 화면에 캡차 위젯을 띄우지 않는다.
+      TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
       # Node 기본 5초는 ALB idle(130초)보다 짧아, ALB가 닫힌 연결을 재사용하면 502가 난다.
       KEEP_ALIVE_TIMEOUT: "140000"
     ports:
