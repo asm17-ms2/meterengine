@@ -8,5 +8,5 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const isValidState = isMatchingState(flow, request.nextUrl.searchParams.get("state"));
   const isCanceled = request.nextUrl.searchParams.get("code") === "PAY_PROCESS_CANCELED";
   await finishRegistration(token, { status: !isValidState ? "invalid" : isCanceled ? "canceled" : "rejected" });
-  return redirectToRegistrationResult(request.url, token);
+  return redirectToRegistrationResult(token);
 }

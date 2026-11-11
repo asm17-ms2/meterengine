@@ -2,7 +2,6 @@ import "server-only";
 
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
-import { NextResponse } from "next/server";
 import { config } from "@/lib/config";
 import type { PaymentMethodResponse, RegistrationFlow, RegistrationOutcome } from "./types";
 
@@ -91,14 +90,16 @@ export async function finishRegistration(token: string, outcome: RegistrationOut
   store.set(cookieName(token, "flow"), "", { ...COOKIE_OPTIONS, maxAge: 0 });
 }
 
-export function redirectToRegistrationResult(requestUrl: string, token: string) {
-  const response = NextResponse.redirect(
-    new URL(`/payment-method-registrations/${encodeURIComponent(token)}/complete`, requestUrl),
-    303,
-  );
-  response.headers.set("Cache-Control", "no-store");
-  response.headers.set("Referrer-Policy", "no-referrer");
-  return response;
+// standalone 서버의 request.url은 Host가 아니라 HOSTNAME, PORT로 만들어진다. 절대 주소로 보내면 프록시 뒤에서 0.0.0.0으로 간다.
+export function redirectToRegistrationResult(token: string) {
+  return new Response(null, {
+    status: 303,
+    headers: {
+      Location: `/payment-method-registrations/${encodeURIComponent(token)}/complete`,
+      "Cache-Control": "no-store",
+      "Referrer-Policy": "no-referrer",
+    },
+  });
 }
 
 export async function createBillingKey(
