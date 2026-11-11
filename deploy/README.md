@@ -640,6 +640,7 @@ EC2 `meterengine-monitoring`(t4g.medium) 한 대가 모든 환경의 앱 서버�
 - 지표 보관은 15일 또는 20GB 중 먼저 닿는 쪽에서 오래된 것부터 지운다. 기록은 서버 디스크에만 있어 서버를 다시 만들면 지워진다.
 - 서버가 읽는 파라미터 이름은 `monitoring/parameters.json` 하나가 정한다. `start.sh`와 서버 역할이 이 파일을 같이 읽어, 목록 밖 파라미터는 읽지 못한다. 환경을 더하면 이 파일과 `compose.monitoring.yml`, `monitoring/prometheus/prometheus.yml`을 같이 고친다.
 - 환경의 `db-exporter-password`가 없으면 그 환경 exporter는 띄우지 않는다.
+- 저장소에 주소를 적을 수 없는 대상은 서버의 `/etc/meterengine/prometheus-targets`에 써 둔 파일에서 읽는다. 지금은 만들 때마다 주소가 바뀌는 MSK 브로커(`kafka-jmx-<환경>.json`, `kafka-node-<환경>.json`)이고, 측정 환경의 `kafka-monitoring-targets.sh`가 쓴다. 파일이 없으면 긁지 않는다. 서버를 다시 만들면 이 파일은 사라지므로 다시 쓴다.
 
 서버를 만들면 `/meterengine/monitoring/` 아래 비밀 파라미터가 생긴다. Terraform은 값을 쓰기만 하고 읽거나 되돌리지 않는다.
 

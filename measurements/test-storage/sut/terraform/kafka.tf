@@ -98,6 +98,14 @@ resource "aws_msk_configuration" "events" {
   PROPERTIES
 }
 
+# 실험한 날의 로그만 보면 되므로 짧게 두고 지운다. 클러스터를 지우면 같이 지워진다.
+resource "aws_cloudwatch_log_group" "kafka_broker" {
+  count = var.kafka_enabled ? 1 : 0
+
+  name              = "/meterengine/${var.sut_name}/kafka-broker"
+  retention_in_days = 7
+}
+
 resource "aws_msk_cluster" "events" {
   count = var.kafka_enabled ? 1 : 0
 
@@ -133,6 +141,16 @@ resource "aws_msk_cluster" "events" {
   configuration_info {
     arn      = aws_msk_configuration.events[0].arn
     revision = aws_msk_configuration.events[0].latest_revision
+  }
+
+  # 브로커를 재부팅했을 때 리더를 언제 다시 뽑았는지는 브로커 로그에만 남는다.
+  logging_info {
+    broker_logs {
+      cloudwatch_logs {
+        enabled   = true
+        log_group = aws_cloudwatch_log_group.kafka_broker[0].name
+      }
+    }
   }
 
   open_monitoring {

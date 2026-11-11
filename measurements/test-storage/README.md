@@ -462,6 +462,7 @@ curl -fo work/<RUN_ID>/<RUN_ID>-backend.log http://localhost:8000/<RUN_ID>-backe
 | 컨슈머 서버 | 오토스케일링 그룹 `meterengine-test-storage-consumer`. `ServerRole=consumer`, 대수 고정, ALB에 붙지 않는다 |
 | 서버가 읽는 값 | 파라미터 `event-write-path`, `kafka-bootstrap-servers`, `kafka-security-protocol`, `kafka-create-topics`, `kafka-consumer-threads`. 켰을 때만 있다 |
 | 컨슈머 스레드 | 서버마다 파티션 수를 컨슈머 서버 대수로 나눈 만큼 띄워 파티션마다 스레드 하나가 붙는다. 2대면 3개씩이다 |
+| 브로커 로그 | CloudWatch Logs 그룹 `/meterengine/test-storage/kafka-broker`, 7일 보관. 브로커를 재부팅했을 때 리더를 다시 뽑은 시각을 여기서 본다 |
 | 토픽 | `event.ingest`(파티션 6, 복제 3, 보관 7일), `event.dlq`(파티션 1, 복제 3, 보관 30일). 먼저 뜬 backend가 만든다 |
 
 - `deploy.sh`가 서버의 `ServerRole` 태그를 읽어 backend에 `METERENGINE_ROLE`로 넘긴다. 태그가 없거나 `all`이면 한 서버가 전부 맡는다.
@@ -482,6 +483,18 @@ terraform -chdir=measurements/test-storage/sut/terraform apply \
 - 서버 없이 클러스터만 먼저 만들려면 `-var kafka_enabled=true`만 준다.
 - 이미 떠 있던 서버는 태그와 파라미터를 다시 읽지 않는다. 0대로 내렸다가 다시 띄운다.
 - `consumer_count`는 6까지다. `event.ingest`의 파티션이 6개라 그보다 많으면 남는 서버가 논다.
+
+### 브로커 지표
+
+브로커 주소는 클러스터를 만들 때마다 바뀌어 수집 설정에 적어 둘 수 없다. 클러스터를 만든 뒤 한 번 부르면 공용 모니터링 서버의 Prometheus가 브로커 3대를 긁는다.
+
+```bash
+measurements/test-storage/sut/scripts/kafka-monitoring-targets.sh register
+```
+
+- 서버 지표(CPU, 디스크, 네트워크)는 15초, 카프카 내부 지표는 60초마다 긁는다. AWS가 내부 지표를 60초보다 자주 긁지 말라고 한다.
+- Prometheus에서 `up{job=~"kafka-.*", env="test-storage"}`가 브로커마다 1이면 긁히는 것이다.
+- 끄기 전에 `kafka-monitoring-targets.sh clear`로 대상 파일을 지운다. 남겨 두면 없는 브로커가 down으로 보인다.
 
 ### 값을 바꿔 가며 재기
 

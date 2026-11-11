@@ -117,3 +117,16 @@ run "consumer_threads_cover_every_partition_once" {
     error_message = "Two consumer servers must run three threads each so that each of the six partitions gets its own thread."
   }
 }
+
+run "broker_logs_are_kept_for_the_experiment" {
+  command = plan
+
+  variables {
+    kafka_enabled = true
+  }
+
+  assert {
+    condition     = aws_msk_cluster.events[0].logging_info[0].broker_logs[0].cloudwatch_logs[0].enabled && aws_cloudwatch_log_group.kafka_broker[0].retention_in_days == 7
+    error_message = "Leader elections during a broker reboot are visible only in broker logs."
+  }
+}
