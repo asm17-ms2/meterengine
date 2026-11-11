@@ -1,12 +1,16 @@
 import { test, expect, type Page } from "@playwright/test";
 
-const FIXTURE_URL = "http://127.0.0.1:38148";
+import { fixtureUrl, frontendOrigin } from "./contract-stack";
+
+const FIXTURE_URL = fixtureUrl();
+const FRONTEND_ORIGIN = frontendOrigin();
+test.use({ baseURL: FRONTEND_ORIGIN });
 const LOGIN_PASSWORD = "contract-password";
 const ORGANIZATION_ID = "11111111-1111-4111-8111-111111111111";
 const WEBHOOK_ENDPOINT_ID = "99999999-9999-4999-8999-999999999999";
 
 async function expectTenantUrl(page: Page, pathname: string) {
-  await expect(page).toHaveURL(url => url.origin === "http://localhost:33148" && url.pathname === pathname && url.searchParams.size === 1 && url.searchParams.get("organization_id") === ORGANIZATION_ID);
+  await expect(page).toHaveURL(url => url.origin === FRONTEND_ORIGIN && url.pathname === pathname && url.searchParams.size === 1 && url.searchParams.get("organization_id") === ORGANIZATION_ID);
 }
 
 async function login(page: Page, email = "member@contract.local", returnTo = "/customers") {
@@ -30,7 +34,7 @@ test("overview keeps the selected month and shows unresolved invoices from every
   await expect(unresolved).toBeVisible();
   await expect(unresolved).toContainText("2026-09");
   const href = await unresolved.getByRole("link", { name: "지난달 실패 고객", exact: true }).getAttribute("href");
-  const target = new URL(href!, "http://localhost:33148");
+  const target = new URL(href!, FRONTEND_ORIGIN);
   expect(target.pathname).toBe(`/payments/${invoiceId}`);
   expect(target.searchParams.get("organization_id")).toBe(ORGANIZATION_ID);
   // 직접 쓴 월은 Enter 없이 조회를 눌러도 반영한다.
@@ -60,7 +64,7 @@ test("public health, gated routes, expired session and return URL", async ({ pag
     await page.goto(path);
     await expect(page).toHaveURL(/\/login\?returnTo=/);
   }
-  await page.context().addCookies([{ name: "me_session", value: "expired-session", url: "http://localhost:33148" }]);
+  await page.context().addCookies([{ name: "me_session", value: "expired-session", url: FRONTEND_ORIGIN }]);
   await page.goto("/customers");
   await expect(page).toHaveURL(/\/login\?reason=expired&returnTo=%2Fcustomers$/);
   await login(page, "member@contract.local", "/customers");
@@ -71,7 +75,7 @@ test("public health, gated routes, expired session and return URL", async ({ pag
 });
 
 test("signup sends displayed consent versions without stale Bearer or a password-bearing follow-up", async ({ page, request }) => {
-  await page.context().addCookies([{ name: "me_session", value: "expired-session", url: "http://localhost:33148" }]);
+  await page.context().addCookies([{ name: "me_session", value: "expired-session", url: FRONTEND_ORIGIN }]);
   await page.goto("/signup");
   await page.getByLabel("도입사 이름", { exact: true }).fill("새 도입사");
   await page.getByLabel("담당자 이름", { exact: true }).fill("새 담당자");
@@ -530,7 +534,7 @@ test("the operator's own card keeps both actions on the same top edge when only 
 });
 
 test("accepting an invitation as a new account does not send a stale session", async ({ page, request }) => {
-  await page.context().addCookies([{ name: "me_session", value: "stale-session", url: "http://localhost:33148" }]);
+  await page.context().addCookies([{ name: "me_session", value: "stale-session", url: FRONTEND_ORIGIN }]);
   await page.goto("/organization-invitations/me_invite_ContractInvitation00000000000001");
   await page.getByLabel(/^이름/).fill("초대 받은 사용자");
   await page.getByLabel(/^비밀번호/).fill("invited-password");
@@ -869,7 +873,7 @@ test("server action replay on a public route cannot create a customer without a 
   await page.context().clearCookies();
   expect((await page.context().cookies()).some(cookie => cookie.name === "me_session")).toBe(false);
   await page.request.post("/login", {
-    headers: { "Next-Action": captured.headers()["next-action"], "Content-Type": captured.headers()["content-type"], Origin: "http://localhost:33148" },
+    headers: { "Next-Action": captured.headers()["next-action"], "Content-Type": captured.headers()["content-type"], Origin: FRONTEND_ORIGIN },
     data: captured.postDataBuffer()!,
     maxRedirects: 0,
   });

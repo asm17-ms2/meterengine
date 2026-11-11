@@ -1,6 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const FIXTURE_URL = "http://127.0.0.1:38149";
+import { fixtureUrl, frontendOrigin } from "./contract-stack";
+
+const FIXTURE_URL = fixtureUrl();
+test.use({ baseURL: frontendOrigin() });
 const TOKEN = "a".repeat(43);
 const REGISTRATION_PATH = `/payment-method-registrations/${TOKEN}`;
 
