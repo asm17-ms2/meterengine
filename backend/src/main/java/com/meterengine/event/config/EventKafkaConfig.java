@@ -1,8 +1,10 @@
 package com.meterengine.event.config;
 
+import com.meterengine.event.client.EventConsumeRetryListener;
 import com.meterengine.global.config.ConditionalOnServerRole;
 import com.meterengine.global.config.ServerRole;
 import java.time.Duration;
+import java.util.Map;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.common.config.TopicConfig;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -56,9 +58,16 @@ public class EventKafkaConfig {
   // 저장에 실패하면 오프셋을 넘기지 않고 같은 묶음을 될 때까지 다시 읽는다. DB가 돌아오면 이어서 간다.
   @Bean
   @ConditionalOnServerRole({ServerRole.ALL, ServerRole.CONSUMER})
-  DefaultErrorHandler eventIngestErrorHandler(EventKafkaProperties properties) {
-    return new DefaultErrorHandler(
-        new FixedBackOff(
-            properties.consumeRetryInterval().toMillis(), FixedBackOff.UNLIMITED_ATTEMPTS));
+  DefaultErrorHandler eventIngestErrorHandler(
+      EventKafkaProperties properties, EventConsumeRetryListener eventConsumeRetryListener) {
+    DefaultErrorHandler errorHandler =
+        new DefaultErrorHandler(
+            new FixedBackOff(
+                properties.consumeRetryInterval().toMillis(), FixedBackOff.UNLIMITED_ATTEMPTS));
+    // 기본값은 ClassCastException 같은 몇 가지를 다시 하지 않고 묶음을 버린다. 수집 서버가 이미 받았다고 답한
+    // 이벤트라 버릴 수 없다. 우리 버그여도 그 자리에 멈춰, 고친 코드가 배포되면 이어서 가게 한다.
+    errorHandler.setClassifications(Map.of(), true);
+    errorHandler.setRetryListeners(eventConsumeRetryListener);
+    return errorHandler;
   }
 }
