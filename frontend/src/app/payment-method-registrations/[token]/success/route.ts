@@ -7,22 +7,22 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const { token } = await params;
   if (!isValidRegistrationToken(token)) return new Response(null, { status: 404 });
   const previous = await readRegistrationOutcome(token);
-  if (previous?.status === "success") return redirectToRegistrationResult(request.url, token);
+  if (previous?.status === "success") return redirectToRegistrationResult(token);
   const flow = await readRegistrationFlow(token);
   const authKey = request.nextUrl.searchParams.get("authKey");
   const customerKey = request.nextUrl.searchParams.get("customerKey");
   if (!isMatchingState(flow, request.nextUrl.searchParams.get("state")) || !authKey || authKey.length > 300 || /[\u0000-\u001f]/.test(authKey) || customerKey !== flow?.customerKey) {
     await finishRegistration(token, { status: "invalid" });
-    return redirectToRegistrationResult(request.url, token);
+    return redirectToRegistrationResult(token);
   }
   const registration = await requestApi<PaymentMethodRegistrationResponse>(`/v1/payment-method-registrations/${encodeURIComponent(token)}`);
   if (!registration.ok) {
     await finishRegistration(token, { status: registration.error.status === 404 ? "expired" : "unavailable" });
-    return redirectToRegistrationResult(request.url, token);
+    return redirectToRegistrationResult(token);
   }
   if (registration.data.customer_key !== customerKey || !flow) {
     await finishRegistration(token, { status: "invalid" });
-    return redirectToRegistrationResult(request.url, token);
+    return redirectToRegistrationResult(token);
   }
   const result = await createBillingKey(token, authKey, customerKey, flow.consentDocumentVersion);
   await finishRegistration(token, result.ok ? {
@@ -32,5 +32,5 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     mode: result.data.mode,
     cardNumber: result.data.card_number,
   } : { status: result.status === 404 ? "expired" : result.status === 400 ? "rejected" : "unavailable" });
-  return redirectToRegistrationResult(request.url, token);
+  return redirectToRegistrationResult(token);
 }

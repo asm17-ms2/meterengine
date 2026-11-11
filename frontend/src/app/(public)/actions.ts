@@ -49,7 +49,7 @@ export async function signupAction(_prev: ActionState, data: FormData): Promise<
   if (organizationName.length > NAME_MAX_LENGTH || name.length > NAME_MAX_LENGTH) return { message: "도입사 이름과 담당자 이름은 255자 이내로 입력하세요." };
   if (!isValidEmail(email)) return { message: "올바른 이메일 주소를 입력하세요." };
   if (!isValidPassword(password)) return { message: PASSWORD_RULE_MESSAGE };
-  if (CONSENT_DOCUMENTS.some(({ document }) => data.get(document) !== "on")) return { message: "두 안내를 읽고 필수 동의에 체크하세요." };
+  if (CONSENT_DOCUMENTS.some(({ document }) => data.get(document) !== "on")) return { message: "이용약관과 개인정보 처리방침을 읽고 두 항목에 모두 체크하세요." };
   const result = await requestApi<SignupResponse>("/v1/signups", {
     clientIp: (await headers()).get("x-meterengine-client-ip") ?? undefined,
     method: "POST", body: { organization_name: organizationName, name, email, password,

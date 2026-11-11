@@ -46,9 +46,11 @@ npx mint dev --port 3333
 
 ## 배포
 
-- 아직 Mintlify에 연결하지 않았다. 연결하면 배포 브랜치는 main, Git Settings의 "docs.json is in a subdirectory"에 `/guide`를 넣는다. develop이 main에 머지될 때 production 배포와 함께 공개된다.
+- 공개 주소는 https://docs.meterengine.com 이다. Mintlify 기본 주소 https://meterengine.mintlify.site 도 같은 사이트를 보인다.
+- Mintlify GitHub App이 이 레포의 main을 읽어 배포한다. Git Settings의 "docs.json is in a subdirectory"는 `/guide`다. develop이 main에 머지될 때 production 배포와 함께 공개된다.
+- 도메인 레코드(TXT 두 개와 CNAME)는 `deploy/terraform/production/dns.tf`가 정한다. TXT 값은 Mintlify 대시보드의 Custom domain 화면에 나온 값과 같아야 한다.
 - Mintlify 웹 편집기는 main으로 직접 PR을 열어 브랜치 규칙과 부딪히므로 쓰지 않는다.
-- 본문은 문서 도메인을 쓰지 않고 절대 경로 링크만 쓴다. 문서 주소는 정하지 않았다.
+- 본문은 문서 도메인을 쓰지 않고 절대 경로 링크만 쓴다.
 
 ## 확인 필요 주석
 

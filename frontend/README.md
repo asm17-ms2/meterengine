@@ -31,7 +31,7 @@ pnpm dev
 - http://localhost:3000 의 `/`는 로그인 여부와 관계없이 서비스 소개를 보여 준다.
 - 다른 기계에서 이 dev 서버를 볼 수 있다 (`next.config.ts`의 `allowedDevOrigins`).
 - 개발 모드에서는 기존 목록의 상태를 `?state=empty`, `?state=loading`, `?state=error`로 바꿔 본다. 프로덕션 빌드에서는 무시된다.
-- 로그인 세션이 없으면 `src/proxy.ts`가 공개 화면(서비스 소개, 로그인, 가입, 고객 조회 링크 등) 밖의 경로를 로그인 화면으로 보낸다.
+- 로그인 세션이 없으면 `src/proxy.ts`가 공개 화면(서비스 소개, 로그인, 가입, 이용약관, 개인정보 처리방침, 고객 조회 링크 등) 밖의 경로를 로그인 화면으로 보낸다.
 - `src/proxy.ts`는 사용자가 보낸 `X-MeterEngine-Client-IP`를 버리고 `X-Forwarded-For`의 맨 오른쪽 값으로 다시 쓴다. 로그인과 가입은 이 값을 백엔드 인증 요청 한도에 넘긴다.
 
 조회 조건은 다음 쿼리스트링으로 받는다.
@@ -184,6 +184,7 @@ docker run -p 3000:3000 \
 | `/login` | 로그인. 계정 역할에 따라 도입사 업무나 플랫폼 운영 화면으로 간다 |
 | `/signup` | 도입사 가입 신청과 필수 동의 |
 | `/pending` | 가입 신청 뒤 승인 안내 |
+| `/terms`, `/privacy` | 로그인 없이 이용약관과 개인정보 처리방침 전문 확인 |
 | `/organizations` | 소속 도입사 선택과 전환 |
 | `/account/consents` | 첫 로그인 때 새 비밀번호 설정과 계정 이용 안내 확인 |
 | `/organization-invitations/{token}` | 초대 링크 확인과 수락 (기존 계정 로그인 또는 새 계정 설정) |
@@ -232,4 +233,4 @@ pnpm test:e2e:real
 
 실제 검증용 FE는 `33147`을 쓴다. `E2E_OPERATOR_EMAIL`, `E2E_OPERATOR_PASSWORD`는 해당 테스트 DB의 소속 없는 운영자 계정이어야 한다. 결과는 `/tmp/meterengine-fe-onboarding-results-real`, 계약 테스트 결과는 같은 경로의 `-contract`에 둔다.
 
-가입 동의 안내는 `2026-10-26-preview` 개발 검증용이다. 정식 약관과 개인정보 처리방침은 서비스 공개 전에 확정해야 한다. S1에 동의 이력 조회 API가 없어 승인 화면에서 동의 내역은 조회하지 않는다.
+가입, 초대 수락, 첫 로그인 화면은 `/terms`, `/privacy`를 동의 문서로 건다. 서버에 남기는 판은 `src/lib/auth/consents.ts`의 `CONSENT_VERSION`(시행일)이고, 두 문서의 본문을 바꾸면 이 날짜도 바꾼다. 두 문서는 법률 검토를 받지 않았다. S1에 동의 이력 조회 API가 없어 승인 화면에서 동의 내역은 조회하지 않는다.

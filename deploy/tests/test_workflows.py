@@ -10,6 +10,7 @@ WORKFLOWS = Path(__file__).resolve().parents[2] / ".github/workflows"
 DEPLOY = WORKFLOWS / "deploy.yml"
 PRODUCTION = WORKFLOWS / "cd-production.yml"
 STAGING = WORKFLOWS / "cd-staging.yml"
+MEASUREMENT = WORKFLOWS / "deploy-test-sjpark.yml"
 CI = WORKFLOWS / "ci.yml"
 ROOT = WORKFLOWS.parents[1]
 README = ROOT / "deploy/README.md"
@@ -30,8 +31,17 @@ class WorkflowTest(unittest.TestCase):
         self.assertIn("environment: staging\n", STAGING.read_text())
         self.assertIn("role/meterengine-staging-deploy", STAGING.read_text())
 
+    def test_measurement_deploy_runs_only_by_hand_on_measurement_environments(self):
+        source = MEASUREMENT.read_text()
+        triggers = re.search(r"^on:\n((?:  .*\n|\n)*)", source, re.M).group(1)
+        self.assertEqual(re.findall(r"^  (\w+):", triggers, re.M), ["workflow_dispatch"])
+        self.assertEqual(re.findall(r"^          - (\S+)$", source, re.M), ["test-sjpark-m7g", "test-sjpark-t4g"])
+        self.assertIn("uses: ./.github/workflows/deploy.yml\n", source)
+        self.assertIn("aws_role: arn:aws:iam::928618307647:role/meterengine-${{ inputs.environment }}-deploy\n", source)
+        self.assertIn("group: deploy-${{ inputs.environment }}\n", source)
+
     def test_no_hardcoded_instance_id(self):
-        for path in (DEPLOY, PRODUCTION, STAGING):
+        for path in (DEPLOY, PRODUCTION, STAGING, MEASUREMENT):
             self.assertIsNone(re.search(r"\bi-0[0-9a-f]+", path.read_text()), path.name)
 
     def test_jobs_run_in_the_github_environment(self):
@@ -85,7 +95,8 @@ class WorkflowTest(unittest.TestCase):
 
     def test_ci_runs_deploy_tests_for_every_file_they_read(self):
         source = CI.read_text()
-        for pattern in (".github/workflows/deploy.yml", ".github/workflows/cd-staging.yml", ".github/workflows/cd-production.yml", "measurements/*/lib/common.sh",
+        for pattern in (".github/workflows/deploy.yml", ".github/workflows/cd-staging.yml", ".github/workflows/cd-production.yml",
+                        ".github/workflows/deploy-test-sjpark.yml", "measurements/*/lib/common.sh",
                         "measurements/*/sut/terraform/iam.tf", "measurements/*/sut/terraform/locals.tf",
                         "measurements/*/sut/terraform/variables.tf",
                         "measurements/*/sut/scripts/remote/upsert-exporter-user.sh", "measurements/*/sut/scripts/sut-deploy.sh",

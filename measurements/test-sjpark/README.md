@@ -24,6 +24,7 @@
 | --- | --- |
 | `sut/module/` | 측정 전용 모듈. 운영 `app_fleet`을 복사한 ALB, 오토스케일링 그룹, 확장 정책에 스냅샷 RDS, 파라미터, 자동 중지를 더했다 |
 | `sut/m7g/`, `sut/t4g/` | 루트. 사양 값만 다르고 `deploy/tests`가 이를 확인한다 |
+| `sut/images/` | 두 환경이 같이 쓰는 측정 ECR `meterengine-test-sjpark-backend`, `meterengine-test-sjpark-frontend` |
 | `sut/scripts/` | 배포, 켜고 끄기, 앱 서버 목록, exporter 사용자 만들기. 첫 인자가 사양이다 |
 | `lib/common.sh` | 스크립트가 같이 쓰는 함수 |
 | [`loadgen/`](loadgen/README.md) | 부하 발생기 |
@@ -32,7 +33,7 @@
 - 자원 이름 접두는 `meterengine-test-sjpark-<사양>`, 도메인은 `test-sjpark-<사양>.meterengine.com`, 파라미터 경로는 `/meterengine/test-sjpark-<사양>`이다.
 - 두 DB는 같은 프로덕션 스냅샷에서 복원한다. 스냅샷은 두 루트의 `snapshot_identifier`이고, 바꾸면 DB가 그 스냅샷에서 다시 만들어진다.
 - 앱 서버는 staging, production과 같은 미리 구운 이미지로 뜨고, 부팅 스크립트가 버전 파라미터 `app-version`의 커밋으로 배포한다. 부팅 템플릿은 운영 파일을 사본 없이 읽어, 그 파일이 바뀌면 다음 apply에서 서버가 바뀐다. 측정 중에는 apply 하지 않는다.
-- VPC, 서브넷, RDS 서브넷 그룹, 호스티드 존, ECR 이미지는 개발 서버와 같이 쓴다. 호스티드 존에는 SUT 도메인과 인증서 검증 레코드를 더하고, 나머지는 읽기만 한다.
+- VPC, 서브넷, RDS 서브넷 그룹, 호스티드 존은 개발 서버와 같이 쓴다. 호스티드 존에는 SUT 도메인과 인증서 검증 레코드를 더하고, 나머지는 읽기만 한다.
 - 역할은 자기 파라미터 경로만 읽고 `/meterengine/prod`와 `/meterengine/production`은 읽지 못한다.
 - 공용 모니터링 서버가 앱 서버와 DB를 긁는다. 앱 서버에는 태그 `Role=app`, `Environment=test-sjpark-<사양>`이 붙고 `Environment`가 `env` 라벨이 된다. 공용 모니터링 보안 그룹에서는 앱 서버의 8080(백엔드), 9100(node exporter), 9101(cAdvisor)과 DB 5432만 들인다. 측정 환경은 공용 Grafana 경보에서 빠진다.
 - 자원에는 `Project=meterengine`, `Environment=test-sjpark-<사양>`, `Owner=sjparkx1129`, `ManagedBy=terraform` 태그가 붙는다. 자동 중지 예약(EventBridge Scheduler 스케줄, 오토스케일링 그룹 예약)은 태그를 붙일 수 없다.
@@ -57,7 +58,7 @@
 | webhook-enabled | 없음(켜짐) | false | 스냅샷의 실제 주소로 나가지 않게 | 후보 |
 | 암호화 키 | 운영 키 | 환경별 새 키 | 운영 비밀 분리. 토스 자격을 풀지 못해 결제 호출이 실패로 끝남 | 후보 |
 | Slack, oauth2 값 | 실제 값 | 받는 곳 없는 값 | 측정 경보가 팀에 가지 않게 | 없음 |
-| 이미지 | main 이미지(meterengine) | develop 이미지(meterengine-staging) | develop 대상 실험과 비교 | 측정 조건 |
+| 이미지 | main 이미지(meterengine) | 고른 브랜치 이미지(meterengine-test-sjpark) | 머지 전 브랜치를 잰다. staging 저장소에 넣으면 cd-staging 수동 실행으로 staging에 배포될 수 있다 | 측정 조건 |
 | 메모리 한도 | 768m | 768m | 사양만 다르게. m7g의 8GB를 앱이 다 쓰지 않음 | 후보 |
 
 - 운영에 맞춘 것: RDS 엔진 18.4, gp3(400GiB 미만이라 기준값 3000 IOPS, 125MiB/s가 적용되고 따로 보내지 않는다), 스토리지 상한 50GB, postgresql 로그 내보내기, Database Insights standard, 백업 7일, Single-AZ.
@@ -71,6 +72,14 @@
 ## 처음 띄우기
 
 ### 1. 만들기
+
+측정 ECR은 두 환경이 같이 쓰므로 처음 한 번만 만든다.
+
+```bash
+terraform -chdir=measurements/test-sjpark/sut/images init
+terraform -chdir=measurements/test-sjpark/sut/images plan -out=images.tfplan
+terraform -chdir=measurements/test-sjpark/sut/images apply images.tfplan
+```
 
 ```bash
 terraform -chdir=measurements/test-sjpark/sut/<사양> init
@@ -105,26 +114,43 @@ measurements/test-sjpark/sut/scripts/create-exporter-user.sh <사양>
 
 ## 다시 배포
 
+### 브랜치 배포
+
+GitHub Actions의 "측정 환경 배포"를 손으로 실행한다. 고른 브랜치의 최신 커밋을 빌드해 측정 ECR에 올리고 `deploy/rollout.sh`로 서버를 바꾼 뒤 `/usage`를 확인한다.
+
+1. "Use workflow from"에서 브랜치를, `environment`에서 환경을 고른다. 이미 올린 커밋을 다시 배포할 때만 `image_tag`에 SHA를 넣는다.
+2. GitHub Environment `test-sjpark-<사양>`의 필수 승인자(moonino, sjparkx1129, skytre0) 중 한 명이 승인한다. 승인해야 그 환경의 배포 역할 `meterengine-test-sjpark-<사양>-deploy`를 받는다. 빌드 job과 배포 job이 따로 승인을 기다려 두 번 승인하고, `image_tag`를 넣으면 빌드 job이 돌지 않아 한 번 승인한다.
+
+- 브랜치는 이 워크플로가 들어간 develop 위에 있어야 한다. 서버는 배포 커밋의 `deploy/environments/test-sjpark-<사양>.json`에서 ECR 접두를 읽는다.
+- 배포한 동안 브랜치를 origin에서 지우지 않는다. 새 서버는 부팅 때 저장소를 clone해 그 커밋을 checkout한다. 포크의 커밋은 받지 못한다.
+- 같은 커밋 이미지가 있으면 빌드를 건너뛴다. 두 환경에 같은 커밋을 올리면 같은 이미지를 쓴다.
+- 앱 서버가 0대면 버전만 기록한다. "켜고 끄기"대로 켜면 그 커밋으로 뜬다.
+- 배포 역할은 측정 ECR 쓰기, 그 환경의 오토스케일링 그룹 새로 고침, 그 환경의 `app-version` 읽기와 쓰기만 한다.
+- GitHub Environment는 Terraform 밖이라 저장소 설정에서 손으로 만든다. 배포 브랜치는 모든 브랜치, 필수 승인자는 위 세 명이다.
+
+### 스크립트 배포
+
+측정 ECR에 이미지가 있는 커밋은 운영자 컴퓨터에서도 배포할 수 있다.
+
 ```bash
 measurements/test-sjpark/sut/scripts/sut-deploy.sh <사양> <SHA 40자>
 ```
 
-- staging, production과 같은 `deploy/rollout.sh`로 배포한다. 새 서버가 대상 그룹에서 healthy가 된 뒤 옛 서버를 뺀다.
-- 배포 전에 그 커밋에 `deploy/rollout.sh`가 있는지, ECR 이미지, RDS 상태를 보고 하나라도 틀리면 멈춘다. 서버의 `deploy.sh`는 DB 식별자를 `deploy/environments/test-sjpark-<사양>.json`과 대조한다.
-- SHA를 빼면 `meterengine-staging-backend`, `meterengine-staging-frontend` 둘 다에 이미지가 있고 `deploy/rollout.sh`가 있는 가장 최근 develop 커밋을 쓴다.
+- 배포 전에 그 커밋에 `deploy/rollout.sh`가 있는지, 환경 파일의 ECR 접두가 지금과 같은지, ECR 이미지, RDS 상태를 보고 하나라도 틀리면 멈춘다. 서버의 `deploy.sh`는 오토스케일링 그룹 이름과 DB 식별자를 `deploy/environments/test-sjpark-<사양>.json`과 대조한다.
+- SHA를 빼면 측정 ECR 두 저장소에 다 이미지가 있는 가장 최근 develop 커밋을 쓴다. develop 이미지는 워크플로에서 develop을 골라 올린다.
 - SUT에는 CD가 없다. develop이 바뀌어도 직접 배포할 때까지 그대로다.
-- staging ECR은 태그 이미지를 최근 10개만 남기고, develop 머지마다 이미지가 올라와 빨리 지워진다. 같은 SHA로 다시 재려면 이미지가 남아 있는지 먼저 본다.
+- 측정 ECR은 태그 이미지를 최근 10개만 남긴다. 같은 SHA로 다시 재려면 이미지가 남아 있는지 먼저 본다.
 
 ```bash
-aws ecr describe-images --region ap-northeast-2 --repository-name meterengine-staging-backend --image-ids imageTag=<SHA>
-aws ecr describe-images --region ap-northeast-2 --repository-name meterengine-staging-frontend --image-ids imageTag=<SHA>
+aws ecr describe-images --region ap-northeast-2 --repository-name meterengine-test-sjpark-backend --image-ids imageTag=<SHA>
+aws ecr describe-images --region ap-northeast-2 --repository-name meterengine-test-sjpark-frontend --image-ids imageTag=<SHA>
 ```
 
 ### 보존 이미지
 
 - 운영 ECR(`meterengine-backend`, `meterengine-frontend`)의 수명 주기 정책에는 `keep-`으로 시작하는 태그를 지우지 않는 규칙이 우선순위 1로 들어 있다. 없어진 한 대 환경이 쓰던 Caddy 시절 운영 이미지를 `keep-test-sjpark-<SHA 7자>` 태그로 남기려고 넣었다.
 - 그다음 규칙(태그 이미지 최근 10개, 태그 없는 매니페스트 14일)은 태그 이름과 상관없이 잡으므로, 1번 규칙이 없으면 보존 태그도 지워진다. 앞 규칙이 잡은 이미지는 뒤 규칙이 지우지 못한다.
-- 운영 ECR 정책은 Terraform 밖이라 손으로 고친다. 정책을 다시 쓸 때 이 규칙을 빼지 않는다. 두 환경은 staging ECR을 써서 이 규칙과 상관없다.
+- 운영 ECR 정책은 Terraform 밖이라 손으로 고친다. 정책을 다시 쓸 때 이 규칙을 빼지 않는다. 두 환경은 측정 ECR을 써서 이 규칙과 상관없다.
 
 ```bash
 aws ecr get-lifecycle-policy --region ap-northeast-2 --repository-name meterengine-backend \

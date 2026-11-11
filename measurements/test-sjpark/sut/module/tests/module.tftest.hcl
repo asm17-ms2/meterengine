@@ -101,3 +101,40 @@ run "auto_stop_returns_to_defaults" {
     error_message = "The 04:00 schedule must leave the group at the variable defaults so the next plan shows no change."
   }
 }
+
+# 정책이 ASG ARN을 담아 plan에서 값이 정해지도록 ARN을 정한다.
+run "deploy_role_reaches_only_this_environment" {
+  command = plan
+
+  override_resource {
+    target          = aws_autoscaling_group.app
+    override_during = plan
+    values = {
+      arn = "arn:aws:autoscaling:ap-northeast-2:928618307647:autoScalingGroup:00000000-0000-0000-0000-000000000000:autoScalingGroupName/meterengine-test-sjpark-m7g-app"
+    }
+  }
+
+  assert {
+    condition = (jsondecode(aws_iam_role.deploy.assume_role_policy).Statement[0].Condition.StringEquals["token.actions.githubusercontent.com:sub"]
+    == "repo:asm17-ms2@293532363/meterengine@1313421667:environment:test-sjpark-m7g")
+    error_message = "Only jobs in this environment's GitHub Environment may assume the deploy role."
+  }
+  assert {
+    condition = alltrue([for statement in jsondecode(aws_iam_role_policy.deploy.policy).Statement :
+      statement.Effect == "Deny" || statement.Resource == "*" || alltrue([for arn in flatten([statement.Resource]) :
+        strcontains(arn, "meterengine-test-sjpark-m7g-app") || strcontains(arn, "repository/meterengine-test-sjpark-")
+    || endswith(arn, "parameter/meterengine/test-sjpark-m7g/app-version")])])
+    error_message = "The deploy role may only write this environment's group, version parameter and the measurement repositories."
+  }
+}
+
+run "servers_pull_from_the_measurement_repositories" {
+  command = plan
+
+  assert {
+    condition = anytrue([for statement in jsondecode(aws_iam_role_policy.app.policy).Statement :
+      contains(statement.Action, "ecr:BatchGetImage") && alltrue([for arn in statement.Resource : strcontains(arn, "repository/meterengine-test-sjpark-")])
+    ])
+    error_message = "Servers must pull images from the measurement repositories only."
+  }
+}

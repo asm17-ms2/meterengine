@@ -22,3 +22,6 @@ output "alb_arn_suffix" {
 output "target_group_arn_suffix" {
   value = module.sut.target_group_arn_suffix
 }
+output "deploy_role_arn" {
+  value = module.sut.deploy_role_arn
+}

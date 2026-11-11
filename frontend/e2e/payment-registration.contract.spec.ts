@@ -51,6 +51,15 @@ test("동의 요청 없이 돌아온 콜백은 발급하지 않고 민감한 쿼
   expect(await (await request.get(`${FIXTURE_URL}/__requests`)).json()).toHaveLength(0);
 });
 
+// standalone 서버는 request.url을 Host가 아니라 HOSTNAME, PORT로 만든다. 절대 주소로 보내면 프록시 뒤에서 깨진다.
+test("결과 화면으로 보낼 때 서버가 아는 자기 주소가 아니라 상대 경로를 준다", async ({ request }) => {
+  for (const callback of ["fail?code=PAY_PROCESS_CANCELED&state=forged", "success?authKey=fixture-auth-key&customerKey=wrong-customer&state=forged"]) {
+    const response = await request.get(`${REGISTRATION_PATH}/${callback}`, { maxRedirects: 0 });
+    expect(response.status()).toBe(303);
+    expect(response.headers().location).toBe(`${REGISTRATION_PATH}/complete`);
+  }
+});
+
 test("다른 고객의 인증 결과는 서버에 발급 요청을 보내지 않는다", async ({ page, request }) => {
   await mockTossSdk(page, "foreign-customer");
   await page.goto(REGISTRATION_PATH);
