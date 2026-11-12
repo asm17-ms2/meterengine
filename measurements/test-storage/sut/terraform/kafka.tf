@@ -78,6 +78,17 @@ resource "aws_vpc_security_group_ingress_rule" "kafka_exporters_from_shared_moni
   to_port                      = each.value
 }
 
+# 공용 모니터링 보안 그룹은 적힌 포트로만 나간다. 들어오는 규칙만 있으면 긁기가 시간 초과로 끝난다.
+resource "aws_vpc_security_group_egress_rule" "shared_monitoring_to_kafka_exporters" {
+  for_each = var.kafka_enabled ? local.kafka_exporter_ports : {}
+
+  security_group_id            = data.aws_security_group.shared_monitoring.id
+  referenced_security_group_id = aws_security_group.kafka[0].id
+  ip_protocol                  = "tcp"
+  from_port                    = each.value
+  to_port                      = each.value
+}
+
 # --- 클러스터 ---
 
 # 토픽을 backend가 정한 값으로만 만들게 자동 생성을 끈다. 나머지는 MS2-568에서 정한 event.ingest의 값과 같다.

@@ -130,3 +130,16 @@ run "broker_logs_are_kept_for_the_experiment" {
     error_message = "Leader elections during a broker reboot are visible only in broker logs."
   }
 }
+
+run "shared_monitoring_can_reach_broker_exporters_both_ways" {
+  command = plan
+
+  variables {
+    kafka_enabled = true
+  }
+
+  assert {
+    condition     = sort([for rule in aws_vpc_security_group_egress_rule.shared_monitoring_to_kafka_exporters : rule.from_port]) == sort([for rule in aws_vpc_security_group_ingress_rule.kafka_exporters_from_shared_monitoring : rule.from_port])
+    error_message = "The monitoring security group allows only listed outbound ports. Without an egress rule per exporter port the scrape times out."
+  }
+}
