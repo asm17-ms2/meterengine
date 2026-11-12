@@ -20,7 +20,7 @@ export const requireSession = cache(async (): Promise<SessionResponse> => {
   const result = await requestApi<SessionResponse>("/v1/sessions/current", { token });
   if (!result.ok) {
     if (result.error.status === 401 || result.error.status === 403) redirect(expiredLoginHref((await headers()).get("x-meterengine-current-path")));
-    throw new Error("로그인 정보를 확인하지 못했습니다. 잠시 후 다시 시도하세요.");
+    throw new Error("로그인 정보를 확인하지 못했어요. 잠시 뒤 다시 시도해 주세요.");
   }
   return result.data;
 });

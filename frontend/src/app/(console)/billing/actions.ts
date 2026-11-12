@@ -17,10 +17,10 @@ export async function finalizeInvoicesAction(
   const session = await requireTenantSession();
   const scopeError = await mutationScopeError(formData, session.organization?.id);
   if (scopeError) return { status: "failed", message: scopeError };
-  if (!hasScope(session.scopes, "admin")) return { status: "failed", message: "이 작업을 수행할 관리 권한이 없습니다. 대표관리자에게 권한을 요청하세요." };
+  if (!hasScope(session.scopes, "admin")) return { status: "failed", message: "인보이스를 확정할 권한이 없어요. 대표관리자에게 전체 관리 권한을 요청하세요." };
   const month = formData.get("month");
   if (typeof month !== "string" || !isMonth(month)) {
-    return { status: "failed", message: "확정할 달을 특정하지 못했습니다." };
+    return { status: "failed", message: "확정할 달을 확인하지 못했어요. 화면을 새로 조회한 뒤 다시 시도해 주세요." };
   }
 
   const result = await finalizeInvoices(month);

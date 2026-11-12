@@ -32,5 +32,5 @@ test("a unit price whose decimals the screen would round away is sent to the API
 });
 
 test("the unit price precision message covers both too many decimals and too many digits", () => {
-  assert.equal(UNIT_PRICE_PRECISION_MESSAGE, "화면에서 정확히 보일 수 없는 단가입니다. 소수 10자리를 넘거나 자릿수가 많은 단가는 API로 등록하세요.");
+  assert.equal(UNIT_PRICE_PRECISION_MESSAGE, "화면에서 정확히 입력할 수 없는 단가예요. 소수 10자리를 넘거나 자릿수가 많은 단가는 API로 등록하세요.");
 });

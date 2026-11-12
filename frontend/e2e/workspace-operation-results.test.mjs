@@ -14,5 +14,5 @@ test("result labels come from the operation, not from response fields", () => {
 });
 
 test("Toss key save uses its own refresh label that matches its unconfirmed message", () => {
-  assert.equal(operationResultCopy("updateTossPaymentsCredential").refreshLabel, "토스 키 상태 새로 조회");
+  assert.equal(operationResultCopy("updateTossPaymentsCredential").refreshLabel, "토스페이먼츠 키 상태 새로 조회");
 });

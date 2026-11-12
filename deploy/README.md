@@ -87,6 +87,7 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
 - `deploy/environments/<환경>.json`의 값이다.
   - `autoscaling_group_name`은 staging과 production에만 적고, `meterengine-<환경>-app`이어야 한다.
   - 프론트는 `https://<site_domain>`에서 온 공개 인보이스 조회와 결제 재시도만 받는다. compose가 이 값을 `METERENGINE_PUBLIC_ORIGIN`으로 넣는다.
+  - compose는 프론트에 `METERENGINE_SHOW_LEGACY_ENVIRONMENT`를 넣지 않는다. staging과 production 모두 콘솔 업무 환경 목록에 기존 데이터가 나오지 않는다. 테스트 환경으로 옮긴 자료에 문제가 있어 옛 범위를 봐야 할 때만 compose의 frontend `environment`에 `METERENGINE_SHOW_LEGACY_ENVIRONMENT: "true"`를 넣어 배포한다.
   - `site_aliases`는 지금 배포에서 쓰지 않는다. 별칭 리다이렉트는 ALB 규칙(Terraform)이 정한다.
   - `image_repository_prefix`: ECR 저장소 이름 앞부분. `<값>-backend`, `<값>-frontend`에서 이미지를 받는다.
   - `backend_mem_limit`: 백엔드 컨테이너의 메모리 한도. `backend_max_ram_percentage`: 그 한도 중 JVM 힙의 최대 비율(%).

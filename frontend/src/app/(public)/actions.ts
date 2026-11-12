@@ -5,6 +5,8 @@ import { headers } from "next/headers";
 import { requestApi, toDisplayMessage } from "@/lib/api/transport";
 import { returnOrganizationId, safeReturnPath, withoutOrganizationId } from "@/lib/auth/navigation";
 import { workspaceHref } from "@/lib/workspace-href";
+import { config } from "@/lib/config";
+import { withoutClosedLegacyEnvironment } from "@/lib/environment";
 import { saveSession } from "@/lib/auth/session";
 import { CONSENT_DOCUMENTS, CONSENT_VERSION } from "@/lib/auth/consents";
 import { isValidEmail, isValidPassword, NAME_MAX_LENGTH, PASSWORD_RULE_MESSAGE } from "@/lib/auth/credentials";
@@ -24,12 +26,12 @@ export async function loginAction(_prev: ActionState, data: FormData): Promise<A
   const result = await requestApi<SessionTokenResponse>("/v1/sessions", { method: "POST", body: { email, password }, clientIp });
   if (!result.ok) {
     if (result.error.code === "email_not_verified") redirect("/email-verifications?reason=unverified");
-    if (result.error.code === "organization_not_active") return { message: "사용 가능한 도입사가 없습니다. 가입 승인 전이거나 이용이 정지된 상태일 수 있습니다. 운영자에게 확인한 뒤 다시 로그인하세요." };
-    if (result.error.status === 401) return { message: "이메일 또는 비밀번호가 올바르지 않습니다." };
+    if (result.error.code === "organization_not_active") return { message: "지금은 콘솔을 이용할 수 없어요. 가입 승인 전이거나, 승인되지 않았거나, 이용이 정지됐거나, 조직에서 접근이 중단됐을 수 있어요." };
+    if (result.error.status === 401) return { message: "이메일 또는 비밀번호가 맞지 않아요." };
     return { message: toDisplayMessage(result.error) };
   }
   await saveSession(result.data.token, result.data.expires_at);
-  const returnPath = safeReturnPath(data.get("returnTo"), result.data.user_account.role === "operator");
+  const returnPath = withoutClosedLegacyEnvironment(safeReturnPath(data.get("returnTo"), result.data.user_account.role === "operator"), config.showLegacyEnvironment);
   const requested = returnOrganizationId(returnPath);
   let organization = result.data.organization;
   if (requested && organization && requested !== organization.id && !result.data.consent_required) {
@@ -46,9 +48,9 @@ export async function signupAction(_prev: ActionState, data: FormData): Promise<
   const name = textField(data, "name").trim();
   const email = textField(data, "email").trim();
   const password = textField(data, "password");
-  if (!organizationName) return { message: "도입사 이름을 입력하세요." };
+  if (!organizationName) return { message: "조직 이름을 입력하세요." };
   if (!name) return { message: "담당자 이름을 입력하세요." };
-  if (organizationName.length > NAME_MAX_LENGTH || name.length > NAME_MAX_LENGTH) return { message: "도입사 이름과 담당자 이름은 255자 이내로 입력하세요." };
+  if (organizationName.length > NAME_MAX_LENGTH || name.length > NAME_MAX_LENGTH) return { message: "조직 이름과 담당자 이름은 255자 이내로 입력하세요." };
   if (!isValidEmail(email)) return { message: "올바른 이메일 주소를 입력하세요." };
   if (!isValidPassword(password)) return { message: PASSWORD_RULE_MESSAGE };
   if (CONSENT_DOCUMENTS.some(({ document }) => data.get(document) !== "on")) return { message: "이용약관과 개인정보 처리방침을 읽고 두 항목에 모두 체크하세요." };

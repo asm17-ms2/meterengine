@@ -43,7 +43,7 @@ export function BillableMetricDeleteDialog({
 
   useEffect(() => {
     if (state.status === "done") {
-      message.success("보관했습니다");
+      message.success("보관했어요");
       onClose();
     }
   }, [state, message, onClose]);
@@ -51,16 +51,14 @@ export function BillableMetricDeleteDialog({
   if (state.status === "rejected") {
     return state.reason === "events" ? (
       <Notice
-        title="보관할 수 없습니다"
-        body={`${state.name} 미터를 현재 상태에서 보관하지 못했습니다. 관련 이벤트와 적용 기간을 확인하세요.`}
-        note="서버가 이벤트 존재를 확인하고 거절했습니다 (409)."
+        title="보관할 수 없어요"
+        body={`수집된 이벤트가 있어 ${state.name} 미터를 보관하지 못했어요. 관련 이벤트와 적용 기간을 확인하세요.`}
         onClose={onClose}
       />
     ) : (
       <Notice
-        title="보관할 수 없습니다"
-        body={`${state.name} 미터를 현재 상태에서 보관하지 못했습니다. 단가와 적용 기간을 확인하세요.`}
-        note="서버가 단가 존재를 확인하고 거절했습니다 (409)."
+        title="보관할 수 없어요"
+        body={`등록된 단가가 있어 ${state.name} 미터를 보관하지 못했어요. 단가와 적용 기간을 확인하세요.`}
         onClose={onClose}
       />
     );
@@ -69,9 +67,8 @@ export function BillableMetricDeleteDialog({
   if (state.status === "gone") {
     return (
       <Notice
-        title="미터를 찾을 수 없습니다"
-        body={`${state.name}를 서버에서 찾지 못했습니다. 목록을 다시 확인하세요.`}
-        note="서버에 그 미터가 없습니다 (404)."
+        title="미터를 찾을 수 없어요"
+        body={`${state.name} 미터를 찾지 못했어요. 목록을 새로 조회하세요.`}
         onClose={onClose}
       />
     );
@@ -116,7 +113,7 @@ export function BillableMetricDeleteDialog({
           </Typography.Text>
         </Flex>
         <Typography.Paragraph style={{ margin: 0 }}>
-          보관하면 관리 목록에서 분리되고 다음 달부터 집계를 중단합니다. 현재 월의 사용량과 청구, 과거 기록은 유지되며 보관 목록에서 복원할 수 있습니다.
+          보관하면 사용 중 목록에서 빠지고 다음 달부터 집계하지 않아요. 이번 달 사용량과 청구, 지난 기록은 그대로 남고 보관 목록에서 복원할 수 있어요.
         </Typography.Paragraph>
         {state.status === "failed" ? (
           <Alert type="error" showIcon icon={alertIcon("error")} title={state.message} />
@@ -129,15 +126,12 @@ export function BillableMetricDeleteDialog({
 function Notice({
   title,
   body,
-  note,
   onClose,
 }: {
   title: string;
   body: string;
-  note: string;
   onClose: () => void;
 }) {
-  const { token } = theme.useToken();
   const confirmRef = useRef<HTMLButtonElement>(null);
 
   useInitialFocus(confirmRef);
@@ -158,9 +152,6 @@ function Notice({
     >
       <Flex vertical gap="small">
         <Alert type="warning" showIcon icon={alertIcon("warning")} title={body} />
-        <Typography.Text type="secondary" style={{ fontSize: token.fontSizeSM }}>
-          {note}
-        </Typography.Text>
       </Flex>
     </Modal>
   );

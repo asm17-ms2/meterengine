@@ -6,13 +6,13 @@ function safe(value: string): string {
   return value.replace(UNSAFE_FILENAME_CHARACTERS, "-").replace(/-+$/, "");
 }
 
-/** 조회 기간과 업무 환경을 담은 CSV 파일 이름. legacy 환경은 이름에 넣지 않는다. */
+/** 조회 기간과 업무 환경을 담은 CSV 파일 이름. 환경 값이 없으면 테스트 환경이고, legacy 환경은 이름에 넣지 않는다. */
 export function exportFilename(resource: string, scope: ExportScope): string {
   const period = scope.from && scope.to ? `${safe(scope.from)}_${safe(scope.to)}`
     : scope.from ? `from-${safe(scope.from)}`
       : scope.to ? `to-${safe(scope.to)}`
         : scope.month ? safe(scope.month) : "";
-  const environment = scope.environment && scope.environment !== "legacy" ? safe(scope.environment) : "";
+  const environment = scope.environment === "legacy" ? "" : scope.environment === "live" ? "live" : "test";
   return [resource, period, environment].filter(Boolean).join("-") + ".csv";
 }
 

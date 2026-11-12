@@ -27,7 +27,7 @@ test("동의 뒤 토스 인증과 서버 발급을 거쳐 성공하며 새로고
   await mockTossSdk(page);
   await page.goto(REGISTRATION_PATH);
   await expect(page.getByRole("heading", { name: "결제에 사용할 카드를 등록해 주세요" })).toBeVisible();
-  const button = page.getByRole("button", { name: "토스에서 카드 등록하기" });
+  const button = page.getByRole("button", { name: "토스페이먼츠에서 카드 등록하기" });
   await expect(button).toBeDisabled();
   await page.getByRole("checkbox").check();
   await button.click();
@@ -67,7 +67,7 @@ test("다른 고객의 인증 결과는 서버에 발급 요청을 보내지 않
   await mockTossSdk(page, "foreign-customer");
   await page.goto(REGISTRATION_PATH);
   await page.getByRole("checkbox").check();
-  await page.getByRole("button", { name: "토스에서 카드 등록하기" }).click();
+  await page.getByRole("button", { name: "토스페이먼츠에서 카드 등록하기" }).click();
   await expect(page).toHaveURL(`${REGISTRATION_PATH}/complete`);
   await expect(page.getByText("등록 요청을 확인하지 못했습니다.", { exact: false })).toBeVisible();
   expect(await (await request.get(`${FIXTURE_URL}/__requests`)).json()).toHaveLength(0);
@@ -77,7 +77,7 @@ test("카드 인증 취소는 오류 원문을 비추지 않고 다시 시작할
   await mockTossSdk(page, "canceled");
   await page.goto(REGISTRATION_PATH);
   await page.getByRole("checkbox").check();
-  await page.getByRole("button", { name: "토스에서 카드 등록하기" }).click();
+  await page.getByRole("button", { name: "토스페이먼츠에서 카드 등록하기" }).click();
   await expect(page.getByRole("heading", { name: "카드 등록을 취소했습니다" })).toBeVisible();
   expect(await page.content()).not.toContain("must-not-be-reflected");
   expect(await (await request.get(`${FIXTURE_URL}/__requests`)).json()).toHaveLength(0);
@@ -90,7 +90,7 @@ test("발급 결과 미확인은 자동으로 재시도하지 않는다", async 
   await mockTossSdk(page);
   await page.goto(REGISTRATION_PATH);
   await page.getByRole("checkbox").check();
-  await page.getByRole("button", { name: "토스에서 카드 등록하기" }).click();
+  await page.getByRole("button", { name: "토스페이먼츠에서 카드 등록하기" }).click();
   await expect(page.getByText("등록 결과를 확인하지 못했습니다.", { exact: false })).toBeVisible();
   await page.reload();
   expect(await (await request.get(`${FIXTURE_URL}/__requests`)).json()).toHaveLength(1);

@@ -1,7 +1,7 @@
 import "server-only";
 
 import { config } from "@/lib/config";
-import { describeTransportFailure } from "@/lib/api/transport-failure";
+import { describeTransportFailure, malformedResponseMessage, unreadableErrorMessage } from "@/lib/api/transport-failure";
 
 export type FieldError = {
   field: string;
@@ -22,8 +22,8 @@ export type Result<T> =
 
 export function toDisplayMessage(error: ApiError): string {
   if (error.status === 429) return error.retryAfterSeconds
-    ? `요청이 많아 잠시 대기해야 합니다. ${error.retryAfterSeconds}초 후 다시 시도하세요.`
-    : "요청이 많아 잠시 대기해야 합니다. 잠시 후 다시 시도하세요.";
+    ? `요청이 너무 많아요. ${error.retryAfterSeconds}초 뒤 다시 시도해 주세요.`
+    : "요청이 너무 많아요. 잠시 뒤 다시 시도해 주세요.";
   if (error.errors && error.errors.length > 0) {
     return error.errors.map((fieldError) => fieldError.message).join(" / ");
   }
@@ -50,7 +50,7 @@ function toFieldErrors(raw: unknown): FieldError[] | undefined {
   return errors.length > 0 ? errors : undefined;
 }
 
-async function toApiError(response: Response): Promise<ApiError> {
+async function toApiError(response: Response, method: string): Promise<ApiError> {
   let body: ErrorBody = {};
   try {
     body = (await response.json()) as ErrorBody;
@@ -63,13 +63,13 @@ async function toApiError(response: Response): Promise<ApiError> {
     message:
       typeof body.message === "string"
         ? body.message
-        : "서버가 오류 응답 형식이 아닌 응답을 보냈습니다.",
+        : unreadableErrorMessage(method),
     errors: toFieldErrors(body.errors),
     ...(retryAfter && /^\d+$/.test(retryAfter) ? { retryAfterSeconds: Math.min(86_400, Number(retryAfter)) } : {}),
   };
 }
 
-async function readJson<T>(response: Response, isEmptyResponse: boolean): Promise<Result<T>> {
+async function readJson<T>(response: Response, isEmptyResponse: boolean, method: string): Promise<Result<T>> {
   try {
     const body = await response.text();
     if (!body.trim() && isEmptyResponse) return { ok: true, data: undefined as T };
@@ -80,7 +80,7 @@ async function readJson<T>(response: Response, isEmptyResponse: boolean): Promis
       error: {
         status: response.status,
         code: "malformed_response",
-        message: "응답을 읽지 못했습니다. 서버가 보낸 응답이 JSON 형식이 아닙니다.",
+        message: malformedResponseMessage(method),
       },
     };
   }
@@ -113,12 +113,12 @@ export async function requestApi<T>(
   } catch (cause) {
     return { ok: false, error: describeTransportFailure(cause, options.method ?? "GET", path, Date.now() - startedAt) };
   }
-  if (!response.ok) return { ok: false, error: await toApiError(response) };
+  if (!response.ok) return { ok: false, error: await toApiError(response, options.method ?? "GET") };
   if (options.responseType === "text") {
     const disposition = response.headers.get("Content-Disposition") ?? "";
     const match = /filename="([^"\r\n]+)"/.exec(disposition);
     return { ok: true, data: { body: await response.text(), contentType: response.headers.get("Content-Type") ?? "text/csv; charset=utf-8", filename: match?.[1] } as T };
   }
   if (response.status === 204) return { ok: true, data: undefined as T };
-  return readJson<T>(response, options.isEmptyResponse ?? false);
+  return readJson<T>(response, options.isEmptyResponse ?? false, options.method ?? "GET");
 }

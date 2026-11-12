@@ -8,14 +8,14 @@ const appSource = path => readFileSync(new URL(`../src/app/${path}`, import.meta
 test("paged tables name their totals as totals of the whole filtered set", () => {
   const billing = source("billing/BillingTable.tsx");
   const invoices = source("invoices/InvoicesTable.tsx");
-  assert.ok(billing.includes('"조건 전체 합계"') && billing.includes('"조건 전체 공급가액"'));
-  assert.ok(invoices.includes(">조건 전체 합계<") && invoices.includes(">조건 전체 세금 포함 합계<"));
+  assert.ok(billing.split('"조건 전체 공급가액"').length === 3 && billing.split('"선택 고객 공급가액"').length === 3 && !billing.includes("조건 전체 합계"));
+  assert.ok(invoices.split(">조건 전체 세금 포함 합계<").length === 3 && !invoices.includes("조건 전체 합계"));
   for (const table of [billing, invoices]) assert.ok(!/[">]합계[<"]/.test(table) && !table.includes("공급가액 합계") && !table.includes(">세금 포함 합계<"));
 });
 
 test("an empty invoice month points to the draft amounts instead of a reset that changes nothing", () => {
   const section = source("invoices/InvoicesSection.tsx");
-  assert.ok(section.includes('resetLabel="청구 예정액 확인"'));
+  assert.ok(section.includes('resetLabel="청구 검토로 이동"'));
   assert.ok(section.includes('isAllMonths ? "/billing" : `/billing?month=${month}`'));
 });
 
@@ -43,7 +43,7 @@ test("the meter search empty state counts all meters and the sort note follows t
   const screen = source("billable-metrics/BillableMetricsScreen.tsx");
   const section = source("billable-metrics/BillableMetricsSection.tsx");
   assert.ok(section.includes("totalUnfiltered={result.data.total_unfiltered}"));
-  assert.ok(screen.includes("등록된 미터는 ${totalUnfiltered ?? rows.length}개입니다."));
+  assert.ok(screen.includes("등록된 미터는 ${totalUnfiltered ?? rows.length}개예요."));
   assert.ok(!screen.includes("<ScreenNote>정렬: 코드 오름차순</ScreenNote>"));
   assert.ok(screen.includes('query.sort ?? "code"'));
 });
@@ -70,10 +70,11 @@ test("mobile event links open the drawer in place and closing it returns focus t
   assert.ok(routed.includes("data-transaction-id"));
 });
 
-test("the rejection search keeps its customer id guidance visible below the field", () => {
+test("the rejection search keeps its customer id guidance visible below the search row and tied to the field", () => {
   const page = readFileSync(new URL("../src/app/(console)/event-rejections/page.tsx", import.meta.url), "utf8");
   assert.ok(!page.includes('placeholder="존재하지 않는 고객 ID도 조회할 수 있습니다"'));
-  assert.ok(page.includes('<small className="field-hint">요청에 담긴 고객 ID(UUID)로 찾습니다. 등록되지 않은 ID도 조회됩니다.</small>'));
+  assert.ok(page.includes('aria-describedby="rejection-customer-hint"'));
+  assert.ok(page.includes('<p id="rejection-customer-hint" className="field-hint">요청 본문의 고객 ID(UUID)로 찾아요. 등록되지 않은 ID로도 찾을 수 있어요.</p>'));
 });
 
 test("usage and event screens drop the mismatched sub-tab rows and keep their cross links in the content", () => {
