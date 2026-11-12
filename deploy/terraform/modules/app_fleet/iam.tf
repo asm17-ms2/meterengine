@@ -24,7 +24,7 @@ resource "aws_iam_instance_profile" "app" {
 resource "aws_iam_role_policy" "app" {
   name = "${var.environment}-app-runtime"
   role = aws_iam_role.app.id
-  policy = jsonencode({ Version = "2012-10-17", Statement = [
+  policy = jsonencode({ Version = "2012-10-17", Statement = concat([
     { Effect = "Allow", Action = ["ssm:GetParameter", "ssm:GetParameters", "ssm:GetParametersByPath"], Resource = local.runtime_path },
     {
       Effect      = "Deny"
@@ -43,5 +43,13 @@ resource "aws_iam_role_policy" "app" {
       Condition = { StringEquals = { "cloudwatch:namespace" = "MeterEngine/Scaling" } }
     },
     { Effect = "Allow", Action = ["autoscaling:DescribeAutoScalingGroups"], Resource = "*" }
-  ] })
+    ],
+    # 가입 인증 메일만 보낸다. 다른 보내는 주소로는 보내지 못하게 주소로 묶는다.
+    var.email_sender == null ? [] : [{
+      Effect    = "Allow"
+      Action    = ["ses:SendEmail"]
+      Resource  = var.email_sender.identity_arn
+      Condition = { StringEquals = { "ses:FromAddress" = var.email_sender.from_address } }
+    }]
+  ) })
 }

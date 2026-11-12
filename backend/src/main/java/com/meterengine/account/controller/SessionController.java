@@ -83,7 +83,11 @@ public class SessionController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=organization_not_active: member인데 소속된 도입사 가운데 활성 상태인 곳이 없다"),
+        description =
+            """
+            code=email_not_verified: 서버가 이메일 인증을 켰는데 이 계정은 아직 인증하지 않았다. 비밀번호가 맞을 때만 준다.
+            code=organization_not_active: member인데 소속된 도입사 가운데 활성 상태인 곳이 없다.
+            """),
     @ApiResponse(
         responseCode = "429",
         content =

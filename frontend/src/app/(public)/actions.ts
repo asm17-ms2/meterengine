@@ -9,6 +9,7 @@ import { saveSession } from "@/lib/auth/session";
 import { CONSENT_DOCUMENTS, CONSENT_VERSION } from "@/lib/auth/consents";
 import { isValidEmail, isValidPassword, NAME_MAX_LENGTH, PASSWORD_RULE_MESSAGE } from "@/lib/auth/credentials";
 import type { ActionState, SessionResponse, SessionTokenResponse, SignupResponse } from "@/lib/auth/types";
+import { CAPTCHA_REQUEST_TIMEOUT_MS, captchaMessage, turnstileField } from "@/lib/auth/captcha";
 
 function textField(data: FormData, name: string) {
   const value = data.get(name);
@@ -22,6 +23,7 @@ export async function loginAction(_prev: ActionState, data: FormData): Promise<A
   const clientIp = (await headers()).get("x-meterengine-client-ip") ?? undefined;
   const result = await requestApi<SessionTokenResponse>("/v1/sessions", { method: "POST", body: { email, password }, clientIp });
   if (!result.ok) {
+    if (result.error.code === "email_not_verified") redirect("/email-verifications?reason=unverified");
     if (result.error.code === "organization_not_active") return { message: "사용 가능한 도입사가 없습니다. 가입 승인 전이거나 이용이 정지된 상태일 수 있습니다. 운영자에게 확인한 뒤 다시 로그인하세요." };
     if (result.error.status === 401) return { message: "이메일 또는 비밀번호가 올바르지 않습니다." };
     return { message: toDisplayMessage(result.error) };
@@ -52,10 +54,11 @@ export async function signupAction(_prev: ActionState, data: FormData): Promise<
   if (CONSENT_DOCUMENTS.some(({ document }) => data.get(document) !== "on")) return { message: "이용약관과 개인정보 처리방침을 읽고 두 항목에 모두 체크하세요." };
   const result = await requestApi<SignupResponse>("/v1/signups", {
     clientIp: (await headers()).get("x-meterengine-client-ip") ?? undefined,
-    method: "POST", body: { organization_name: organizationName, name, email, password,
+    method: "POST", timeoutMs: CAPTCHA_REQUEST_TIMEOUT_MS, body: { organization_name: organizationName, name, email, password,
       consents: CONSENT_DOCUMENTS.map(({ document }) => ({ document, document_version: CONSENT_VERSION })),
+      ...turnstileField(data),
     },
   });
-  if (!result.ok) return { message: toDisplayMessage(result.error) };
-  redirect("/pending");
+  if (!result.ok) return { message: captchaMessage(result.error) ?? toDisplayMessage(result.error) };
+  redirect(result.data.user_account.email_verified === false ? "/email-verifications" : "/pending");
 }

@@ -81,6 +81,26 @@ public class AuthRequestRateLimitService {
         authRateLimitProperties.signupWindow());
   }
 
+  // 인증 메일 다시 보내기는 가입과 같은 한도를 쓰되 따로 센다.
+  public void resend(String email, HttpServletRequest request) {
+    if (!authRateLimitProperties.enabled()) return;
+    String address = clientAddress(request);
+    String account = authRequestRateLimitRepository.normalizeAccount(email);
+    check(
+        "email_verification",
+        address,
+        new Bucket(
+            "email_verification_ip",
+            SecureTokens.hash(address),
+            authRateLimitProperties.signupIpLimit()),
+        List.of(
+            new Bucket(
+                "email_verification_account",
+                SecureTokens.hash(account),
+                authRateLimitProperties.signupAccountLimit())),
+        authRateLimitProperties.signupWindow());
+  }
+
   private void check(
       String action, String address, Bucket addressBucket, List<Bucket> accounts, Duration window) {
     Optional<Rejection> rejection =

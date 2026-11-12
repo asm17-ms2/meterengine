@@ -68,6 +68,8 @@ pnpm build
 
 운영 compose는 `METERENGINE_PUBLIC_ORIGIN`에 `https://<SITE_DOMAIN>`을 주입한다. 외부 고객에게 인보이스 조회 링크를 제공할 때는 런타임 `METERENGINE_PUBLIC_ORIGIN`을 공개 콘솔 origin으로 지정한다. 예: `https://console.example.com`. 프록시는 해당 Host를 보존해야 한다. 공개 조회 중계는 이 origin과 Host를 검사하며 `X-Forwarded-*`는 신뢰하지 않는다. 설정이 없으면 localhost, 127.0.0.1과 ::1의 같은 origin 요청만 허용한다.
 
+`TURNSTILE_SITE_KEY`가 있으면 가입 화면과 인증 메일 다시 받기 화면(`/email-verifications`)에 Cloudflare Turnstile 위젯을 띄우고 토큰을 요청에 싣는다. 비어 있으면 위젯을 띄우지 않는다. 런타임에 읽으므로 두 화면은 정적으로 굽지 않는다. 두 요청은 백엔드가 Siteverify를 기다리므로 기본 5초 대신 15초까지 기다린다. 검증과 비밀 키는 백엔드가 갖는다.
+
 도입사와 표시 이름은 로그인 세션에서 읽는다. 기존 `METERENGINE_ORGANIZATION_ID`, `METERENGINE_ORGANIZATION_NAME`은 사용하지 않는다.
 
 상단 업무 환경은 URL의 `environment=test|live`와 API 환경 헤더로 유지한다. 767px 이하에서는 헤더에 업무 환경만 두고 시연 안내, 권한 범위와 새로 조회, 로그아웃은 메뉴 서랍에 둔다. 기존 데이터는 별도 메뉴 범위에 보존하며 새 환경에 복사하지 않는다. 시연 안내는 화면 설명만 바꾼다.
@@ -185,6 +187,8 @@ docker run -p 3000:3000 \
 | `/signup` | 도입사 가입 신청과 필수 동의 |
 | `/pending` | 가입 신청 뒤 승인 안내 |
 | `/terms`, `/privacy` | 로그인 없이 이용약관과 개인정보 처리방침 전문 확인 |
+| `/email-verifications` | 가입 뒤 인증 메일 안내와 다시 받기. 인증 전 로그인은 `?reason=unverified`로 온다 |
+| `/email-verifications/{token}` | 메일 속 인증 링크 확인. 메일 검사기가 열어도 인증되지 않게 버튼을 눌러야 인증한다 |
 | `/organizations` | 소속 도입사 선택과 전환 |
 | `/account/consents` | 첫 로그인 때 새 비밀번호 설정과 계정 이용 안내 확인 |
 | `/organization-invitations/{token}` | 초대 링크 확인과 수락 (기존 계정 로그인 또는 새 계정 설정) |

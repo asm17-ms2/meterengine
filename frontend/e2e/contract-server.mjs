@@ -13,6 +13,7 @@ let failures = {};
 let bulk = false;
 let apiKeys = [];
 let unresolvedInvoicePayments = [];
+let captchaDelayMs = 0;
 const WEBHOOK_ENDPOINT_ID = "99999999-9999-4999-8999-999999999999";
 const HEALTHY_WEBHOOK_ENDPOINT_ID = "99999999-9999-4999-8999-999999999998";
 const bulkId = (prefix, index) => `${prefix}${String(index).padStart(12, "0")}`;
@@ -34,7 +35,8 @@ const server = createServer(async (req, res) => {
   else if (path === "/__control" && req.method === "POST") {
     if (body.reset) { sessions = new Map(); requests = []; outage = false; customers = []; failures = {}; bulk = false; apiKeys = []; }
     if (typeof body.bulk === "boolean") bulk = body.bulk;
-    if (body.reset) unresolvedInvoicePayments = [];
+    if (body.reset) { unresolvedInvoicePayments = []; captchaDelayMs = 0; }
+    if (typeof body.captchaDelayMs === "number") captchaDelayMs = body.captchaDelayMs;
     if (Array.isArray(body.unresolvedInvoicePayments)) unresolvedInvoicePayments = body.unresolvedInvoicePayments;
     if (body.fail) failures = { ...failures, ...body.fail };
     if (body.revoke) sessions.delete(body.revoke);
@@ -48,8 +50,14 @@ const server = createServer(async (req, res) => {
   else {
     requests.push({ path: req.url, method: req.method, hasAuthorization: Boolean(req.headers.authorization), hasOrganizationHeader: Boolean(req.headers["x-organization-id"]), consents: body.consents, description: body.description, clientIp: req.headers["x-meterengine-client-ip"] });
     if (outage) result = failure(503, "service_unavailable", "서버를 잠시 사용할 수 없습니다.");
+    // 백엔드가 Siteverify를 기다리다 끊긴 경우를 흉내 낸다. 프론트의 기본 제한 5초보다 늦게 답한다.
+    else if (captchaDelayMs > 0 && req.method === "POST" && ["/v1/signups", "/v1/email-verifications"].includes(path)) {
+      await new Promise(resolve => setTimeout(resolve, captchaDelayMs));
+      result = failure(503, "captcha_unavailable", "자동 가입 방지 확인 결과를 받지 못했습니다. 잠시 뒤 다시 시도하세요");
+    }
     else if (failures[path]) result = failure(failures[path], failures[path] === 403 ? "permission_denied" : "internal_error", failures[path] === 403 ? "접근 권한이 없습니다." : "서버에서 요청을 처리하지 못했습니다.");
     else if (path === "/v1/signups" && req.method === "POST") result = { status: 201, body: { organization: { ...organizations[0], status: "pending" }, user_account: { id: "member", email: body.email, name: body.name, role: "member" } } };
+    else if (path === "/v1/email-verification-confirmations" && req.method === "POST") result = failure(404, "email_verification_not_found", "인증 링크가 없거나 만료되었거나 이미 사용되었습니다");
     else if (path === "/v1/sessions" && req.method === "POST") {
       if (body.email === "pending@contract.local") result = failure(403, "organization_not_active", "도입사가 활성 상태가 아닙니다.");
       else if (!(body.email === "invited@contract.local" && body.password === "invited-password") && (!["member@contract.local", "operator@contract.local"].includes(body.email) || body.password !== "contract-password")) result = failure(401, "invalid_credentials", "인증 정보가 올바르지 않습니다.");

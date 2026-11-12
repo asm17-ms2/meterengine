@@ -95,6 +95,41 @@ test("signup sends displayed consent versions without stale Bearer or a password
   expect(calls).toEqual([{ path: "/v1/signups", method: "POST", hasAuthorization: false, hasOrganizationHeader: false, clientIp: "127.0.0.1", consents: [{ document: "terms_of_service", document_version: "2026-11-11" }, { document: "privacy_policy", document_version: "2026-11-11" }] }]);
 });
 
+test("signup shows the captcha outage message when the backend answers after the default 5 second limit", async ({ page, request }) => {
+  await request.post(`${FIXTURE_URL}/__control`, { data: { captchaDelayMs: 6_000 } });
+  await page.goto("/signup");
+  await page.getByLabel("도입사 이름", { exact: true }).fill("새 도입사");
+  await page.getByLabel("담당자 이름", { exact: true }).fill("새 담당자");
+  await page.getByLabel("이메일", { exact: true }).fill("slow-captcha@contract.local");
+  await page.getByLabel("비밀번호", { exact: true }).fill(LOGIN_PASSWORD);
+  await page.getByRole("checkbox").nth(0).check();
+  await page.getByRole("checkbox").nth(1).check();
+  await page.getByRole("button", { name: "가입 신청", exact: true }).click();
+  await expect(page.getByText("확인 서비스가 응답하지 않아 요청을 받지 못했어요. 잠시 뒤 다시 시도해 주세요.")).toBeVisible({ timeout: 15_000 });
+  await expect(page).toHaveURL(/\/signup$/);
+});
+
+const VERIFICATION_LINK = `/email-verifications/me_verify_${"a".repeat(32)}`;
+
+test("an unusable verification link offers login and a new mail as two separate choices", async ({ page }) => {
+  await page.goto(VERIFICATION_LINK);
+  await page.getByRole("button", { name: "이메일 인증", exact: true }).click();
+  await expect(page.getByText("링크가 만료됐거나 이미 사용됐어요.", { exact: true })).toBeVisible();
+  await expect(page.getByText("인증을 마쳤나요?")).toContainText("로그인");
+  await expect(page.getByText("아직 인증하지 않았나요?")).toContainText("인증 메일 다시 받기");
+  await expect(page.getByRole("link", { name: "로그인", exact: true })).toHaveAttribute("href", "/login");
+  await expect(page.getByRole("link", { name: "인증 메일 다시 받기", exact: true })).toHaveAttribute("href", "/email-verifications");
+});
+
+test("a verification that failed on the server only asks to press the button again", async ({ page, request }) => {
+  await request.post(`${FIXTURE_URL}/__control`, { data: { fail: { "/v1/email-verification-confirmations": 500 } } });
+  await page.goto(VERIFICATION_LINK);
+  await page.getByRole("button", { name: "이메일 인증", exact: true }).click();
+  await expect(page.getByText("인증하지 못했어요. 잠시 뒤 이메일 인증 버튼을 다시 눌러 주세요.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "로그인", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "인증 메일 다시 받기", exact: true })).toHaveCount(0);
+});
+
 test("safe relative return targets and member admin denial", async ({ page }) => {
   for (const returnTo of ["https://example.com", "//example.com/customers", "//[", "/\\example.com", "/%2f%2fexample.com", "/admin/users", "/login", "javascript:alert(1)"]) {
     await login(page, "member@contract.local", returnTo);

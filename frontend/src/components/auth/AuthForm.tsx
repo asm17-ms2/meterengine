@@ -6,8 +6,9 @@ import { startTransition, useActionState, useEffect, useRef } from "react";
 import { loginAction, signupAction } from "@/app/(public)/actions";
 import { ConsentFields } from "@/components/auth/ConsentFields";
 import type { ActionState } from "@/lib/auth/types";
+import { TurnstileWidget } from "@/components/auth/TurnstileWidget";
 
-export function AuthForm({ mode, returnTo = "", expired = false, logoutUnconfirmed = false }: { mode: "login" | "signup"; returnTo?: string; expired?: boolean; logoutUnconfirmed?: boolean }) {
+export function AuthForm({ mode, returnTo = "", expired = false, logoutUnconfirmed = false, turnstileSiteKey = "" }: { mode: "login" | "signup"; returnTo?: string; expired?: boolean; logoutUnconfirmed?: boolean; turnstileSiteKey?: string }) {
   const [state, action, isPending] = useActionState<ActionState, FormData>(mode === "login" ? loginAction : signupAction, {});
   const errorRef = useRef<HTMLDivElement>(null);
   const isSignup = mode === "signup";
@@ -21,6 +22,7 @@ export function AuthForm({ mode, returnTo = "", expired = false, logoutUnconfirm
     <div className="form-field"><label htmlFor="email">이메일</label><Input id="email" name="email" type="email" autoComplete="username" required maxLength={254} size="large" /></div>
     <div className="form-field"><label htmlFor="password">비밀번호</label><Input.Password id="password" name="password" autoComplete={isSignup ? "new-password" : "current-password"} required minLength={isSignup ? 8 : undefined} maxLength={isSignup ? 72 : undefined} size="large" aria-describedby={isSignup ? "password-help" : undefined} />{isSignup && <span id="password-help" className="field-hint">8자 이상 72자 이하. 한글은 1자를 3자로 계산합니다</span>}</div>
     {isSignup && <ConsentFields />}
+    {isSignup && turnstileSiteKey && <TurnstileWidget siteKey={turnstileSiteKey} action="signup" resetKey={state} />}
     <Button type="primary" htmlType="submit" size="large" block loading={isPending}>{isSignup ? "가입 신청" : "로그인"}</Button>
     <p className="auth-switch">{isSignup ? "이미 계정이 있나요?" : "처음 이용하나요?"} <Link href={isSignup ? "/login" : "/signup"}>{isSignup ? "로그인" : "가입 신청"}</Link></p>
   </form>;

@@ -75,7 +75,8 @@ class SignupIntegrationTest {
                 "id", userAccountId.toString(),
                 "email", "new.user@example.com",
                 "name", "가입자",
-                "role", "member"));
+                "role", "member",
+                "email_verified", true));
     entityManager.flush();
     assertThat(
             jdbcTemplate.queryForObject(
@@ -279,6 +280,26 @@ class SignupIntegrationTest {
           .extractingPath("$.code")
           .isEqualTo(ErrorCode.VALIDATION_ERROR.getCode());
     }
+  }
+
+  @Test
+  void 이메일_인증과_캡차가_꺼져_있으면_turnstile_token_없이_가입하고_바로_인증된_계정이_된다() {
+    MvcTestResult result = signup("no-captcha@example.com", PASSWORD, BOTH_CONSENTS);
+
+    assertThat(result).hasStatus(201);
+    entityManager.flush();
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT email_verified_at IS NOT NULL FROM user_account WHERE email = ?",
+                Boolean.class,
+                "no-captcha@example.com"))
+        .isTrue();
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM email_verification v JOIN user_account u ON u.id = v.user_account_id WHERE u.email = ?",
+                Integer.class,
+                "no-captcha@example.com"))
+        .isZero();
   }
 
   private MvcTestResult signup(String email, String password, String consents) {
