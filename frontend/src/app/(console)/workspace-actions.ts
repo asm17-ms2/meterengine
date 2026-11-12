@@ -38,8 +38,8 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
   let method: "POST" | "PUT" | "PATCH" | "DELETE" = "POST";
   let body: unknown;
   const operation = text(data, "operation");
-  if (environment !== "legacy" && ["updatePaymentSetting", "updateTossPaymentsCredential", "archiveTossPaymentsCredential", "createApiKey"].includes(operation) && text(data, "mode") !== environment) return { message: "현재 업무 환경과 다른 환경의 키나 결제 설정을 변경할 수 없습니다. 업무 환경을 확인한 뒤 다시 시도하세요." };
-  if (!canPerformWorkspaceOperation(session.scopes, session.organization_role, operation)) return { message: "이 작업을 수행할 권한이 없습니다. 대표관리자에게 권한을 요청하세요." };
+  if (environment !== "legacy" && ["updatePaymentSetting", "updateTossPaymentsCredential", "archiveTossPaymentsCredential", "createApiKey"].includes(operation) && text(data, "mode") !== environment) return { message: "지금 고른 업무 환경과 다른 환경의 키나 결제 설정은 바꿀 수 없어요. 화면 위의 업무 환경을 확인한 뒤 다시 시도하세요." };
+  if (!canPerformWorkspaceOperation(session.scopes, session.organization_role, operation)) return { message: "이 작업을 할 권한이 없어요. 대표관리자에게 권한을 요청하세요." };
   try {
     switch (operation) {
       case "createMember": {
@@ -94,11 +94,11 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
       case "createPaymentAttempt": path = `/v1/invoices/${identifier(data)}/payment-attempts`; break;
       case "createPaymentCancellation": path = `/v1/payment-attempts/${identifier(data)}/cancellations`; body = { reason: text(data, "reason"), amount: text(data, "amount") ? amount(data, "amount") : undefined }; break;
       case "finalizeInvoices": path = `/v1/invoices?month=${encodeURIComponent(text(data, "month"))}`; break;
-      default: return { message: "수행할 작업을 확인하지 못했습니다." };
+      default: return { message: "어떤 작업인지 확인하지 못했어요." };
     }
   } catch (error) {
     if (error instanceof InputFieldError) return { message: "입력한 내용을 확인하세요.", fieldErrors: { [error.field]: error.message } };
-    return { message: "입력한 값을 처리하지 못했습니다. 입력값을 확인한 뒤 다시 시도하세요." };
+    return { message: "입력한 값을 처리하지 못했어요. 입력값을 확인한 뒤 다시 시도하세요." };
   }
   if (operation === "updateCustomer" && !/^\d+$/.test(text(data, "version"))) return { message: "고객의 최신 정보를 다시 조회한 뒤 수정하세요." };
   const isPaymentRequest = ["createPaymentAttempt", "createPaymentCancellation", "updateTossPaymentsCredential"].includes(operation);
@@ -130,10 +130,10 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
     const existing = existingCustomerMessage({ externalId: text(data, "external_id"), name: text(data, "name"), billingEmail: text(data, "billing_email") }, response);
     if (existing) return { isConfirmedFailure: true, message: existing };
   }
-  if (response?.status === "failed") return { isConfirmedFailure: true, message: String(response.failure_message ?? "요청이 거절됐습니다. 실패 사유를 확인하세요.") };
-  if (response?.status === "pending") return { isUnconfirmed: true, message: "요청을 접수했습니다. 결과를 확인 중이므로 다시 청구하지 말고 상태를 새로고침하세요." };
+  if (response?.status === "failed") return { isConfirmedFailure: true, message: String(response.failure_message ?? "요청이 거절됐어요. 실패 사유를 확인하세요.") };
+  if (response?.status === "pending") return { isUnconfirmed: true, message: "요청을 접수했어요. 결과를 확인하는 중이니 같은 요청을 다시 보내지 말고 상태를 새로 조회하세요." };
   return {
-    isSuccess: true, message: operation === "testWebhookEndpoint" ? "시험 통보를 발송 대기에 추가했습니다. 발송 내역에서 결과를 확인하세요." : successMessage(operation),
+    isSuccess: true, message: operation === "testWebhookEndpoint" ? "시험 통보를 발송 대기에 넣었어요. 발송 내역에서 결과를 확인하세요." : successMessage(operation),
     secret: typeof response?.secret === "string" ? response.secret : undefined,
     registrationPath: typeof response?.token === "string" ? `${operation === "createOrganizationInvitation" ? "/organization-invitations/" : "/payment-method-registrations/"}${encodeURIComponent(response.token)}` : undefined,
     registrationLabel: operation === "createOrganizationInvitation" ? "초대 링크" : undefined,

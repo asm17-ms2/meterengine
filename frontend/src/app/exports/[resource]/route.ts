@@ -17,7 +17,7 @@ const RESOURCES = {
 
 export async function GET(request: Request, context: { params: Promise<{ resource: string }> }) {
   const { resource } = await context.params;
-  if (!Object.hasOwn(RESOURCES, resource)) return new Response("찾을 수 없는 내보내기입니다.", { status: 404 });
+  if (!Object.hasOwn(RESOURCES, resource)) return new Response("내보낼 수 없는 목록이에요.", { status: 404 });
   const target = RESOURCES[resource as keyof typeof RESOURCES];
   const url = new URL(request.url);
   const search = normalizeResourceQuery(resource, searchParametersFromUrl(url.searchParams));

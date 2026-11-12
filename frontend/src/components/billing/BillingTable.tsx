@@ -86,8 +86,8 @@ type BillingRow =
 
 const MIN_WIDTH = 900;
 const UNPRICED_LABEL = "기타 (단가 없음)";
-const HELD_GUIDANCE = "이 달이 끝나기 전에 단가를 등록하세요. 달이 끝나면 월 전체 확정으로 단가 있는 사용량만 청구합니다.";
-const PAST_HELD_GUIDANCE = "끝난 달은 단가를 등록할 수 없어 다시 시도하지 않습니다. 월 전체 확정으로 단가 있는 사용량만 청구하세요.";
+const HELD_GUIDANCE = "이 달이 끝나기 전에 단가를 등록하세요. 단가 없는 사용량이 남으면 자동 확정이 보류되고, 월 전체 확정으로 단가 있는 사용량만 청구할 수 있어요.";
+const PAST_HELD_GUIDANCE = "끝난 달에는 단가를 등록할 수 없어 자동 확정을 다시 시도하지 않아요. 월 전체 확정으로 단가 있는 사용량만 청구하세요.";
 
 function byCustomerName(left: BillingRow, right: BillingRow): number {
   return left.kind === "customer" && right.kind === "customer"
@@ -323,7 +323,7 @@ export function BillingTable({
         <Table.Summary>
           <Table.Summary.Row>
             <Table.Summary.Cell index={0}>
-              <Typography.Text strong>{query.customerId ? "선택 고객 합계" : "조건 전체 합계"}</Typography.Text>
+              <Typography.Text strong>{query.customerId ? "선택 고객 공급가액" : "조건 전체 공급가액"}</Typography.Text>
             </Table.Summary.Cell>
             <Table.Summary.Cell index={1} colSpan={3} />
             <Table.Summary.Cell index={4} align="right">

@@ -62,6 +62,12 @@ export function publicInvoiceLineTier(line: Pick<PublicInvoiceLine, "line_type" 
   return null;
 }
 
+// 청구서를 보낸 조직의 이름을 받지 못하면 조직을 가리키는 일반 표현으로 쓴다.
+export function publicInvoiceContact(organizationName?: string | null): string {
+  const name = organizationName?.trim();
+  return name ? `${name} 담당자` : "청구서를 보낸 담당자";
+}
+
 export function isValidInvoiceViewToken(value: unknown): value is string {
   return typeof value === "string" && /^me_invoice_[A-Za-z0-9]{32}$/.test(value);
 }

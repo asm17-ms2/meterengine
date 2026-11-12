@@ -13,7 +13,7 @@ export async function EventsMeta({
   return (
     <>
       총 <b>{formatDecimal(result.data.total)}</b>건, 이 페이지{" "}
-      <b>{result.data.events.length}</b>줄
+      <b>{result.data.events.length}</b>건
     </>
   );
 }

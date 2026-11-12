@@ -19,7 +19,7 @@ export type CustomerOption = { value: string; label: string };
 
 // 입력이 멈춘 뒤에만 검색해 글자마다 서버 액션을 보내지 않는다.
 const SEARCH_DEBOUNCE_MS = 300;
-const SEARCH_FAILURE_MESSAGE = "고객을 찾지 못했습니다. 잠시 뒤 다시 입력하세요.";
+const SEARCH_FAILURE_MESSAGE = "고객 목록을 불러오지 못했어요. 잠시 뒤 다시 입력해 주세요.";
 
 function CustomerFilterIcon({ isLoading, isOpen }: { isLoading: boolean; isOpen: boolean }) {
   if (isLoading) return <LoadingOutlined spin aria-hidden aria-label={undefined} />;
@@ -106,7 +106,7 @@ export function CustomerFilter({
       loading={isLoadingOptions || isSearching}
       suffixIcon={<CustomerFilterIcon isLoading={isLoadingOptions || isSearching} isOpen={isOpen} />}
       options={remoteOptions ?? customers}
-      notFoundContent={searchError || (isSearching ? "조회 중" : "일치하는 고객이 없습니다")}
+      notFoundContent={searchError || (isSearching ? "조회 중" : "일치하는 고객이 없어요")}
       optionRender={(option) => <CustomerLabel name={option.data.label} id={option.data.value} />}
       value={isLoadingOptions ? undefined : onChange ? selectedCustomerId : liveQuery.customerId}
       onOpenChange={open => { setIsOpen(open); if (!open) scheduleSearch(""); else if (customers.length === 0 && remoteOptions === null) void searchCustomers(""); }}

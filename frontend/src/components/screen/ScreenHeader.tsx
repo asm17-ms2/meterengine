@@ -4,11 +4,13 @@ import { Flex, Typography } from "antd";
 
 export function ScreenHeader({
   title,
+  description,
   tags,
   extra,
   children,
 }: {
   title: React.ReactNode;
+  description?: React.ReactNode;
   tags?: React.ReactNode;
   extra?: React.ReactNode;
   children?: React.ReactNode;
@@ -22,6 +24,11 @@ export function ScreenHeader({
           </Typography.Title>
           {tags}
         </Flex>
+        {description ? (
+          <Typography.Paragraph type="secondary" style={{ margin: 0, maxWidth: 650 }}>
+            {description}
+          </Typography.Paragraph>
+        ) : null}
         {children ? (
           <Typography.Paragraph type="secondary" style={{ margin: 0 }}>
             {children}

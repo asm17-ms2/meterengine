@@ -24,7 +24,7 @@ public enum ErrorCode {
 
   // 403 Forbidden
   PERMISSION_DENIED(HttpStatus.FORBIDDEN, "이 요청을 할 권한이 없습니다"),
-  ORGANIZATION_NOT_ACTIVE(HttpStatus.FORBIDDEN, "활성 상태가 아닌 도입사입니다"),
+  ORGANIZATION_NOT_ACTIVE(HttpStatus.FORBIDDEN, "활성 상태가 아닌 조직입니다"),
   ENVIRONMENT_MISMATCH(HttpStatus.FORBIDDEN, "API 키의 환경과 요청 환경이 다릅니다"),
   CONSENT_REQUIRED(HttpStatus.FORBIDDEN, "서비스 이용 안내와 개인정보 처리 안내에 본인이 동의해야 합니다"),
   EMAIL_NOT_VERIFIED(HttpStatus.FORBIDDEN, "이메일 인증을 마치지 않은 계정입니다"),
@@ -38,7 +38,7 @@ public enum ErrorCode {
   INVOICE_VIEW_LINK_NOT_FOUND(HttpStatus.NOT_FOUND, "인보이스 조회 링크를 찾을 수 없습니다"),
   ENDPOINT_NOT_FOUND(HttpStatus.NOT_FOUND, "요청한 경로가 없습니다"),
   API_KEY_NOT_FOUND(HttpStatus.NOT_FOUND, "API 키를 찾을 수 없습니다"),
-  ORGANIZATION_NOT_FOUND(HttpStatus.NOT_FOUND, "도입사를 찾을 수 없습니다"),
+  ORGANIZATION_NOT_FOUND(HttpStatus.NOT_FOUND, "조직을 찾을 수 없습니다"),
   USER_ACCOUNT_NOT_FOUND(HttpStatus.NOT_FOUND, "사용자 계정을 찾을 수 없습니다"),
   PAYMENT_METHOD_NOT_FOUND(HttpStatus.NOT_FOUND, "등록된 카드가 없습니다"),
   PAYMENT_METHOD_REGISTRATION_NOT_FOUND(HttpStatus.NOT_FOUND, "카드 등록 링크를 찾을 수 없습니다"),
@@ -61,7 +61,7 @@ public enum ErrorCode {
   IDEMPOTENCY_CONFLICT(HttpStatus.CONFLICT, "같은 재시도 키로 다른 요청을 보낼 수 없습니다"),
   CUSTOMER_ARCHIVED(HttpStatus.CONFLICT, "보관한 고객입니다. 복원한 뒤 사용하세요"),
   RESOURCE_ARCHIVED(HttpStatus.CONFLICT, "보관한 항목입니다"),
-  ENVIRONMENT_NOT_READY(HttpStatus.CONFLICT, "선택한 환경에서 아직 지원하지 않는 기능입니다. 기존 데이터는 기존 범위에서 확인하세요"),
+  ENVIRONMENT_NOT_READY(HttpStatus.CONFLICT, "테스트 환경과 실제 환경에서는 아직 쓸 수 없는 기능입니다"),
   ARCHIVE_RESTORATION_CONFLICT(
       HttpStatus.CONFLICT, "현재 버전과 충돌하거나 보관 기간이 시작되어 복원할 수 없습니다. 새 버전을 등록하세요"),
   CUSTOMER_HAS_EVENTS(HttpStatus.CONFLICT, "수집된 이벤트가 있어 고객을 삭제할 수 없습니다"),
@@ -77,8 +77,8 @@ public enum ErrorCode {
   PAYMENT_RETRY_STALE(HttpStatus.CONFLICT, "결제 상태가 바뀌었습니다. 최신 상태를 조회한 뒤 다시 확인해 주세요"),
   INVOICE_AMOUNT_ZERO(HttpStatus.CONFLICT, "청구 금액이 0원인 인보이스는 결제할 수 없습니다"),
   EMAIL_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 가입한 이메일입니다"),
-  ORGANIZATION_STATUS_TRANSITION_INVALID(HttpStatus.CONFLICT, "도입사를 이 상태로 바꿀 수 없습니다"),
-  ORGANIZATION_MEMBER_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 도입사에 소속된 사용자입니다"),
+  ORGANIZATION_STATUS_TRANSITION_INVALID(HttpStatus.CONFLICT, "조직을 이 상태로 바꿀 수 없습니다"),
+  ORGANIZATION_MEMBER_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 조직에 소속된 사용자입니다"),
   TOSS_PAYMENTS_CREDENTIAL_MISSING(HttpStatus.CONFLICT, "결제 모드에 맞는 토스페이먼츠 키가 없습니다"),
   PAYMENT_METHOD_MISSING(HttpStatus.CONFLICT, "결제 모드에 맞는 등록 카드가 없습니다"),
   PAYMENT_MODE_MISMATCH(HttpStatus.CONFLICT, "API 키의 모드와 결제 모드가 다릅니다"),

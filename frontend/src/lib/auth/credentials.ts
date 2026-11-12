@@ -2,7 +2,7 @@ export const NAME_MAX_LENGTH = 255;
 export const EMAIL_MAX_LENGTH = 254;
 export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_BYTES = 72;
-export const PASSWORD_RULE_MESSAGE = "비밀번호는 8자 이상 72자 이하로 입력하세요. 한글은 1자를 3자로 계산합니다.";
+export const PASSWORD_RULE_MESSAGE = "비밀번호는 8자 이상 72자 이하로 입력하세요. 한글은 1자를 3자로 계산해요.";
 
 export function isValidPassword(password: string): boolean {
   return password.length >= PASSWORD_MIN_LENGTH && new TextEncoder().encode(password).length <= PASSWORD_MAX_BYTES;

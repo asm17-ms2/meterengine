@@ -254,7 +254,7 @@ export function InvoicesTable({
       summary={() => (
         <Table.Summary.Row>
           <Table.Summary.Cell index={0}>
-            <Typography.Text strong>조건 전체 합계</Typography.Text>
+            <Typography.Text strong>조건 전체 세금 포함 합계</Typography.Text>
           </Table.Summary.Cell>
           <Table.Summary.Cell index={1} colSpan={3} />
           <Table.Summary.Cell index={4} align="right">

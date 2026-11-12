@@ -29,7 +29,7 @@ export async function reviewConsentsForInvitation(data: FormData) {
 
 export async function acceptInvitationAction(_previous: InvitationState, data: FormData): Promise<InvitationState> {
   const token = String(data.get("token") ?? "");
-  if (!/^me_invite_[A-Za-z0-9]{32}$/.test(token)) return { message: "초대 링크를 확인하세요." };
+  if (!/^me_invite_[A-Za-z0-9]{32}$/.test(token)) return { message: "초대 링크가 올바르지 않아요. 받은 링크를 다시 확인하세요." };
   const path = `/v1/organization-invitations/${encodeURIComponent(token)}`;
   const preview = await requestApi<Preview>(path);
   if (!preview.ok) return { message: toDisplayMessage(preview.error) };
@@ -37,7 +37,7 @@ export async function acceptInvitationAction(_previous: InvitationState, data: F
   let password = "";
   let body: unknown;
   if (preview.data.account_exists) {
-    if (!sessionToken) return { message: "초대한 이메일의 계정으로 로그인한 뒤 이 링크를 다시 열어 주세요." };
+    if (!sessionToken) return { message: "초대받은 이메일 계정으로 로그인한 뒤 이 링크를 다시 여세요." };
   } else {
     const name = String(data.get("name") ?? "").trim();
     password = String(data.get("password") ?? "");
@@ -53,12 +53,12 @@ export async function acceptInvitationAction(_previous: InvitationState, data: F
   let activeToken = sessionToken;
   if (!preview.data.account_exists) {
     const login = await requestApi<SessionTokenResponse>("/v1/sessions", { method: "POST", body: { email: preview.data.email, password }, clientIp: (await headers()).get("x-meterengine-client-ip") ?? undefined });
-    if (!login.ok) return { isAccepted: true, message: "초대를 수락했습니다. 로그인 화면에서 도입사로 이동하세요." };
+    if (!login.ok) return { isAccepted: true, message: "초대를 수락했어요. 로그인 화면에서 새 계정으로 로그인해 주세요." };
     await saveSession(login.data.token, login.data.expires_at);
     activeToken = login.data.token;
   }
   const selected = await requestApi("/v1/sessions/current/organization", { method: "PUT", token: activeToken, body: { organization_id: accepted.data.organization_id } });
-  if (!selected.ok) return { isAccepted: true, message: "초대 수락을 마쳤습니다. 도입사 선택 화면에서 참여한 도입사를 선택하세요." };
+  if (!selected.ok) return { isAccepted: true, message: "초대를 수락했어요. 조직 선택 화면에서 참여한 조직을 골라 주세요." };
   revalidatePath("/", "layout");
   redirect(workspaceHref("/overview", new URLSearchParams({ organization_id: accepted.data.organization_id })));
 }

@@ -17,7 +17,7 @@ export async function InvoiceFinalizeSection({
   month: string;
 }) {
   const result = await draftInvoice;
-  if (!result.ok) return <InvoiceFinalizeButton disabled disabledReason="청구 예정액을 불러오지 못해 확정할 수 없습니다." />;
+  if (!result.ok) return <InvoiceFinalizeButton disabled disabledReason="청구 예정액을 불러오지 못해 확정할 수 없어요." />;
   const targets = listFinalizeTargets(result.data.customers);
 
   return (
