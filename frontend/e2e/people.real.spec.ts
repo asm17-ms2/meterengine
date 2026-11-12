@@ -103,7 +103,7 @@ test("직접 생성과 초대, 본인 동의와 권한, 감사 조회와 고객 
       const admin = await newPage();
       await login(admin, adminEmail);
       await expect(admin).toHaveURL(/\/account\/consents(?:\?|$)/);
-      await expect(admin.getByRole("heading", { name: "계정 이용 안내 확인", exact: true })).toBeVisible();
+      await expect(admin.getByRole("heading", { name: "약관 동의", exact: true })).toBeVisible();
       await admin.goto("/customers");
       await expect(admin).toHaveURL(/\/account\/consents(?:\?|$)/);
       const returnTo = new URL(admin.url()).searchParams.get("returnTo");
@@ -116,7 +116,7 @@ test("직접 생성과 초대, 본인 동의와 권한, 감사 조회와 고객 
       await admin.getByLabel(/^새 비밀번호 확인/).fill(`${CHANGED_PASSWORD}-typo`);
       await agree(admin);
       await admin.getByRole("button", { name: "동의하고 업무 시작", exact: true }).click();
-      await expect(admin.getByText("새 비밀번호와 확인 칸이 다릅니다.", { exact: true })).toBeVisible();
+      await expect(admin.getByText("새 비밀번호와 확인 칸이 서로 달라요.", { exact: true })).toBeVisible();
       await admin.getByLabel(/^새 비밀번호 확인/).fill(CHANGED_PASSWORD);
       await admin.getByRole("button", { name: "동의하고 업무 시작", exact: true }).click();
       await expect(admin).toHaveURL(url => url.pathname === "/customers" && url.searchParams.get("organization_id") === expectedOrganizationId);
@@ -146,7 +146,7 @@ test("직접 생성과 초대, 본인 동의와 권한, 감사 조회와 고객 
       await invited.getByLabel(/^이름/).fill("초대 수락 관리자");
       await invited.getByLabel(/^비밀번호/).fill(PASSWORD);
       await agree(invited);
-      await invited.getByRole("button", { name: "초대 수락하고 도입사로 이동", exact: true }).click();
+      await invited.getByRole("button", { name: "초대 수락하고 시작", exact: true }).click();
       await expect(invited).toHaveURL(/\/overview(?:\?.*)?$/);
       await expect(invited.locator(".organization-link")).toContainText(organizationName);
       await owner.reload();
@@ -167,7 +167,7 @@ test("직접 생성과 초대, 본인 동의와 권한, 감사 조회와 고객 
       dialog = owner.getByRole("dialog");
       await dialog.getByRole("button", { name: "고객 보관", exact: true }).click();
       await expect(dialog).toHaveCount(0);
-      await expect(owner.getByText("고객을 보관했습니다. 보관 목록에서 확인하세요.", { exact: true })).toBeVisible();
+      await expect(owner.getByText("고객을 보관했어요. 보관 목록에서 확인하세요.", { exact: true })).toBeVisible();
       await expect(owner).toHaveURL(url => url.pathname === "/customers" && url.searchParams.get("status") === "archived" && /^\d{4}-\d{2}$/.test(url.searchParams.get("month") ?? ""));
       await expect(owner.getByRole("link", { name: customerName, exact: true })).toBeVisible();
       const status = owner.getByRole("combobox", { name: "관리 상태", exact: true });
@@ -177,25 +177,25 @@ test("직접 생성과 초대, 본인 동의와 권한, 감사 조회와 고객 
       await status.selectOption("archived");
       await owner.getByRole("button", { name: "조건 적용", exact: true }).click();
       await owner.getByRole("link", { name: customerName, exact: true }).click();
-      await expect(owner.getByText("보관된 고객입니다.", { exact: false })).toBeVisible();
+      await expect(owner.getByText("보관된 고객이에요.", { exact: false })).toBeVisible();
       await owner.getByRole("button", { name: "고객 복원", exact: true }).click();
       dialog = owner.getByRole("dialog");
       await dialog.getByRole("button", { name: "고객 복원", exact: true }).click();
       await expect(dialog).toHaveCount(0);
-      await expect(owner.getByText("보관된 고객입니다.", { exact: false })).toHaveCount(0);
+      await expect(owner.getByText("보관된 고객이에요.", { exact: false })).toHaveCount(0);
       await owner.goto("/customers");
       await expect(owner.getByRole("link", { name: customerName, exact: true })).toBeVisible();
     });
 
     await test.step("감사 행동 필터와 API 경로 검색", async () => {
       await owner.goto("/audit");
-      await owner.getByLabel("행동", { exact: true }).selectOption("organization_invitation_accepted");
+      await owner.getByLabel("활동", { exact: true }).selectOption("organization_invitation_accepted");
       await owner.getByRole("button", { name: "조건 적용", exact: true }).click();
       await expect(owner.locator(".audit-summary strong")).toHaveText(["초대 수락"]);
       await owner.locator(".audit-summary").click();
       await expect(owner.locator(".audit-detail")).toContainText(invitedEmail);
-      await owner.getByLabel("행동", { exact: true }).selectOption("api_request_completed");
-      await owner.getByLabel("행동 또는 대상 검색", { exact: true }).fill("/v1/organization/members");
+      await owner.getByLabel("활동", { exact: true }).selectOption("api_request_completed");
+      await owner.getByLabel("활동 또는 대상 검색", { exact: true }).fill("/v1/organization/members");
       await owner.getByRole("button", { name: "조건 적용", exact: true }).click();
       await expect(owner.locator(".audit-summary strong").first()).toHaveText("API 요청");
       await owner.locator(".audit-summary").first().click();
@@ -210,7 +210,7 @@ test("직접 생성과 초대, 본인 동의와 권한, 감사 조회와 고객 
       for (const route of ["/members", "/audit?action=api_request_completed&q=%2Fv1%2Forganization%2Fmembers", "/customers"]) {
         await owner.goto(route);
         await expect(owner.getByRole("main")).toBeVisible();
-        await expect(owner.getByText("데이터를 불러오지 못했습니다", { exact: true })).toHaveCount(0);
+        await expect(owner.getByText("데이터를 불러오지 못했어요", { exact: true })).toHaveCount(0);
         expect(await owner.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       }
       await expect(owner.locator(".workspace-mobile-records").getByRole("link", { name: customerName, exact: true })).toBeVisible();

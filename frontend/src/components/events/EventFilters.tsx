@@ -9,7 +9,9 @@ import { useId, useMemo, useRef, useState, useTransition, type FormEvent } from 
 import { buildListHref, PAGE_SIZE_OPTIONS, rangeEndpoint, type ListQueryOverrides, type MonthlyListQuery } from "@/lib/list-query";
 import { CustomerFilter, type CustomerOption } from "@/components/screen/CustomerFilter";
 import { MonthPicker } from "@/components/screen/MonthPicker";
+import { RetryButton } from "@/components/screen/RetryButton";
 import { CAPABILITIES } from "@/lib/api/capabilities";
+import { formatKoreanMonth } from "@/lib/format";
 
 type RangeUnit = "date" | "datetime";
 
@@ -41,7 +43,7 @@ function toDateEnd(value: string) {
 }
 
 function appliedPeriod(query: MonthlyListQuery) {
-  if (!query.from && !query.to) return `${query.month} 월별, 한국 시간(KST)`;
+  if (!query.from && !query.to) return `${formatKoreanMonth(query.month)}, 한국 시간(KST)`;
   const from = localTime(query.from);
   const to = localTime(query.to);
   return query.rangeMode === "date"
@@ -132,7 +134,7 @@ export function EventFilters({ query: initialQuery, customers, types, optionsErr
       return;
     }
     if (period === "custom" && (!from || !to || rangeEndpoint(from, false, unit) >= rangeEndpoint(to, true, unit))) {
-      showError("range", "시작과 종료를 확인하세요. 종료는 시작보다 뒤여야 합니다.");
+      showError("range", "종료는 시작보다 뒤여야 해요. 시작과 종료를 확인하세요.");
       return;
     }
     navigate(new FormData(event.currentTarget), { from: period === "month" ? undefined : from, to: period === "month" ? undefined : to, rangeMode: unit });
@@ -160,7 +162,7 @@ export function EventFilters({ query: initialQuery, customers, types, optionsErr
           <label className="workspace-field"><span>지정 단위</span><select name="range_unit" value={unit} onChange={event => changeUnit(event.target.value as RangeUnit)}><option value="date">날짜</option><option value="datetime">날짜와 시각 (초 단위)</option></select></label>
           <label className="workspace-field"><span>시작 {unit === "date" ? "날짜" : "시각"} (포함)</span><input name="from" type={unit === "date" ? "date" : "datetime-local"} step={1} value={from} onChange={event => setFrom(event.target.value)} required aria-invalid={error?.field === "range"} aria-describedby={`${id}-range-help${error?.field === "range" ? ` ${id}-range-error` : ""}`} /></label>
           <label className="workspace-field"><span>종료 {unit === "date" ? "날짜 (해당 일 포함)" : "시각 (미포함)"}</span><input name="to" type={unit === "date" ? "date" : "datetime-local"} step={1} value={to} onChange={event => setTo(event.target.value)} required aria-invalid={error?.field === "range"} aria-describedby={`${id}-range-help${error?.field === "range" ? ` ${id}-range-error` : ""}`} /></label>
-          <p id={`${id}-range-help`} className="field-hint">한국 시간(KST). {unit === "date" ? "종료 날짜 전체를 포함합니다." : "시작 시각을 포함하고 종료 시각은 포함하지 않습니다."}</p>
+          <p id={`${id}-range-help`} className="field-hint">한국 시간(KST). {unit === "date" ? "종료 날짜 하루 전체를 포함해요." : "시작 시각은 포함하고 종료 시각은 포함하지 않아요."}</p>
           {error?.field === "range" && <p id={`${id}-range-error`} role="alert" className="field-error">{error.message}</p>}
         </div>}
       </fieldset>
@@ -170,19 +172,19 @@ export function EventFilters({ query: initialQuery, customers, types, optionsErr
         <label className="workspace-field event-search"><span>이벤트 또는 고객 찾기</span><input type="search" name="q" defaultValue={query.q} placeholder="전송 ID, 고객명, 외부 고객 ID" autoComplete="off" /></label>
       </div>
       <details ref={detailsRef} className="event-advanced" open={detailCount > 0}>
-        <summary>상세 조건{detailCount > 0 && <span className="field-hint"> (적용 {detailCount}개)</span>}</summary>
+        <summary className="disclosure-summary">상세 조건{detailCount > 0 && <span className="field-hint"> (적용 {detailCount}개)</span>}</summary>
         <div className="event-filter-grid">
           <label className="workspace-field"><span>정렬 기준</span><select name="sort" defaultValue={query.sort ?? "occurred_at"}><option value="occurred_at">발생 시각</option><option value="received_at">수신 시각</option><option value="transaction_id">전송 ID</option><option value="customer_name">고객명</option><option value="type">이벤트 유형</option></select></label>
-          <label className="workspace-field"><span>정렬 순서</span><select name="order" defaultValue={query.order ?? "desc"}><option value="desc">내림차순 (최신순)</option><option value="asc">오름차순</option></select></label>
-          <label className="workspace-field"><span>페이지당 표시</span><select name="size" defaultValue={query.size}>{PAGE_SIZE_OPTIONS.map(size => <option key={size} value={size}>{size}건</option>)}</select></label>
+          <label className="workspace-field"><span>정렬 순서</span><select name="order" defaultValue={query.order ?? "desc"}><option value="desc">내림차순</option><option value="asc">오름차순</option></select></label>
+          <label className="workspace-field"><span>표시 건수</span><select name="size" defaultValue={query.size}>{PAGE_SIZE_OPTIONS.map(size => <option key={size} value={size}>{size}건</option>)}</select></label>
         </div>
         <div className="workspace-field"><label htmlFor={`${id}-properties`}>속성과 값 (JSON 객체)</label><textarea id={`${id}-properties`} name="properties" rows={3} defaultValue={query.properties ?? ""} placeholder={'{"model":"large"}'} aria-invalid={error?.field === "properties"} aria-describedby={`${id}-properties-help${error?.field === "properties" ? ` ${id}-properties-error` : ""}`} /></div>
-        <p className="field-hint" id={`${id}-properties-help`}>입력한 속성과 값이 모두 일치하는 이벤트를 찾습니다. 문자, 숫자와 불리언 값을 구분합니다.</p>
+        <p className="field-hint" id={`${id}-properties-help`}>입력한 속성과 값이 모두 일치하는 이벤트를 찾아요. 문자, 숫자, 불리언 값은 서로 구분해요.</p>
         {error?.field === "properties" && <p id={`${id}-properties-error`} role="alert" className="field-error">{error.message}</p>}
       </details>
-      <div className="event-filter-submit"><Button htmlType="submit" loading={isPending}>조건 적용</Button><Link href={resetHref}>조건 초기화</Link>{isEdited && !isPending && <span className="field-hint">조건 변경됨. 조건 적용을 눌러 반영하세요.</span>}</div>
+      <div className="event-filter-submit"><Button type="primary" htmlType="submit" loading={isPending}>조건 적용</Button><Link href={resetHref}>조건 초기화</Link>{isEdited && !isPending && <span className="field-hint">조건이 바뀌었어요. 조건 적용을 눌러 반영하세요.</span>}</div>
     </fieldset>
-    <p role="status" aria-label="현재 조회 기간" className="event-applied-period">{isPending ? "조회 중입니다." : `현재 조회: ${appliedPeriod(query)}`}</p>
-    {optionsError && <p role="status" className="field-hint">{optionsError} 유형은 직접 입력할 수 있습니다. <a href="">후보 다시 불러오기</a></p>}
+    <p role="status" aria-label="현재 조회 기간" className="event-applied-period">{isPending ? "조회 중이에요." : `현재 조회: ${appliedPeriod(query)}`}</p>
+    {optionsError && <p role="status" className="field-hint">{optionsError} 이벤트 유형은 직접 입력해도 돼요. <RetryButton type="link" size="small">다시 불러오기</RetryButton></p>}
   </form>;
 }

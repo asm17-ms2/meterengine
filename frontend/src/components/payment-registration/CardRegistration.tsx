@@ -71,7 +71,7 @@ export function CardRegistration({ token, registration }: { token: string; regis
     </fieldset>
     {errorMessage && <Alert type="error" showIcon title={errorMessage} />}
     <Button type="primary" size="large" block disabled={!hasConsent || !isSdkReady} loading={isSubmitting} onClick={registerCard}>
-      토스에서 카드 등록하기
+      토스페이먼츠에서 카드 등록하기
     </Button>
     <p className={styles.note}>{!isSdkReady && !errorMessage ? "카드 인증창을 준비하고 있습니다." : "다음 화면에서 카드 정보를 입력하고 본인인증을 진행합니다."}</p>
   </div>;

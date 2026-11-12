@@ -28,7 +28,13 @@ public record CreateSignupRequest(
     @Schema(format = "password", description = "8자 이상 72자 이하이고 UTF-8로 72바이트 이하")
         @NotBlank @Size(min = UserAccount.PASSWORD_MIN_LENGTH, max = UserAccount.PASSWORD_MAX_LENGTH) @StorableText
         String password,
-    @Schema(description = "필수 동의. terms_of_service와 privacy_policy를 한 번씩 담는다") @NotEmpty @Valid List<@NotNull CreateSignupConsentRequest> consents) {
+    @Schema(description = "필수 동의. terms_of_service와 privacy_policy를 한 번씩 담는다") @NotEmpty @Valid List<@NotNull CreateSignupConsentRequest> consents,
+    @Schema(description = "Cloudflare Turnstile 위젯이 준 토큰. 서버가 캡차를 켰을 때만 필요하다")
+        @JsonProperty("turnstile_token")
+        @Size(max = TURNSTILE_TOKEN_MAX_LENGTH) @StorableText
+        String turnstileToken) {
+
+  public static final int TURNSTILE_TOKEN_MAX_LENGTH = 2048;
 
   @Override
   public String toString() {
@@ -40,6 +46,6 @@ public record CreateSignupRequest(
         + email
         + ", password=(redacted), consents="
         + consents
-        + "]";
+        + ", turnstileToken=(redacted)]";
   }
 }

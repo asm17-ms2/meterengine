@@ -1,6 +1,7 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { CONSENT_DOCUMENTS, CONSENT_VERSION } from "../src/lib/auth/consents";
+import { consoleHeaders } from "./console-environment";
 
 const API_URL = process.env.S1_API_URL ?? "http://127.0.0.1:38147";
 const PG_URL = "http://127.0.0.1:38447";
@@ -55,12 +56,19 @@ function safeFailure(error: unknown, secrets: Set<string>) {
   return new Error(message.replace(/me_(?:test|live|reg|invite)_[A-Za-z0-9]+/g, "[redacted token]"));
 }
 
-test("미터 이름과 이름 정렬 머리글이 데스크톱 폭에서 보인다", async ({ page }) => {
+test("미터 이름과 이름 정렬 머리글이 데스크톱 폭에서 보인다", async ({ page, request }) => {
   await page.goto("/login?returnTo=%2Fbillable-metrics");
   await page.getByLabel("이메일", { exact: true }).fill("member@meterengine.local");
   await page.getByLabel("비밀번호", { exact: true }).fill("local-member-password");
   await page.getByRole("button", { name: "로그인", exact: true }).click();
   await expect(page).toHaveURL(/\/billable-metrics(?:\?.*)?$/);
+  // 로컬 시드 미터는 legacy에만 있어 테스트 환경 화면에 그릴 미터를 만든다.
+  const token = (await page.context().cookies()).find(cookie => cookie.name === "me_session")?.value;
+  if (!token) throw new Error("로컬 검증 세션이 없습니다.");
+  const code = `column-width-${randomUUID()}`;
+  const metric = await request.post(`${API_URL}/v1/billable-metrics`, { headers: consoleHeaders(token), data: { code, name: "열 너비 확인 미터", event_type: code, aggregation: "sum", target_property: "units", dimension_properties: [] } });
+  expect(metric.status()).toBe(201);
+  await page.reload();
 
   for (const width of [1024, 1280, 1440]) {
     await page.setViewportSize({ width, height: 900 });
@@ -116,7 +124,7 @@ test("보관을 지원하는 모든 도입사 목록에서 상태별 조회와 �
     const token = (await context.cookies()).find(cookie => cookie.name === "me_session")?.value;
     if (!token) throw new Error("도입사 검증 세션이 없습니다.");
     secrets.add(token);
-    const headers = { Authorization: `Bearer ${token}` };
+    const headers = consoleHeaders(token);
     const post = async <T = { id: string }>(path: string, data: Record<string, unknown>): Promise<T> => {
       const result = await request.post(`${API_URL}${path}`, { headers, data });
       expect(result.status()).toBe(201);
@@ -254,15 +262,15 @@ test("보관을 지원하는 모든 도입사 목록에서 상태별 조회와 �
 
     await test.step("사용자와 서버 키, 통보의 상태별 목록 분리", async () => {
       await page.goto("/members");
-      const members = section(page, "도입사 사용자");
+      const members = section(page, "사용자 목록");
       await expectRecords(members, [email], [archivedMemberEmail]);
       await selectedFilter(page, "사용자 관리 상태", "보관됨");
       await expectRecords(members, [archivedMemberEmail], [email]);
       await selectedFilter(page, "사용자 관리 상태", "전체");
       await expectRecords(members, [email, archivedMemberEmail]);
       await page.goto("/integrations");
-      const keys = section(page, "서버 연동 키");
-      const hooks = section(page, "처리 결과 통보");
+      const keys = section(page, "API 키");
+      const hooks = section(page, "통보 수신 주소");
       await expectRecords(keys, [activeKeyLabel], [revokedKeyLabel]);
       await expect(hooks.getByText(activeWebhookUrl, { exact: true })).toBeVisible();
       await expect(hooks.getByText(archivedWebhookUrl, { exact: true })).toHaveCount(0);
@@ -287,18 +295,18 @@ test("보관을 지원하는 모든 도입사 목록에서 상태별 조회와 �
       await page.goto("/settings");
       const credentials = section(page, "토스페이먼츠 연동");
       await expectRecords(credentials, ["new2"], ["old1"]);
-      await selectedFilter(page, "토스 키 관리 상태", "보관됨");
+      await selectedFilter(page, "토스페이먼츠 키 관리 상태", "보관됨");
       await expectRecords(credentials, ["old1"], ["new2"]);
-      await selectedFilter(page, "토스 키 관리 상태", "전체");
+      await selectedFilter(page, "토스페이먼츠 키 관리 상태", "전체");
       await expectRecords(credentials, ["new2", "old1"]);
       await page.goto(`/customers/${activeCustomerId}?month=${currentMonth}`);
       const cards = section(page, "현재 결제 모드의 카드 관리");
       const rows = cards.locator(".workspace-desktop-table").getByRole("row").filter({ hasText: "43301234****123*" });
       await expect(rows).toHaveCount(1);
-      await expect(cards.getByRole("button", { name: "카드 보관", exact: true })).toBeVisible();
+      await expect(cards.getByRole("button", { name: /카드 보관$/ })).toBeVisible();
       await selectedFilter(page, "카드 관리 상태", "보관됨");
       await expect(rows).toHaveCount(1);
-      await expect(cards.getByRole("button", { name: "카드 보관", exact: true })).toHaveCount(0);
+      await expect(cards.getByRole("button", { name: /카드 보관$/ })).toHaveCount(0);
       await selectedFilter(page, "카드 관리 상태", "전체");
       await expect(rows).toHaveCount(2);
       await page.reload();
@@ -317,13 +325,13 @@ test("보관을 지원하는 모든 도입사 목록에서 상태별 조회와 �
         { path: `/pricing?month=${currentMonth}&metric=${activeMetricCode}&metric_status=all&plan_status=all&rate_status=all`, filters: ["미터 관리 상태", "요금제 관리 상태", "단가 관리 상태"] },
         { path: "/members?status=all", filters: ["사용자 관리 상태"] },
         { path: "/integrations?status=all&key_status=all", filters: ["API 키 상태", "통보 관리 상태"] },
-        { path: "/settings?status=all", filters: ["토스 키 관리 상태"] },
+        { path: "/settings?status=all", filters: ["토스페이먼츠 키 관리 상태"] },
         { path: `/customers/${activeCustomerId}?month=${currentMonth}&card_status=all`, filters: ["카드 관리 상태"] },
       ];
       for (const route of routes) {
         await page.goto(route.path);
         await expect(page.getByRole("main")).toBeVisible();
-        await expect(page.getByText("데이터를 불러오지 못했습니다", { exact: true })).toHaveCount(0);
+        await expect(page.getByText("데이터를 불러오지 못했어요", { exact: true })).toHaveCount(0);
         for (const label of route.filters) {
           const select = page.getByRole("combobox", { name: label, exact: true });
           if (["/customers", "/billable-metrics", "/pricing"].includes(new URL(route.path, "http://localhost").pathname)) await expect(select).toHaveValue("all");

@@ -14,8 +14,8 @@ const pretendard = localFont({
 });
 
 export const metadata: Metadata = {
-  title: { default: "MeterEngine 관리자 콘솔", template: "%s | MeterEngine" },
-  description: "사용량 이벤트와 고객별 집계를 확인하는 도입사 운영자 화면",
+  title: { default: "MeterEngine 콘솔", template: "%s | MeterEngine" },
+  description: "고객별 사용량과 요금, 청구와 결제를 관리하는 MeterEngine 콘솔",
 };
 
 export default function RootLayout({

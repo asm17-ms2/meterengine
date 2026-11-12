@@ -124,7 +124,7 @@ export function BillableMetricFormDialog({
 
   useEffect(() => {
     if (state.status === "done") {
-      message.success("저장했습니다");
+      message.success("저장했어요");
       onClose();
     }
     if (state.status === "failed") failureRef.current?.focus();
@@ -210,7 +210,7 @@ export function BillableMetricFormDialog({
           <Form.Item
             name="code"
             label="코드"
-            extra="조직 내에서 유일해야 합니다. 등록 뒤 바꿀 수 없습니다."
+            extra="다른 미터와 같은 코드는 쓸 수 없어요. 등록한 뒤에는 바꿀 수 없어요."
             rules={[{ required: true, transform: trimText, message: "코드를 입력하세요" }]}
           >
             <Input
@@ -223,7 +223,7 @@ export function BillableMetricFormDialog({
           </Form.Item>
         )}
         {isEdit ? <Typography.Paragraph type="secondary">
-          수집된 이벤트가 있는 미터는 이름만 바꿀 수 있습니다. 계산 기준을 바꾸려면 새 미터를 등록하세요.
+          수집된 이벤트가 있는 미터는 이름만 바꿀 수 있어요. 계산 기준을 바꾸려면 새 미터를 등록하세요.
         </Typography.Paragraph> : null}
         <Form.Item
           name="name"
@@ -239,7 +239,7 @@ export function BillableMetricFormDialog({
         <Form.Item
           name="eventType"
           label="이벤트 타입"
-          extra="어떤 사용량 이벤트를 집계할지 정하는 매칭 키입니다."
+          extra="사용량 이벤트의 type이 이 값과 같으면 이 미터로 집계해요."
           rules={[{ required: true, transform: trimText, message: "이벤트 타입을 입력하세요" }]}
         >
           <Input
@@ -263,7 +263,7 @@ export function BillableMetricFormDialog({
           name="percentile"
           label="백분위 (0-100)"
           preserve={false}
-          extra="예: 95는 P95, 50은 중앙값입니다."
+          extra="예: 95는 P95, 50은 중앙값이에요."
           rules={[{ required: true, type: "number", min: 0, max: 100, message: "백분위는 0부터 100 사이의 숫자로 입력하세요" }]}
         ><InputNumber controls={false} min={0} max={100} style={{ width: "100%" }} /></Form.Item> : null}
         {aggregation !== "count" ? (
@@ -271,7 +271,7 @@ export function BillableMetricFormDialog({
           name="targetProperty"
           label="집계 대상 속성"
           preserve={false}
-          extra={aggregation === "count_distinct" ? "이벤트 properties에서 고유 값을 셀 키입니다. 예: user_id." : "이벤트 properties에서 집계할 숫자 속성의 키입니다. 없는 값과 숫자가 아닌 값은 제외합니다."}
+          extra={aggregation === "count_distinct" ? "이벤트 properties에서 고유 값을 셀 키예요. 예: user_id" : "이벤트 properties에서 집계할 숫자 속성의 키예요. 값이 없거나 숫자가 아니면 집계에서 빼요."}
           rules={[
             {
               required: true,
@@ -291,7 +291,7 @@ export function BillableMetricFormDialog({
         <Form.Item
           name="dimensionProperties"
           label="차원 키"
-          extra="단가를 가르는 이벤트 속성 키. 예: model. 여럿이면 쉼표로 나눕니다."
+          extra="단가를 나누는 기준이 되는 이벤트 속성 키예요. 예: model. 여럿이면 쉼표로 구분하세요."
           rules={[PASSING_RULE]}
         >
           <Input
@@ -304,11 +304,11 @@ export function BillableMetricFormDialog({
         <Divider />
         <Typography.Title level={5}>결과 변환</Typography.Title>
         <Typography.Paragraph type="secondary">
-          집계 결과를 과금 단위 크기로 나눕니다. 올림, 내림, 반올림을 선택하면 각 조합의 수량에 적용한 뒤 요금을 계산합니다.
+          집계 결과를 과금 단위 크기로 나눠요. 올림, 내림, 반올림을 고르면 조합마다 수량에 적용한 뒤 요금을 계산해요.
         </Typography.Paragraph>
-        <Form.Item name="unitSize" label="과금 단위 크기" extra="1이면 그대로 사용합니다. 예: 바이트를 1,024로 나누면 KiB 단위 수량이 됩니다." rules={[
+        <Form.Item name="unitSize" label="과금 단위 크기" extra="1이면 그대로 써요. 예: 바이트를 1,024로 나누면 KiB 단위 수량이 돼요." rules={[
           { required: true, message: "과금 단위 크기를 입력하세요" },
-          { validator: (_, value) => typeof value === "number" && Number.isFinite(value) && value > 0 ? Promise.resolve() : Promise.reject(new Error("과금 단위 크기는 0보다 커야 합니다")) },
+          { validator: (_, value) => typeof value === "number" && Number.isFinite(value) && value > 0 ? Promise.resolve() : Promise.reject(new Error("과금 단위 크기는 0보다 커야 해요")) },
         ]}>
           <InputNumber controls={false} min={0} style={{ width: "100%" }} />
         </Form.Item>
@@ -316,7 +316,7 @@ export function BillableMetricFormDialog({
           <Form.Item name="roundingMode" label="반올림 방식" style={{ flex: "1 1 240px" }}>
             <Select options={METRIC_ROUNDING_OPTIONS} onChange={(value) => { if (value === "none") form.setFieldValue("roundingPrecision", 0); }} />
           </Form.Item>
-          {roundingMode !== "none" ? <Form.Item name="roundingPrecision" label="소수 자릿수" extra="0이면 정수로 만듭니다." style={{ flex: "1 1 180px" }} rules={[{ required: true, type: "integer", min: 0, max: 12, message: "소수 자릿수는 0부터 12 사이의 정수로 입력하세요" }]}>
+          {roundingMode !== "none" ? <Form.Item name="roundingPrecision" label="소수 자릿수" extra="0이면 정수로 만들어요." style={{ flex: "1 1 180px" }} rules={[{ required: true, type: "integer", min: 0, max: 12, message: "소수 자릿수는 0부터 12 사이의 정수로 입력하세요" }]}>
             <InputNumber controls={false} min={0} max={12} precision={0} style={{ width: "100%" }} />
           </Form.Item> : null}
         </Flex>
@@ -344,7 +344,7 @@ export function BillableMetricFormDialog({
 
       <Divider size="small" />
       <Typography.Paragraph type="secondary" style={{ margin: 0, fontSize: token.fontSizeSM }}>
-        상단에 표시된 도입사에 저장합니다. 같은 이벤트와 속성으로 미터를 여러 개 만들 수 있습니다. 예를 들어 합계와 이벤트 수 미터에 각각 단가를 등록하면 두 사용료가 모두 청구됩니다.
+        화면 위에서 고른 조직과 업무 환경에 저장해요. 다른 업무 환경에서 쓰려면 그 환경에서 다시 등록하세요. 같은 이벤트와 속성으로 미터를 여러 개 만들 수 있어요. 예를 들어 합계 미터와 이벤트 수 미터에 각각 단가를 등록하면 두 사용료가 모두 청구돼요.
       </Typography.Paragraph>
 
     </Modal>

@@ -80,14 +80,14 @@ export function BillableMetricsScreen({
 
         {hasNoBillableMetrics ? (
           <EmptyState
-            title={query.status === "archived" ? "보관된 미터가 없습니다" : query.status === "all" ? "등록된 미터가 없습니다" : "사용 중인 미터가 없습니다"}
-            body="미터를 새로 등록하거나 관리 상태를 바꿔 보관한 미터를 확인하세요."
+            title={query.status === "archived" ? "보관된 미터가 없어요" : query.status === "all" ? "등록된 미터가 없어요" : "사용 중인 미터가 없어요"}
+            body={query.status === "archived" ? undefined : query.status === "all" ? "미터를 새로 등록하세요." : "미터를 새로 등록하거나 관리 상태를 바꿔 보관한 미터를 확인하세요."}
             action={canManage ? <Button onClick={openCreate}>미터 등록</Button> : undefined}
           />
         ) : visibleRows.length === 0 ? (
           <EmptyState
-            title="검색 결과가 없습니다"
-            body={`"${appliedSearchText}"에 맞는 미터가 없습니다. 등록된 미터는 ${totalUnfiltered ?? rows.length}개입니다.`}
+            title="검색 결과가 없어요"
+            body={`"${appliedSearchText}"에 맞는 미터가 없어요. 등록된 미터는 ${totalUnfiltered ?? rows.length}개예요.`}
             action={<Button onClick={search.clear}>검색어 지우기</Button>}
           />
         ) : (

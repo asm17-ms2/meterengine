@@ -56,6 +56,7 @@ public class SessionService {
   private final TransactionTemplate transactionTemplate;
   private final String unknownUserPasswordHash;
   private final OrganizationInvitationRepository organizationInvitationRepository;
+  private final EmailVerificationService emailVerificationService;
 
   SessionService(
       UserAccountRepository userAccountRepository,
@@ -75,6 +76,7 @@ public class SessionService {
         sessionProperties,
         auditLogService,
         transactionTemplate,
+        null,
         null);
   }
 
@@ -88,7 +90,8 @@ public class SessionService {
       SessionProperties sessionProperties,
       AuditLogService auditLogService,
       TransactionTemplate transactionTemplate,
-      OrganizationInvitationRepository organizationInvitationRepository) {
+      OrganizationInvitationRepository organizationInvitationRepository,
+      EmailVerificationService emailVerificationService) {
     this.userAccountRepository = userAccountRepository;
     this.userSessionRepository = userSessionRepository;
     this.organizationRepository = organizationRepository;
@@ -99,11 +102,18 @@ public class SessionService {
     this.transactionTemplate = transactionTemplate;
     this.unknownUserPasswordHash = passwordEncoder.encode(SecureTokens.generate(""));
     this.organizationInvitationRepository = organizationInvitationRepository;
+    this.emailVerificationService = emailVerificationService;
   }
 
   // bcrypt 비교가 DB 커넥션을 잡지 않게 트랜잭션 밖에서 확인하고, 가장 먼저 소속된 활성 도입사로 세션을 만든다.
   public IssuedSession create(String email, String password) {
     UserAccount userAccount = verifiedUserAccount(email, password);
+    // 비밀번호가 맞은 뒤에만 알려 계정이 있는지 새지 않게 한다.
+    if (emailVerificationService != null
+        && emailVerificationService.isRequired()
+        && !userAccount.isEmailVerified()) {
+      throw new ForbiddenException(ErrorCode.EMAIL_NOT_VERIFIED);
+    }
     List<Organization> organizations = organizationsOf(userAccount.getId());
     Organization organization =
         organizations.stream()

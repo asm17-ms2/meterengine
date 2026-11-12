@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { readArchiveStatus, readListQuery } from "@/lib/list-query";
 import { ScopedLink as Link } from "@/components/workspace/ScopedLink";
 import { PricingWorkspace, type PricingMetric, type PricingCustomer } from "@/components/pricing/PricingWorkspace";
@@ -13,6 +14,11 @@ import { requireTenantSession } from "@/lib/auth/session";
 import type { BillableMetricResponse } from "@/lib/api/billable-metrics";
 import type { CustomerResponse } from "@/lib/api/customers";
 import { normalizeResourceQuery } from "@/lib/resource-query";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "요금 설계" };
+
+const PRICING_DESCRIPTION = "적용 월과 고객을 고른 뒤 사용량 단가와 기본료를 정하세요. 같은 사용량도 적용 월과 고객에 따라 가격이 달라져요.";
 
 export default async function PricingPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   await requireTenantSession();
@@ -27,7 +33,7 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
     searchBillableMetricPrices(query), searchOptions("customers"), listPricePlans(undefined, "all"), listPricePlans(customerId, "all"),
   ]);
   const failed = [prices, customerOptions, commonPlans, scopedPlans].find(result => !result.ok);
-  if (failed && !failed.ok) return <><WorkspaceHeader title="무엇에 얼마를 청구할까요" description="적용 월과 고객을 정한 뒤 사용량 단가와 기본료를 설정하세요." /><WorkspaceError message={toDisplayMessage(failed.error)} /></>;
+  if (failed && !failed.ok) return <><WorkspaceHeader title="요금 설계" description={PRICING_DESCRIPTION} /><WorkspaceError message={toDisplayMessage(failed.error)} /></>;
   if (!prices.ok || !customerOptions.ok || !commonPlans.ok || !scopedPlans.ok) return null;
   const requestedCode = typeof params.metric === "string" ? params.metric : "";
   const selectedCode = prices.data.items.some(metric => metric.billable_metric_code === requestedCode) ? requestedCode : prices.data.items[0]?.billable_metric_code;
@@ -44,10 +50,9 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
   }
   const detailFailure = [selectedMetric, commonPrices, history].find(result => result && !result.ok);
   return <>
-    <WorkspaceHeader title="무엇에 얼마를 청구할까요" description="같은 사용량도 적용 월과 고객에 따라 가격이 달라집니다. 청구하기 전에 이곳에서 계산 규칙을 확인하세요."><Link href="/billable-metrics">과금 미터 관리</Link></WorkspaceHeader>
-    <DataMonths filterForm="resource-search-billable-metric-prices" resource="billable-metric-prices" pathname="/pricing" query={query} />
+    <WorkspaceHeader title="요금 설계" description={PRICING_DESCRIPTION}><Link href="/billable-metrics">미터 관리</Link></WorkspaceHeader>
     {detailFailure && !detailFailure.ok && <WorkspaceError message={toDisplayMessage(detailFailure.error)} />}
-    <PricingWorkspace query={query} total={prices.data.total} summary={prices.data.summary}
+    <PricingWorkspace dataMonths={<Suspense fallback={null}><DataMonths filterForm="resource-search-billable-metric-prices" resource="billable-metric-prices" pathname="/pricing" query={query} /></Suspense>} query={query} total={prices.data.total} summary={prices.data.summary}
       planHistoryStatus={readArchiveStatus(typeof params.plan_status === "string" ? params.plan_status : typeof params.status === "string" ? params.status : undefined)}
       rateHistoryStatus={readArchiveStatus(typeof params.rate_status === "string" ? params.rate_status : typeof params.status === "string" ? params.status : undefined)}
       metricStatus={metricStatus} month={month} currentMonth={currentMonth} customerId={customerId ?? ""} customers={customers} metrics={metrics}

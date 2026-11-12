@@ -20,7 +20,7 @@ export default async function RegistrationCompletePage({ params }: { params: Pro
         <p><strong>{outcome.customerName}</strong>의 결제 카드가 등록되었습니다.</p>
         <dl className={styles.summary}>
           <div><dt>등록 카드</dt><dd>{outcome.cardNumber}</dd></div>
-          <div><dt>결제 구분</dt><dd>{outcome.mode === "test" ? "테스트 등록" : "실제 결제"}</dd></div>
+          <div><dt>결제 구분</dt><dd>{outcome.mode === "test" ? "테스트 결제" : "실제 결제"}</dd></div>
         </dl>
         <p>지금은 카드 등록만 완료되었으며 결제 금액은 청구 시 별도로 안내됩니다. 이 창을 닫아도 됩니다.</p>
       </> : <>

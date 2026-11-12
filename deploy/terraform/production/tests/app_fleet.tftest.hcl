@@ -108,6 +108,10 @@ run "production_fleet_configuration" {
     error_message = "Production servers pull production images only."
   }
   assert {
+    condition     = !strcontains(aws_iam_role_policy.app.policy, "ses:")
+    error_message = "Without an email sender the app role gets no SES permission."
+  }
+  assert {
     condition     = strcontains(base64decode(aws_launch_template.app.user_data), "--name '/meterengine/production/app-version'") && aws_ssm_parameter.app_version.value == "unset"
     error_message = "Boot reads the production version parameter, which starts unset."
   }
@@ -183,5 +187,60 @@ run "recorded_sha_starts_one_server_and_waits_for_it" {
   assert {
     condition     = length(aws_autoscaling_group.app.target_group_arns) == 2
     error_message = "The wait counts servers in both target groups. Without them it would end without any health check."
+  }
+}
+
+run "production_sends_signup_mail_from_one_address" {
+  command = plan
+  override_resource {
+    target = module.service.aws_db_instance.app
+    values = { id = "db-72GJNZYUHSQRXAKNQGC7ECV7UI" }
+  }
+
+  assert {
+    condition     = local.email_identity_arn == "arn:aws:ses:ap-northeast-2:928618307647:identity/meterengine.com"
+    error_message = "The app may send only through the hand-made meterengine.com SES identity."
+  }
+  assert {
+    condition     = aws_ssm_parameter.signup["mail-from"].value == "MeterEngine <no-reply@meterengine.com>" && aws_ssm_parameter.signup["mail-sender"].value == "ses"
+    error_message = "The app sends signup mail through SES from the no-reply address."
+  }
+}
+
+run "app_role_sends_only_from_the_signup_address" {
+  command = plan
+  module {
+    source = "../modules/app_fleet"
+  }
+  variables {
+    environment                        = "production"
+    parameter_path                     = "/meterengine/production"
+    site_domain                        = "meterengine.com"
+    site_aliases                       = ["www.meterengine.com"]
+    vpc_id                             = "vpc-07498f0672b7f3c9e"
+    public_subnet_ids                  = ["subnet-0348a18c1d399c193", "subnet-0e375e82d415767a3"]
+    route53_zone_id                    = "Z08728621CQ5R1K37A7N1"
+    database_security_group_id         = "sg-068a54ab4cfa91730"
+    ecr_repository_names               = ["meterengine-backend", "meterengine-frontend"]
+    ami_id                             = "ami-0f4109eb491b0476f"
+    min_size                           = 0
+    scaling_target_average_cpu_percent = 60
+    alb_deletion_protection            = true
+    app_egress_ports                   = [443]
+    monitoring_security_group_id       = "sg-33333333333333333"
+    email_sender = {
+      identity_arn = "arn:aws:ses:ap-northeast-2:928618307647:identity/meterengine.com"
+      from_address = "no-reply@meterengine.com"
+    }
+  }
+
+  assert {
+    condition = anytrue([
+      for statement in jsondecode(aws_iam_role_policy.app.policy).Statement :
+      statement.Action == ["ses:SendEmail"] &&
+      statement.Resource == "arn:aws:ses:ap-northeast-2:928618307647:identity/meterengine.com" &&
+      statement.Condition.StringEquals["ses:FromAddress"] == "no-reply@meterengine.com"
+    ])
+    error_message = "The app role may send only from the signup address of the production identity."
   }
 }

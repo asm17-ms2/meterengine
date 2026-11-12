@@ -101,6 +101,32 @@ docker build -t meterengine-backend .
 - `meterengine.webhook.allow-private-network`(기본 false)를 true로 두면 http와 사설망 주소로도 통보를 보낸다. `local` 프로파일과 시험만 켠다.
 - 오류 문구의 언어는 `spring.web.locale=ko`, `spring.web.locale-resolver=fixed`로 고정한다. `Accept-Language`가 무엇이든 한국어가 나간다.
 
+### 가입 이메일 인증과 캡차
+
+메일은 가입 인증에만 쓴다. 인증(`EMAIL_VERIFICATION_ENABLED`)과 캡차(`TURNSTILE_ENABLED`)는 기본이 꺼짐이고 발송기(`MAIL_SENDER`)는 기본이 로그만 남기는 `log`라, 그대로 두면 가입과 로그인이 이 기능 전과 같다.
+
+| 환경변수 | 용도 | 기본값 |
+| --- | --- | --- |
+| `EMAIL_VERIFICATION_ENABLED` | true면 가입한 계정을 인증 전 상태로 만들고 인증 메일을 보낸다. 인증 전 로그인은 403 `email_not_verified` | `false` |
+| `EMAIL_VERIFICATION_TTL` | 인증 링크의 유효 시간. 1분에서 7일 | `24h` |
+| `METERENGINE_PUBLIC_ORIGIN` | 메일 속 링크의 origin(`<값>/email-verifications/<토큰>`). 프론트의 공개 주소다 | `http://localhost:3000` |
+| `MAIL_SENDER` | `log`는 보내지 않고 받는 주소와 본문(링크 포함)을 INFO 로그로 남긴다. `ses`는 Amazon SES로 보낸다 | `log` |
+| `MAIL_FROM` | 보내는 주소. `ses`일 때 비면 기동하지 않는다 | 없음 |
+| `MAIL_SES_REGION` | SES 리전 | `ap-northeast-2` |
+| `TURNSTILE_ENABLED` | true면 가입과 인증 메일 다시 보내기가 `turnstile_token`을 Cloudflare Siteverify로 확인한다 | `false` |
+| `TURNSTILE_SECRET_KEY` | Turnstile 위젯의 비밀 키. 켰는데 비면 기동하지 않는다 | 없음 |
+| `TURNSTILE_ALLOWED_HOSTNAMES` | 받아 줄 위젯 hostname, 쉼표로 여럿. 켰는데 비면 기동하지 않는다 | 없음 |
+
+- 인증을 끈 동안 가입한 계정은 바로 인증된 것으로 저장된다. 나중에 켜도 그 계정은 막히지 않는다. 운영자가 만든 계정, 초대로 만든 계정, SQL로 넣은 계정도 인증된 것으로 둔다.
+- 메일은 가입이나 다시 보내기 트랜잭션이 커밋된 뒤 발송 스레드(2개, 대기열 100)에 넘겨 보낸다. 응답은 발송을 기다리지 않고, 롤백되면 보내지 않는다. SES 호출은 시도마다 4초, 모두 10초에서 끊는다.
+- 보내지 못하거나 대기열이 차서 버리면 가입은 그대로 201이고 WARN 로그(`Email verification mail failed`, `dropped`)와 지표 `meterengine.email.verification.send{outcome="failure"}`가 남는다. 서버가 내려갈 때 대기 중이던 메일은 잃는다. 사용자는 `POST /v1/email-verifications`로 다시 받는다. 로그에는 받는 주소 대신 SHA-256 해시 앞 12자만 남긴다.
+- 지표의 `outcome`은 `success`(SES가 받음), `logged`(`log` 발송기라 보내지 않음), `failure`다. 인증을 켰는데 발송기가 `log`이면 기동할 때 WARN을 한 번 남긴다. 그 상태로는 새 가입자가 메일을 받지 못해 로그인하지 못한다.
+- 인증 토큰은 `me_verify_`와 영문 대소문자와 숫자 32자이고, 서버는 SHA-256 해시만 둔다. 만료 전에 한 번만 쓸 수 있고, 다시 보내도 앞서 보낸 링크는 만료까지 쓸 수 있다.
+- SES 자격 증명은 AWS SDK 기본 체인이 찾는다. 배포 서버에서는 EC2 인스턴스 역할이다. 로컬에서 `ses`로 띄우지 않는다.
+- 캡차는 요청 수 제한을 본 뒤에 확인한다. 토큰이 없거나 확인에 실패하면 400 `captcha_failed`, Siteverify가 4초(연결 1초, 읽기 3초) 안에 답하지 않거나 오류를 주면 가입을 받지 않고 503 `captcha_unavailable`이다. 로그인에는 캡차가 없다.
+- Siteverify 응답에 `action`이 있으면 가입은 `signup`, 다시 받기는 `email_verification`이어야 한다. 다르면 400 `captcha_failed`다. 시험 키의 응답에는 `action`이 없어 이 비교를 건너뛴다(Cloudflare Testing 문서). 성공 응답에 `hostname`이 없어도 `captcha_failed`다.
+- Turnstile 시험 키(사이트 키 `1x00000000000000000000AA`, 비밀 키 `1x0000000000000000000000000000000AA`)는 늘 통과하고 hostname을 `example.com`으로 준다. 로컬에서 켤 때는 `TURNSTILE_ALLOWED_HOSTNAMES=example.com`으로 둔다.
+
 ### 수집 경로 예열
 
 기동할 때 readiness를 열기 전에 자기 서버(`127.0.0.1`)의 수집 API를 불러 데운다. ALB는 readiness가 200인 서버에만 보내므로 새 서버가 받자마자 느려지지 않는다.
@@ -123,7 +149,7 @@ docker build -t meterengine-backend .
 ## 인증
 
 - `/v1` 요청은 `Authorization: Bearer <값>`으로 인증한다. 값은 API 키(`me_live_`, `me_test_`)나 로그인 세션 토큰(`me_session_`)이고, 도입사는 키나 세션이 정한다.
-- 로그인과 가입, 초대 확인과 수락, 헬스체크, 메트릭과 API 문서는 공개다. 카드 등록은 일회용 토큰, 고객 인보이스 조회는 만료와 폐기가 가능한 조회 토큰으로 인증한다. 토스 웹훅은 PG 상태 재조회로 검증한다. 나머지 도입사 요청은 세션이나 API 키가 필요하다.
+- 로그인과 가입, 인증 메일 다시 보내기와 이메일 인증, 초대 확인과 수락, 헬스체크, 메트릭과 API 문서는 공개다. 카드 등록은 일회용 토큰, 고객 인보이스 조회는 만료와 폐기가 가능한 조회 토큰으로 인증한다. 토스 웹훅은 PG 상태 재조회로 검증한다. 나머지 도입사 요청은 세션이나 API 키가 필요하다.
 - 사용자와 API 키의 권한은 `read`(조회), `ingest`(고객 등록과 이벤트 수집), `admin`(업무 관리)이며 `admin`은 나머지를 포함한다. 로그인 사용자는 선택한 도입사의 소속 권한을 쓰고, 변경한 권한은 기존 세션의 다음 요청부터 적용된다.
 - 새 사용자와 초대의 기본 권한은 `read`다. 대표관리자는 사용자와 초대, 소속별 권한을 관리하며 관리 권한을 유지한다. 플랫폼 도입사와 사용자 관리는 별도의 `operator` 역할이 필요하다.
 - API 키는 로그인 관리 권한으로 발급, 폐기와 스코프를 변경한다. 조회 세션은 메타데이터만 읽고 API 키 자체는 키 관리 API를 부를 수 없다. 키의 권한 변경은 같은 원문으로 다음 요청부터 반영하며, 폐기하거나 만료된 키는 변경할 수 없다. 원문, 수명, 모드와 레이트 한도는 유지한다.
@@ -139,7 +165,7 @@ docker build -t meterengine-backend .
 
 ### 공개 인증 요청 제한
 
-로그인과 가입은 DB에 공유하는 IP별, 계정별 고정 구간 한도를 모두 적용한다. 기본값은 로그인 IP 100회/계정 10회(5분), 가입 IP 20회/계정 3회(30분)다. 정상 로그인도 계산하며, 제한 시 429와 초 단위 `Retry-After`를 반환한다. 로그인 계정 한도는 계정과 IP 쌍으로 세고, 모든 IP를 합친 계정 전체 시도는 계정 한도의 10배까지 받는다. IP 한도를 넘은 요청은 계정 한도에 세지 않는다. JSON 파싱과 입력 형식 검증에 실패한 요청은 이 한도에 넣지 않으며 요청 감사에는 남는다.
+로그인과 가입은 DB에 공유하는 IP별, 계정별 고정 구간 한도를 모두 적용한다. 기본값은 로그인 IP 100회/계정 10회(5분), 가입 IP 20회/계정 3회(30분)다. 인증 메일 다시 보내기는 가입과 같은 한도와 구간을 쓰되 따로 센다. 정상 로그인도 계산하며, 제한 시 429와 초 단위 `Retry-After`를 반환한다. 로그인 계정 한도는 계정과 IP 쌍으로 세고, 모든 IP를 합친 계정 전체 시도는 계정 한도의 10배까지 받는다. IP 한도를 넘은 요청은 계정 한도에 세지 않는다. JSON 파싱과 입력 형식 검증에 실패한 요청은 이 한도에 넣지 않으며 요청 감사에는 남는다.
 
 `METERENGINE_AUTH_RATE_LIMIT_LOGIN_IP_LIMIT`, `LOGIN_ACCOUNT_LIMIT`, `LOGIN_WINDOW`, `SIGNUP_IP_LIMIT`, `SIGNUP_ACCOUNT_LIMIT`, `SIGNUP_WINDOW`는 공통 접두사 `METERENGINE_AUTH_RATE_LIMIT_`를 쓴다. `METERENGINE_AUTH_RATE_LIMIT_ENABLED` 기본값은 true다.
 
@@ -251,7 +277,7 @@ unset SESSION
 - 앱을 띄우면 같은 문서를 `/scalar`(UI), `/v3/api-docs`(JSON), `/v3/api-docs.yaml`에서 볼 수 있다.
 - 파라미터, 응답 스키마, 오류 코드는 `openapi.yaml`을 본다.
 - 모든 `/v1` 응답에 `X-Request-ID` 헤더가 붙는다. 요청 감사 행의 `detail.request_id`와 같은 값이다. 이벤트 수집 요청과, 로그인과 가입이 아닌 요청의 주체 없는 401과 429는 감사 행을 남기지 않고 `http.server.requests` 지표와 요청 로그로만 센다.
-- 로그인, 가입 신청, 초대 확인과 수락을 뺀 모든 오퍼레이션이 Bearer 인증(`bearerAuth`)을 요구한다.
+- 로그인, 가입 신청, 인증 메일 다시 보내기와 이메일 인증, 초대 확인과 수락을 뺀 모든 오퍼레이션이 Bearer 인증(`bearerAuth`)을 요구한다.
 - 핸들러마다 `global.security`의 접근 어노테이션(`@ReadAccess`, `@IngestAccess`, `@AdminAccess`, `@MemberAccess`, `@OperatorAccess`, `@PublicAccess`) 가운데 하나를 단다. 빠지면 `ApiAccessCoverageTest`가 실패한다.
 
 ### 오류 응답
@@ -271,7 +297,7 @@ unset SESSION
 - `errors`는 400에만 실리고 비면 나가지 않는다. `field`는 도입사가 보낸 이름이다.
 - 인증, 권한, 한도 오류도 같은 형식이다.
   - 401 `authentication_required`: Authorization 헤더가 없다. `invalid_credentials`: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다. 로그인 실패도 같다. 401에는 `WWW-Authenticate: Bearer`가 붙는다.
-  - 403 `permission_denied`: 키의 스코프나 계정의 역할 밖이거나, 도입사가 없는 세션의 도입사 범위 요청이거나, 소속이 아닌 도입사로 전환하려 했다. `organization_not_active`: 도입사가 pending, rejected, suspended다. `consent_required`: 로그인 세션의 사용자가 필수 안내에 동의하지 않았다. 동의 전에는 `GET /v1/sessions/current`, `DELETE /v1/sessions/current`, `POST /v1/sessions/current/consents`만 된다. 관리자나 운영자가 만든 계정은 이 동의 요청에 `new_password`를 실어 처음 받은 비밀번호를 바꾸고, 그때 다른 세션은 끝난다.
+  - 403 `permission_denied`: 키의 스코프나 계정의 역할 밖이거나, 도입사가 없는 세션의 도입사 범위 요청이거나, 소속이 아닌 도입사로 전환하려 했다. `organization_not_active`: 도입사가 pending, rejected, suspended다. `email_not_verified`: 이메일 인증을 켰는데 로그인한 계정이 아직 인증하지 않았다. 비밀번호가 맞을 때만 준다. `consent_required`: 로그인 세션의 사용자가 필수 안내에 동의하지 않았다. 동의 전에는 `GET /v1/sessions/current`, `DELETE /v1/sessions/current`, `POST /v1/sessions/current/consents`만 된다. 관리자나 운영자가 만든 계정은 이 동의 요청에 `new_password`를 실어 처음 받은 비밀번호를 바꾸고, 그때 다른 세션은 끝난다.
   - 429 `rate_limit_exceeded`: API 키의 분당 요청 한도를 넘었다. `Retry-After` 헤더의 초만큼 기다린 뒤 다시 보낸다.
 - 한도는 키마다 인스턴스별로 센다. 발급 시 `rate_limit_per_minute`를 양수로 지정하고, 생략하거나 null이면 무제한이다. 로그인 세션은 세지 않는다.
 - code 값의 정본은 `ErrorCode` enum이고 목록은 `openapi.yaml`이 낸다.
@@ -292,10 +318,10 @@ unset SESSION
 | `payment` | 도입사별 토스 키, 카드 등록, 승인과 취소, 결과 확정, 재시도와 대사 | `/v1/invoices/{id}/payment-attempts` |
 | `webhook`, `notification` | 서명된 아웃박스 통보, 발송 이력과 제외 사용량 정기 통보 | `/v1/webhook-endpoints`, `/v1/unbilled-events` |
 | `dashboard` | 도입사 과금과 수납, 전체 월의 미해결 결제, 운영자 상태 조회 | `/v1/dashboard`, `/v1/operations` |
-| `mail` | 보낼 메일 기록. 남긴 메일의 본문과 받는 주소는 고치지 않는다 | 없음 |
+| `mail` | 보낼 메일 기록과 메일 발송 포트(`EmailSender`, 로그와 SES 구현). 남긴 메일의 본문과 받는 주소는 고치지 않는다 | 없음 |
 | `organization` | 현재 도입사 조회, 도입사 목록과 상태 변경(승인, 거절, 정지, 재개), 소속 추가 | `/v1/organization`, `/v1/organizations` |
 | `apikey` | API 키 발급, 폐기, 교체와 키 검증 | `/v1/api-keys` |
-| `account` | 로그인 세션과 도입사 전환, 가입 신청과 동의, 사용자 목록과 역할 변경, 기동 시 부트스트랩 | `/v1/sessions`, `/v1/signups`, `/v1/user-accounts` |
+| `account` | 로그인 세션과 도입사 전환, 가입 신청과 동의, 가입 이메일 인증과 캡차, 사용자 목록과 역할 변경, 기동 시 부트스트랩 | `/v1/sessions`, `/v1/signups`, `/v1/email-verifications`, `/v1/email-verification-confirmations`, `/v1/user-accounts` |
 | `audit` | 핵심 동작과 `/v1` 요청의 감사 기록, 도입사와 운영자의 감사 기록 조회. 이벤트 수집 요청은 제외하며 남긴 행은 고치지 않는다. 단가 행(`price_rate`)의 target_id는 단가 버전 id이고 미터 code는 detail의 `billable_metric_code`에 있다. 버전 단가 전에 남은 행은 target_id가 미터 code다 | `/v1/audit-logs`, `/v1/operations/audit-logs` |
 | `global.security` | 인증 필터, 접근 어노테이션, `@CurrentOrganizationId`, 레이트리밋, 요청 로그 | 없음 |
 | `scheduling` | 예약 작업 실행 기록과 실행기. 예약 작업은 `@Scheduled(cron = ..., zone = "Asia/Seoul")` 메서드에서 `ScheduledJobRunService.run(작업 이름, 슬롯 시각(지금을 분 단위로 자른 값처럼 인스턴스마다 같은 값), 작업)`을 불러, 인스턴스가 여럿이어도 같은 슬롯을 한 번만 돌린다 | 없음 |
@@ -307,7 +333,7 @@ unset SESSION
 - 루트(`com.meterengine`)에는 부트스트랩(`MeterEngineApplication`)만 둔다. 도메인에 속하지 않는 설정은 `global.config`에 둔다.
 - 다른 패키지가 쓰는 것만 public으로 열고 나머지는 package-private을 유지한다. 경계는 코드 리뷰로 지킨다.
 - `customer`가 아래층이고 `event`, `metric`, `invoice`가 그것을 쓴다. 역방향은 고객 삭제가 이벤트와 결제 기록 유무를 묻는 `customer` -> `event`, `customer` -> `payment`다. 미터 수정과 삭제는 이벤트 유무를 `event`에, 삭제는 단가 유무를 `pricing`에 묻는다(`metric` -> `event`, `metric` -> `pricing`). 결제 요청은 인보이스를 `invoice`에서 읽고, 토스 시크릿 키와 빌링키는 `global.crypto`로 암호화해 저장한다(`payment` -> `invoice`, `global.crypto`). 인보이스 확정은 도입사 이름을 `organization`에서 읽고 청구 메일을 `mail`에 남긴다(`invoice` -> `organization`, `invoice` -> `mail`). 자동 확정은 `scheduling`의 실행기로 돈다(`invoice` -> `scheduling`).
-- 인증은 키와 세션 검증을 `apikey`, `account`에, 도입사 상태를 `organization`에 묻는다(`global.security` -> `apikey`, `account`, `organization`). 로그인, 가입, 사용자 목록, 부트스트랩은 도입사를 `organization`에서 읽거나 넣고, 부트스트랩은 콘솔 키를 `apikey`에 넣는다(`account` -> `organization`, `apikey`). 소속 추가는 사용자를 확인한다(`organization` -> `account`).
+- 인증은 키와 세션 검증을 `apikey`, `account`에, 도입사 상태를 `organization`에 묻는다(`global.security` -> `apikey`, `account`, `organization`). 로그인, 가입, 사용자 목록, 부트스트랩은 도입사를 `organization`에서 읽거나 넣고, 부트스트랩은 콘솔 키를 `apikey`에 넣는다(`account` -> `organization`, `apikey`). 가입 인증 메일은 `mail`의 발송 포트로 보낸다(`account` -> `mail`). 소속 추가는 사용자를 확인한다(`organization` -> `account`).
 - 웹훅 발송은 예약 작업 실행기를 쓰고 비밀값을 `global.crypto`로 풀며 엔드포인트 변경을 감사 기록에 남긴다(`webhook` -> `scheduling`, `global.crypto`, `audit`). 운영 현황은 도입사, 결제, 웹훅, 예약 작업 표를 SQL로 직접 센다. 결제 수는 live 결제만, 웹훅 실패 수는 test 환경 전송을 빼고 센다. 웹훅 전송 지표 `meterengine.webhook.delivery`는 `environment`(legacy, test, live) 태그를 붙인다.
 
 ### 웹훅
@@ -335,6 +361,7 @@ unset SESSION
 - V27은 사용자 소속과 초대에 권한을 저장한다. 기존 소속과 미수락 초대는 관리 권한을 보존하며, 새 API 요청에서 권한을 생략하면 조회만 허용한다.
 - V53은 확정 라인에 그때의 미터 이름(`billable_metric_name`)을 남긴다. 미터 이름을 바꿔도 확정한 인보이스와 고객용 공개 청구서의 항목명은 그대로다. V53 전에 확정한 라인은 이름이 비어 있어 공개 청구서가 미터 코드로 보인다.
 - V54는 인보이스에 확정이 읽은 이벤트의 받은 시각 상한(`cutoff_at`)을 남긴다. V54 전에 확정한 인보이스는 그때 확정이 읽은 범위로 채운다. 2026-10-30 15:09:28 KST 운영 배포 전 확정은 확정 시각, 그 뒤 확정은 확정 시각과 그 달 마감 중 이른 쪽이다. 그 배포 구간에 지난 달을 확정했고 마감 뒤 받은 이벤트가 있는 행이 있으면 V54가 멈춘다.
+- V56은 `user_account.email_verified_at`을 더하고 이미 있던 계정을 만든 시각에 인증한 것으로 채운다. 이 열의 DB 기본값은 `now()`라 SQL로 넣는 계정은 인증된 것으로 들어간다. 앱은 인증을 켰을 때의 가입만 NULL로 넣는다.
 - V45는 도입사마다 test, live 업무 환경을 만들고 기존 키, 고객, 이벤트와 감사 기록은 환경 없는 기존 데이터 범위로 둔다. 고객 `external_id` 고유 인덱스와 이벤트 기본키를 환경 범위로 바꾼다.
 
 ## 요금과 결제 연동

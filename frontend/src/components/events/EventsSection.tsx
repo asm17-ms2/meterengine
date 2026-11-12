@@ -8,7 +8,7 @@ import {
   countPages,
   type ListEventsResponse,
 } from "@/lib/api/events";
-import { formatKstDateTime, formatDecimal } from "@/lib/format";
+import { formatKstDateTime, formatDecimal, formatKoreanMonth } from "@/lib/format";
 import { buildListHref, type MonthlyListQuery } from "@/lib/list-query";
 import { shiftMonth } from "@/lib/month";
 
@@ -21,7 +21,7 @@ export async function EventsSection({
 }) {
   const result = await events;
   const { month } = query;
-  const periodLabel = query.from || query.to ? "선택한 기간" : month;
+  const periodLabel = query.from || query.to ? "선택한 기간" : formatKoreanMonth(month);
   const resetHref = buildListHref("/events", query, {
     customerId: undefined,
     type: undefined,
@@ -34,7 +34,7 @@ export async function EventsSection({
   if (!result.ok) {
     return (
       <ErrorState
-        title="이벤트를 불러오지 못했습니다"
+        title="이벤트를 불러오지 못했어요"
         error={result.error}
         narrowerHref={`/events?month=${shiftMonth(month, -1)}`}
         resetHref={query.customerId || query.type || query.q || query.properties ? resetHref : undefined}
@@ -49,11 +49,11 @@ export async function EventsSection({
     const isOutOfRange = listEventsResponse.total > 0;
     return (
       <EmptyState
-        title={isOutOfRange ? "이 페이지에는 이벤트가 없습니다" : "수집된 이벤트가 없습니다"}
+        title={isOutOfRange ? "이 페이지에는 이벤트가 없어요" : "조건에 맞는 이벤트가 없어요"}
         body={
           isOutOfRange
-            ? `${periodLabel}의 이벤트는 ${formatDecimal(listEventsResponse.total)}건, ${pageCount}페이지까지입니다. 요청한 페이지가 그 뒤에 있습니다.`
-            : `${periodLabel}에 조건과 일치하는 이벤트가 없습니다. 기간이나 검색어를 바꾸고 이벤트 수집이 동작하는지 확인하세요.`
+            ? `${periodLabel} 이벤트는 ${formatDecimal(listEventsResponse.total)}건이고 ${pageCount}페이지까지 있어요. 요청한 페이지는 그 뒤예요.`
+            : `${periodLabel}에 조건과 일치하는 이벤트가 없어요. 기간이나 검색어를 바꿔 보고, 그래도 없으면 이벤트를 보내는 서버 연동을 확인하세요.`
         }
         resetHref={isOutOfRange ? buildListHref("/events", query, { page: 0 }) : resetHref}
         resetLabel={isOutOfRange ? "첫 페이지 보기" : "조건 초기화"}

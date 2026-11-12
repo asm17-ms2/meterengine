@@ -20,7 +20,7 @@ export async function BillableMetricsSection({
     return (
       <BillableMetricsFrame query={query} capabilities={CAPABILITIES.listBillableMetrics}>
         <ErrorState
-          title="미터 목록을 불러오지 못했습니다"
+          title="미터 목록을 불러오지 못했어요"
           error={result.error}
         />
       </BillableMetricsFrame>

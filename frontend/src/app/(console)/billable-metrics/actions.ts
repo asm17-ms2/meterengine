@@ -49,6 +49,9 @@ const REQUIRED_MESSAGES: Record<RequiredBillableMetricField, string> = {
 
 const DIMENSION_PROPERTIES_SEPARATOR = ",";
 
+const ADMIN_REQUIRED_MESSAGE = "전체 관리 권한이 없어 이 작업을 할 수 없어요. 대표관리자에게 권한을 요청하세요.";
+const METRIC_UNKNOWN_MESSAGE = "어느 미터인지 확인하지 못했어요. 목록을 새로 조회한 뒤 다시 시도해 주세요.";
+
 function readField(formData: FormData, field: BillableMetricField): string {
   const raw = formData.get(field);
   return typeof raw === "string" ? raw.trim() : "";
@@ -92,7 +95,7 @@ function readCalculation(formData: FormData): {
     fieldErrors.percentile = "백분위는 0부터 100 사이의 숫자로 입력하세요";
   }
   const unitSize = Number(readField(formData, "unit_size") || "1");
-  if (!Number.isFinite(unitSize) || unitSize <= 0) fieldErrors.unit_size = "과금 단위 크기는 0보다 커야 합니다";
+  if (!Number.isFinite(unitSize) || unitSize <= 0) fieldErrors.unit_size = "과금 단위 크기는 0보다 커야 해요";
   const roundingMode = readField(formData, "rounding_mode") || "none";
   if (!isMetricRoundingMode(roundingMode)) fieldErrors.rounding_mode = "반올림 방식을 선택하세요";
   const roundingPrecision = Number(readField(formData, "rounding_precision") || "0");
@@ -128,7 +131,7 @@ function toServerFieldErrors(
 
 function toFailureState(error: ApiError): BillableMetricFormState {
   if (error.code === "billable_metric_has_events") {
-    return { status: "failed", message: "수집된 이벤트가 있는 미터는 이름만 바꿀 수 있습니다. 계산 기준을 바꾸려면 새 미터를 등록하세요." };
+    return { status: "failed", message: "수집된 이벤트가 있는 미터는 이름만 바꿀 수 있어요. 계산 기준을 바꾸려면 새 미터를 등록하세요." };
   }
   if (error.code === "billable_metric_already_exists") {
     return { status: "invalid", fieldErrors: { code: error.message } };
@@ -147,7 +150,7 @@ export async function createBillableMetricAction(
   const session = await requireTenantSession();
   const scopeError = await mutationScopeError(formData, session.organization?.id);
   if (scopeError) return { status: "failed", message: scopeError };
-  if (!hasScope(session.scopes, "admin")) return { status: "failed", message: "이 작업을 수행할 관리 권한이 없습니다. 대표관리자에게 권한을 요청하세요." };
+  if (!hasScope(session.scopes, "admin")) return { status: "failed", message: ADMIN_REQUIRED_MESSAGE };
   const { values, fieldErrors } = readRequiredFields(formData, CREATE_REQUIRED_FIELDS);
   const calculation = readCalculation(formData);
   Object.assign(fieldErrors, calculation.fieldErrors);
@@ -175,10 +178,10 @@ export async function updateBillableMetricAction(
   const session = await requireTenantSession();
   const scopeError = await mutationScopeError(formData, session.organization?.id);
   if (scopeError) return { status: "failed", message: scopeError };
-  if (!hasScope(session.scopes, "admin")) return { status: "failed", message: "이 작업을 수행할 관리 권한이 없습니다. 대표관리자에게 권한을 요청하세요." };
+  if (!hasScope(session.scopes, "admin")) return { status: "failed", message: ADMIN_REQUIRED_MESSAGE };
   const code = formData.get("code");
   if (typeof code !== "string" || code === "") {
-    return { status: "failed", message: "미터를 특정하지 못했습니다." };
+    return { status: "failed", message: METRIC_UNKNOWN_MESSAGE };
   }
 
   const { values, fieldErrors } = readRequiredFields(formData, UPDATE_REQUIRED_FIELDS);
@@ -189,7 +192,7 @@ export async function updateBillableMetricAction(
   }
 
   const version = formData.get("version");
-  if (typeof version !== "string" || !/^\d+$/.test(version) || !Number.isSafeInteger(Number(version))) return { status: "failed", message: "최신 미터를 다시 조회한 뒤 수정하세요." };
+  if (typeof version !== "string" || !/^\d+$/.test(version) || !Number.isSafeInteger(Number(version))) return { status: "failed", message: "미터 정보를 확인하지 못했어요. 목록을 새로 조회한 뒤 다시 수정하세요." };
 
   const result = await updateBillableMetric(code, {
     name: values.name,
@@ -210,12 +213,12 @@ export async function deleteBillableMetricAction(
   const session = await requireTenantSession();
   const scopeError = await mutationScopeError(formData, session.organization?.id);
   if (scopeError) return { status: "failed", message: scopeError };
-  if (!hasScope(session.scopes, "admin")) return { status: "failed", message: "이 작업을 수행할 관리 권한이 없습니다. 대표관리자에게 권한을 요청하세요." };
+  if (!hasScope(session.scopes, "admin")) return { status: "failed", message: ADMIN_REQUIRED_MESSAGE };
   const code = formData.get("code");
   const name = formData.get("name");
   const billableMetricName = typeof name === "string" ? name : "";
   if (typeof code !== "string" || code === "") {
-    return { status: "failed", message: "미터를 특정하지 못했습니다." };
+    return { status: "failed", message: METRIC_UNKNOWN_MESSAGE };
   }
 
   const result = await deleteBillableMetric(code);

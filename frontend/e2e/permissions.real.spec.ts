@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { CONSENT_DOCUMENTS, CONSENT_VERSION } from "../src/lib/auth/consents";
+import { consoleHeaders } from "./console-environment";
 
 const API_URL = process.env.S1_API_URL ?? "http://127.0.0.1:38147";
 const FRONTEND_URL = process.env.PERMISSIONS_FRONTEND_URL ?? "http://localhost:33147";
@@ -58,7 +59,9 @@ function safeFailure(error: unknown, secrets: Set<string>) {
   return new Error(message.replace(/me_(?:invite|session|invoice|test|live)_[A-Za-z0-9_-]+/g, "[redacted token]"));
 }
 function result(name: string, value: unknown) { writeFileSync(`${OUTPUT}/${name}.json`, JSON.stringify(value, null, 2)); }
-function authorization(token: string): Headers { return { Authorization: `Bearer ${token}` }; }
+function authorization(token: string): Headers { return consoleHeaders(token); }
+// API 키는 발급한 환경에 묶여 있어 환경 헤더 없이 부른다.
+function keyAuthorization(secret: string): Headers { return { Authorization: `Bearer ${secret}` }; }
 function uuid(value: string) { if (!/^[a-f\d-]{36}$/i.test(value)) throw new Error("검증 UUID가 잘못됐습니다."); return value; }
 function sql(statement: string) {
   return execFileSync("docker", ["exec", "-i", DB_CONTAINER, "psql", "-X", "-v", "ON_ERROR_STOP=1", "-U", "meterengine", "-d", "meterengine", "-At"], { input: statement, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }).trim();
@@ -226,7 +229,7 @@ test("같은 API 키의 권한만 바꾸고 읽기와 수집, 키 관리 금지�
     const data = await fixture(request, secrets); const other = await fixture(request, secrets);
     const reader = await member(request, data, secrets, "key-reader");
     const issued = await key(request, data, secrets, ["admin"]);
-    const headers = authorization(issued.secret);
+    const headers = keyAuthorization(issued.secret);
     const fingerprint = () => sql(`SELECT md5((to_jsonb(api_key)-'scopes')::text) FROM api_key WHERE id='${uuid(issued.id)}';`);
     const before = fingerprint();
     expect((await request.get(`${API_URL}/v1/api-keys`, { headers })).status()).toBe(403);
@@ -299,7 +302,7 @@ test("대표관리자가 화면에서 사용자와 키 권한을 정하고 조�
     await capture(reader.page, "read-only-customers-desktop");
     await reader.page.setViewportSize({ width: 390, height: 844 }); await capture(reader.page, "read-only-customers-mobile");
     const row = owner.page.getByRole("row").filter({ hasText: email });
-    await row.getByRole("button", { name: "권한 변경", exact: true }).click();
+    await row.getByRole("button", { name: /권한 변경$/ }).click();
     await dialog.getByRole("checkbox", { name: INGEST }).check();
     await owner.page.setViewportSize({ width: 390, height: 844 }); await capture(owner.page, "owner-member-scopes-mobile"); await owner.page.setViewportSize({ width: 1280, height: 900 });
     await dialog.getByRole("button", { name: "권한 저장", exact: true }).click(); await expect(dialog).toHaveCount(0);
@@ -313,14 +316,14 @@ test("대표관리자가 화면에서 사용자와 키 권한을 정하고 조�
     const keyFingerprint = sql(`SELECT md5((to_jsonb(api_key)-'scopes')::text) FROM api_key WHERE id='${uuid(issued.id)}';`);
     await owner.page.goto("/integrations");
     const keyRow = owner.page.getByRole("row").filter({ hasText: "화면 권한 변경 키" });
-    await keyRow.getByRole("button", { name: "키 권한 변경", exact: true }).click();
+    await keyRow.getByRole("button", { name: "화면 권한 변경 키 키 권한 변경", exact: true }).click();
     await dialog.getByRole("checkbox", { name: ADMIN }).uncheck(); await dialog.getByRole("checkbox", { name: READ }).focus(); await owner.page.keyboard.press("Space");
     await expect(dialog.getByRole("checkbox", { name: READ })).toBeChecked();
     await capture(owner.page, "owner-api-key-scopes-desktop");
     await dialog.getByRole("button", { name: "키 권한 저장", exact: true }).click(); await expect(dialog).toHaveCount(0);
     expect(sql(`SELECT md5((to_jsonb(api_key)-'scopes')::text) FROM api_key WHERE id='${uuid(issued.id)}';`)).toBe(keyFingerprint);
-    expect((await request.get(`${API_URL}/v1/customers`, { headers: authorization(issued.secret) })).status()).toBe(200);
-    expect((await request.post(`${API_URL}/v1/customers`, { headers: authorization(issued.secret), data: { name: "화면에서축소한키" } })).status()).toBe(403);
+    expect((await request.get(`${API_URL}/v1/customers`, { headers: keyAuthorization(issued.secret) })).status()).toBe(200);
+    expect((await request.post(`${API_URL}/v1/customers`, { headers: keyAuthorization(issued.secret), data: { name: "화면에서축소한키" } })).status()).toBe(403);
     await capture(owner.page, "owner-api-key-scopes-saved-desktop");
     result("browser-scopes-result", { passed: true, new_user_defaults_read: true, readonly_business_pages: 15, readonly_mutation_controls_hidden: true, readonly_filters_work: true, member_scopes_edited: true, read_ingest_can_create_but_not_modify: true, key_scope_edit_uses_same_key: true, key_scope_edit_preserves_metadata: true, desktop_width: 1280, mobile_width: 390 });
   } catch (error) { throw safeFailure(error, secrets); }
@@ -342,7 +345,7 @@ test("열린 관리 폼도 같은 세션의 권한 축소와 조작된 Server Ac
     }, data.customerId);
     await updateScopes(request, data, admin.user_account_id, ["read"]);
     await dialog.getByRole("button", { name: "고객 저장", exact: true }).click();
-    await expect(dialog.getByText("이 작업을 수행할 권한이 없습니다. 대표관리자에게 권한을 요청하세요.", { exact: true })).toBeVisible();
+    await expect(dialog.getByText("이 작업을 할 권한이 없어요. 대표관리자에게 권한을 요청하세요.", { exact: true })).toBeVisible();
     const customer = await request.get(`${API_URL}/v1/customers/${data.customerId}`, { headers: data.headers });
     expect(customer.status()).toBe(200); expect((await customer.json()).name).toBe(data.customerName);
     await capture(view.page, "stale-form-permission-denied-desktop");
@@ -360,9 +363,9 @@ test("수집 전용과 플랫폼 운영자의 조회 소속이 화면과 실제 
     const view = await browserPage(browser, ingest.session, 390); contexts.push(view.context);
     for (const path of ["/overview", "/customers", "/pricing", "/payments"]) {
       await view.page.goto(path);
-      await expect(view.page.getByRole("heading", { name: "업무 조회 권한이 없습니다", exact: true })).toBeVisible();
-      await expect(view.page.getByRole("link", { name: "다른 도입사 선택", exact: true })).toBeVisible();
-      await view.page.getByRole("button", { name: "업무 메뉴 열기", exact: true }).click();
+      await expect(view.page.getByRole("heading", { name: "조회 권한이 없어요", exact: true })).toBeVisible();
+      await expect(view.page.getByRole("link", { name: "다른 조직 선택", exact: true })).toBeVisible();
+      await view.page.getByRole("button", { name: "메뉴 열기", exact: true }).click();
       await expect(view.page.getByRole("dialog").getByRole("button", { name: "로그아웃", exact: true }), "폰에서는 메뉴 서랍에서 로그아웃한다").toBeVisible();
       await view.page.keyboard.press("Escape");
       await expect(view.page.getByRole("dialog")).toHaveCount(0);
@@ -376,7 +379,7 @@ test("수집 전용과 플랫폼 운영자의 조회 소속이 화면과 실제 
     const platform = await browserPage(browser, operator); contexts.push(platform.context);
     await platform.page.goto("/admin/users");
     const card = platform.page.locator("article.organization-card").filter({ hasText: operatorEmail });
-    await card.getByRole("button", { name: "도입사 소속 연결", exact: true }).click();
+    await card.getByRole("button", { name: "조직 소속 연결", exact: true }).click();
     const dialog = platform.page.getByRole("dialog");
     await expect(dialog.getByRole("checkbox", { name: READ })).toBeChecked();
     await dialog.getByRole("combobox").selectOption(data.organizationId);
@@ -388,7 +391,7 @@ test("수집 전용과 플랫폼 운영자의 조회 소속이 화면과 실제 
     await platform.page.goto("/customers"); await expect(platform.page.getByRole("button", { name: "고객 등록", exact: true })).toHaveCount(0);
     await expect(platform.page.locator(".workspace-scope")).toHaveText("조회 전용");
     await expect(platform.page.getByRole("button", { name: "권한 새로 조회", exact: true })).toBeVisible();
-    await platform.page.goto("/admin/users"); await expect(platform.page.getByRole("heading", { name: "사용자와 플랫폼 권한", exact: true })).toBeVisible();
+    await platform.page.goto("/admin/users"); await expect(platform.page.getByRole("heading", { name: "사용자와 권한", exact: true })).toBeVisible();
     expect((await request.get(`${API_URL}/v1/organizations`, { headers: authorization(operator.token) })).status()).toBe(200);
     expect((await request.post(`${API_URL}/v1/customers`, { headers: authorization(operator.token), data: { name: "플랫폼 역할 우회 시도" } })).status()).toBe(403);
     result("ingest-operator-result", { passed: true, ingest_session_and_logout_available: true, ingest_no_login_redirect_loop: true, platform_attach_defaults_read: true, operator_platform_read_allowed: true, operator_tenant_write_denied: true, mobile_width: 390 });

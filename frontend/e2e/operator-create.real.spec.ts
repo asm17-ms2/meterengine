@@ -1,6 +1,7 @@
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { CONSENT_DOCUMENTS, CONSENT_VERSION } from "../src/lib/auth/consents";
+import { consoleHeaders } from "./console-environment";
 
 const API_URL = process.env.S1_API_URL ?? "http://127.0.0.1:38147";
 const FRONTEND_URL = "http://localhost:33147";
@@ -83,7 +84,7 @@ test("운영자 신규 생성과 첫 동의, 중복 보호와 생성자 감사�
       const card = operator.getByRole("article").filter({ has: operator.getByRole("heading", { name: createdName, exact: true }) });
       await expect(card).toContainText(createdEmail);
       await expect(card.getByText("플랫폼 운영자", { exact: true })).toBeVisible();
-      await expect(card).toContainText("소속 도입사 없음");
+      await expect(card).toContainText("소속 조직 없음");
       expect(await operator.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       if (process.env.OPERATOR_CREATE_SCREENSHOT_PATH) {
         await card.scrollIntoViewIfNeeded();
@@ -98,7 +99,7 @@ test("운영자 신규 생성과 첫 동의, 중복 보호와 생성자 감사�
       await dialog.getByLabel(/^이메일/).fill(createdEmail);
       await dialog.getByLabel(/^초기 비밀번호/).fill(DUPLICATE_PASSWORD);
       await dialog.getByRole("button", { name: "운영자 계정 생성", exact: true }).click();
-      await expect(dialog).toContainText("이미 가입한 이메일입니다. 기존 계정은 사용자 목록에서 플랫폼 운영자로 변경하세요.");
+      await expect(dialog).toContainText("이미 가입한 이메일이에요. 그 계정은 사용자 목록에서 플랫폼 운영자로 바꾸세요.");
       await expect(dialog.getByLabel(/^이름/)).toHaveValue("덮어쓰면 안 되는 이름");
       await expect(dialog.getByLabel(/^이메일/)).toHaveValue(createdEmail);
       await expect(dialog.getByLabel(/^이메일/)).toBeFocused();
@@ -136,7 +137,7 @@ test("운영자 신규 생성과 첫 동의, 중복 보호와 생성자 감사�
       await expect(created).toHaveURL(/\/admin(?:\/users)?$/);
       expect((await request.post(`${API_URL}/v1/sessions`, { data: { email: createdEmail, password: CREATED_PASSWORD } })).status()).toBe(401);
       await created.goto("/admin/users");
-      await expect(created.getByRole("heading", { name: "사용자와 플랫폼 권한", exact: true })).toBeVisible();
+      await expect(created.getByRole("heading", { name: "사용자와 권한", exact: true })).toBeVisible();
       const allowed = await request.get(`${API_URL}/v1/operations`, { headers });
       expect(allowed.status()).toBe(200);
     });
@@ -156,7 +157,7 @@ test("운영자 신규 생성과 첫 동의, 중복 보호와 생성자 감사�
       expect(session.organization_role).toBe("owner");
       tenantToken = session.token;
       secrets.add(tenantToken);
-      const tenantHeaders = { Authorization: `Bearer ${tenantToken}` };
+      const tenantHeaders = consoleHeaders(tenantToken);
       const duplicate = await request.post(`${API_URL}/v1/user-accounts`, { headers: operatorHeaders, data: { name: "기존 회원을 바꾸면 안 됨", email: tenantEmail, password: DUPLICATE_PASSWORD } });
       expect(duplicate.status()).toBe(409);
       expect((await duplicate.json()).code).toBe("email_already_exists");
@@ -199,7 +200,7 @@ test("운영자 신규 생성과 첫 동의, 중복 보호와 생성자 감사�
   } catch (error) {
     failure = safeFailure(error, secrets);
   } finally {
-    if (tenantApiKeyId && tenantToken) await request.delete(`${API_URL}/v1/api-keys/${tenantApiKeyId}`, { headers: { Authorization: `Bearer ${tenantToken}` } }).catch(() => undefined);
+    if (tenantApiKeyId && tenantToken) await request.delete(`${API_URL}/v1/api-keys/${tenantApiKeyId}`, { headers: consoleHeaders(tenantToken) }).catch(() => undefined);
     await Promise.allSettled(contexts.map(context => context.close()));
   }
   if (failure) throw failure;

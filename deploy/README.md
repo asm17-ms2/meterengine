@@ -87,6 +87,7 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
 - `deploy/environments/<환경>.json`의 값이다.
   - `autoscaling_group_name`은 staging과 production에만 적고, `meterengine-<환경>-app`이어야 한다.
   - 프론트는 `https://<site_domain>`에서 온 공개 인보이스 조회와 결제 재시도만 받는다. compose가 이 값을 `METERENGINE_PUBLIC_ORIGIN`으로 넣는다.
+  - compose는 프론트에 `METERENGINE_SHOW_LEGACY_ENVIRONMENT`를 넣지 않는다. staging과 production 모두 콘솔 업무 환경 목록에 기존 데이터가 나오지 않는다. 테스트 환경으로 옮긴 자료에 문제가 있어 옛 범위를 봐야 할 때만 compose의 frontend `environment`에 `METERENGINE_SHOW_LEGACY_ENVIRONMENT: "true"`를 넣어 배포한다.
   - `site_aliases`는 지금 배포에서 쓰지 않는다. 별칭 리다이렉트는 ALB 규칙(Terraform)이 정한다.
   - `image_repository_prefix`: ECR 저장소 이름 앞부분. `<값>-backend`, `<값>-frontend`에서 이미지를 받는다.
   - `backend_mem_limit`: 백엔드 컨테이너의 메모리 한도. `backend_max_ram_percentage`: 그 한도 중 JVM 힙의 최대 비율(%).
@@ -363,7 +364,7 @@ ALB는 받은 `X-Forwarded-For` 뒤에 접속 주소를 붙이므로 맨 오른�
 - 전부 Parameter Store `/meterengine/<환경>/` 아래에 있다. 아래 명령은 production 기준이다.
 - 파라미터 이름이 대문자 환경변수 이름이 된다 (`db-host` -> `DB_HOST`).
 - staging은 모든 파라미터를 `deploy/terraform/staging/parameters.tf`가 만든다.
-- production은 DB 접속 정보와 `invoice-auto-finalize-enabled`만 `deploy/terraform/production/parameters.tf`가 갖고, 비밀값과 공개 저장소에 올리지 않는 값은 아래 명령으로 손으로 등록한다. 코드가 갖는 값을 손으로 바꾸면 다음 apply가 되돌린다.
+- production은 DB 접속 정보, `invoice-auto-finalize-enabled`, 가입 메일의 `mail-sender`, `mail-from`, `turnstile-allowed-hostnames`만 `deploy/terraform/production/parameters.tf`가 갖고, 비밀값과 공개 저장소에 올리지 않는 값은 아래 명령으로 손으로 등록한다. 코드가 갖는 값을 손으로 바꾸면 다음 apply가 되돌린다.
 
 | 파라미터 | 타입 | 쓰이는 곳 |
 | --- | --- | --- |
@@ -384,6 +385,12 @@ ALB는 받은 `X-Forwarded-For` 뒤에 접속 주소를 붙이므로 맨 오른�
 | `ingest-warmup-api-key` | SecureString | 선택. 백엔드가 기동할 때 수집 경로를 데우는 예열 도입사의 ingest 키 원문. 없으면 예열을 건너뛴다("수집 경로 예열") |
 | `ingest-warmup-organization-id`, `ingest-warmup-customer-id` | String | 선택. 예열 도입사와 예열 고객의 id. 없으면 compose가 빈 값을 넣는다 |
 | `ingest-warmup-requests`, `ingest-warmup-time-limit` | String | 선택. 예열 요청 수와 시간 상한. 없으면 compose가 `1000`, `20s`를 넣는다. 숫자나 기간 형식이 아니면 백엔드가 뜨지 못한다. 시간 상한은 늘리지 않는다. 예열 중에는 readiness가 503이고 ALB는 15초 간격 5번 실패면 빼므로, 컨테이너가 죽고 빠르면 60초 뒤 서버가 교체된다. 스스로 다시 뜨는 데 약 23초, 상한 20초, 마지막 요청 대기 5초를 더하면 약 48초다. 상한은 예열을 시작한 때부터 재므로 다시 뜨는 데 35초를 넘기면 서버가 교체될 수 있다 |
+| `email-verification-enabled` | String | 선택. `true`면 가입한 계정은 메일 인증을 마쳐야 로그인한다. 없으면 compose가 `false`를 넣는다("가입 메일 인증과 캡차 켜기") |
+| `mail-sender`, `mail-from` | String | 코드가 만든다. 메일을 SES로 보내고 보내는 사람을 `MeterEngine <no-reply@meterengine.com>`으로 둔다. 메일은 가입 인증에만 쓴다 |
+| `turnstile-enabled` | String | 선택. `true`면 가입과 인증 메일 다시 받기에 Cloudflare Turnstile 통과가 필요하다. 없으면 compose가 `false`를 넣는다 |
+| `turnstile-secret-key` | SecureString | 선택. Turnstile 위젯의 비밀 키. 백엔드만 읽는다. `turnstile-enabled`가 `true`인데 비어 있으면 백엔드가 뜨지 못한다 |
+| `turnstile-site-key` | String | 선택. Turnstile 위젯의 사이트 키. 프론트가 가입 화면과 인증 메일 다시 받기 화면에 위젯을 띄울 때 쓴다. 없으면 위젯을 띄우지 않는다 |
+| `turnstile-allowed-hostnames` | String | 코드가 만든다. Turnstile 결과의 hostname이 이 목록(쉼표 구분)에 있어야 통과한다 |
 | `frontend-api-key` | SecureString | 이 버전의 compose는 읽지 않는다. 옛 프론트가 백엔드를 부르던 API 키 원문이고, 옛 버전으로 되돌리는 배포가 요구해 남긴다 |
 | `app-version` | String | 앱 서버가 띄울 커밋 SHA 40자. CD와 `rollout.sh`가 쓰고 서버가 부팅 때 읽는다. Terraform은 자리 값 `unset`만 만들고 되돌리지 않는다. `prod.env`에는 들어가지 않는다 |
 
@@ -415,6 +422,30 @@ aws ssm get-parameter --name /meterengine/production/operator-password --with-de
 
 - 값을 고쳤으면 서버를 다시 띄워야 반영된다. 같은 SHA로 `rollout.sh`를 다시 부르면 서버를 새로 바꾼다("수동 배포").
 - **값에 개행이 섞이면 `deploy.sh`가 배포를 멈춘다.** 콘솔에서 복사할 때 줄바꿈이 딸려 오지 않았는지 본다.
+
+### 가입 메일 인증과 캡차 켜기
+
+- 둘 다 꺼진 채로 배포된다. 꺼져 있으면 가입과 로그인은 이 기능이 없던 때와 같다.
+- SES 도메인 인증(`meterengine.com`), Easy DKIM과 Route53 DKIM CNAME 셋, MAIL FROM 도메인(`mail.meterengine.com`의 MX와 SPF), DMARC TXT는 콘솔에서 만들어 Terraform 밖에 있다. 이 자원을 Terraform으로 가져오는(import) 일이 남았다.
+- Terraform은 앱 서버 역할의 `ses:SendEmail`(identity `meterengine.com`, 보내는 주소 `no-reply@meterengine.com`만)과 파라미터 `mail-sender`, `mail-from`, `turnstile-allowed-hostnames`를 만든다(`terraform/production/ses.tf`, `parameters.tf`, `app_fleet` 모듈).
+- 아래 순서로 켠다. 앞 단계가 끝나기 전에 다음 값을 켜지 않는다.
+  1. Terraform을 apply해 발송 권한과 파라미터 셋을 만든다. SES 콘솔에서 도메인 인증과 DKIM이 여전히 `Verified`인지 본다.
+  2. SES 콘솔에서 프로덕션 액세스(샌드박스 해제)를 신청하고 승인을 기다린다. 승인 전에는 인증한 주소로만 메일이 간다.
+  3. Cloudflare 대시보드에서 Turnstile 위젯을 만든다. 도메인은 `meterengine.com`, 모드는 Managed다.
+  4. `turnstile-site-key`와 `turnstile-secret-key`를 등록하고 재배포한다. 사이트 키가 먼저 있어야 가입 화면이 토큰을 보낸다.
+  5. `turnstile-enabled`를 `true`로 두고 재배포한다. 가입 화면에서 위젯을 풀고 가입이 되는지 본다.
+  6. 발송기가 `ses`인지 본다. `mail-sender`는 Terraform이 `ses`로 만들고, 없으면 compose가 `log`를 넣어 메일을 보내지 않는다. **발송기를 `ses`로 바꾼 뒤에 인증을 켠다.**
+  7. SES 승인이 끝났으면 `email-verification-enabled`를 `true`로 두고 재배포한다. 켜기 전에 가입한 계정은 인증된 것으로 남아 막히지 않는다.
+  8. 새 주소로 가입해 메일이 오는지 보고, 지표 `meterengine_email_verification_send_total`의 `outcome="success"`가 오르는지 본다. `outcome="logged"`가 오르거나 기동 로그에 `Email verification is required but the mail sender only logs`가 있으면 발송기가 `log`다. 바로 `email-verification-enabled`를 `false`로 되돌린다.
+- 메일 발송 실패는 가입을 막지 않는다. 백엔드 로그의 WARN과 지표 `meterengine_email_verification_send_total{outcome="failure"}`로 본다.
+- 보낸 뒤의 반송과 스팸 신고는 CloudWatch 경보가 본다. 인증을 켜기 전에 Slack 구독을 걸어 둔다("메일 발송 경보").
+
+```bash
+aws ssm put-parameter --name /meterengine/production/turnstile-site-key --type String --value '<사이트 키>'
+aws ssm put-parameter --name /meterengine/production/turnstile-secret-key --type SecureString --value '<비밀 키>'
+aws ssm put-parameter --name /meterengine/production/turnstile-enabled --type String --overwrite --value true
+aws ssm put-parameter --name /meterengine/production/email-verification-enabled --type String --overwrite --value true
+```
 
 ### 수집 경로 예열
 
@@ -739,6 +770,37 @@ GitHub 로그인이 안 되면 공용 모니터링 서버의 9090을 포트 포�
 - 임계값과 수신처를 바꾸려면 UI가 아니라 `grafana/provisioning/alerting/alerting.yml`을 고쳐 배포한다.
 - 새 경보를 만들었으면 임계값을 낮춰 한 번 발화시켜 Slack 수신을 확인하고 원복한다.
 - 경보는 백엔드를 직접 긁어 보는 것이라, 그 앞의 ALB가 죽거나 인증서가 만료된 상황은 잡지 못한다.
+
+### 메일 발송 경보
+
+- SES의 반송, 스팸 신고, 발송량은 Grafana가 아니라 CloudWatch 경보가 보고, SNS 주제 `meterengine-ses-alarms`로 보낸다(`terraform/production/ses_alarms.tf`).
+- 받는 곳은 코드에 없다. apply한 뒤 Amazon Q Developer in chat applications 콘솔에서 Slack 채널 구성을 열어, SNS 주제에 리전 `ap-northeast-2`의 `meterengine-ses-alarms`를 더한다. 구독이 없으면 울려도 아무에게도 가지 않는다.
+- Slack에는 경보 이름과 값만 간다. 반송된 주소는 가지 않는다.
+
+| 경보 | 조건 | 뜻 |
+| --- | --- | --- |
+| `meterengine-ses-bounce` | 5분 안에 반송 1건 이상 | 받는 서버가 메일을 영구히 거절했다. 억제 목록에서 주소를 본다 |
+| `meterengine-ses-complaint` | 5분 안에 스팸 신고 1건 이상 | 받은 사람이 메일을 스팸으로 신고했다. 억제 목록에서 주소를 본다 |
+| `meterengine-ses-bounce-rate` | 계정 반송률 5% 이상 | AWS가 계정을 검토 대상에 올리는 선이다. 10%부터는 발송을 멈출 수 있다 |
+| `meterengine-ses-complaint-rate` | 계정 신고율 0.1% 이상 | AWS가 계정을 검토 대상에 올리는 선이다. 0.5%부터는 발송을 멈출 수 있다 |
+| `meterengine-ses-daily-send` | 지난 24시간 발송 200통 이상 | 가입 폼으로 메일을 찍어 내고 있을 수 있다. `turnstile-enabled`가 켜져 있는지와 가입 수를 본다 |
+
+- 반송과 신고 경보는 새 건이 없으면 스스로 풀리고, 풀릴 때는 알리지 않는다. 울려 있는 동안 생긴 다음 건은 알림을 새로 만들지 않으므로, 울리면 억제 목록에서 건수를 같이 본다.
+- 비율 경보는 SES가 계산한 계정 평판 값을 본다. 이 값은 메일을 보낼 때만 찍혀서, 발송을 멈추면 경보가 울린 채로 남는다. 선 아래로 내려오면 복구 알림이 간다.
+- 반송되거나 신고한 주소는 계정 억제 목록에 오르고, SES는 그 주소로 메일을 전달하지 않는다. 주소 주인이 메일함을 고쳤다고 알려 오면 목록에서 뺀다.
+
+```bash
+aws sesv2 list-suppressed-destinations --region ap-northeast-2
+aws sesv2 list-suppressed-destinations --region ap-northeast-2 --reasons BOUNCE --start-date 2026-11-11T00:00:00Z
+aws sesv2 get-suppressed-destination --region ap-northeast-2 --email-address '<주소>'
+aws sesv2 delete-suppressed-destination --region ap-northeast-2 --email-address '<주소>'
+```
+
+- 구독을 건 뒤 경보를 손으로 한 번 울려 Slack 수신을 확인한다. 경보는 다음 평가 때 실제 상태로 돌아간다.
+
+```bash
+aws cloudwatch set-alarm-state --region ap-northeast-2 --alarm-name meterengine-ses-daily-send --state-value ALARM --state-reason 'Slack delivery check'
+```
 
 ## 문제 해결
 

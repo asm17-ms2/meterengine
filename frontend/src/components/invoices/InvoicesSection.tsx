@@ -18,6 +18,7 @@ import type {
 } from "@/lib/api/invoices";
 import {
   formatDecimal,
+  formatKoreanMonth,
   formatKrw,
   formatKstDateTime,
   formatTargetPropertyTooltip,
@@ -43,7 +44,7 @@ export async function InvoicesSection({
   if (!result.ok) {
     return (
       <ErrorState
-        title="인보이스를 불러오지 못했습니다"
+        title="인보이스를 불러오지 못했어요"
         error={result.error}
         narrowerHref={isAllMonths ? undefined : `/invoices?month=${shiftMonth(month, -1)}`}
         resetHref={
@@ -61,28 +62,24 @@ export async function InvoicesSection({
     );
   }
 
-  if (result.data.invoices.length === 0 && (result.data.total ?? 0) > 0) return <><EmptyState title="이 페이지에 인보이스가 없습니다" body={`현재 조건에 맞는 인보이스는 ${result.data.total}건입니다. 첫 페이지에서 다시 확인하세요.`} resetHref={buildListHref("/invoices", query, { page: 0 })} resetLabel="첫 페이지 보기" /><ListPagination query={query} capabilities={capabilities} total={result.data.total} /></>;
+  if (result.data.invoices.length === 0 && (result.data.total ?? 0) > 0) return <><EmptyState title="이 페이지에 인보이스가 없어요" body={`현재 조건에 맞는 인보이스는 ${result.data.total}건이에요. 첫 페이지에서 다시 확인하세요.`} resetHref={buildListHref("/invoices", query, { page: 0 })} resetLabel="첫 페이지 보기" /><ListPagination query={query} capabilities={capabilities} total={result.data.total} /></>;
 
-  if (result.data.invoices.length === 0 && (query.q || query.customerId || query.metricCode || query.paymentStatus || query.minAmount || query.maxAmount || query.from || query.to || query.mode)) return <EmptyState title="조건에 맞는 인보이스가 없습니다" body="검색, 수납 상태, 금액과 기간 조건을 바꿔 다시 조회하세요." resetHref={buildListHref("/invoices", query, { page: 0, q: "", customerId: undefined, metricCode: undefined, paymentStatus: undefined, minAmount: undefined, maxAmount: undefined, from: undefined, to: undefined, mode: undefined })} />;
+  if (result.data.invoices.length === 0 && (query.q || query.customerId || query.metricCode || query.paymentStatus || query.minAmount || query.maxAmount || query.from || query.to || query.mode)) return <EmptyState title="조건에 맞는 인보이스가 없어요" body="검색, 수납 상태, 금액과 기간 조건을 바꿔 다시 조회하세요." resetHref={buildListHref("/invoices", query, { page: 0, q: "", customerId: undefined, metricCode: undefined, paymentStatus: undefined, minAmount: undefined, maxAmount: undefined, from: undefined, to: undefined, mode: undefined })} />;
 
   if (result.data.invoices.length === 0) {
     return (
       <EmptyState
-        title="확정된 인보이스가 없습니다"
-        body={
-          isAllMonths
-            ? "확정된 인보이스가 없습니다. 확정 전 금액은 청구 예정액에서 봅니다."
-            : `${month}에 확정된 인보이스가 없습니다. 확정 전 금액은 청구 예정액에서 봅니다.`
-        }
+        title={isAllMonths ? "확정된 인보이스가 없어요" : `${formatKoreanMonth(month)}에 확정된 인보이스가 없어요`}
+        body="확정 전 금액은 청구 검토에서 확인하세요."
         resetHref={isAllMonths ? "/billing" : `/billing?month=${month}`}
-        resetLabel="청구 예정액 확인"
+        resetLabel="청구 검토로 이동"
       />
     );
   }
 
   return (
     <>
-      {result.data.summary && <p role="status">조건 전체 {result.data.summary.invoice_count}건, 세금 포함 {formatKrw(result.data.summary.total_amount)}, 취소액 {formatKrw(result.data.summary.canceled_amount)}, {result.data.summary.has_pending ? "결과 확인 중인 결제가 있어 미수금은 확정 전입니다." : `미수금 ${formatKrw(result.data.summary.outstanding_amount ?? 0)}`}</p>}
+      {result.data.summary && <><p role="status">조건 전체 {result.data.summary.invoice_count}건, 세금 포함 {formatKrw(result.data.summary.total_amount)}, 취소액 {formatKrw(result.data.summary.canceled_amount)}{result.data.summary.has_pending ? "" : `, 미수금 ${formatKrw(result.data.summary.outstanding_amount ?? 0)}`}</p>{result.data.summary.has_pending && <p className="field-hint">결과를 확인하는 중인 결제가 있어 미수금을 아직 알 수 없어요.</p>}</>}
       <InvoicesTable
         groups={result.data.invoices.map(invoice => toInvoiceGroupView(invoice, result.data.payments?.[invoice.id]))}
         totalAmount={formatKrw(
@@ -94,9 +91,9 @@ export async function InvoicesSection({
       />
       <ListPagination query={query} capabilities={capabilities} total={result.data.total} />
       <ScreenNote>
-        금액과 미터 라인은 확정할 때 저장한 값이라 뒤에 단가나 고객 이름을 고쳐도 바뀌지
-        않습니다. 합계는 공급가액에 세액을 더한 값입니다.
-        반복소수는 줄여 표시하며, 금액은 정확한 분자와 분모로 계산합니다.
+        금액과 미터 라인은 확정할 때 저장한 값이라 나중에 단가나 고객 이름을 고쳐도 바뀌지
+        않아요. 합계는 공급가액에 세액을 더한 값이에요.
+        반복소수는 줄여 표시하지만 금액은 줄이기 전 정확한 값으로 계산해요.
       </ScreenNote>
     </>
   );
