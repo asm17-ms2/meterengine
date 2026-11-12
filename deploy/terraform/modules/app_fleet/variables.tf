@@ -39,6 +39,12 @@ variable "alb_deletion_protection" {
   type = bool
 }
 
+# false면 ALB의 80, 443 인바운드 규칙을 만들지 않는다. 콘솔에서 넣은 규칙은 Terraform이 건드리지 않는다.
+variable "alb_public_ingress" {
+  type    = bool
+  default = true
+}
+
 variable "app_egress_ports" {
   type    = list(number)
   default = [443]

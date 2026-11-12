@@ -29,6 +29,22 @@ resource "aws_ssm_parameter" "db_exporter_password" {
   value_wo_version = 1
 }
 
+# 가입 인증 메일과 캡차의 공개 설정이다. 켜고 끄는 값과 Turnstile 키는 손으로 등록한다(deploy/README.md "설정값").
+locals {
+  signup_parameters = {
+    mail-sender                 = "ses"
+    mail-from                   = "MeterEngine Staging <no-reply@meterengine.com>"
+    turnstile-allowed-hostnames = "staging.meterengine.com"
+  }
+}
+
+resource "aws_ssm_parameter" "signup" {
+  for_each = local.signup_parameters
+  name     = "/meterengine/staging/${each.key}"
+  type     = "String"
+  value    = each.value
+}
+
 import {
   to = aws_ssm_parameter.runtime["invoice-auto-finalize-enabled"]
   id = "/meterengine/staging/invoice-auto-finalize-enabled"

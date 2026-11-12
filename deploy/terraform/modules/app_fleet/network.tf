@@ -21,7 +21,7 @@ resource "aws_security_group" "asg" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "alb_web" {
-  for_each          = toset(["80", "443"])
+  for_each          = var.alb_public_ingress ? toset(["80", "443"]) : toset([])
   security_group_id = aws_security_group.alb.id
   cidr_ipv4         = "0.0.0.0/0"
   ip_protocol       = "tcp"

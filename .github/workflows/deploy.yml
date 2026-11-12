@@ -19,6 +19,11 @@ on:
         required: false
         type: string
         default: ""
+      external_check:
+        description: "배포 뒤 인터넷에서 ALB로 붙어 확인할지. ALB가 인터넷을 받지 않는 환경은 false다"
+        required: false
+        type: boolean
+        default: true
 
 env:
   AWS_REGION: ap-northeast-2
@@ -145,7 +150,7 @@ jobs:
       # 인터넷에서 ALB를 거쳐 보이는지 본다. 도메인이 아직 옛 서버를 가리켜도 ALB 주소로 붙어 확인한다.
       # 로그인하지 않은 요청은 로그인 화면으로 리다이렉트되므로 따라가서 마지막 응답을 본다.
       - name: 외부에서 확인
-        if: steps.rollout.outputs.recorded_only == 'false'
+        if: steps.rollout.outputs.recorded_only == 'false' && inputs.external_check
         env:
           ALB_DNS_NAME: ${{ steps.rollout.outputs.alb_dns_name }}
         run: |

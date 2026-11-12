@@ -44,3 +44,5 @@ jobs:
       environment: staging
       aws_role: arn:aws:iam::928618307647:role/meterengine-staging-deploy
       image_tag: ${{ inputs.image_tag }}
+      # 스테이징 ALB는 팀 IP만 받아 러너가 닿지 못한다. 서버가 떴는지는 서버 교체 단계가 ALB 상태 검사로 본다.
+      external_check: false
