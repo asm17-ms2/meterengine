@@ -101,14 +101,14 @@ class Sender:
             self._next_organization_attempt = now + ORGANIZATION_RETRY_SECONDS
             code = _organization_error_code(error)
             if code != self.organization_error:
-                _log("도입사를 확인하지 못해 보내지 않습니다. %d초 뒤에 다시 확인합니다: %s" % (ORGANIZATION_RETRY_SECONDS, error))
+                _log("조직을 확인하지 못해 보내지 않습니다. %d초 뒤에 다시 확인합니다: %s" % (ORGANIZATION_RETRY_SECONDS, error))
             self.organization_error = code
             return False
         self.state.set_scope(self.config.scope(organization.id))
         self.organization = organization
         self.organization_error = None
         self._roll()
-        _log("도입사 확인: %s (%s)" % (organization.name, organization.id))
+        _log("조직 확인: %s (%s)" % (organization.name, organization.id))
         return True
 
     def submit(self, record: dict, name: str, session_id: Optional[str]) -> None:
@@ -204,7 +204,7 @@ class Sender:
         problem = parse_problem(result.status, result.body)
         code = problem.code or "http_%d" % problem.status
         if code != self.organization_error:
-            _log("API 키가 거부돼 보내지 않습니다. %d초 뒤에 도입사를 다시 확인합니다: HTTP %d %s"
+            _log("API 키가 거부돼 보내지 않습니다. %d초 뒤에 조직을 다시 확인합니다: HTTP %d %s"
                  % (ORGANIZATION_RETRY_SECONDS, problem.status, code))
         self.organization = None
         self.organization_error = code
@@ -398,7 +398,7 @@ class BridgeHandler(BaseHTTPRequestHandler):
 def startup_lines(config: BridgeConfig, host: str, port: int) -> List[str]:
     return [
         "브리지 시작: http://%s:%d" % (host, port),
-        "  전송 대상 %s (API 키 %s, 도입사: 첫 전송 때 확인)" % (config.base_url, mask_api_key(config.api_key)),
+        "  전송 대상 %s (API 키 %s, 조직: 첫 전송 때 확인)" % (config.base_url, mask_api_key(config.api_key)),
         "  주인 %s, 허용 목록 %s" % (config.owner or "(없음)", config.allow or "(전부 실명)"),
         "  기록 %s" % os.path.join(LOGS_DIR, "bridge-<날짜>.jsonl"),
     ]

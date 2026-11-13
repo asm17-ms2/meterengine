@@ -94,7 +94,7 @@ def require_organization(client) -> Organization:
     organization_id = body.get("id")
     if result.status != 200 or not isinstance(organization_id, str) or not organization_id:
         raise ApiRequestError(
-            "/v1/organization 응답으로 도입사를 확인하지 못했습니다: %s" % problem.summary(), problem
+            "/v1/organization 응답으로 조직을 확인하지 못했습니다: %s" % problem.summary(), problem
         )
     return Organization(id=organization_id, name=str(body.get("name") or ""))
 

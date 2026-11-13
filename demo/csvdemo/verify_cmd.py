@@ -62,7 +62,7 @@ def run_verify(args, console: Console) -> int:
     if source.organization_id and source.organization_id != organization.id:
         print(
             console.warn(
-                "주의: 기록은 도입사 %s에서 보냈는데 이 키는 다른 도입사 %s (%s)의 키입니다. 결과가 어긋날 수 있습니다."
+                "주의: 기록은 조직 %s에서 보냈는데 이 키는 다른 조직 %s (%s)의 키입니다. 결과가 어긋날 수 있습니다."
                 % (source.organization_id, organization.name, organization.id)
             )
         )

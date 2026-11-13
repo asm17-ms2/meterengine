@@ -17,7 +17,7 @@ from core.api_client import Organization
 
 DEMO_CUSTOMER = "35bc8d12-9d38-57ab-bc9b-bbd35d779a26"
 LIVE_KEY = "me_live_QouOFuCiJyAbC0VGK1ltUCkG4IZM2LtA"
-ORGANIZATION = Organization(id="d7cee55d-8c82-4afc-b996-6749d8b26a4e", name="데모 도입사")
+ORGANIZATION = Organization(id="d7cee55d-8c82-4afc-b996-6749d8b26a4e", name="데모 조직")
 
 API_REQUEST = {
     "attributes": [
@@ -204,7 +204,7 @@ class DenyTest(SenderTestCase):
 
 
 class RunHeaderTest(SenderTestCase):
-    def test_머리말에는_도입사_id만_남고_키는_없다(self):
+    def test_머리말에는_조직_id만_남고_키는_없다(self):
         sender = self.sender(BridgeConfig(api_key=LIVE_KEY), organization=ORGANIZATION)
         with open(sender.writer.path, encoding="utf-8") as f:
             text = f.read()
@@ -219,12 +219,12 @@ class RunHeaderTest(SenderTestCase):
 
 
 class StartupLinesTest(unittest.TestCase):
-    def test_시작_로그에는_가린_키만_나오고_도입사는_나중에_확인한다(self):
+    def test_시작_로그에는_가린_키만_나오고_조직은_나중에_확인한다(self):
         config = BridgeConfig(owner="박성종", api_key=LIVE_KEY)
         text = "\n".join(server.startup_lines(config, "127.0.0.1", 4318))
         self.assertNotIn(LIVE_KEY, text)
         self.assertIn("me_live_****2LtA", text)
-        self.assertIn("도입사: 첫 전송 때 확인", text)
+        self.assertIn("조직: 첫 전송 때 확인", text)
 
 
 class OrganizationClient:
@@ -277,13 +277,13 @@ class LazyOrganizationTest(SenderTestCase):
         with open(path, encoding="utf-8") as f:
             return [json.loads(line) for line in f if line.strip() and json.loads(line)["type"] == "run"]
 
-    def test_도입사를_알기_전에는_기록_파일을_열지_않는다(self):
+    def test_조직을_알기_전에는_기록_파일을_열지_않는다(self):
         sender, client = self.lazy_sender([ORGANIZATION_REPLY])
         self.assertIsNone(sender.writer)
         self.assertEqual(self.header_lines(), [])
         self.assertEqual(client.organization_calls, 0)
 
-    def test_첫_이벤트에서_한_번만_확인하고_머리말에_도입사_id를_남긴다(self):
+    def test_첫_이벤트에서_한_번만_확인하고_머리말에_조직_id를_남긴다(self):
         sender, client = self.lazy_sender([ORGANIZATION_REPLY])
         sender._send_one(API_REQUEST, "api_request", "sess-1")
         sender._send_one(API_REQUEST, "api_request", "sess-1")
@@ -330,7 +330,7 @@ class LazyOrganizationTest(SenderTestCase):
         self.assertEqual(len(client.posted), 1)
         self.assertIsNone(sender.organization_error)
 
-    def test_확인한_뒤에_키가_거부되면_도입사를_내려놓고_한_번만_남긴다(self):
+    def test_확인한_뒤에_키가_거부되면_조직을_내려놓고_한_번만_남긴다(self):
         sender, client = self.lazy_sender([ORGANIZATION_REPLY], post_replies=[REJECTED_REPLY])
         sender._send_one(API_REQUEST, "api_request", "sess-1")
         self.assertEqual(sender.counts["rejected"], 1)
@@ -453,7 +453,7 @@ class RequestOriginTest(unittest.TestCase):
         finally:
             connection.close()
 
-    def test_health에는_확인한_도입사와_가린_키만_나온다(self):
+    def test_health에는_확인한_조직과_가린_키만_나온다(self):
         self.sender.organization = ORGANIZATION
         status, text = self.health_body()
         self.assertEqual(status, 200)

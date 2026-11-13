@@ -53,7 +53,7 @@ export function CsvUploadPanel({ targetNames, configError }: CsvUploadPanelProps
     <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
       <Typography.Title level={3}>CSV 보내기</Typography.Title>
       {configError === undefined ? null : <Alert type="error" title="대상 설정을 읽지 못했습니다" description={configError} />}
-      <Alert type="info" title="예제 양식으로 CSV를 준비하세요" description={<><p>필수 컬럼: transaction_id, customer_id, event_type, timestamp, properties. properties는 JSON 객체이며 900KB 이하 파일을 선택하세요.</p><a download="meterengine-events.csv" href={'data:text/csv;charset=utf-8,' + encodeURIComponent('transaction_id,customer_id,event_type,timestamp,properties\nexample-001,customer-id,usage,2026-10-26T12:00:00%2B09:00,"{""units"":10}"\n'.replace('%2B', '+'))}>예제 CSV 받기</a><p>예제의 고객 ID, 유형과 시각을 실제 시연 대상에 맞춰 바꾸세요. 잘못된 행은 건너뛰고 나머지만 전송합니다.</p></>} />
+      <Alert type="info" title="예제 양식으로 CSV를 준비하세요" description={<><p>필수 컬럼: transaction_id, customer_id, event_type, timestamp, properties. properties는 JSON 객체이며 900KB 이하 파일을 선택하세요.</p><a download="meterengine-events.csv" href={'data:text/csv;charset=utf-8,' + encodeURIComponent('transaction_id,customer_id,event_type,timestamp,properties\nexample-001,customer-id,usage,2026-10-26T12:00:00%2B09:00,"{""units"":10}"\n'.replace('%2B', '+'))}>예제 CSV 받기</a><p>예제의 고객 ID, 유형, 시각을 이벤트를 보낼 조직의 값으로 바꾸세요. 잘못된 행은 건너뛰고 나머지만 전송합니다.</p></>} />
       <Upload
         accept=".csv,text/csv"
         showUploadList={false}

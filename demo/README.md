@@ -1,11 +1,11 @@
 # demo
 
-API 연동 도구와 도입사의 고객용 서비스 예제를 실행한다.
+API 연동 도구와, 자사 서비스에 MeterEngine을 붙인 예제를 실행한다.
 
 | 앱 | 기본 포트 | 용도 |
 | --- | --- | --- |
 | `web` | 3100 | SDK 전송, CSV, 브리지, 웹훅과 고객 조회를 확인하는 개발자 도구 |
-| [LLM 서비스](llm-service/README.md) | 3200 | 고객 로그인, 모델 사용, 본인 사용량과 청구를 연결한 도입사 예제 |
+| [LLM 서비스](llm-service/README.md) | 3200 | 가상의 LLM 회사 OpenAB의 고객용 서비스. 대화, API, 일괄 처리 사용량을 보내고 본인 사용량과 청구를 조회한다 |
 
 확정 인보이스를 MeterEngine 화면으로 전달하려면 서버 SDK의 `createInvoiceViewLink`로 링크를 발급한다. 발급과 폐기는 `admin`, 목록 조회는 `read` 권한이 필요하다. 기본 유효기간은 30일이며 최대 90일이다.
 
@@ -97,8 +97,8 @@ python3 demo/meterdemo.py verify (--log <JSONL> | --csv <CSV>) [옵션]
 - 형식이 틀리면 아무것도 보내지 않고 끝난다.
 - 로컬 키는 `backend/src/main/resources/db/local/R__local_credentials.sql`에 있다. 배포 환경 키는 운영자 세션으로 발급한다(스코프 `ingest`, `read`).
   - 로컬 시드 키는 기존 데이터(legacy) 범위 키다. test나 live 환경 대상에는 콘솔에서 그 업무 환경을 고른 뒤 발급한 키를 쓴다. 시드 키에 환경을 지정하면 403 `environment_mismatch`다.
-- 시작할 때 `GET /v1/organization`으로 키의 도입사를 확인한다. 이때나 `send` 전송 중에 401이나 403을 받으면 code를 보여 주고 멈춘다. 종료 코드는 2다.
-- 화면과 기록에는 키를 `me_live_****abcd`처럼 가려서 보인다. 실행 기록 머리말에는 키 대신 도입사 id(`organization_id`)를 남긴다. 옛 기록의 도입사 값은 읽지 않는다.
+- 시작할 때 `GET /v1/organization`으로 키의 조직을 확인한다. 이때나 `send` 전송 중에 401이나 403을 받으면 code를 보여 주고 멈춘다. 종료 코드는 2다.
+- 화면과 기록에는 키를 `me_live_****abcd`처럼 가려서 보인다. 실행 기록 머리말에는 키 대신 조직 id(`organization_id`)를 남긴다. 옛 기록의 조직 값은 읽지 않는다.
 
 ### send
 
@@ -106,7 +106,7 @@ python3 demo/meterdemo.py verify (--log <JSONL> | --csv <CSV>) [옵션]
 - 전송 중 끊긴 묶음은 `UNKNOWN`, 아직 보내지 않은 행은 `NOT_SENT`로 구분해 원래 순서대로 모두 기록한다. 두 상태의 로그 `outcome`은 `error`이고 `error`에 구분값이 남는다.
 - 전송마다 요청 요약과 서버 응답을 `[NEW]` `[DUP]` `[REJ]` 태그로 출력한다.
 - 모든 요청과 응답 쌍을 `demo/logs/send-YYYYMMDD-HHMMSS.jsonl`에 항상 기록한다. 끄는 옵션은 없다.
-- 전송 전 확인 게이트에서 대상 서버, 도입사 이름과 id, 가린 API 키, 건수, KST 월별 분포, 서버에 이미 있는 건수, 예상 결과(신규/중복/거절)를 보여주고 `y` 입력을 기다린다.
+- 전송 전 확인 게이트에서 대상 서버, 조직 이름과 id, 가린 API 키, 건수, KST 월별 분포, 서버에 이미 있는 건수, 예상 결과(신규/중복/거절)를 보여주고 `y` 입력을 기다린다.
   - 문제로 예측된 행은 미리보기 범위 밖이어도 사유와 함께 표시된다.
 - 잘못된 값(빈 필드, 미등록 고객)도 거르지 않고 그대로 보낸다. 판정은 서버가 한다.
 
@@ -117,7 +117,7 @@ python3 demo/meterdemo.py verify (--log <JSONL> | --csv <CSV>) [옵션]
 | `--interval` | `0` | 전송 간격 초 |
 | `--jitter` | `0` | 간격에 더할 랜덤 슬립 상한 초 |
 | `--yes` | 끔 | 확인 게이트 생략 |
-| `--dry-run` | 끔 | 게이트와 미리보기만. 전송도 로그 기록도 하지 않는다. 도입사 확인과 미리보기 때문에 백엔드에는 연결한다 |
+| `--dry-run` | 끔 | 게이트와 미리보기만. 전송도 로그 기록도 하지 않는다. 조직 확인과 미리보기 때문에 백엔드에는 연결한다 |
 | `--verbose` | 끔 | 요청과 응답 JSON 전문도 출력 |
 
 ### verify
@@ -127,7 +127,7 @@ python3 demo/meterdemo.py verify (--log <JSONL> | --csv <CSV>) [옵션]
 - 그 달의 집계 마감 시각(다음 달 1일 13:00 KST) 이후에 받은 이벤트는 서버처럼 제외한다. 로그 소스는 `sent_at`을 받은 시각으로 보고, CSV 소스는 받은 시각을 몰라 제외하지 않는다.
 - `per_unit`, `graduated`, `volume`을 계산하며 각 과금 라인의 10원 미만을 절사한다. 고객 단가가 공통 단가보다 우선하고, 양수 사용량이 있으면 최소 과금을 적용한 뒤 기본료를 더한다. 단가 없는 조합은 별도로 표시한다.
 - 고객 전체 집계와 조합별 청구 수량은 따로 검증한다. 평균, 고유 값 수와 반올림 결과는 조합별 합과 다를 수 있다. 표시용 소수와 별개로 정확한 분자와 분모로 금액과 구간 경계를 계산한다. 숫자 차원의 `9`와 `9.0`은 같은 조합이다.
-- `--log`와 `--csv`를 함께 주면 로그를 쓴다. 깨진 `send` 로그는 종료 코드 2, 여러 브리지 헤더와 도입사 불일치는 경고로 표시한다. CSV는 서버 판정을 예측하므로 NUL 같은 일부 저장 거절은 재현하지 못한다.
+- `--log`와 `--csv`를 함께 주면 로그를 쓴다. 깨진 `send` 로그는 종료 코드 2, 여러 브리지 헤더와 조직 불일치는 경고로 표시한다. CSV는 서버 판정을 예측하므로 NUL 같은 일부 저장 거절은 재현하지 못한다.
 
 | 옵션 | 기본값 | 내용 |
 |---|---|---|
@@ -207,7 +207,7 @@ python3 demo/otel_bridge.py stop && python3 demo/otel_bridge.py start
 | `--fallback-project` | 허용 목록 밖 프로젝트를 합칠 이름 |
 | `--config` | 설정 파일 경로. 기본 `~/.meterengine/bridge.json` |
 
-- 설정 파일은 권한 600으로 쓴다. 옛 설정 파일의 도입사 값은 읽지 않는다.
+- 설정 파일은 권한 600으로 쓴다. 옛 설정 파일의 조직 값은 읽지 않는다.
 - 키는 `METERENGINE_API_KEY`, 설정 파일 순서로 고른다. 둘 다 없으면 안내를 띄우고 시작하지 않는다.
   - launchd로 띄운 브리지는 환경변수를 받지 않는다. 그래서 설정 파일에 키가 없으면 `install`과 `start`를 거부한다. `console.py`의 등록과 시작도 같다.
 - 설정을 바꿔도 이미 도는 브리지에는 반영되지 않는다. `stop` 후 `start`를 한다.
@@ -230,7 +230,7 @@ python3 demo/otel_bridge.py status      # 상태와 누적 건수
 
 - 모든 하위 명령이 `--host`(기본 `127.0.0.1`)와 `--port`(기본 `4318`)를 받는다. `config`는 받지 않는다.
 - `serve`는 `--config`, `--state`(기본 `~/.meterengine/state.json`), `--base-url`을 추가로 받는다. `--base-url`은 이번 실행에만 적용된다.
-- 키의 도입사는 첫 전송 때 `GET /v1/organization`으로 확인한다. 실패하면(연결 실패, 401, 403) 브리지는 떠 있고 이벤트를 보내지 않은 채 오류로 센 뒤 60초 뒤에 다시 확인한다. 확인한 뒤 전송이 401이나 403을 받아도(키 폐기, 도입사 정지) 그 이벤트를 거절로 세고 같은 방식으로 다시 확인한다. `status`의 `organization_error`에 마지막 실패 code가 나온다.
+- 키의 조직은 첫 전송 때 `GET /v1/organization`으로 확인한다. 실패하면(연결 실패, 401, 403) 브리지는 떠 있고 이벤트를 보내지 않은 채 오류로 센 뒤 60초 뒤에 다시 확인한다. 확인한 뒤 전송이 401이나 403을 받아도(키 폐기, 조직 이용 정지) 그 이벤트를 거절로 세고 같은 방식으로 다시 확인한다. `status`의 `organization_error`에 마지막 실패 code가 나온다.
 - `install`은 워크트리에서 실행하면 거부한다. 본 저장소의 `demo/otel_bridge.py`로 등록한다. `--force`로 무시할 수 있다.
 - `status`는 브리지가 응답하지 않으면 종료 코드 1로 끝난다.
 - 브리지가 꺼져 있으면 Claude Code는 그대로 동작하고 사용량만 수집되지 않는다.
@@ -262,9 +262,9 @@ python3 demo/otel_bridge.py status      # 상태와 누적 건수
   - `--git-common-dir`을 보므로 워크트리에서 일해도 전부 한 이름으로 모인다.
 - `allow`에 적은 레포만 실명이고 나머지는 `fallback_project` 하나로 합쳐진다. `allow`가 비면 전부 실명이다.
 - `deny`에 적은 레포는 보내지 않는다. hook이 세션을 묶을 때와 전송 직전에 각각 본다.
-- 고객은 이름을 `external_id`로 실어 `POST /v1/customers`로 등록한다. 같은 도입사와 외부 ID면 200으로 기존 고객을 받아 여러 프로세스가 등록해도 중복 고객을 만들지 않는다.
+- 고객은 이름을 `external_id`로 실어 `POST /v1/customers`로 등록한다. 같은 조직과 외부 ID면 200으로 기존 고객을 받아 여러 프로세스가 등록해도 중복 고객을 만들지 않는다.
   - 등록 전에 고객 목록에서 외부 ID 없이 같은 이름으로 만든 옛 고객을 찾으면 그 고객을 이어 쓴다.
-- 찾아낸 고객 id는 `~/.meterengine/state.json`에 전송 대상, 도입사 id와 API 키 해시별로 담는다. 키를 바꾸면 고객을 다시 찾고, 서버가 404 `customer_not_found`로 답하면 캐시를 버린다.
+- 찾아낸 고객 id는 `~/.meterengine/state.json`에 전송 대상, 조직 id와 API 키 해시별로 담는다. 키를 바꾸면 고객을 다시 찾고, 서버가 404 `customer_not_found`로 답하면 캐시를 버린다.
 
 ### 보내는 이벤트와 properties
 
@@ -326,7 +326,7 @@ uv run demo/console.py
 
 - 의존성이 파일 안에 적혀 있어(PEP 723) uv가 받아서 실행한다. demo의 나머지는 `python3`로 돈다.
 - `--config`, `--state`를 받는다.
-- 상태가 2초마다 갱신된다. 가린 API 키와 도입사 확인 결과(실패하면 code)가 함께 나온다.
+- 상태가 2초마다 갱신된다. 가린 API 키와 조직 확인 결과(실패하면 code)가 함께 나온다.
 - 설정에 적은 프로젝트와 브리지가 실제로 본 프로젝트가 함께 뜬다. 콘솔을 켜 둔 사이에 처음 본 레포도 다음 갱신에 목록으로 붙는다.
 - 커서를 놓고 스페이스를 누르면 세 상태를 돈다.
 
@@ -386,7 +386,7 @@ await client.ingestEvent({
 
 ## cli
 
-도입사 개발자와 코딩 에이전트가 터미널에서 MeterEngine API를 부르는 명령 `meterengine`(`cli/`)이다. 아직 배포하지 않고 이 workspace에서 실행한다. 지금은 키 저장과 청구 예정액 조회만 있다.
+자사 서비스 개발자와 코딩 에이전트가 터미널에서 MeterEngine API를 부르는 명령 `meterengine`(`cli/`)이다. 아직 배포하지 않고 이 workspace에서 실행한다. 지금은 키 저장과 청구 예정액 조회만 있다.
 
 ```bash
 cd demo && corepack pnpm install
@@ -410,7 +410,7 @@ node cli/src/main.ts invoices draft --month 2026-11
 
 ## 테스트 웹
 
-도입사 서버가 API를 조회해 고객의 사용량과 청구, 수납 화면을 그리는 Next.js 앱(`web/`)이다. 이벤트 전송과 웹훅 수신 도구도 함께 둔다. `127.0.0.1:3100`에만 붙는다.
+자사 서버가 API를 조회해 고객의 사용량과 청구, 수납 화면을 그리는 Next.js 앱(`web/`)이다. 이벤트 전송과 웹훅 수신 도구도 함께 둔다. `127.0.0.1:3100`에만 붙는다.
 
 - 사전 준비: Node 24 이상, corepack.
 
@@ -440,7 +440,7 @@ corepack pnpm --filter @meterengine/demo-web dev
 | 웹훅 수신 | `/webhooks` | 대상을 선택해 해당 수신 URL과 서명 검증 기록 조회 |
 | 브리지 설정 | `/bridge` | 브리지 설정 조회, 저장, 재시작 |
 
-- 키는 시연 서버에만 두고 브라우저에 전달하지 않는다. 조회에는 `read`, 이벤트 전송에는 `ingest`, 카드 등록 링크 생성에는 `admin` 스코프가 필요하다.
+- 키는 테스트 웹 서버에만 두고 브라우저에 전달하지 않는다. 조회에는 `read`, 이벤트 전송에는 `ingest`, 카드 등록 링크 생성에는 `admin` 스코프가 필요하다.
 - 고객 화면의 카드는 공개 등록 화면에서 고객이 동의하고 인증한 뒤 등록된다. 링크 생성이나 화면 조회만으로 카드 등록과 결제 성공을 판정하지 않는다.
 
 ### 웹훅 받기
@@ -481,7 +481,7 @@ node --env-file=.env.local scripts/send-test-webhook.ts --target=local-test --ol
 | `bridge/` | Claude Code 사용량을 보내는 쪽 |
 | `sdk/` | TypeScript SDK (`@meterengine/sdk`) |
 | `web/` | 테스트 웹 (`@meterengine/demo-web`) |
-| `llm-service/` | Lumen LLM 서비스 예제 (`@meterengine/llm-service`) |
+| `llm-service/` | OpenAB LLM 서비스 예제 (`@meterengine/llm-service`) |
 | `package.json`, `pnpm-workspace.yaml`, `pnpm-lock.yaml` | `sdk/`, `web/`, `llm-service/`를 묶는 pnpm workspace |
 | `eslint-naming-rules.mjs` | `sdk/`, `web/`, `llm-service/`가 같이 쓰는 식별자 이름 규칙(`@typescript-eslint/naming-convention`) |
 | `sample-events.csv`, `sample-events-edge.csv` | 샘플 이벤트와 경계 케이스 |
