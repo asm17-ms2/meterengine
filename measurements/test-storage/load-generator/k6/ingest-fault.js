@@ -16,11 +16,15 @@ const GRACEFUL_STOP_EXTRA_SECONDS = 30;
 const MIN_VUS = 50;
 const MAX_VUS = Math.max(MIN_VUS, RATE);
 const DUPLICATE_PERIOD = 100;
+const STORED = 200;
+const ACCEPTED = 202;
 const NO_VALUE = '-';
 
 const started = new Counter('events_started');
 const stored = new Counter('events_stored');
 const duplicate = new Counter('events_duplicate');
+// 카프카 경로의 202. 받아서 발행했고 저장과 중복 판정은 컨슈머가 뒤에서 한다.
+const accepted = new Counter('events_accepted');
 const failed = new Counter('events_failed');
 
 export const options = {
@@ -43,11 +47,11 @@ export const options = {
 };
 
 export function setup() {
-  return { organizationId: loadOrganizationId(), customerIds: loadCustomerIds(), startedAt: new Date().toISOString() };
+  return { organizationId: loadOrganizationId(config.headers), customerIds: loadCustomerIds(config.headers), startedAt: new Date().toISOString() };
 }
 
 function duplicateFlag(res) {
-  if (res.status !== 200) {
+  if (res.status !== STORED) {
     return NO_VALUE;
   }
   return res.json('duplicate') ? 1 : 0;
@@ -67,7 +71,11 @@ export default function (data) {
   });
   const elapsedMs = Date.now() - sentMs;
   console.log(`REQ ${id} ${sentMs} ${elapsedMs} ${res.status} ${res.error_code} ${duplicateFlag(res)} ${resend ? 1 : 0}`);
-  if (res.status !== 200) {
+  if (res.status === ACCEPTED) {
+    accepted.add(1);
+    return;
+  }
+  if (res.status !== STORED) {
     failed.add(1);
     if (!resend) {
       console.log(`FAILED_ID ${id} status=${res.status} error_code=${res.error_code}`);

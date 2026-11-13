@@ -80,6 +80,8 @@ write_env_file() {
 		printf 'BACKEND_MEM_LIMIT=%s\n' "$BACKEND_MEM_LIMIT"
 		printf 'BACKEND_MAX_RAM_PERCENTAGE=%s\n' "$BACKEND_MAX_RAM_PERCENTAGE"
 		printf 'COMPOSE_PROFILES=%s\n' "$COMPOSE_PROFILES"
+		# 서버의 ServerRole 태그에서 온다. 태그가 없는 서버는 전부 맡는다.
+		printf 'METERENGINE_ROLE=%s\n' "${METERENGINE_ROLE:-all}"
 	} >>"$tmp"
 
 	# 빠진 값이 있으면 지금 env 파일을 그대로 둔다.

@@ -53,6 +53,7 @@ jobs:
               - 'measurements/*/README.md'
               - 'measurements/*/lib/common.sh'
               - 'measurements/*/sut/scripts/sut-deploy.sh'
+              - 'measurements/*/sut/scripts/push-images.sh'
               - 'measurements/*/sut/scripts/remote/upsert-exporter-user.sh'
               - 'measurements/*/sut/terraform/iam.tf'
               - 'measurements/*/sut/terraform/locals.tf'

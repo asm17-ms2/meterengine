@@ -107,7 +107,7 @@ class WorkflowTest(unittest.TestCase):
                         "measurements/*/sut/terraform/iam.tf", "measurements/*/sut/terraform/locals.tf",
                         "measurements/*/sut/terraform/variables.tf",
                         "measurements/*/sut/scripts/remote/upsert-exporter-user.sh", "measurements/*/sut/scripts/sut-deploy.sh",
-                        "measurements/*/README.md", "measurements/test-sjpark/sut/**",
+                        "measurements/*/sut/scripts/push-images.sh", "measurements/*/README.md", "measurements/test-sjpark/sut/**",
                         "measurements/test-sjpark/k6/lib/config.js"):
             self.assertIn(f"- '{pattern}'", source)
 
