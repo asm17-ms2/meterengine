@@ -40,7 +40,7 @@ public class InvoicePaymentController {
       summary = "인보이스별 결제 상태 목록",
       description =
           """
-          인보이스마다 도입사의 현재 결제 모드(test 또는 live)로 본 결제 상태를 한 줄씩 돌려준다. 다른 결제 모드의 시도는 보지 않는다.
+          인보이스마다 조직의 현재 결제 모드(test 또는 live)로 본 결제 상태를 한 줄씩 돌려준다. 다른 결제 모드의 시도는 보지 않는다.
           상태는 그 모드에서 가장 늦게 요청한 시도로 정한다. total_amount가 0원이면 not_required, 시도가 없으면 unpaid, 시도가 pending이면 pending, failed면 failed다.
           시도가 done이면 그 시도에서 취소를 마친 금액의 합이 0원이면 paid, 결제 금액보다 적으면 partially_canceled, 결제 금액과 같으면 canceled다.
           순서와 거르는 조건은 인보이스 목록 조회와 같다. 달 내림차순이고, 같은 달은 고객 이름 오름차순, 이름이 같으면 고객 id 순이다.

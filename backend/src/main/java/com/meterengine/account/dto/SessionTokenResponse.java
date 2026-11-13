@@ -11,7 +11,7 @@ public record SessionTokenResponse(
     @Schema(description = "세션이 끝나는 시각. 이 시각이 지나면 다시 로그인한다") @JsonProperty("expires_at")
         OffsetDateTime expiresAt,
     @JsonProperty("user_account") SessionUserAccount userAccount,
-    @Schema(description = "세션이 고른 도입사. 활성 소속이 없는 operator면 null") SessionOrganization organization,
+    @Schema(description = "세션이 고른 조직. 활성 소속이 없는 operator면 null") SessionOrganization organization,
     @JsonProperty("organization_role") String organizationRole,
     @JsonProperty("consent_required") boolean consentRequired,
     List<String> scopes) {

@@ -15,7 +15,7 @@ import jakarta.validation.constraints.Size;
 import java.util.List;
 
 public record CreateSignupRequest(
-    @Schema(description = "가입하는 도입사 이름")
+    @Schema(description = "가입하는 조직 이름")
         @JsonProperty("organization_name")
         @NotBlank @Size(max = Organization.NAME_MAX_LENGTH) @StorableText
         String organizationName,

@@ -32,7 +32,7 @@ public class DashboardController {
   @Operation(
       summary = "월별 과금과 수납 현황 조회",
       description =
-          "로그인 세션 또는 read API 키의 도입사 현황을 조회한다. 예정액은 공급가액이고, 확정액과 수납액은 세금 포함 금액이다. 취소는 결제 대기액으로 다시"
+          "로그인 세션 또는 read API 키의 조직 현황을 조회한다. 예정액은 공급가액이고, 확정액과 수납액은 세금 포함 금액이다. 취소는 결제 대기액으로 다시"
               + " 잡지 않는다.")
   public DashboardResponse getDashboard(
       @CurrentOrganizationId UUID organizationId,

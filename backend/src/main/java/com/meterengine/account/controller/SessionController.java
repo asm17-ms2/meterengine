@@ -53,8 +53,8 @@ public class SessionController {
           """
           이메일과 비밀번호로 로그인하고 세션 토큰을 돌려준다. 토큰 원문은 이 응답에서만 볼 수 있다.
           이후 요청의 Authorization 헤더에 Bearer 값으로 싣는다. 세션은 expires_at에 끝난다.
-          세션의 도입사는 소속된 활성 도입사 가운데 가장 먼저 소속된 곳이다.
-          활성 소속이 없는 operator는 도입사 없이 로그인하고 organization이 null이다.
+          세션의 조직은 소속된 활성 조직 가운데 가장 먼저 소속된 곳이다.
+          활성 소속이 없는 operator는 조직 없이 로그인하고 organization이 null이다.
           """)
   @ApiResponses({
     @ApiResponse(responseCode = "201", description = "만든 세션과 토큰"),
@@ -86,7 +86,7 @@ public class SessionController {
         description =
             """
             code=email_not_verified: 서버가 이메일 인증을 켰는데 이 계정은 아직 인증하지 않았다. 비밀번호가 맞을 때만 준다.
-            code=organization_not_active: member인데 소속된 도입사 가운데 활성 상태인 곳이 없다.
+            code=organization_not_active: member인데 소속된 조직 가운데 활성 상태인 곳이 없다.
             """),
     @ApiResponse(
         responseCode = "429",
@@ -114,8 +114,8 @@ public class SessionController {
       summary = "현재 세션 조회",
       description =
           """
-          요청에 실은 세션 토큰의 사용자, 세션이 고른 도입사, 소속된 도입사 목록, 만료 시각을 돌려준다.
-          도입사가 활성 상태가 아니어도 조회할 수 있다. API 키로는 부를 수 없다.
+          요청에 실은 세션 토큰의 사용자, 세션이 고른 조직, 소속된 조직 목록, 만료 시각을 돌려준다.
+          조직이 활성 상태가 아니어도 조회할 수 있다. API 키로는 부를 수 없다.
           """)
   @ApiResponses({@ApiResponse(responseCode = "200", description = "현재 세션")})
   public SessionResponse getSession(@AuthenticationPrincipal AuthenticatedPrincipal principal) {
@@ -136,11 +136,11 @@ public class SessionController {
   @PutMapping("/current/organization")
   @MemberAccess
   @Operation(
-      summary = "도입사 전환",
+      summary = "조직 전환",
       description =
           """
-          세션의 도입사를 사용자가 소속된 다른 도입사로 바꾸고 바뀐 현재 세션을 돌려준다.
-          활성 상태가 아닌 도입사로도 바꿀 수 있지만, 그 도입사의 데이터를 다루는 요청은 403(organization_not_active)이다.
+          세션의 조직을 사용자가 소속된 다른 조직으로 바꾸고 바뀐 현재 세션을 돌려준다.
+          활성 상태가 아닌 조직으로도 바꿀 수 있지만, 그 조직의 데이터를 다루는 요청은 403(organization_not_active)이다.
           """)
   @ApiResponses({
     @ApiResponse(responseCode = "200", description = "바뀐 현재 세션"),
@@ -157,7 +157,7 @@ public class SessionController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=permission_denied: API 키로 부른 요청이거나, 사용자가 소속되지 않은 도입사다")
+        description = "code=permission_denied: API 키로 부른 요청이거나, 사용자가 소속되지 않은 조직이다")
   })
   public SessionResponse updateSessionOrganization(
       @AuthenticationPrincipal AuthenticatedPrincipal principal,

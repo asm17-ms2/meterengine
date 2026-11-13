@@ -15,7 +15,7 @@ public record UserAccountResponse(
             description = "사용자 역할",
             allowableValues = {"member", "operator"})
         String role,
-    @Schema(description = "사용자가 소속된 도입사. 소속된 순서") List<UserAccountOrganization> organizations,
+    @Schema(description = "사용자가 소속된 조직. 소속된 순서") List<UserAccountOrganization> organizations,
     @JsonProperty("created_at") OffsetDateTime createdAt) {
 
   public static UserAccountResponse from(UserAccountMemberships memberships) {

@@ -10,7 +10,7 @@ public record SessionOrganization(
     UUID id,
     String name,
     @Schema(
-            description = "도입사 상태",
+            description = "조직 상태",
             allowableValues = {"pending", "active", "rejected", "suspended"})
         String status,
     @Schema(description = "실제 환경을 연 시각. null이면 실제 환경이 잠겨 있어 테스트 환경만 쓴다", nullable = true)
