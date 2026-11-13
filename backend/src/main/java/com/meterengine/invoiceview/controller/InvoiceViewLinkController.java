@@ -114,7 +114,7 @@ public class InvoiceViewLinkController {
   @Operation(
       summary = "고객의 실패 결제 재시도",
       description =
-          "도입사가 재시도를 허용한 링크로 실패 결제만 다시 시도한다."
+          "조직이 재시도를 허용한 링크로 실패 결제만 다시 시도한다."
               + " 조회 응답의 retry_version을 보내며 같은 실패 버전은 한 번만 새 결제를 만들 수 있다."
               + " 금액과 등록 카드는 서버의 기록을 사용한다. pending, 승인과 취소, 시도 상한과 카드 오류는 우회하지 않는다.")
   public PublicInvoiceResponse createInvoicePaymentRetry(

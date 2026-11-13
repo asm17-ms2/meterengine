@@ -21,7 +21,7 @@ public record InvoicePaymentResponse(
             })
         String status,
     @Schema(
-            description = "상태를 정한 결제 모드. 조회한 때 도입사의 결제 모드다",
+            description = "상태를 정한 결제 모드. 조회한 때 조직의 결제 모드다",
             allowableValues = {"test", "live"})
         String mode,
     @Schema(description = "인보이스의 total_amount. 원 단위 정수") long amount,

@@ -24,7 +24,7 @@ public record CreateApiKeyRequest(
             schema = @Schema(allowableValues = {"ingest", "read", "admin"}))
         @NotEmpty List<@NotNull @StorableText @Pattern(regexp = ApiKey.SCOPE_PATTERN) String> scopes,
     @Schema(
-            description = "키 모드. test도 실제 데이터를 다루므로 샌드박스가 아니다. 결제 요청은 도입사의 현재 PG 모드와 같아야 한다",
+            description = "키 모드. test도 실제 데이터를 다루므로 샌드박스가 아니다. 결제 요청은 조직의 현재 PG 모드와 같아야 한다",
             allowableValues = {"live", "test"})
         @NotBlank @Pattern(regexp = ApiKey.MODE_PATTERN) @StorableText
         String mode,

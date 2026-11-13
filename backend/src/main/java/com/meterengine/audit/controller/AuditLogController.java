@@ -39,7 +39,7 @@ public class AuditLogController {
   @EnvironmentReady
   @MemberReadAccess
   @Operation(
-      summary = "현재 도입사 감사 기록 조회",
+      summary = "현재 조직 감사 기록 조회",
       description = "로그인 세션 전용이다. 사람과 키 관리 이력, 요청 기록을 담아 API 키로는 조회할 수 없다.")
   @ApiResponses({
     @ApiResponse(responseCode = "200", description = "감사 기록 목록. 조건에 맞는 것이 없으면 audit_logs가 빈 배열이다"),
@@ -84,7 +84,7 @@ public class AuditLogController {
   @Operation(
       summary = "플랫폼 감사 기록 조회",
       description =
-          "q는 action, target_type, target_id, detail의 request_id와 route에 더해 organization_id도 부분 일치로 찾는다. 도입사 id를 q로 보내면 그 도입사의 기록과 함께, 그 id를 대상(target_id)으로 남긴 운영자 요청 같은 도입사 없는 기록도 나온다.")
+          "q는 action, target_type, target_id, detail의 request_id와 route에 더해 organization_id도 부분 일치로 찾는다. 조직 id를 q로 보내면 그 조직의 기록과 함께, 그 id를 대상(target_id)으로 남긴 운영자 요청 같은 조직 없는 기록도 나온다.")
   @ApiResponses({
     @ApiResponse(responseCode = "200", description = "감사 기록 목록. 조건에 맞는 것이 없으면 audit_logs가 빈 배열이다"),
     @ApiResponse(

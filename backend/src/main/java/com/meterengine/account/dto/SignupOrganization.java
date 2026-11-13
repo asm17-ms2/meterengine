@@ -8,7 +8,7 @@ public record SignupOrganization(
     UUID id,
     String name,
     @Schema(
-            description = "도입사 상태",
+            description = "조직 상태",
             allowableValues = {"pending", "active", "rejected", "suspended"})
         String status) {
 

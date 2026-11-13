@@ -45,7 +45,7 @@ public class PaymentAttemptController {
       description =
           """
           인보이스의 total_amount를 그 고객의 등록 카드로 토스페이먼츠 자동결제 승인을 요청한다. 본문은 받지 않는다.
-          도입사의 현재 결제 모드(test 또는 live)의 토스페이먼츠 키와 그 모드로 등록한 카드를 쓴다.
+          조직의 현재 결제 모드(test 또는 live)의 토스페이먼츠 키와 그 모드로 등록한 카드를 쓴다.
           승인되면 status=done과 payment_key, 거절되면 status=failed와 failure_code, failure_message가 남고 둘 다 201이다.
           토스페이먼츠 응답으로 결과를 확인하지 못하면 status=pending인 시도를 201로 돌려준다.
           결제 모드마다 인보이스 하나에 결제 중이거나 결제된 시도는 하나뿐이다. 이미 있으면 409다.
@@ -84,7 +84,7 @@ public class PaymentAttemptController {
             code=invoice_amount_zero: 인보이스의 total_amount가 0원이다.
             code=toss_payments_credential_missing: 결제 모드의 토스페이먼츠 키가 없다.
             code=payment_method_missing: 인보이스의 고객이 결제 모드로 등록한 카드가 없다.
-            code=payment_mode_mismatch: API 키의 모드가 도입사의 결제 모드와 다르다.
+            code=payment_mode_mismatch: API 키의 모드가 조직의 결제 모드와 다르다.
             """)
   })
   public PaymentAttemptResponse createPaymentAttempt(

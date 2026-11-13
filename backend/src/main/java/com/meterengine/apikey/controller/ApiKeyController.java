@@ -49,7 +49,7 @@ public class ApiKeyController {
       summary = "API 키 목록 조회",
       description =
           """
-          세션 도입사의 API 키를 만든 순서로 돌려준다. 기본은 전체이며 사용 중, 폐기, 만료 상태를 고를 수 있다.
+          세션 조직의 API 키를 만든 순서로 돌려준다. 기본은 전체이며 사용 중, 폐기, 만료 상태를 고를 수 있다.
           사용 중은 현재 인증 가능한 키다. 폐기된 키는 만료 시각과 관계없이 폐기로 분류한다. 키 원문은 싣지 않는다.
           로그인 세션만 부를 수 있고 API 키로는 부를 수 없다. 페이지를 나누지 않는다.
           """)
@@ -74,7 +74,7 @@ public class ApiKeyController {
       summary = "API 키 발급",
       description =
           """
-          세션 도입사에 API 키를 발급하고 원문을 돌려준다. 원문은 이 응답에서만 볼 수 있고 서버는 해시만 저장한다.
+          세션 조직에 API 키를 발급하고 원문을 돌려준다. 원문은 이 응답에서만 볼 수 있고 서버는 해시만 저장한다.
           replaced_api_key_id를 주면 그 키를 이 키로 교체한다. 옛 키는 지금부터 유예 시간(기본 24시간)이 지나면 끝나고,
           이미 그보다 이른 만료 시각이 있으면 그대로 둔다. 로그인 세션만 부를 수 있고 API 키로는 부를 수 없다.
           """)
@@ -97,7 +97,7 @@ public class ApiKeyController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=api_key_not_found: replaced_api_key_id가 세션 도입사의 폐기하지 않은 키가 아니다")
+        description = "code=api_key_not_found: replaced_api_key_id가 세션 조직의 폐기하지 않은 키가 아니다")
   })
   public ApiKeySecretResponse createApiKey(
       @CurrentOrganizationId UUID organizationId, @Valid @RequestBody CreateApiKeyRequest request) {
@@ -136,7 +136,7 @@ public class ApiKeyController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=api_key_not_found: 세션 도입사에 그런 키가 없다")
+        description = "code=api_key_not_found: 세션 조직에 그런 키가 없다")
   })
   public void deleteApiKey(
       @CurrentOrganizationId UUID organizationId,
@@ -149,7 +149,7 @@ public class ApiKeyController {
   @Operation(
       summary = "API 키 권한 변경",
       description =
-          "현재 도입사의 사용 중인 API 키의 스코프만 바꾼다."
+          "현재 조직의 사용 중인 API 키의 스코프만 바꾼다."
               + " 키 원문, 모드와 만료 시각을 유지하며 다음 요청부터 바뀐 권한을 적용한다."
               + " 로그인 사용자의 관리 권한이 필요하며 API 키로는 부를 수 없다.")
   @ApiResponses({
@@ -174,7 +174,7 @@ public class ApiKeyController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=api_key_not_found: 현재 도입사에 그런 키가 없다"),
+        description = "code=api_key_not_found: 현재 조직에 그런 키가 없다"),
     @ApiResponse(
         responseCode = "409",
         content =

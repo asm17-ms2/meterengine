@@ -73,7 +73,7 @@ public class BillableMetricController {
           count는 전체 이벤트 수이며 target_property를 지정하지 않는다. count_distinct는 대상 속성의 숫자, 문자열, 불리언 고유값 수다.
           나머지는 숫자 속성만 집계한다. first와 last는 occurred_at, transaction_id 순서다. median은 50백분위, percentile은 0~100의 percentile이 필수다.
           집계량을 unit_size(기본 1)로 나눈 뒤 rounding_mode(none, ceil, floor, round)를 rounding_precision(0~12, 기본 0)에 적용한다.
-          round는 사사오입이며 none은 유한소수를 그대로 보존하고 순환소수는 유효숫자와 소수 자릿수를 각각 최소 18자리로 보존한다. code는 도입사 안에서 유일하고 등록 뒤 바꿀 수 없다.
+          round는 사사오입이며 none은 유한소수를 그대로 보존하고 순환소수는 유효숫자와 소수 자릿수를 각각 최소 18자리로 보존한다. code는 조직 안에서 유일하고 등록 뒤 바꿀 수 없다.
           같은 이벤트와 속성에 여러 미터를 등록할 수 있다. 각 미터에 단가를 설정하면 각각 청구한다.
           """)
   @ApiResponses({
@@ -116,7 +116,7 @@ public class BillableMetricController {
       @Valid @RequestBody CreateBillableMetricRequest request,
       @Parameter(
               description =
-                  "1~255자 재시도 키. 같은 도입사와 업무 환경에서 같은 키와 같은 본문을 다시 보내면 최초 응답을 상태 코드까지 그대로 돌려준다. 최초 응답을 기한 없이 보관하므로 그 뒤에 고치거나 보관해도 재전송 응답은 바뀌지 않는다.")
+                  "1~255자 재시도 키. 같은 조직과 업무 환경에서 같은 키와 같은 본문을 다시 보내면 최초 응답을 상태 코드까지 그대로 돌려준다. 최초 응답을 기한 없이 보관하므로 그 뒤에 고치거나 보관해도 재전송 응답은 바뀌지 않는다.")
           @RequestHeader(name = "Idempotency-Key", required = false)
           @StorableText
           String idempotencyKey) {
