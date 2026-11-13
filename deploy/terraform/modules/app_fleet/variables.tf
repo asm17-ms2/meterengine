@@ -87,10 +87,12 @@ variable "monitoring_security_group_id" {
 }
 
 # 앱이 가입 인증 메일을 보낼 SES 자격 증명. 비우면 앱 역할에 SES 권한을 주지 않는다.
+# SES는 자격 증명에 걸린 기본 구성 세트에도 발송 권한을 요구하므로 그 ARN을 같이 받는다.
 variable "email_sender" {
   type = object({
-    identity_arn = string
-    from_address = string
+    identity_arn          = string
+    configuration_set_arn = string
+    from_address          = string
   })
   default = null
 }

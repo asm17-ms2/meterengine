@@ -48,7 +48,7 @@ resource "aws_iam_role_policy" "app" {
     var.email_sender == null ? [] : [{
       Effect    = "Allow"
       Action    = ["ses:SendEmail"]
-      Resource  = var.email_sender.identity_arn
+      Resource  = [var.email_sender.identity_arn, var.email_sender.configuration_set_arn]
       Condition = { StringEquals = { "ses:FromAddress" = var.email_sender.from_address } }
     }]
   ) })

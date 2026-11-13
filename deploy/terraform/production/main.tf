@@ -40,7 +40,8 @@ module "app_fleet" {
   app_egress_ports             = [443]
   monitoring_security_group_id = data.aws_security_group.monitoring.id
   email_sender = {
-    identity_arn = local.email_identity_arn
-    from_address = local.email_from_address
+    identity_arn          = local.email_identity_arn
+    configuration_set_arn = local.email_configuration_set_arn
+    from_address          = local.email_from_address
   }
 }
