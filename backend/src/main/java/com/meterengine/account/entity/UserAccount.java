@@ -48,6 +48,9 @@ public class UserAccount implements Persistable<UUID> {
   @Column(name = "consent_required", nullable = false)
   private boolean consentRequired;
 
+  @Column(name = "email_verified_at")
+  private OffsetDateTime emailVerifiedAt;
+
   @Transient private boolean isNew = true;
 
   protected UserAccount() {}
@@ -65,6 +68,8 @@ public class UserAccount implements Persistable<UUID> {
     this.name = name;
     this.role = role;
     this.createdAt = createdAt;
+    // 운영자가 만든 계정과 초대로 들어온 계정은 이메일을 따로 인증하지 않는다. 가입만 requireEmailVerification으로 되돌린다.
+    this.emailVerifiedAt = createdAt;
   }
 
   @PostLoad
@@ -113,6 +118,22 @@ public class UserAccount implements Persistable<UUID> {
 
   public void acceptConsent() {
     consentRequired = false;
+  }
+
+  public OffsetDateTime getEmailVerifiedAt() {
+    return emailVerifiedAt;
+  }
+
+  public boolean isEmailVerified() {
+    return emailVerifiedAt != null;
+  }
+
+  public void requireEmailVerification() {
+    emailVerifiedAt = null;
+  }
+
+  public void verifyEmail(OffsetDateTime verifiedAt) {
+    if (emailVerifiedAt == null) emailVerifiedAt = verifiedAt;
   }
 
   public void changeRole(String role) {

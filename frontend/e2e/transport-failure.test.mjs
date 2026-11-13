@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test, { mock } from "node:test";
-import { describeTransportFailure, maskApiPath } from "../src/lib/api/transport-failure.ts";
+import { describeTransportFailure, malformedResponseMessage, maskApiPath, unreadableErrorMessage } from "../src/lib/api/transport-failure.ts";
 
 test("a timeout and a connection failure become different errors with status 0", () => {
   const log = mock.method(console, "error", () => {});
@@ -14,6 +14,17 @@ test("a timeout and a connection failure become different errors with status 0",
     assert.equal(log.mock.callCount(), 3);
   } finally {
     log.mock.restore();
+  }
+});
+
+test("an unreadable response tells a read to load again and a write to check whether it was applied", () => {
+  for (const describe of [unreadableErrorMessage, malformedResponseMessage]) {
+    assert.doesNotMatch(describe("GET"), /결과를 확인/);
+    assert.match(describe("GET"), /다시 조회해 주세요/);
+    for (const method of ["POST", "PUT", "PATCH", "DELETE"]) {
+      assert.notEqual(describe(method), describe("GET"));
+      assert.match(describe(method), /화면을 새로 조회해/);
+    }
   }
 });
 

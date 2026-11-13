@@ -58,7 +58,12 @@ public class SecurityConfig {
                 requests
                     .dispatcherTypeMatchers(DispatcherType.ERROR)
                     .permitAll()
-                    .requestMatchers(HttpMethod.POST, "/v1/sessions", "/v1/signups")
+                    .requestMatchers(
+                        HttpMethod.POST,
+                        "/v1/sessions",
+                        "/v1/signups",
+                        "/v1/email-verifications",
+                        "/v1/email-verification-confirmations")
                     .permitAll()
                     .requestMatchers(
                         HttpMethod.POST,

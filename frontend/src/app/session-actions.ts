@@ -29,7 +29,7 @@ export async function logoutAction(_prev: ActionState, data: FormData): Promise<
 export async function switchOrganizationAction(_prev: ActionState, data: FormData): Promise<ActionState> {
   const session = await requireSession();
   const id = data.get("organization_id");
-  if (typeof id !== "string" || !session.organizations.some(org => org.id === id)) return { message: "소속된 도입사를 선택하세요." };
+  if (typeof id !== "string" || !session.organizations.some(org => org.id === id)) return { message: "소속된 조직을 선택하세요." };
   const result = await requestApi<SessionResponse>("/v1/sessions/current/organization", {
     method: "PUT", token: await readSessionToken(), body: { organization_id: id },
   });

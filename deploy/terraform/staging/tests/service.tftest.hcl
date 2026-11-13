@@ -368,3 +368,61 @@ run "alb_domain_needs_a_server" {
   }
   expect_failures = [aws_route53_record.app]
 }
+
+run "staging_alb_takes_no_internet_ingress_from_terraform" {
+  command = plan
+
+  assert {
+    condition     = module.app_fleet.alb_public_ingress_ports == toset([])
+    error_message = "Staging ALB ingress is added by hand per team IP, so Terraform must open nothing to the internet."
+  }
+}
+
+run "alb_ingress_can_be_left_to_the_console" {
+  command = plan
+  module {
+    source = "../modules/app_fleet"
+  }
+  variables {
+    environment                        = "staging"
+    parameter_path                     = "/meterengine/staging"
+    site_domain                        = "staging.meterengine.com"
+    vpc_id                             = "vpc-07498f0672b7f3c9e"
+    public_subnet_ids                  = ["subnet-0348a18c1d399c193", "subnet-0e375e82d415767a3"]
+    route53_zone_id                    = "Z08728621CQ5R1K37A7N1"
+    database_security_group_id         = "sg-22222222222222222"
+    ecr_repository_names               = ["meterengine-staging-backend", "meterengine-staging-frontend"]
+    ami_id                             = "ami-0f4109eb491b0476f"
+    min_size                           = 0
+    scaling_target_average_cpu_percent = 60
+    alb_deletion_protection            = false
+    monitoring_security_group_id       = "sg-33333333333333333"
+    alb_public_ingress                 = false
+  }
+
+  assert {
+    condition     = length(aws_vpc_security_group_ingress_rule.alb_web) == 0
+    error_message = "With public ingress off the module defines no ALB ingress rule."
+  }
+  assert {
+    condition     = toset(keys(aws_vpc_security_group_egress_rule.alb_to_app)) == toset(["3000", "8080"]) && toset(keys(aws_vpc_security_group_ingress_rule.app_from_alb)) == toset(["3000", "8080"])
+    error_message = "The ALB still reaches the app servers."
+  }
+}
+
+run "staging_signup_uses_its_own_hostname" {
+  command = plan
+
+  assert {
+    condition     = aws_ssm_parameter.signup["turnstile-allowed-hostnames"].value == "staging.meterengine.com"
+    error_message = "Staging accepts Turnstile tokens issued for the staging hostname only."
+  }
+  assert {
+    condition     = aws_ssm_parameter.signup["mail-sender"].value == "ses" && aws_ssm_parameter.signup["mail-from"].value == "MeterEngine Staging <no-reply@meterengine.com>"
+    error_message = "Staging sends signup mail through SES and names itself in the sender."
+  }
+  assert {
+    condition     = toset(keys(aws_ssm_parameter.signup)) == toset(["mail-sender", "mail-from", "turnstile-allowed-hostnames"])
+    error_message = "Keys and on/off values are registered by hand, not by Terraform."
+  }
+}

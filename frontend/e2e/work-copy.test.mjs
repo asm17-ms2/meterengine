@@ -71,7 +71,7 @@ test("base fee and minimum fee accept any whole won and only say the billed amou
   const pricing = source("components/pricing/PricingWorkspace.tsx");
   for (const name of ["base_fee", "minimum_amount"]) {
     const field = pricing.match(new RegExp(`\\{name:"${name}",[^}]*\\}`))[0];
-    assert.ok(!field.includes("step:10") && field.includes("청구할 때 10원 미만은 버립니다."), field);
+    assert.ok(!field.includes("step:10") && field.includes("청구할 때 10원 미만은 버려요."), field);
   }
 });
 

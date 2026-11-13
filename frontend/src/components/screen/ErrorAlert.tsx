@@ -23,7 +23,7 @@ export function ErrorAlert({
   const actions = (
     <Flex gap="small" wrap>
       <RetryButton />
-      {narrowerHref ? <LinkButton href={narrowerHref}>기간 좁히기</LinkButton> : null}
+      {narrowerHref ? <LinkButton href={narrowerHref}>이전 달 보기</LinkButton> : null}
       {resetHref ? <LinkButton href={resetHref}>조건 초기화</LinkButton> : null}
     </Flex>
   );

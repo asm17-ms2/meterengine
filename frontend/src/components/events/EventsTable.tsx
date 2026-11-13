@@ -94,7 +94,7 @@ export function EventsTable({
       width: 160,
       render: (_, row) => <NumberText type="secondary">{row.receivedAt}</NumberText>,
     },
-    { key: "customerName", sortKey: "customer_name", title: "고객", dataIndex: "customerName", width: 110, ellipsis: true },
+    { key: "customerName", sortKey: "customer_name", title: "고객", dataIndex: "customerName", width: 160, ellipsis: { showTitle: false }, render: (_, row) => <Typography.Text ellipsis={{ tooltip: row.customerName }}>{row.customerName}</Typography.Text> },
     { key: "eventType", sortKey: "type", title: "이벤트 유형", dataIndex: "eventType", width: 140, ellipsis: true },
     {
       key: "propertiesPreview",
@@ -115,7 +115,7 @@ export function EventsTable({
 
   return (
     <>
-      {isOpening && <p role="status" className="field-hint">이벤트 상세를 불러오고 있습니다.</p>}
+      {isOpening && <p role="status" className="field-hint">이벤트 상세를 불러오는 중이에요.</p>}
       <div className="data-mobile-records">{rows.map(row => <article key={row.transactionId} className="data-mobile-record"><h3><a href={detailHref(row)} data-transaction-id={row.transactionId} onClick={event => openOnPlainClick(event, row)}>{row.transactionId}</a></h3><div className="data-mobile-line"><span>{row.customerName}</span><strong>{row.eventType}</strong></div><p className="field-hint">발생 {row.occurredAt} KST</p><p className="field-hint">수신 {row.receivedAt} KST</p><code className="workspace-cell-text">{row.propertiesPreview}</code></article>)}</div>
       <div className="data-desktop-table"><Table<EventRowView>
         rowKey="transactionId"

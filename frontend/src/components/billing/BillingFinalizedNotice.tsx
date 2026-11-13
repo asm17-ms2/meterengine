@@ -26,7 +26,7 @@ export function BillingFinalizedNotice({
         showIcon
         icon={alertIcon("success")}
         title={title}
-        description={`청구 예정액이 0원인 고객 ${zeroAmountCustomerCount}곳은 인보이스가 만들어지지 않았습니다.`}
+        description={`청구 예정액이 0원인 고객 ${zeroAmountCustomerCount}곳은 인보이스가 만들어지지 않았어요.`}
         action={
           <Flex vertical gap="small">
             <LinkButton href={invoicesHref}>인보이스 보기</LinkButton>

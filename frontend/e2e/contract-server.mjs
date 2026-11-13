@@ -13,6 +13,7 @@ let failures = {};
 let bulk = false;
 let apiKeys = [];
 let unresolvedInvoicePayments = [];
+let captchaDelayMs = 0;
 const WEBHOOK_ENDPOINT_ID = "99999999-9999-4999-8999-999999999999";
 const HEALTHY_WEBHOOK_ENDPOINT_ID = "99999999-9999-4999-8999-999999999998";
 const bulkId = (prefix, index) => `${prefix}${String(index).padStart(12, "0")}`;
@@ -34,12 +35,14 @@ const server = createServer(async (req, res) => {
   else if (path === "/__control" && req.method === "POST") {
     if (body.reset) { sessions = new Map(); requests = []; outage = false; customers = []; failures = {}; bulk = false; apiKeys = []; }
     if (typeof body.bulk === "boolean") bulk = body.bulk;
-    if (body.reset) unresolvedInvoicePayments = [];
+    if (body.reset) { unresolvedInvoicePayments = []; captchaDelayMs = 0; }
+    if (typeof body.captchaDelayMs === "number") captchaDelayMs = body.captchaDelayMs;
     if (Array.isArray(body.unresolvedInvoicePayments)) unresolvedInvoicePayments = body.unresolvedInvoicePayments;
     if (body.fail) failures = { ...failures, ...body.fail };
     if (body.revoke) sessions.delete(body.revoke);
     if (body.demote) { const entry = sessions.get(body.demote); if (entry) entry.user_account.role = "member"; }
     if (body.suspend) { const entry = sessions.get(body.suspend); if (entry) entry.organization = organizations[2]; }
+    if (body.soleOrganization) { const entry = sessions.get(body.soleOrganization); if (entry) entry.organizations = [entry.organization]; }
     if (typeof body.outage === "boolean") outage = body.outage;
     if (body.archiveCustomers) for (const customer of customers) customer.archived_at = new Date().toISOString();
     if (typeof body.renameCustomersElsewhere === "string") for (const customer of customers) Object.assign(customer, { name: body.renameCustomersElsewhere, version: customer.version + 1 });
@@ -48,10 +51,16 @@ const server = createServer(async (req, res) => {
   else {
     requests.push({ path: req.url, method: req.method, hasAuthorization: Boolean(req.headers.authorization), hasOrganizationHeader: Boolean(req.headers["x-organization-id"]), consents: body.consents, description: body.description, clientIp: req.headers["x-meterengine-client-ip"] });
     if (outage) result = failure(503, "service_unavailable", "서버를 잠시 사용할 수 없습니다.");
+    // 백엔드가 Siteverify를 기다리다 끊긴 경우를 흉내 낸다. 프론트의 기본 제한 5초보다 늦게 답한다.
+    else if (captchaDelayMs > 0 && req.method === "POST" && ["/v1/signups", "/v1/email-verifications"].includes(path)) {
+      await new Promise(resolve => setTimeout(resolve, captchaDelayMs));
+      result = failure(503, "captcha_unavailable", "자동 가입 방지 확인 결과를 받지 못했습니다. 잠시 뒤 다시 시도하세요");
+    }
     else if (failures[path]) result = failure(failures[path], failures[path] === 403 ? "permission_denied" : "internal_error", failures[path] === 403 ? "접근 권한이 없습니다." : "서버에서 요청을 처리하지 못했습니다.");
     else if (path === "/v1/signups" && req.method === "POST") result = { status: 201, body: { organization: { ...organizations[0], status: "pending" }, user_account: { id: "member", email: body.email, name: body.name, role: "member" } } };
+    else if (path === "/v1/email-verification-confirmations" && req.method === "POST") result = failure(404, "email_verification_not_found", "인증 링크가 없거나 만료되었거나 이미 사용되었습니다");
     else if (path === "/v1/sessions" && req.method === "POST") {
-      if (body.email === "pending@contract.local") result = failure(403, "organization_not_active", "도입사가 활성 상태가 아닙니다.");
+      if (body.email === "pending@contract.local") result = failure(403, "organization_not_active", "활성 상태가 아닌 조직입니다");
       else if (!(body.email === "invited@contract.local" && body.password === "invited-password") && (!["member@contract.local", "operator@contract.local"].includes(body.email) || body.password !== "contract-password")) result = failure(401, "invalid_credentials", "인증 정보가 올바르지 않습니다.");
       else {
         const role = body.email.startsWith("operator") ? "operator" : "member";
@@ -76,7 +85,7 @@ const server = createServer(async (req, res) => {
       else if (path === "/v1/organizations") result = { status: 200, body: { organizations: bulk ? Array.from({ length: 30 }, (_, index) => ({ id: bulkId("66666666-6666-4666-8666-", index), name: `대량 도입사 ${index}`, status: "active", created_at: new Date().toISOString() })) : [] } };
       else if (path === "/v1/user-accounts") result = { status: 200, body: { user_accounts: [{ ...session.user_account, organizations: [], created_at: new Date().toISOString() }, { id: "55555555-5555-4555-8555-555555555555", email: "other@contract.local", name: "다른 사용자", role: "member", organizations: [], created_at: new Date().toISOString() }].concat(bulk ? Array.from({ length: 30 }, (_, index) => ({ id: bulkId("77777777-7777-4777-8777-", index), email: `bulk-${index}@contract.local`, name: `대량 사용자 ${index}`, role: "member", organizations: [], created_at: new Date().toISOString() })) : []) } };
       else result = { status: 200, body: {} };
-    } else if (!session.organization || session.organization.status !== "active") result = failure(403, "organization_not_active", "도입사가 활성 상태가 아닙니다.");
+    } else if (!session.organization || session.organization.status !== "active") result = failure(403, "organization_not_active", "활성 상태가 아닌 조직입니다");
     else if (path === "/v1/customers/search") {
       const q = (url.searchParams.get("q") ?? "").toLowerCase();
       const filtered = customers.filter(customer => !q || `${customer.name} ${customer.external_id ?? ""} ${customer.billing_email ?? ""}`.toLowerCase().includes(q));
@@ -128,5 +137,5 @@ const server = createServer(async (req, res) => {
   res.writeHead(result.status, { "Content-Type": "application/json" });
   res.end(result.body === undefined ? undefined : JSON.stringify(result.body));
 });
-server.listen(38148, "127.0.0.1");
+server.listen(0, "127.0.0.1", () => console.log(`fixture listening on ${server.address().port}`));
 for (const signal of ["SIGINT", "SIGTERM"]) process.on(signal, () => server.close());

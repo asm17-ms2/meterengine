@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { CONSENT_DOCUMENTS, CONSENT_VERSION } from "../src/lib/auth/consents";
+import { consoleHeaders } from "./console-environment";
 
 const API_URL = process.env.S1_API_URL ?? "http://127.0.0.1:38147";
 const FRONTEND_URL = process.env.CUSTOMER_RETRY_FRONTEND_URL ?? "http://localhost:33147";
@@ -63,6 +64,10 @@ function uuid(value: string) {
   if (!/^[a-f\d-]{36}$/i.test(value)) throw new Error("검증 데이터의 UUID가 잘못됐습니다.");
   return value;
 }
+// 결제 행은 인보이스와 같은 환경이어야 한다(V48의 same_environment 외래 키).
+function invoiceEnvironment(invoiceId: string) { return `(SELECT environment_id FROM invoice WHERE id='${uuid(invoiceId)}')`; }
+// 환경의 결제 시도는 그때 쓴 토스페이먼츠 키 버전을 고정한다. 고정하지 않으면 요청 시각 기준 키를 찾아 재시도를 막는다.
+function pinnedCredential(data: Fixture, invoiceId: string) { return `(SELECT updated_at FROM toss_payments_credential WHERE organization_id='${uuid(data.organizationId)}' AND mode='test' AND environment_id=${invoiceEnvironment(invoiceId)})`; }
 function result(name: string, value: unknown) { writeFileSync(`${OUTPUT}/${name}.json`, JSON.stringify(value, null, 2)); }
 async function approvalCalls(request: APIRequestContext) { return Number((await (await request.get(`${PG_URL}/__state`)).json()).approval_calls); }
 async function nextApproval(request: APIRequestContext, outcome: "done" | "rejected" | "response-lost") {
@@ -95,7 +100,7 @@ async function fixture(request: APIRequestContext, names: string[], secrets: Set
   expect(sessionResponse.status()).toBe(201);
   const session = (await sessionResponse.json()).token as string;
   secrets.add(session);
-  const headers = { Authorization: `Bearer ${session}` };
+  const headers = consoleHeaders(session);
   const readKeyResponse = await request.post(`${API_URL}/v1/api-keys`, { headers, data: { label: "고객 재시도 조회", mode: "test", scopes: ["read", "ingest"] } });
   expect(readKeyResponse.status()).toBe(201);
   const readKey = (await readKeyResponse.json()).secret as string;
@@ -139,7 +144,7 @@ async function adminAttempt(request: APIRequestContext, data: Fixture, name: str
   return body as { id: string; status: string };
 }
 function seedFailure(data: Fixture, name: string, code = "REJECT_CARD_PAYMENT", count = 1) {
-  for (let i = 0; i < count; i++) sql(`INSERT INTO payment_attempt(id,organization_id,customer_id,invoice_id,mode,amount,order_name,status,failure_code,failure_message,requested_at,completed_at) VALUES('${randomUUID()}','${data.organizationId}','${data.customers[name]}','${data.invoices[name]}','test',1100,'로컬 재시도 검증','failed','${code}','로컬 PG 검증 실패',clock_timestamp()-interval '${count - i + 1} seconds',clock_timestamp());`);
+  for (let i = 0; i < count; i++) sql(`INSERT INTO payment_attempt(id,organization_id,environment_id,credential_updated_at,customer_id,invoice_id,mode,amount,order_name,status,failure_code,failure_message,requested_at,completed_at) VALUES('${randomUUID()}','${data.organizationId}',${invoiceEnvironment(data.invoices[name])},${pinnedCredential(data, data.invoices[name])},'${data.customers[name]}','${data.invoices[name]}','test',1100,'로컬 재시도 검증','failed','${code}','로컬 PG 검증 실패',clock_timestamp()-interval '${count - i + 1} seconds',clock_timestamp());`);
 }
 async function mint(request: APIRequestContext, data: Fixture, name: string, secrets: Set<string>, allow?: boolean): Promise<ViewLink> {
   const response = await request.post(`${API_URL}/v1/invoices/${data.invoices[name]}/view-links`, { headers: data.headers, data: allow === undefined ? {} : { allow_payment_retry: allow } });
@@ -279,17 +284,17 @@ test("조회 전용 권한을 보존하고 같은 실패의 중복 요청과 관
   } catch (error) { throw safeFailure(error, secrets); }
 });
 
-test("결제 상태와 카드, 모드, 만료 및 폐기 경계가 새 결제 실행을 막는다", async ({ request }) => {
+test("결제 상태와 카드, 만료 및 폐기 경계가 새 결제 실행을 막는다", async ({ request }) => {
   const secrets = newSecrets();
   try {
-    const names = ["unpaid", "pending", "paid", "cancel", "missing", "stopped", "limit", "expired", "revoked", "mode"];
+    const names = ["unpaid", "pending", "paid", "cancel", "missing", "stopped", "limit", "expired", "revoked", "suspended"];
     const data = await fixture(request, names, secrets);
-    sql(`INSERT INTO payment_attempt(id,organization_id,customer_id,invoice_id,mode,amount,order_name,status,requested_at) VALUES('${randomUUID()}','${data.organizationId}','${data.customers.pending}','${data.invoices.pending}','test',1100,'로컬 결과 확인 중','pending',clock_timestamp());`);
+    sql(`INSERT INTO payment_attempt(id,organization_id,environment_id,customer_id,invoice_id,mode,amount,order_name,status,requested_at) VALUES('${randomUUID()}','${data.organizationId}',${invoiceEnvironment(data.invoices.pending)},'${data.customers.pending}','${data.invoices.pending}','test',1100,'로컬 결과 확인 중','pending',clock_timestamp());`);
     await adminAttempt(request, data, "paid", "done", secrets);
     const canceledAttempt = await adminAttempt(request, data, "cancel", "done", secrets);
     const cancellation = await request.post(`${API_URL}/v1/payment-attempts/${canceledAttempt.id}/cancellations`, { headers: data.headers, data: { request_id: randomUUID(), reason: "고객 재시도 차단 검증" } });
     expect(cancellation.status()).toBe(201);
-    for (const name of ["missing", "expired", "revoked", "mode"]) seedFailure(data, name);
+    for (const name of ["missing", "expired", "revoked", "suspended"]) seedFailure(data, name);
     seedFailure(data, "stopped", "INVALID_STOPPED_CARD");
     seedFailure(data, "limit", "REJECT_CARD_PAYMENT", 3);
     expect((await request.delete(`${API_URL}/v1/customers/${data.customers.missing}/payment-method`, { headers: data.headers })).ok()).toBe(true);
@@ -306,10 +311,6 @@ test("결제 상태와 카드, 모드, 만료 및 폐기 경계가 새 결제 �
     sql(`UPDATE invoice_view_link SET created_at=clock_timestamp()-interval '31 days',expires_at=clock_timestamp()-interval '1 second' WHERE id='${uuid(links.expired.id)}';`);
     await revoke(request, data, "revoked", links.revoked);
     for (const name of ["expired", "revoked"]) expect((await retry(request, links[name], "0".repeat(64))).status()).toBe(404);
-    sql(`INSERT INTO payment_setting(organization_id,mode,updated_at) VALUES('${data.organizationId}','live',clock_timestamp()) ON CONFLICT(organization_id) DO UPDATE SET mode='live',updated_at=clock_timestamp();`);
-    expect((await lookup(request, links.mode.token)).payment_retry.allowed).toBe(false);
-    expect((await retry(request, links.mode, "0".repeat(64))).status()).toBe(409);
-    sql(`UPDATE payment_setting SET mode='test',updated_at=clock_timestamp() WHERE organization_id='${data.organizationId}';`);
     expect(await approvalCalls(request)).toBe(before);
     await registerCard(request, data, "stopped", secrets);
     const recovered = await lookup(request, links.stopped.token);
@@ -317,11 +318,12 @@ test("결제 상태와 카드, 모드, 만료 및 폐기 경계가 새 결제 �
     expect((await retry(request, links.stopped, recovered.payment_retry.version)).status()).toBe(200);
     expect((await lookup(request, links.stopped.token)).payment.status).toBe("paid");
     expect(await approvalCalls(request) - before).toBe(1);
+    expect((await lookup(request, links.suspended.token)).payment_retry.allowed).toBe(true);
     expect((await request.put(`${API_URL}/v1/organizations/${data.organizationId}/status`, { headers: data.operatorHeaders, data: { status: "suspended" } })).status()).toBe(200);
     const suspendedBefore = await approvalCalls(request);
-    expect((await retry(request, links.mode, "0".repeat(64))).status()).toBe(404);
+    expect((await retry(request, links.suspended, "0".repeat(64))).status()).toBe(404);
     expect(await approvalCalls(request)).toBe(suspendedBefore);
-    result("blocked-states-result", { passed: true, blocked_states: ["unpaid", "pending", "paid", "canceled", "missing_card", "stopped_card", "attempt_limit", "expired", "revoked", "mode_changed", "organization_suspended"], blocked_provider_calls: 0, refreshed_card_retry_succeeded: true, canceled_outstanding_krw: 0, pending_amounts_unknown: true });
+    result("blocked-states-result", { passed: true, blocked_states: ["unpaid", "pending", "paid", "canceled", "missing_card", "stopped_card", "attempt_limit", "expired", "revoked", "organization_suspended"], blocked_provider_calls: 0, refreshed_card_retry_succeeded: true, canceled_outstanding_krw: 0, pending_amounts_unknown: true });
   } catch (error) { throw safeFailure(error, secrets); }
 });
 
@@ -412,7 +414,7 @@ test("고객은 금액과 모드를 확인한 뒤에만 결제를 다시 시도�
     await expect(confirm).toBeVisible();
     await capture(page, "customer-confirm-mobile");
     await confirm.focus(); await page.keyboard.press("Enter");
-    await expect(page.getByText("납부 완료", { exact: true })).toBeVisible();
+    await expect(page.getByText("결제 완료", { exact: true })).toBeVisible();
     expect(await approvalCalls(request) - before).toBe(1);
     await expect(page.getByRole("button", { name: "결제 다시 시도", exact: true })).toHaveCount(0);
     await expect(page).toHaveURL(`${FRONTEND_URL}/invoice-links`);
@@ -467,7 +469,7 @@ test("고객 화면의 응답 유실은 재결제 대신 상태 조회로 복구
     expect(await approvalCalls(request) - before).toBe(1);
     await capture(page, "customer-result-unknown-mobile");
     await page.getByRole("button", { name: "결제 상태 새로 조회", exact: true }).first().click();
-    await expect(page.getByText("납부 완료", { exact: true })).toBeVisible();
+    await expect(page.getByText("결제 완료", { exact: true })).toBeVisible();
     expect(submissions).toBe(1); expect(await approvalCalls(request) - before).toBe(1);
     await page.unroute("**/invoice-links/payment-retries");
     const pending = await mint(request, data, "pending", secrets, true);

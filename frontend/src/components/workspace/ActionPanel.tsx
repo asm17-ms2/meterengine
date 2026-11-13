@@ -32,7 +32,7 @@ export type WorkspaceField = {
   autoComplete?: string;
 };
 
-export type ActionPanelProps = { title: string; operation: string; description?: string; fields?: WorkspaceField[]; label?: string; isDanger?: boolean; isInline?: boolean; triggerType?: "default" | "primary" | "link" };
+export type ActionPanelProps = { title: string; operation: string; description?: string; fields?: WorkspaceField[]; label?: string; isDanger?: boolean; isInline?: boolean; triggerType?: "default" | "primary" | "link"; triggerLabel?: string };
 
 function ActionBody({ title, operation, description, fields = [], label, isDanger = false, isInline = false, onSuccess, requestId, onClose, onNewRequest }: ActionPanelProps & { onSuccess?: () => void; requestId?: string; onClose?: (isConfirmedFailure?: boolean) => void; onNewRequest?: () => void }) {
   const { message } = App.useApp();
@@ -56,12 +56,12 @@ function ActionBody({ title, operation, description, fields = [], label, isDange
       result = await workspaceAction(previous, data);
     } catch (error) {
       unstable_rethrow(error);
-      return { message: "요청 결과를 확인하지 못했습니다. 목록을 새로 조회해 반영됐는지 확인한 뒤 다시 시도하세요." };
+      return { message: "요청 결과를 확인하지 못했어요. 목록을 새로 조회해 반영됐는지 확인한 뒤 다시 시도해 주세요." };
     }
     if (result.isSuccess) {
       setIsDirty(false);
       if (!result.secret && !result.registrationPath && !isInline) {
-        message.success(result.message ?? "저장했습니다.");
+        message.success(result.message ?? "저장했어요.");
         onSuccess?.();
         if (result.nextPath) router.push(result.nextPath);
       }
@@ -98,14 +98,14 @@ function ActionBody({ title, operation, description, fields = [], label, isDange
   function close() {
     if (isPending) return;
     if (isDirty && !window.confirm("작성 중인 내용을 버리고 닫을까요?")) return;
-    if ((state.secret || state.registrationPath) && !isCopied && !window.confirm("닫으면 이 값을 다시 볼 수 없습니다. 복사하지 않고 닫을까요?")) return;
+    if ((state.secret || state.registrationPath) && !isCopied && !window.confirm("닫으면 이 값을 다시 볼 수 없어요. 복사하지 않고 닫을까요?")) return;
     onClose?.(Boolean(state.isConfirmedFailure));
   }
 
   async function copy(value: string) {
     setCopyResult("");
-    try { await navigator.clipboard.writeText(value); requestAnimationFrame(() => setCopyResult("복사했습니다.")); setIsCopied(true); }
-    catch { requestAnimationFrame(() => setCopyResult("복사하지 못했습니다. 표시된 값을 선택해 직접 복사하세요.")); }
+    try { await navigator.clipboard.writeText(value); requestAnimationFrame(() => setCopyResult("복사했어요.")); setIsCopied(true); }
+    catch { requestAnimationFrame(() => setCopyResult("복사하지 못했어요. 표시된 값을 선택해 직접 복사해 주세요.")); }
   }
 
   const isLocked = Boolean(state.secret || state.registrationPath || state.isUnconfirmed || state.isConfirmedFailure);
@@ -117,8 +117,8 @@ function ActionBody({ title, operation, description, fields = [], label, isDange
     {requestId && <input type="hidden" name="request_id" value={requestId} />}
     {description && <p className="muted">{description}</p>}
     {(visibleMessage || Object.keys(clientErrors).length > 0) && <div ref={summaryRef} tabIndex={-1} className="form-feedback"><Alert type={state.isUnconfirmed ? "warning" : state.isSuccess ? "success" : "error"} showIcon title={visibleMessage ?? "입력한 내용을 확인하세요."} description={Object.keys(errors).length > 0 ? <ul>{Object.entries(errors).map(([name, error]) => <li key={name}><a href={`#${formId}-${name}`} onClick={event => { event.preventDefault(); document.getElementById(`${formId}-${name}`)?.focus(); }}>{fields.find(field => field.name === name)?.label ?? name}: {error}</a></li>)}</ul> : undefined} /></div>}
-    {state.secret && <div ref={resultRef} tabIndex={-1} className="secret-result"><strong>이 창에서만 확인할 수 있습니다</strong><p>안전한 곳에 보관한 뒤 창을 닫으세요.</p><code>{state.secret}</code><Button onClick={() => copy(state.secret!)}>비밀값 복사</Button></div>}
-    {state.registrationPath && <div ref={resultRef} tabIndex={-1} className="secret-result"><p>{resultCopy.linkNote}</p><Link href={state.registrationPath} target="_blank" rel="noreferrer" aria-describedby={`${formId}-new-tab`}>{state.registrationLabel ?? resultCopy.linkLabel} 열기</Link><small id={`${formId}-new-tab`} className="field-hint">새 탭에서 열립니다.</small><Button onClick={() => copy(new URL(state.registrationPath!, window.location.origin).href)}>{state.registrationLabel ?? resultCopy.linkLabel} 복사</Button></div>}
+    {state.secret && <div ref={resultRef} tabIndex={-1} className="secret-result"><strong>이 창에서만 확인할 수 있어요</strong><p>안전한 곳에 보관한 뒤 창을 닫으세요.</p><code>{state.secret}</code><Button onClick={() => copy(state.secret!)}>비밀값 복사</Button></div>}
+    {state.registrationPath && <div ref={resultRef} tabIndex={-1} className="secret-result"><p>{resultCopy.linkNote}</p><Link href={state.registrationPath} target="_blank" rel="noreferrer" aria-describedby={`${formId}-new-tab`}>{state.registrationLabel ?? resultCopy.linkLabel} 열기</Link><small id={`${formId}-new-tab`} className="field-hint">새 탭에서 열려요.</small><Button onClick={() => copy(new URL(state.registrationPath!, window.location.origin).href)}>{state.registrationLabel ?? resultCopy.linkLabel} 복사</Button></div>}
     <div role="status">{copyResult && <p className="field-hint">{copyResult}</p>}</div>
     <fieldset disabled={isPending || isLocked}>
       {fields.map(field => {
@@ -165,7 +165,7 @@ export function ActionPanel(props: ActionPanelProps) {
   if (!canPerformWorkspaceOperation(access?.scopes, access?.organizationRole, props.operation)) return null;
   if (props.isInline) return <section className="workspace-panel"><h2>{props.title}</h2><ActionBody {...props} /></section>;
   return <>
-    <Button id={triggerId} danger={props.isDanger} type={props.triggerType ?? "default"} size={props.triggerType === "link" ? "small" : "middle"} onClick={() => { setRequestId(current => current || createRequestId()); setIsOpen(true); }}>{props.title}</Button>
+    <Button id={triggerId} aria-label={props.triggerLabel} danger={props.isDanger} type={props.triggerType ?? "default"} size={props.triggerType === "link" ? "small" : "middle"} onClick={() => { setRequestId(current => current || createRequestId()); setIsOpen(true); }}>{props.title}</Button>
     {isOpen && <ActionBody key={`${requestId}-${version}`} {...props} requestId={requestId} onClose={isConfirmedFailure => { if (isConfirmedFailure) setRequestId(""); setIsOpen(false); restoreFocus(); }} onNewRequest={() => setRequestId(createRequestId())} onSuccess={() => { setIsOpen(false); setRequestId(""); restoreFocus(); }} />}
   </>;
 }

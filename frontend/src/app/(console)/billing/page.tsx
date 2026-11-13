@@ -57,7 +57,7 @@ export default async function BillingPage({
   return (
     <CollapseProvider>
       <ScreenHeader
-        title={`청구 예정액 - ${formatKoreanMonth(month)}`}
+        title={`청구 검토 - ${formatKoreanMonth(month)}`}
         tags={
           monthDraftInvoice ? (
             <Suspense fallback={null}>
@@ -107,7 +107,7 @@ export default async function BillingPage({
           }
         >
           <Suspense
-            fallback={<span role="status">조회 조건을 불러오는 중입니다.</span>}
+            fallback={<span role="status">조회 조건을 불러오는 중이에요.</span>}
           >
             <ListControlsLoader
               resource="billing"

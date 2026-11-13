@@ -6,8 +6,11 @@ google-java-format = "1.36.1"
 checkstyle = "14.3.0"
 springdoc = "3.0.3"
 archunit = "1.5.1"
+aws-sdk = "2.57.4"
 
 [libraries]
+aws-sdk-bom = { module = "software.amazon.awssdk:bom", version.ref = "aws-sdk" }
+aws-sdk-sesv2 = { module = "software.amazon.awssdk:sesv2" }
 archunit-junit6 = { module = "com.tngtech.archunit:archunit-junit6", version.ref = "archunit" }
 springdoc-openapi-starter-webmvc-scalar = { module = "org.springdoc:springdoc-openapi-starter-webmvc-scalar", version.ref = "springdoc" }
 

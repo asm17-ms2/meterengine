@@ -68,9 +68,13 @@ pnpm build
 
 운영 compose는 `METERENGINE_PUBLIC_ORIGIN`에 `https://<SITE_DOMAIN>`을 주입한다. 외부 고객에게 인보이스 조회 링크를 제공할 때는 런타임 `METERENGINE_PUBLIC_ORIGIN`을 공개 콘솔 origin으로 지정한다. 예: `https://console.example.com`. 프록시는 해당 Host를 보존해야 한다. 공개 조회 중계는 이 origin과 Host를 검사하며 `X-Forwarded-*`는 신뢰하지 않는다. 설정이 없으면 localhost, 127.0.0.1과 ::1의 같은 origin 요청만 허용한다.
 
+`TURNSTILE_SITE_KEY`가 있으면 가입 화면과 인증 메일 다시 받기 화면(`/email-verifications`)에 Cloudflare Turnstile 위젯을 띄우고 토큰을 요청에 싣는다. 비어 있으면 위젯을 띄우지 않는다. 런타임에 읽으므로 두 화면은 정적으로 굽지 않는다. 두 요청은 백엔드가 Siteverify를 기다리므로 기본 5초 대신 15초까지 기다린다. 검증과 비밀 키는 백엔드가 갖는다.
+
 도입사와 표시 이름은 로그인 세션에서 읽는다. 기존 `METERENGINE_ORGANIZATION_ID`, `METERENGINE_ORGANIZATION_NAME`은 사용하지 않는다.
 
-상단 업무 환경은 URL의 `environment=test|live`와 API 환경 헤더로 유지한다. 767px 이하에서는 헤더에 업무 환경만 두고 시연 안내, 권한 범위와 새로 조회, 로그아웃은 메뉴 서랍에 둔다. 기존 데이터는 별도 메뉴 범위에 보존하며 새 환경에 복사하지 않는다. 시연 안내는 화면 설명만 바꾼다.
+상단 업무 환경은 URL의 `environment`와 API 환경 헤더로 유지한다. 값이 없으면 테스트 환경이고, 프론트는 테스트 환경에서도 API에 `X-MeterEngine-Environment: test`를 보낸다(백엔드는 헤더가 없으면 기존 데이터로 본다). 767px 이하에서는 헤더에 업무 환경만 두고 권한 범위와 새로 조회, 로그아웃은 메뉴 서랍에 둔다.
+
+기존 데이터(`environment=legacy`)는 런타임 `METERENGINE_SHOW_LEGACY_ENVIRONMENT=true`를 준 서버에서만 업무 환경 목록에 나온다. 서버에서만 읽는 값이라 같은 이미지라도 서버마다 다르게 줄 수 있다. 기본은 꺼짐이고 운영 compose도 이 값을 넣지 않는다. 테스트 환경으로 옮긴 자료에 문제가 있어 옛 범위를 봐야 할 때만 켠다. 꺼진 서버에서 업무 화면을 `environment=legacy`로 열면 `environment`만 뺀 같은 주소(테스트 환경)로 보내고 다른 쿼리는 그대로 둔다. 로그인 뒤 돌아갈 주소(`returnTo`)에 들어 있던 legacy도 뺀다. 서버 액션, GET이 아닌 요청, 내보내기처럼 업무 화면이 아닌 경로는 400으로 거절한다.
 
 ## 컨테이너 이미지
 
@@ -169,7 +173,8 @@ docker run -p 3000:3000 \
 | `/` | 서비스 소개 (로그인 없이 보는 첫 화면, 로그인과 가입 신청 링크) |
 | `/overview` | 미완료 설정, 과금 경고와 월별 예정액, 확정액, 결제 대기액, 순수납 확인, 전체 월의 미해결 결제 |
 | `/customers`, `/customers/{id}` | 외부 ID로 고객 연결, 보관과 복원, 사용량, 청구, 수납과 카드 등록 연결 |
-| `/usage`, `/events` | 집계, 미터 미연결, 값 오류, 미래 시각과 음수 정정 확인, 원본 로그 조회 |
+| `/usage`, `/events` | 집계, 미터 미연결, 값 오류, 미래 시각과 음수 수량 진단, 원본 로그 조회 |
+| `/event-issues`, `/event-rejections` | 받은 이벤트 가운데 미터, 수량, 단가가 연결되지 않은 것 진단, 수집 때 거절한 이벤트 기록 조회 |
 | `/pricing`, `/billable-metrics` | 월과 고객별 단가 이력, 구간 요금, 기본료, 최소 과금과 미터 설정, 보관과 복원 |
 | `/billing`, `/invoices` | 단가 없는 조합과 음수 합을 검토한 뒤 확정, 계산 근거 조회 |
 | `/payments`, `/payments/{id}` | 결제 요청과 수동 재시도, 결과 확인, 결제 실패 건만 보기, 부분과 전액 취소, 시도와 취소 이력, 고객 조회 링크의 재시도 권한 선택, 발급과 폐기 |
@@ -177,7 +182,7 @@ docker run -p 3000:3000 \
 | `/integrations`, `/integrations/{id}` | API 키 발급과 교체, 권한 변경, 폐기, 웹훅 등록과 발송 이력, 마지막 시도가 실패한 수신 주소 표시, 시험 통보와 실패 재전송 |
 | `/members` | 사용자 관리 (계정 직접 생성, 초대 링크, 업무 권한과 역할 변경, 소속 보관, 초대 이력) |
 | `/audit` | 감사 기록 (도입사의 변경 기록과 API 요청 기록 조회) |
-| `/settings` | 환경별 공급자와 토스 키, 기존 데이터의 결제 모드 설정 |
+| `/settings` | 환경별 공급자와 토스페이먼츠 키. 기존 데이터 환경을 켠 서버에서는 그 환경의 결제 모드 설정 |
 | `/admin`, `/admin/organizations`, `/admin/users` | 전체 운영 현황, 가입 승인, 사용자 권한과 소속 연결 관리 |
 | `/admin/audit` | 운영자의 플랫폼 감사 기록 조회 |
 | `/payment-method-registrations/{token}` | 일회용 링크 확인과 동의, 토스 카드 인증, 등록 결과 확인 |
@@ -185,13 +190,15 @@ docker run -p 3000:3000 \
 | `/signup` | 도입사 가입 신청과 필수 동의 |
 | `/pending` | 가입 신청 뒤 승인 안내 |
 | `/terms`, `/privacy` | 로그인 없이 이용약관과 개인정보 처리방침 전문 확인 |
+| `/email-verifications` | 가입 뒤 인증 메일 안내와 다시 받기. 인증 전 로그인은 `?reason=unverified`로 온다 |
+| `/email-verifications/{token}` | 메일 속 인증 링크 확인. 메일 검사기가 열어도 인증되지 않게 버튼을 눌러야 인증한다 |
 | `/organizations` | 소속 도입사 선택과 전환 |
 | `/account/consents` | 첫 로그인 때 새 비밀번호 설정과 계정 이용 안내 확인 |
 | `/organization-invitations/{token}` | 초대 링크 확인과 수락 (기존 계정 로그인 또는 새 계정 설정) |
 
 - `/billable-metric-prices`는 월과 고객 조건을 유지해 `/pricing`으로 이동한다.
-- 사용량과 청구 예정액 화면의 필터 행은 그 달의 집계 마감 시각(다음 달 1일 13:00 KST)과 그 기준이 이미 적용됐는지를 보인다.
-- 자동 확정이 켜져 있으면 청구 예정액 화면의 필터 행에 다음 자동 확정 시각을 보인다. 그 달을 자동 확정하는 중이면 "자동 확정 진행 중"을, 다 훑었고 다시 시도할 실패가 없으면 아무것도 보이지 않는다. 자동 확정이 보류할 고객(단가 없는 사용량이 있고 0원이 아님) 줄에는 보류 표시를 단다. 이번 달이면 가격 화면 링크를, 끝난 달이면 단가를 등록할 수 없어 월 전체 확정 안내를 단다. 보류 여부는 미터 조건과 관계없이 서버가 고객의 모든 미터로 정한다.
+- 사용량과 청구 검토 화면의 필터 행은 그 달의 집계 마감 시각(다음 달 1일 13:00 KST)과 그 기준이 이미 적용됐는지를 보인다.
+- 자동 확정이 켜져 있으면 청구 검토 화면의 필터 행에 다음 자동 확정 시각을 보인다. 그 달을 자동 확정하는 중이면 "자동 확정 진행 중"을, 다 훑었고 다시 시도할 실패가 없으면 아무것도 보이지 않는다. 자동 확정이 보류할 고객(단가 없는 사용량이 있고 0원이 아님) 줄에는 보류 표시를 단다. 이번 달이면 요금 설계 화면 링크를, 끝난 달이면 단가를 등록할 수 없어 월 전체 확정 안내를 단다. 보류 여부는 미터 조건과 관계없이 서버가 고객의 모든 미터로 정한다.
 - 인보이스 일괄 확정이 일부 고객에서 실패하면 결과 창이 다른 안내 대신 확정하지 못한 고객 수를 알린다.
 - API 키의 분당 한도는 양수 또는 무제한으로 정한다. 유한 한도는 인스턴스별이다.
 - 콘솔 결제성 요청은 75초, 고객 직접 재시도는 120초까지 기다린다. 응답 유실은 실패로 단정하지 않고 상태를 새로 조회하기 전 재요청을 막는다. 취소는 같은 요청 식별자를 유지한다.
@@ -209,13 +216,13 @@ pnpm build
 pnpm test:e2e:contract
 ```
 
-계약 테스트는 임시 HTTP 대역과 standalone FE를 `38148`, `33148` 포트에서 실행하고 종료한다. 실제 Spring 검증과 구분한다.
+계약 테스트는 임시 HTTP 대역과 standalone FE를 실행마다 다른 빈 포트에서 실행하고 종료한다. 실제 Spring 검증과 구분한다.
 
 카드 등록과 업무 화면의 계약 테스트는 설정 파일을 지정해 돌린다. 둘 다 `pnpm build` 뒤 대역과 FE를 스스로 띄우고 끝내며 백엔드가 필요 없다.
 
 ```bash
-pnpm exec playwright test -c playwright.payment.config.ts    # 대역 38149, FE 33149
-pnpm exec playwright test -c playwright.workspace.config.ts  # 대역 38150, FE 33150. 결과 폴더는 WORKSPACE_CONTRACT_OUTPUT_DIR
+pnpm exec playwright test -c playwright.payment.config.ts
+pnpm exec playwright test -c playwright.workspace.config.ts  # 결과 폴더는 WORKSPACE_CONTRACT_OUTPUT_DIR
 ```
 
 실제 S1 Spring 서버를 별도 테스트 DB로 `38147`에 실행한 뒤 아래를 실행한다. 테스트는 가입, 승인, 로그인과 고객 등록을 수행하므로 운영 환경을 지정하지 않는다. 테스트 설정은 로컬 HTTP 주소만 허용한다.

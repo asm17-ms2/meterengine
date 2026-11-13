@@ -49,7 +49,7 @@ export default async function UsagePage({
           </Suspense>
         ) : null}
       </ScreenHeader>
-      <Suspense fallback={<p role="status" className="field-hint">수집 상태를 확인하는 중입니다.</p>}><UsageQuality selectedMonth={month} /></Suspense>
+      <Suspense fallback={<p role="status" className="field-hint">수집 진단을 불러오는 중이에요.</p>}><UsageQuality selectedMonth={month} /></Suspense>
 
       <ScreenCard>
         <FilterBar
@@ -62,7 +62,7 @@ export default async function UsagePage({
           }
         >
           <Suspense
-            fallback={<span role="status">조회 조건을 불러오는 중입니다.</span>}
+            fallback={<span role="status">조회 조건을 불러오는 중이에요.</span>}
           >
             <ListControlsLoader
               resource="usage"
@@ -83,7 +83,7 @@ export default async function UsagePage({
           <TableSkeleton />
         )}
       </ScreenCard>
-      <p className="field-hint">이 달의 청구 금액은 <Link inheritFilters href="/billing">청구 검토</Link>에서 확인합니다.</p>
+      <p className="field-hint">이 달의 청구 금액은 <Link inheritFilters href="/billing">청구 검토</Link>에서 확인하세요.</p>
     </CollapseProvider>
   );
 }

@@ -42,6 +42,7 @@ public class SignupService {
   private final ConsentRepository consentRepository;
   private final PasswordEncoder passwordEncoder;
   private final AuditLogService auditLogService;
+  private final EmailVerificationService emailVerificationService;
 
   SignupService(
       OrganizationRepository organizationRepository,
@@ -49,16 +50,18 @@ public class SignupService {
       OrganizationMemberRepository organizationMemberRepository,
       ConsentRepository consentRepository,
       PasswordEncoder passwordEncoder,
-      AuditLogService auditLogService) {
+      AuditLogService auditLogService,
+      EmailVerificationService emailVerificationService) {
     this.organizationRepository = organizationRepository;
     this.userAccountRepository = userAccountRepository;
     this.organizationMemberRepository = organizationMemberRepository;
     this.consentRepository = consentRepository;
     this.passwordEncoder = passwordEncoder;
     this.auditLogService = auditLogService;
+    this.emailVerificationService = emailVerificationService;
   }
 
-  // pending 도입사와 그 도입사에 소속된 member, 동의 행을 한 트랜잭션에 만든다.
+  // pending 도입사와 그 도입사에 소속된 member, 동의 행을 한 트랜잭션에 만든다. 인증 메일은 커밋 뒤에 나간다.
   @Transactional
   public Signup create(
       String organizationName,
@@ -74,15 +77,17 @@ public class SignupService {
     Organization organization =
         organizationRepository.save(
             new Organization(UUID.randomUUID(), organizationName, Organization.PENDING));
-    UserAccount userAccount =
-        userAccountRepository.save(
-            new UserAccount(
-                UUID.randomUUID(),
-                email.toLowerCase(Locale.ROOT),
-                passwordEncoder.encode(password),
-                name,
-                UserAccount.MEMBER,
-                now));
+    UserAccount newUserAccount =
+        new UserAccount(
+            UUID.randomUUID(),
+            email.toLowerCase(Locale.ROOT),
+            passwordEncoder.encode(password),
+            name,
+            UserAccount.MEMBER,
+            now);
+    boolean verificationRequired = emailVerificationService.isRequired();
+    if (verificationRequired) newUserAccount.requireEmailVerification();
+    UserAccount userAccount = userAccountRepository.save(newUserAccount);
     OrganizationMember member =
         new OrganizationMember(organization.getId(), userAccount.getId(), now);
     member.changeRole("owner");
@@ -104,6 +109,7 @@ public class SignupService {
         "organization",
         organization.getId().toString(),
         Map.of());
+    if (verificationRequired) emailVerificationService.issue(userAccount);
     return new Signup(organization, userAccount);
   }
 

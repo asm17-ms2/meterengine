@@ -6,6 +6,7 @@ const ATTEMPT_ID = "22222222-2222-4222-8222-222222222222";
 const ENDPOINT_ID = "33333333-3333-4333-8333-333333333333";
 const DELIVERY_ID = "44444444-4444-4444-8444-444444444444";
 const ZERO_CUSTOMER_ID = "12121212-1212-4212-8212-121212121212";
+const VIEW_LINK_ID = "18181818-1818-4818-8818-181818181818";
 const NOW = "2026-10-26T12:00:00+09:00";
 const organization = { id: "55555555-5555-4555-8555-555555555555", name: "워크스페이스 계약 테스트", status: "active" };
 const otherOrganization = { id: "88888888-8888-4888-8888-888888888888", name: "전환된 도입사 B", status: "active" };
@@ -100,6 +101,11 @@ const server = createServer(async (request, response) => {
         current.activeOrganization = otherOrganization;
         return send(response, 200, { items, total: 21, total_unfiltered: 21, page: 1, size: 20, summary: {} });
       }
+      if (current.scenario === "customer-pages") {
+        const page = Math.max(1, Number(new URL(request.url, "http://127.0.0.1").searchParams.get("page") ?? 1));
+        const all = Array.from({ length: 25 }, (_, index) => ({ id: `19191919-1919-4919-8919-${String(index).padStart(12, "0")}`, name: `페이지 고객 ${index}`, external_id: null, billing_email: null, archived_at: null, created_at: NOW, version: 0 }));
+        return send(response, 200, { items: all.slice((page - 1) * 20, page * 20), total: all.length, total_unfiltered: all.length, page, size: 20, summary: {} });
+      }
       const items = ["organization-switch-after-session", "organization-switch-after-search"].includes(current.scenario) ? [{ id: "99999999-9999-4999-8999-999999999999", name: "다른 도입사 B의 비공개 고객", external_id: "organization-b-private", billing_email: null, archived_at: null, created_at: NOW, version: 0 }] : [];
       return send(response, 200, { items, total: items.length, total_unfiltered: items.length, page: 1, size: 20, summary: {} });
     }
@@ -187,6 +193,9 @@ const server = createServer(async (request, response) => {
     }
     if (path === `/v1/invoices/${INVOICE_ID}`) return send(response, 200, invoice);
     if (path === `/v1/invoices/${INVOICE_ID}/payment-attempts`) return send(response, 200, { payment_attempts: [attempt] });
+    // 다른 시나리오는 전처럼 404로 둔다. 실패 뒤 복구는 테스트가 시나리오를 바꿔 흉내 낸다.
+    if (path === `/v1/invoices/${INVOICE_ID}/view-links` && current.scenario === "view-links-failure") return error(response, 500, "internal_error", "서버 오류가 발생했습니다");
+    if (path === `/v1/invoices/${INVOICE_ID}/view-links` && current.scenario === "view-links-recovered") return send(response, 200, { invoice_view_links: [{ id: VIEW_LINK_ID, created_at: NOW, expires_at: "2099-01-01T00:00:00Z", revoked_at: null, mode: "test", allow_payment_retry: true }] });
     if (path === `/v1/payment-attempts/${ATTEMPT_ID}/cancellations`) {
       if (request.method === "GET") return send(response, 200, { payment_cancellations: current.cancellations });
       const startedAt = Date.now();
@@ -244,5 +253,5 @@ const server = createServer(async (request, response) => {
   }
 });
 
-server.listen(38150, "127.0.0.1");
+server.listen(0, "127.0.0.1", () => console.log(`fixture listening on ${server.address().port}`));
 for (const signal of ["SIGINT", "SIGTERM"]) process.on(signal, () => server.close());

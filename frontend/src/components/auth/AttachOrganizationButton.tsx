@@ -17,7 +17,7 @@ export function AttachOrganizationButton({ userId, userLabel, organizations: act
     const result = await attachOrganizationAction(previous, data);
     if (result.done) {
       setIsDirty(false);
-      message.success(result.message ?? "도입사 소속과 업무 권한을 연결했습니다.");
+      message.success(result.message ?? "조직 소속과 업무 권한을 연결했어요.");
     }
     return result;
   }, {});
@@ -45,14 +45,14 @@ export function AttachOrganizationButton({ userId, userLabel, organizations: act
   }
 
   return <>
-    {organizations.length === 0 ? <Flex vertical gap={4} align="flex-start"><Button disabled aria-describedby={`${formId}-empty`}>도입사 소속 연결</Button><span id={`${formId}-empty`} className="field-hint">추가로 연결할 사용 중인 도입사가 없습니다.</span></Flex> : <Button onClick={() => setIsOpen(true)}>도입사 소속 연결</Button>}
-    <Modal title="도입사 소속 연결" open={isOpen} onCancel={close} keyboard={!isPending} mask={{ closable: !isPending }} closable={{ disabled: isPending }} className="workspace-dialog" width="min(600px, calc(100vw - 32px))" style={{ top: 24 }} styles={{ body: { maxHeight: "calc(100dvh - 210px)", overflowY: "auto", padding: 8, marginInline: -8 } }} footer={<div className="workspace-dialog-actions"><Button onClick={close} disabled={isPending}>닫기</Button><Button form={formId} type="primary" htmlType="submit" loading={isPending} disabled={state.done}>소속 연결</Button></div>}>
+    {organizations.length === 0 ? <Flex vertical gap={4} align="flex-start"><Button disabled aria-describedby={`${formId}-empty`}>조직 소속 연결</Button><span id={`${formId}-empty`} className="field-hint">더 연결할 수 있는 사용 중인 조직이 없어요.</span></Flex> : <Button onClick={() => setIsOpen(true)}>조직 소속 연결</Button>}
+    <Modal title="조직 소속 연결" open={isOpen} onCancel={close} keyboard={!isPending} mask={{ closable: !isPending }} closable={{ disabled: isPending }} className="workspace-dialog" width="min(600px, calc(100vw - 32px))" style={{ top: 24 }} styles={{ body: { maxHeight: "calc(100dvh - 210px)", overflowY: "auto", padding: 8, marginInline: -8 } }} footer={<div className="workspace-dialog-actions"><Button onClick={close} disabled={isPending}>닫기</Button><Button form={formId} type="primary" htmlType="submit" loading={isPending} disabled={state.done}>소속 연결</Button></div>}>
       <form id={formId} noValidate onSubmit={submit} onChange={() => { setIsDirty(true); setOrganizationError(undefined); }} className="workspace-form" aria-busy={isPending}>
         <input name="user_account_id" type="hidden" value={userId} />
-        <p><strong>{userLabel}</strong>의 도입사 업무 권한을 지정합니다. 플랫폼 운영 권한은 바뀌지 않습니다.</p>
+        <p><strong>{userLabel}</strong>의 조직 업무 권한을 정해요. 플랫폼 운영 권한은 바뀌지 않아요.</p>
         <fieldset disabled={isPending || state.done}>
-          <div className="workspace-field"><label htmlFor={`${formId}-organization`}>연결할 도입사 (필수)</label><select id={`${formId}-organization`} name="organization_id" required defaultValue="" aria-invalid={Boolean(organizationError)} aria-describedby={organizationError ? `${formId}-organization-error` : undefined}><option value="">도입사를 선택하세요</option>{organizations.map(organization => <option key={organization.id} value={organization.id}>{organization.name}</option>)}</select>{organizationError && <small className="field-error" id={`${formId}-organization-error`}>{organizationError}</small>}</div>
-          <fieldset className="workspace-choice-group" aria-describedby={`${formId}-scope-hint`}><legend>도입사 업무 권한 (필수)</legend><Checkbox.Group name="scopes" defaultValue={["read"]} options={ACCESS_SCOPE_OPTIONS} aria-label="도입사 업무 권한" /><small id={`${formId}-scope-hint`} className="field-hint">기본값은 조회입니다. 전체 관리는 조회와 수집을 포함하며, 대표관리자의 사용자 관리는 포함하지 않습니다.</small></fieldset>
+          <div className="workspace-field"><label htmlFor={`${formId}-organization`}>연결할 조직 (필수)</label><select id={`${formId}-organization`} name="organization_id" required defaultValue="" aria-invalid={Boolean(organizationError)} aria-describedby={organizationError ? `${formId}-organization-error` : undefined}><option value="">조직을 선택하세요</option>{organizations.map(organization => <option key={organization.id} value={organization.id}>{organization.name}</option>)}</select>{organizationError && <small className="field-error" id={`${formId}-organization-error`}>{organizationError}</small>}</div>
+          <fieldset className="workspace-choice-group" aria-describedby={`${formId}-scope-hint`}><legend>업무 권한 (필수)</legend><Checkbox.Group name="scopes" defaultValue={["read"]} options={ACCESS_SCOPE_OPTIONS} aria-label="업무 권한" /><small id={`${formId}-scope-hint`} className="field-hint">기본값은 조회예요. 전체 관리는 조회와 수집을 포함하지만, 대표관리자의 사용자 관리는 포함하지 않아요.</small></fieldset>
         </fieldset>
         {state.message && <div ref={feedbackRef} tabIndex={-1}><Alert showIcon type={state.done ? "success" : "error"} title={state.message} /></div>}
       </form>

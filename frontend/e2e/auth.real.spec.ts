@@ -14,7 +14,7 @@ async function login(page: Page, email: string, password = PASSWORD, returnTo = 
 
 async function signup(page: Page, name: string, email: string) {
   await page.goto("/signup");
-  await page.getByLabel("도입사 이름", { exact: true }).fill(name);
+  await page.getByLabel("조직 이름", { exact: true }).fill(name);
   await page.getByLabel("담당자 이름", { exact: true }).fill("테스트 담당자");
   await page.getByLabel("이메일", { exact: true }).fill(email);
   await page.getByLabel("비밀번호", { exact: true }).fill(PASSWORD);
@@ -31,7 +31,7 @@ test("real Spring: signup, approval, login, tenant actions and isolation, logout
   await signup(page, orgName, email);
   expect((await page.context().cookies()).some(cookie => cookie.name === "me_session")).toBeFalsy();
   await login(page, email);
-  await expect(page.getByRole("alert").filter({ hasText: "사용 가능한 도입사가 없습니다" })).toContainText("사용 가능한 도입사가 없습니다");
+  await expect(page.getByRole("alert").filter({ hasText: "지금은 콘솔을 이용할 수 없어요" })).toContainText("지금은 콘솔을 이용할 수 없어요");
   await expect(page).toHaveURL(/\/login/);
 
   const adminContext = await browser.newContext();
@@ -65,7 +65,7 @@ test("real Spring: signup, approval, login, tenant actions and isolation, logout
   for (const route of ["/events", "/usage", "/billing", "/invoices", "/billable-metrics", "/billable-metric-prices", "/customers"]) {
     await page.goto(route);
     await expect(page.locator(".organization-link")).toContainText(orgName);
-    await expect(page.getByRole("heading", { name: "화면을 불러오지 못했습니다" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "화면을 불러오지 못했어요" })).toHaveCount(0);
     await expect(page.locator(".ant-alert-error")).toHaveCount(0);
   }
 
@@ -79,8 +79,8 @@ test("real Spring: signup, approval, login, tenant actions and isolation, logout
   const user = (await current.json()).user_account;
   expect((await request.post(`${API_URL}/v1/organizations/${secondOrg.id}/members`, { headers: operatorHeaders, data: { user_account_id: user.id } })).status()).toBe(201);
   await page.goto("/organizations");
-  await page.getByLabel("접근할 도입사").selectOption(secondOrg.id);
-  await page.getByRole("button", { name: "도입사로 이동" }).click();
+  await page.getByLabel("이동할 조직").selectOption(secondOrg.id);
+  await page.getByRole("button", { name: "이동", exact: true }).click();
   await expect(page).toHaveURL(/\/overview(?:\?.*)?$/);
   await expect(page.locator(".organization-link")).toContainText(secondOrg.name);
   await page.goto("/customers");
@@ -103,8 +103,8 @@ test("real Spring: operator without organization and mobile keyboard access", as
   const cookie = (await page.context().cookies()).find(cookie => cookie.name === "me_session")!;
   const current = await request.get(`${API_URL}/v1/sessions/current`, { headers: { Authorization: `Bearer ${cookie.value}` } });
   expect((await current.json()).organization).toBeNull();
-  await page.getByRole("link", { name: "내 도입사로 이동" }).click();
-  await expect(page.getByText("소속된 도입사가 없습니다.", { exact: false })).toBeVisible();
+  await page.getByRole("link", { name: "내 조직으로 이동" }).click();
+  await expect(page.getByText("소속된 조직이 없어요.", { exact: false })).toBeVisible();
   await page.getByRole("link", { name: "운영자 화면으로" }).click();
   await expect(page).toHaveURL(/\/admin$/);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
@@ -136,13 +136,13 @@ test("real Spring: role promotion and demotion, irreversible signup rejection", 
   await page.goto("/admin/organizations");
   const organization = page.getByRole("article").filter({ has: page.getByRole("heading", { name: orgName, exact: true }) });
   await organization.getByRole("button", { name: "가입 거절", exact: true }).click();
-  await expect(page.getByRole("dialog")).toContainText("거절한 가입은 다시 승인할 수 없습니다");
+  await expect(page.getByRole("dialog")).toContainText("거절한 가입은 다시 승인할 수 없어요");
   await page.getByRole("button", { name: "가입 거절 확정", exact: true }).click();
   await expect(organization).toHaveCount(0);
   await page.getByRole("link", { name: "가입 거절", exact: true }).click();
   await expect(organization).toContainText("가입 거절");
   await expect(organization.getByRole("button")).toHaveCount(0);
   await login(applicant, email);
-  await expect(applicant.getByRole("alert").filter({ hasText: "사용 가능한 도입사가 없습니다" })).toBeVisible();
+  await expect(applicant.getByRole("alert").filter({ hasText: "지금은 콘솔을 이용할 수 없어요" })).toBeVisible();
   await applicantContext.close();
 });

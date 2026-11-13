@@ -35,7 +35,8 @@ public class AuditLogService {
           "user_account_created",
           "user_account_role_updated",
           "user_account_password_updated",
-          "user_account_consents_accepted");
+          "user_account_consents_accepted",
+          "user_account_email_verified");
 
   private final AuditLogRepository auditLogRepository;
   private final JsonMapper jsonMapper;

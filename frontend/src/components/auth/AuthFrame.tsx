@@ -1,10 +1,10 @@
 import Link from "next/link";
 
 const STEPS: Record<"signup" | "join" | "operator" | "login", [string, string][]> = {
-  login: [["계정 로그인", "가입한 이메일 또는 전달받은 계정으로 로그인"], ["이용 안내 확인", "첫 로그인에 안내 확인이 필요한 계정은 본인 동의"], ["담당 업무 시작", "도입사 업무 또는 MeterEngine 플랫폼 운영"]],
-  operator: [["계정 확인", "플랫폼 운영자가 생성한 계정으로 로그인"], ["안내 동의", "이용 안내와 개인정보 처리 내용 확인"], ["플랫폼 운영 시작", "도입사 승인과 플랫폼 권한 관리"]],
-  join: [["계정 확인", "초대받은 계정 또는 현재 로그인 계정 확인"], ["안내 동의", "이용 안내와 개인정보 처리 내용 확인"], ["소속 도입사로 이동", "부여된 권한으로 도입사 업무 시작"]],
-  signup: [["가입 신청", "도입사와 담당자 정보 등록"], ["운영자 승인", "신청 확인 후 도입사 활성화"], ["로그인과 연동", "고객, 미터와 사용량 운영 시작"]],
+  login: [["로그인", "가입한 이메일이나 받은 계정으로 로그인"], ["약관 동의", "처음 로그인할 때 필요하면 확인"], ["업무 시작", "고객, 사용량, 청구 확인"]],
+  operator: [["계정 확인", "플랫폼 운영자가 생성한 계정으로 로그인"], ["약관 동의", "이용약관과 개인정보 처리방침 확인"], ["플랫폼 운영 시작", "조직 승인과 플랫폼 권한 관리"]],
+  join: [["계정 확인", "초대받은 계정이나 지금 로그인한 계정 확인"], ["약관 동의", "이용약관과 개인정보 처리방침 확인"], ["소속 조직으로 이동", "받은 권한으로 업무 시작"]],
+  signup: [["가입 신청", "조직과 담당자 정보 입력"], ["가입 승인", "승인 후 로그인"], ["연동 시작", "고객과 요금을 등록하고 사용량 보내기"]],
 };
 
 export function AuthFrame({ title, description, children, variant = "signup", currentStep }: { title: string; description: string; children: React.ReactNode; variant?: "signup" | "join" | "operator" | "login"; currentStep?: 1 | 2 | 3 }) {
@@ -13,9 +13,9 @@ export function AuthFrame({ title, description, children, variant = "signup", cu
   const isLogin = variant === "login";
   const steps = STEPS[variant];
   return <div className="auth-layout">
-    <aside className="auth-context" aria-label={isLogin ? "로그인 안내" : isOperator ? "플랫폼 운영자 계정 확인" : isJoin ? "도입사 연결 절차" : "가입 절차"}>
+    <aside className="auth-context" aria-label={isLogin ? "로그인 안내" : isOperator ? "플랫폼 운영자 계정 확인" : isJoin ? "참여 절차" : "가입 절차"}>
       <Link className="wordmark" href="/">MeterEngine</Link>
-      <div className="auth-intro"><p className="auth-intro-title">{isLogin ? <>계정으로 로그인해<br />담당 업무를 시작하세요.</> : isOperator ? <>플랫폼 운영을<br />함께 맡습니다.</> : isJoin ? <>함께 관리할<br />도입사로 연결합니다.</> : <>사용량에서<br />청구까지, 한 흐름으로.</>}</p><p>{isLogin ? "계정에 부여된 역할에 따라 도입사 업무 또는 플랫폼 운영 화면으로 이동합니다." : isOperator ? "계정과 이용 안내를 확인한 뒤 MeterEngine 운영을 시작하세요." : isJoin ? "계정과 안내를 확인한 뒤 소속 도입사의 업무를 시작하세요." : <>서비스의 사용량과 요금을 연결하고<br />고객별 청구 근거를 확인하세요.</>}</p></div>
+      <div className="auth-intro"><p className="auth-intro-title">{isLogin ? "로그인하고 고객별 사용량과 청구를 확인하세요." : isOperator ? "플랫폼 운영을 함께 맡아요." : isJoin ? "팀과 같은 콘솔에서 일을 시작하세요." : "고객이 쓴 만큼 청구하고 결제까지 받으세요."}</p>{!isLogin && <p>{isOperator ? "계정을 확인하고 약관에 동의한 뒤 MeterEngine 운영을 시작하세요." : isJoin ? "계정을 확인하고 약관에 동의하면 소속 조직의 콘솔로 이동해요." : "사용량을 보내면 고객별 요금 계산부터 청구와 결제까지 이어져요."}</p>}</div>
       <ol className="onboarding-steps">{steps.map(([stepTitle, stepDetail], index) => <li key={stepTitle} aria-current={index + 1 === currentStep ? "step" : undefined} className={currentStep ? index + 1 < currentStep ? "is-done" : index + 1 === currentStep ? "is-current" : undefined : undefined}><strong>{stepTitle}</strong><span>{stepDetail}</span></li>)}</ol>
     </aside>
     <main id="main-content" className="auth-main"><div className="auth-panel"><header><h1>{title}</h1><p className="muted">{description}</p></header>{children}</div></main>

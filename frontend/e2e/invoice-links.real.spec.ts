@@ -3,6 +3,7 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { CONSENT_DOCUMENTS, CONSENT_VERSION } from "../src/lib/auth/consents";
+import { consoleHeaders } from "./console-environment";
 
 const API_URL = process.env.S1_API_URL ?? "http://127.0.0.1:38147";
 const FRONTEND_URL = process.env.INVOICE_LINK_FRONTEND_URL ?? "http://localhost:33147";
@@ -62,6 +63,11 @@ function uuid(value: string) {
   return value;
 }
 
+// 결제와 링크 행은 인보이스와 같은 환경이어야 한다(V48의 same_environment 외래 키).
+function invoiceEnvironment(invoiceId: string) {
+  return `(SELECT environment_id FROM invoice WHERE id = '${uuid(invoiceId)}')`;
+}
+
 async function fixture(request: APIRequestContext, secrets: Set<string>): Promise<Fixture> {
   const suffix = randomUUID();
   const organizationName = `조회 링크 검증 ${suffix}`;
@@ -82,7 +88,7 @@ async function fixture(request: APIRequestContext, secrets: Set<string>): Promis
   expect(session.status()).toBe(201);
   const token = (await session.json()).token as string;
   secrets.add(token);
-  const headers = { Authorization: `Bearer ${token}` };
+  const headers = consoleHeaders(token);
   const key = await request.post(`${API_URL}/v1/api-keys`, { headers, data: { label: "고객 인보이스 조회 검증", mode: "test", scopes: ["read", "ingest"] } });
   expect(key.status()).toBe(201);
   const readKey = (await key.json()).secret as string;
@@ -160,12 +166,12 @@ test("발급 권한, 인보이스 경계와 공개 조회의 결제 및 취소 �
     for (const forbidden of [data.organizationId, data.customerId, data.invoiceId, data.otherInvoiceId, "private-recipient@fe-e2e.local", "공개되면 안 되는 다른 고객", ...secrets]) expect(serialized.includes(forbidden)).toBe(false);
     expect((await (await lookup(request, link.token)).json())).toEqual(publicData);
     const pendingLink = await mint(request, { ...data, invoiceId: data.otherInvoiceId }, secrets, 7);
-    sql(`INSERT INTO payment_attempt (id, organization_id, customer_id, invoice_id, mode, amount, order_name, status, requested_at) SELECT '${randomUUID()}', organization_id, customer_id, id, 'test', supply_amount + tax_amount, 'local invoice link pending fixture', 'pending', clock_timestamp() FROM invoice WHERE id = '${data.otherInvoiceId}';`);
+    sql(`INSERT INTO payment_attempt (id, organization_id, environment_id, customer_id, invoice_id, mode, amount, order_name, status, requested_at) SELECT '${randomUUID()}', organization_id, environment_id, customer_id, id, 'test', supply_amount + tax_amount, 'local invoice link pending fixture', 'pending', clock_timestamp() FROM invoice WHERE id = '${data.otherInvoiceId}';`);
     expect((await (await lookup(request, pendingLink.token)).json()).payment).toMatchObject({ status: "pending", mode: "test", paid_amount: null, canceled_amount: 0, outstanding_amount: null });
     const paymentId = randomUUID();
-    sql(`INSERT INTO payment_attempt (id, organization_id, customer_id, invoice_id, mode, amount, order_name, status, payment_key, requested_at, completed_at) VALUES ('${paymentId}', '${data.organizationId}', '${data.customerId}', '${data.invoiceId}', 'test', 1100, 'local invoice link fixture', 'done', 'local-link-payment-${paymentId}', clock_timestamp(), clock_timestamp());`);
+    sql(`INSERT INTO payment_attempt (id, organization_id, environment_id, customer_id, invoice_id, mode, amount, order_name, status, payment_key, requested_at, completed_at) VALUES ('${paymentId}', '${data.organizationId}', ${invoiceEnvironment(data.invoiceId)}, '${data.customerId}', '${data.invoiceId}', 'test', 1100, 'local invoice link fixture', 'done', 'local-link-payment-${paymentId}', clock_timestamp(), clock_timestamp());`);
     expect((await (await lookup(request, link.token)).json()).payment).toMatchObject({ status: "paid", paid_amount: 1100, canceled_amount: 0, outstanding_amount: 0 });
-    const cancel = (amount: number) => sql(`INSERT INTO payment_cancellation (id, organization_id, payment_attempt_id, mode, amount, reason, status, transaction_key, requested_at, completed_at) VALUES ('${randomUUID()}', '${data.organizationId}', '${paymentId}', 'test', ${amount}, 'local invoice link fixture', 'done', 'local-link-cancel-${randomUUID()}', clock_timestamp(), clock_timestamp());`);
+    const cancel = (amount: number) => sql(`INSERT INTO payment_cancellation (id, organization_id, environment_id, payment_attempt_id, mode, amount, reason, status, transaction_key, requested_at, completed_at) VALUES ('${randomUUID()}', '${data.organizationId}', ${invoiceEnvironment(data.invoiceId)}, '${paymentId}', 'test', ${amount}, 'local invoice link fixture', 'done', 'local-link-cancel-${randomUUID()}', clock_timestamp(), clock_timestamp());`);
     cancel(400);
     const partial = await (await lookup(request, link.token)).json();
     expect(partial).toMatchObject({ total_amount: 1100, payment: { status: "partially_canceled", paid_amount: 700, canceled_amount: 400, outstanding_amount: 0 } });
@@ -186,7 +192,7 @@ test("발급 권한, 인보이스 경계와 공개 조회의 결제 및 취소 �
     const expiredToken = `me_invoice_${randomBytes(16).toString("hex")}`;
     secrets.add(expiredToken);
     const expiredHash = createHash("sha256").update(expiredToken).digest("hex");
-    sql(`INSERT INTO invoice_view_link (id, organization_id, invoice_id, token_hash, mode, created_at, expires_at) VALUES ('${randomUUID()}', '${data.organizationId}', '${data.invoiceId}', decode('${expiredHash}', 'hex'), 'test', clock_timestamp() - interval '2 days', clock_timestamp() - interval '1 day');`);
+    sql(`INSERT INTO invoice_view_link (id, organization_id, environment_id, invoice_id, token_hash, mode, created_at, expires_at) VALUES ('${randomUUID()}', '${data.organizationId}', ${invoiceEnvironment(data.invoiceId)}, '${data.invoiceId}', decode('${expiredHash}', 'hex'), 'test', clock_timestamp() - interval '2 days', clock_timestamp() - interval '1 day');`);
     const expired = await lookup(request, expiredToken);
     const retired = await lookup(request, link.token);
     expect(retired.status()).toBe(404);
@@ -218,11 +224,11 @@ test("콘솔에서 전달한 링크를 고객이 로그인 없이 열고 새로�
     await consolePage.goto(`/payments/${data.invoiceId}`);
     const section = consolePage.locator("section").filter({ has: consolePage.getByRole("heading", { name: "고객 조회 링크", exact: true }) });
     await expect(section.getByRole("button", { name: "고객 조회 링크 발급", exact: true })).toBeVisible();
-    const period = section.getByRole("combobox", { name: /사용 기간/ });
+    const period = section.getByRole("combobox", { name: /유효 기간/ });
     await expect(period).toHaveValue("30");
     writeFileSync(`${OUTPUT}/console-label-observation.json`, JSON.stringify({
-      exact_role_name_match: await section.getByRole("combobox", { name: "사용 기간", exact: true }).count(),
-      exact_label_match: await section.getByLabel("사용 기간", { exact: true }).count(),
+      exact_role_name_match: await section.getByRole("combobox", { name: "유효 기간", exact: true }).count(),
+      exact_label_match: await section.getByLabel("유효 기간", { exact: true }).count(),
       aria_snapshot: await period.ariaSnapshot(),
       label_dom: await period.evaluate(element => (element as HTMLSelectElement).labels?.[0]?.outerHTML ?? ""),
     }, null, 2));
@@ -263,7 +269,7 @@ test("콘솔에서 전달한 링크를 고객이 로그인 없이 열고 새로�
     await expect(page.getByText(data.customerName, { exact: true })).toBeVisible();
     expect((await customer.cookies()).find(cookie => cookie.name === "me_session")).toBeUndefined();
     const paymentId = randomUUID();
-    sql(`INSERT INTO payment_attempt (id, organization_id, customer_id, invoice_id, mode, amount, order_name, status, payment_key, requested_at, completed_at) VALUES ('${paymentId}', '${data.organizationId}', '${data.customerId}', '${data.invoiceId}', 'test', 1100, 'local browser link fixture', 'done', 'local-browser-link-payment-${paymentId}', clock_timestamp(), clock_timestamp()); INSERT INTO payment_cancellation (id, organization_id, payment_attempt_id, mode, amount, reason, status, transaction_key, requested_at, completed_at) VALUES ('${randomUUID()}', '${data.organizationId}', '${paymentId}', 'test', 400, 'local browser link fixture', 'done', 'local-browser-link-cancel-${randomUUID()}', clock_timestamp(), clock_timestamp());`);
+    sql(`INSERT INTO payment_attempt (id, organization_id, environment_id, customer_id, invoice_id, mode, amount, order_name, status, payment_key, requested_at, completed_at) VALUES ('${paymentId}', '${data.organizationId}', ${invoiceEnvironment(data.invoiceId)}, '${data.customerId}', '${data.invoiceId}', 'test', 1100, 'local browser link fixture', 'done', 'local-browser-link-payment-${paymentId}', clock_timestamp(), clock_timestamp()); INSERT INTO payment_cancellation (id, organization_id, environment_id, payment_attempt_id, mode, amount, reason, status, transaction_key, requested_at, completed_at) VALUES ('${randomUUID()}', '${data.organizationId}', ${invoiceEnvironment(data.invoiceId)}, '${paymentId}', 'test', 400, 'local browser link fixture', 'done', 'local-browser-link-cancel-${randomUUID()}', clock_timestamp(), clock_timestamp());`);
     const refresh = page.getByRole("button", { name: "결제 상태 새로 조회", exact: true });
     await refresh.focus();
     await refresh.press("Enter");
@@ -286,7 +292,7 @@ test("콘솔에서 전달한 링크를 고객이 로그인 없이 열고 새로�
     expect(recordBox && recordBox.x + recordBox.width <= 390).toBe(true);
     writeFileSync(`${OUTPUT}/mobile-line-records-result.json`, JSON.stringify({ records: await lineRecords.getByRole("listitem").count(), right_edge: recordBox ? recordBox.x + recordBox.width : null }, null, 2));
     const secondLink = await mint(request, { ...data, invoiceId: data.otherInvoiceId }, secrets, 7);
-    sql(`INSERT INTO payment_attempt (id, organization_id, customer_id, invoice_id, mode, amount, order_name, status, requested_at) SELECT '${randomUUID()}', organization_id, customer_id, id, 'test', supply_amount + tax_amount, 'local browser pending fixture', 'pending', clock_timestamp() FROM invoice WHERE id = '${data.otherInvoiceId}';`);
+    sql(`INSERT INTO payment_attempt (id, organization_id, environment_id, customer_id, invoice_id, mode, amount, order_name, status, requested_at) SELECT '${randomUUID()}', organization_id, environment_id, customer_id, id, 'test', supply_amount + tax_amount, 'local browser pending fixture', 'pending', clock_timestamp() FROM invoice WHERE id = '${data.otherInvoiceId}';`);
     await page.goto(`${FRONTEND_URL}/invoice-links#${secondLink.token}`);
     await expect(page.getByText("공개되면 안 되는 다른 고객", { exact: true })).toBeVisible();
     await expect(page.getByText(data.customerName, { exact: true })).toHaveCount(0);
@@ -308,7 +314,7 @@ test("콘솔에서 전달한 링크를 고객이 로그인 없이 열고 새로�
     await consolePage.getByRole("button", { name: "링크 폐기", exact: true }).click();
     await consolePage.getByRole("dialog").getByRole("button", { name: "링크 폐기", exact: true }).click();
     await expect.poll(async () => (await lookup(request, token)).status()).toBe(404);
-    await expect(section.getByText("폐기됨 / 테스트", { exact: true })).toBeVisible();
+    await expect(section.getByText("폐기됨 / 테스트 결제", { exact: true })).toBeVisible();
     await section.screenshot({ path: `${OUTPUT}/console-links-revoked.png` });
     await page.reload();
     await expect(page.getByRole("heading", { name: "사용할 수 없는 조회 링크입니다", exact: true })).toBeVisible();
@@ -355,7 +361,7 @@ test("조회 링크 누락과 일시 조회 실패를 안내하고 원래 링크
     await page.getByRole("button", { name: "다시 조회", exact: true }).press("Enter");
     await expect(page.getByText(data.customerName, { exact: true })).toBeVisible();
     expect(page.url()).toBe(`${FRONTEND_URL}/invoice-links`);
-    sql(`INSERT INTO payment_attempt (id, organization_id, customer_id, invoice_id, mode, amount, order_name, status, failure_code, failure_message, requested_at, completed_at) VALUES ('${randomUUID()}', '${data.organizationId}', '${data.customerId}', '${data.invoiceId}', 'test', 1100, 'local failed lookup fixture', 'failed', 'LOCAL_DECLINED', 'local fixture failure', clock_timestamp(), clock_timestamp());`);
+    sql(`INSERT INTO payment_attempt (id, organization_id, environment_id, customer_id, invoice_id, mode, amount, order_name, status, failure_code, failure_message, requested_at, completed_at) VALUES ('${randomUUID()}', '${data.organizationId}', ${invoiceEnvironment(data.invoiceId)}, '${data.customerId}', '${data.invoiceId}', 'test', 1100, 'local failed lookup fixture', 'failed', 'LOCAL_DECLINED', 'local fixture failure', clock_timestamp(), clock_timestamp());`);
     await page.getByRole("button", { name: "결제 상태 새로 조회", exact: true }).click();
     await expect(page.getByText("결제 실패", { exact: true })).toBeVisible();
     await expect(page.getByText("결제 실패", { exact: true })).toHaveCSS("color", "rgb(169, 35, 52)");

@@ -39,6 +39,12 @@ variable "alb_deletion_protection" {
   type = bool
 }
 
+# false면 ALB의 80, 443 인바운드 규칙을 만들지 않는다. 콘솔에서 넣은 규칙은 Terraform이 건드리지 않는다.
+variable "alb_public_ingress" {
+  type    = bool
+  default = true
+}
+
 variable "app_egress_ports" {
   type    = list(number)
   default = [443]
@@ -78,4 +84,13 @@ variable "scaling_target_average_cpu_percent" {
 
 variable "monitoring_security_group_id" {
   type = string
+}
+
+# 앱이 가입 인증 메일을 보낼 SES 자격 증명. 비우면 앱 역할에 SES 권한을 주지 않는다.
+variable "email_sender" {
+  type = object({
+    identity_arn = string
+    from_address = string
+  })
+  default = null
 }

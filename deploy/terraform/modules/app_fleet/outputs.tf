@@ -25,3 +25,6 @@ output "alb_security_group_id" {
 output "alb_arn_suffix" {
   value = aws_lb.app.arn_suffix
 }
+output "alb_public_ingress_ports" {
+  value = toset(keys(aws_vpc_security_group_ingress_rule.alb_web))
+}

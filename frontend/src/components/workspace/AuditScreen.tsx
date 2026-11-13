@@ -2,6 +2,9 @@ import { ScopedLink } from "@/components/workspace/ScopedLink";
 import { EnvironmentInput } from "@/components/workspace/EnvironmentSwitch";
 import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
 import { WorkspaceError } from "@/components/workspace/WorkspaceView";
+import { Button } from "antd";
+import { EmptyState } from "@/components/screen/EmptyState";
+import { PageLinks } from "@/components/screen/ListPagination";
 import { StatusTag } from "@/components/screen/StatusTag";
 import { type AuditLogsResponse, listOrganizationMembers } from "@/lib/api/management";
 import { operatorRequest, listOrganizations, listUserAccounts } from "@/lib/api/operator";
@@ -21,7 +24,7 @@ function localTime(input: string) {
 }
 
 function withSeconds(input: string) { return input.length === 16 ? `${input}:00` : input; }
-const RANGE_ERROR = "종료 일시는 시작 일시보다 뒤여야 합니다.";
+const RANGE_ERROR = "종료 일시는 시작 일시보다 뒤여야 해요.";
 
 export async function AuditScreen({ query, isOperator = false }: { query: Query; isOperator?: boolean }) {
   const from = withSeconds(localTime(value(query, "from")));
@@ -30,6 +33,8 @@ export async function AuditScreen({ query, isOperator = false }: { query: Query;
   const params = new URLSearchParams();
   for (const key of ["action", "actor_type", "q", "from", "to", "sort", "page", "size"]) {
     const input = value(query, key);
+    // 서버는 page*size가 int를 넘으면 500을 낸다. 이벤트 화면처럼 숫자만 받고 상한을 둔다.
+    if (key === "page") { if (/^\d+$/.test(input)) params.set(key, String(Math.min(100_000, Number(input)))); continue; }
     if (input) params.set(key, key === "from" || key === "to" ? apiTime(input) : input);
   }
   const path = `${isOperator ? "/v1/operations/audit-logs" : "/v1/audit-logs"}?${params}`;
@@ -46,33 +51,32 @@ export async function AuditScreen({ query, isOperator = false }: { query: Query;
   }
   const orgNames = new Map(organizations?.ok ? organizations.data.organizations.map(org => [org.id, org.name]) : []);
   const pagePath = isOperator ? "/admin/audit" : "/audit";
-  function pageHref(page: number) { const next = new URLSearchParams(params); next.set("page", String(page)); return `${pagePath}?${next}`; }
   return <>
-    <WorkspaceHeader title="감사 기록" description={isOperator ? "전체 도입사의 업무 변경과 API 요청 결과를 확인하세요." : "누가 무엇을 바꿨는지, 어떤 API 요청이 성공하거나 거절됐는지 확인하세요."} />
+    <WorkspaceHeader title="감사 기록" description={isOperator ? "모든 조직의 업무 변경과 API 요청 결과를 확인하세요." : "누가 무엇을 바꿨는지, 어떤 API 요청이 성공하거나 거절됐는지 확인하세요."} />
     <section className="workspace-panel"><h2>기록 찾기</h2><form method="get" className="workspace-form">
       <EnvironmentInput />
       <div className="settings-grid">
-        <label className="workspace-field"><span>행동 또는 대상 검색</span><input name="q" defaultValue={value(query, "q")} placeholder="행동 코드, 대상 ID 또는 API 경로" maxLength={255} /></label>
+        <label className="workspace-field"><span>활동 또는 대상 검색</span><input name="q" defaultValue={value(query, "q")} placeholder="활동 코드, 대상 ID 또는 API 경로" maxLength={255} /></label>
         <div className="workspace-field"><label htmlFor="audit-actor">실행 주체</label><select id="audit-actor" name="actor_type" defaultValue={value(query, "actor_type")}><option value="">모든 주체</option>{Object.entries(AUDIT_ACTOR_TYPES).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></div>
-        <div className="workspace-field"><label htmlFor="audit-action">행동</label><select id="audit-action" name="action" defaultValue={value(query, "action")}><option value="">모든 행동</option>{AUDIT_ACTION_OPTIONS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></div>
+        <div className="workspace-field"><label htmlFor="audit-action">활동</label><select id="audit-action" name="action" defaultValue={value(query, "action")}><option value="">모든 활동</option>{AUDIT_ACTION_OPTIONS.map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></div>
         <div className="workspace-field"><label htmlFor="audit-sort">정렬</label><select id="audit-sort" name="sort" defaultValue={value(query, "sort") || "occurred_at_desc"}><option value="occurred_at_desc">최신 기록부터</option><option value="occurred_at_asc">오래된 기록부터</option></select></div>
         <label className="workspace-field"><span>시작 일시 (KST)</span><input name="from" type="datetime-local" step="1" defaultValue={localTime(value(query, "from"))} /></label>
         <label className="workspace-field"><span>종료 일시 (KST, 미포함)</span><input name="to" type="datetime-local" step="1" defaultValue={localTime(value(query, "to"))} aria-invalid={isRangeInvalid} aria-describedby={isRangeInvalid ? "audit-range-error" : undefined} /></label>
         {isRangeInvalid && <p id="audit-range-error" role="alert" className="field-error">{RANGE_ERROR}</p>}
-      </div><div className="workspace-actions"><button className="month-apply" type="submit">조건 적용</button><ScopedLink href={pagePath}>조건 초기화</ScopedLink></div>
+      </div><div className="workspace-actions"><Button type="primary" htmlType="submit">조건 적용</Button><ScopedLink href={pagePath}>조건 초기화</ScopedLink></div>
     </form></section>
-    {!result ? null : !result.ok ? <WorkspaceError message={result.error.message} /> : <section className="workspace-panel"><div className="workspace-heading"><h2>활동 {new Intl.NumberFormat("ko-KR").format(result.data.total)}건</h2><p className="field-hint">시간은 KST입니다. 조회 요청도 감사 대상이므로 새로 조회하면 기록이 추가됩니다.</p></div>
-      {result.data.audit_logs.length === 0 ? <p className="muted">이 조건에 해당하는 기록이 없습니다. 기간이나 행동 조건을 조정하세요.</p> : <div className="audit-list">{result.data.audit_logs.map(log => {
+    {!result ? null : !result.ok ? <WorkspaceError message={result.error.message} /> : <section className="workspace-panel"><div className="workspace-heading"><h2>활동 {new Intl.NumberFormat("ko-KR").format(result.data.total)}건</h2><p className="field-hint">시간은 KST예요. 조회한 것도 기록돼서 새로 조회할 때마다 기록이 늘어나요.</p></div>
+      {result.data.audit_logs.length === 0 ? <EmptyState title="이 조건에 맞는 기록이 없어요" body="기간이나 활동 조건을 바꿔 보세요." /> : <div className="audit-list">{result.data.audit_logs.map(log => {
         const status = Number(log.detail.status);
         const isRequest = log.action === "api_request_completed" && Number.isFinite(status);
         const outcome = isRequest ? status >= 400 ? <StatusTag color="error">요청 거절/오류 ({status})</StatusTag> : `성공 (${status})` : "변경 기록";
         return <details className="audit-entry" key={log.id}><summary className="audit-summary"><time dateTime={log.occurred_at}>{formatKstDateTime(log.occurred_at)}</time><strong>{AUDIT_ACTIONS[log.action] ?? log.action}</strong><span>{auditActorLabel(log.actor_type, log.actor_id, names)}</span><span>{outcome}</span>{log.action === "api_request_completed" && <span className="audit-request">{String(log.detail.method ?? "")} {String(log.detail.route ?? "")}</span>}</summary><div className="audit-detail"><dl className="audit-meta">
           <div><dt>실행 주체</dt><dd>{log.actor_id ? names.get(log.actor_id) ?? `${AUDIT_ACTOR_TYPES[log.actor_type]} ${log.actor_id}` : AUDIT_ACTOR_TYPES[log.actor_type]}</dd></div>
-          {isOperator && <div><dt>도입사</dt><dd>{log.organization_id ? orgNames.get(log.organization_id) ?? log.organization_id : "도입사 미지정"}</dd></div>}
-          <div><dt>대상</dt><dd>{log.target_type}: {log.target_id}</dd></div><div><dt>행동 코드</dt><dd><code>{log.action}</code></dd></div>
+          {isOperator && <div><dt>조직</dt><dd>{log.organization_id ? orgNames.get(log.organization_id) ?? log.organization_id : "조직 미지정"}</dd></div>}
+          <div><dt>대상</dt><dd>{log.target_type}: {log.target_id}</dd></div><div><dt>활동 코드</dt><dd><code>{log.action}</code></dd></div>
         </dl><pre className="workspace-json">{JSON.stringify(log.detail, null, 2)}</pre></div></details>;
       })}</div>}
-      <nav className="workspace-actions" aria-label="감사 기록 페이지">{result.data.page > 0 && <ScopedLink href={pageHref(result.data.page - 1)}>이전 기록</ScopedLink>}<span>{result.data.page + 1}페이지</span>{(result.data.page + 1) * result.data.size < result.data.total && <ScopedLink href={pageHref(result.data.page + 1)}>다음 기록</ScopedLink>}</nav>
+      <PageLinks label="감사 기록 페이지" pathname={pagePath} params={Object.fromEntries(params)} page={result.data.page} size={result.data.size} total={result.data.total} />
     </section>}
   </>;
 }

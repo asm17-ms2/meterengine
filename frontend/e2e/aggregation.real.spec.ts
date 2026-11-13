@@ -1,6 +1,7 @@
 import { expect, test, type BrowserContext, type Locator, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { CONSENT_DOCUMENTS, CONSENT_VERSION } from "../src/lib/auth/consents";
+import { consoleHeaders } from "./console-environment";
 
 const API_URL = process.env.S1_API_URL ?? "http://127.0.0.1:38147";
 const PASSWORD = "local-aggregation-e2e-password";
@@ -109,7 +110,7 @@ test("집계 10종과 단위 변환을 수집부터 사용량, 청구 예정액,
     const token = (await context.cookies()).find(cookie => cookie.name === "me_session")?.value;
     if (!token) throw new Error("대표관리자 검증 세션이 없습니다.");
     secrets.add(token);
-    const headers = { Authorization: `Bearer ${token}` };
+    const headers = consoleHeaders(token);
     const calculation = (metric: MetricCase) => ({
       name: metricName(metric), event_type: eventType, aggregation: metric.aggregation,
       target_property: metric.aggregation === "count" ? null : "units", dimension_properties: [],
@@ -334,7 +335,7 @@ test("집계 10종과 단위 변환을 수집부터 사용량, 청구 예정액,
       await expect(page.getByRole("button", { name: "월 전체 확정", exact: true })).toBeEnabled();
       await page.getByRole("button", { name: "월 전체 확정", exact: true }).click();
       await page.getByRole("dialog").getByRole("button", { name: "확정", exact: true }).click();
-      await expect(page.getByRole("dialog")).toContainText("1건을 확정했습니다");
+      await expect(page.getByRole("dialog")).toContainText("1건을 확정했어요");
       const invoices = await request.get(`${API_URL}/v1/invoices?month=${month}&customer_id=${customerId}`, { headers: readHeaders });
       expect(invoices.status()).toBe(200);
       const invoice = (await invoices.json()).invoices[0];

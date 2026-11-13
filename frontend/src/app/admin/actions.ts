@@ -28,12 +28,12 @@ export async function createOperatorAction(_previous: CreateOperatorState, data:
   const result = await operatorRequest<UserAccountResponse>("/v1/user-accounts", { method: "POST", body: { name, email, password } });
   if (!result.ok) {
     if (result.error.code === "email_already_exists") return {
-      message: "이미 가입한 이메일입니다. 기존 계정은 사용자 목록에서 플랫폼 운영자로 변경하세요.",
-      fieldErrors: { email: "다른 이메일을 입력하거나 기존 계정의 권한을 변경하세요." },
+      message: "이미 가입한 이메일이에요. 그 계정은 사용자 목록에서 플랫폼 운영자로 바꾸세요.",
+      fieldErrors: { email: "다른 이메일을 입력하거나 그 계정의 권한을 바꾸세요." },
     };
     if (result.error.status === 0 || result.error.code === "malformed_response") {
       revalidatePath("/admin/users");
-      return { isUnconfirmed: true, message: "생성 결과를 확인하지 못했습니다. 목록을 새로 조회해 같은 이메일의 계정이 생겼는지 확인하세요." };
+      return { isUnconfirmed: true, message: "생성 결과를 확인하지 못했어요. 목록을 새로 조회해 같은 이메일의 계정이 생겼는지 확인하세요." };
     }
     const errors = result.error.errors?.filter(error => ["name", "email", "password"].includes(error.field));
     return {
@@ -42,32 +42,32 @@ export async function createOperatorAction(_previous: CreateOperatorState, data:
     };
   }
   revalidatePath("/admin/users");
-  return { isCreated: true, message: "운영자 계정을 만들었습니다." };
+  return { isCreated: true, message: "운영자 계정을 만들었어요." };
 }
 
 export async function reviewSignupAction(_prev: ActionState, data: FormData): Promise<ActionState> {
   await requireOperator();
   const id = data.get("id");
   const status = data.get("status");
-  if (typeof id !== "string" || !UUID_PATTERN.test(id) || (status !== "active" && status !== "rejected")) return { message: "승인하거나 거절할 도입사를 확인하세요." };
+  if (typeof id !== "string" || !UUID_PATTERN.test(id) || (status !== "active" && status !== "rejected")) return { message: "가입 신청 정보를 읽지 못했어요. 목록을 다시 조회한 뒤 다시 시도해 주세요." };
   const current = await listOrganizations("pending");
   if (!current.ok) return { message: toDisplayMessage(current.error) };
-  if (!current.data.organizations.some(org => org.id === id && org.status === "pending")) return { message: "승인 대기 중인 도입사가 아닙니다. 목록을 새로고침하세요." };
+  if (!current.data.organizations.some(org => org.id === id && org.status === "pending")) return { message: "승인 대기 중인 신청이 아니에요. 목록을 다시 조회하세요." };
   const result = await operatorRequest<OrganizationResponse>(`/v1/organizations/${id}/status`, { method: "PUT", body: { status } });
   if (!result.ok) return { message: toDisplayMessage(result.error) };
   revalidatePath("/admin/organizations");
-  return { done: true, message: status === "active" ? "가입을 승인했습니다." : "가입을 거절했습니다." };
+  return { done: true, message: status === "active" ? "가입을 승인했어요." : "가입을 거절했어요." };
 }
 
 export async function updateRoleAction(_prev: ActionState, data: FormData): Promise<ActionState> {
   await requireOperator();
   const id = data.get("id");
   const role = data.get("role");
-  if (typeof id !== "string" || !UUID_PATTERN.test(id) || (role !== "member" && role !== "operator")) return { message: "사용자와 변경할 역할을 확인하세요." };
+  if (typeof id !== "string" || !UUID_PATTERN.test(id) || (role !== "member" && role !== "operator")) return { message: "사용자 정보를 읽지 못했어요. 목록을 다시 조회한 뒤 다시 시도해 주세요." };
   const result = await operatorRequest<UserAccountResponse>(`/v1/user-accounts/${id}/role`, { method: "PUT", body: { role } });
   if (!result.ok) return { message: toDisplayMessage(result.error) };
   revalidatePath("/", "layout");
-  return { done: true, message: "사용자 역할을 변경했습니다." };
+  return { done: true, message: "사용자 역할을 바꿨어요." };
 }
 
 export async function attachOrganizationAction(_previous: ActionState, data: FormData): Promise<ActionState> {
@@ -75,11 +75,11 @@ export async function attachOrganizationAction(_previous: ActionState, data: For
   const userId = data.get("user_account_id");
   const organizationId = data.get("organization_id");
   const scopes = data.getAll("scopes");
-  if (typeof userId !== "string" || !UUID_PATTERN.test(userId) || typeof organizationId !== "string" || !UUID_PATTERN.test(organizationId)) return { message: "연결할 사용자와 도입사를 확인하세요." };
+  if (typeof userId !== "string" || !UUID_PATTERN.test(userId) || typeof organizationId !== "string" || !UUID_PATTERN.test(organizationId)) return { message: "연결할 사용자와 조직을 확인하세요." };
   if (!scopes.length || !scopes.every(isAccessScope)) return { message: "조회, 수집과 전체 관리 중 권한을 하나 이상 선택하세요." };
   const result = await operatorRequest(`/v1/organizations/${organizationId}/members`, { method: "POST", body: { user_account_id: userId, scopes } });
   if (!result.ok) return { message: toDisplayMessage(result.error) };
   revalidatePath("/admin/users");
   revalidatePath("/admin/organizations");
-  return { done: true, message: "도입사 소속과 업무 권한을 연결했습니다." };
+  return { done: true, message: "조직 소속과 업무 권한을 연결했어요." };
 }
