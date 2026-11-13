@@ -1,12 +1,15 @@
 package com.meterengine.event.repository;
 
+import com.meterengine.event.dto.EventIngestMessage;
 import com.meterengine.event.dto.EventRejectionResponse;
 import com.meterengine.event.dto.EventRejectionsResponse;
 import com.meterengine.event.service.EventRejection;
+import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.security.AuthenticatedPrincipal;
 import com.meterengine.global.security.BusinessEnvironmentContext;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -68,6 +71,40 @@ public class EventRejectionRepository {
                 java.util.Collections.nCopies(
                     rejections.size(), "(?,?,?,?,?,?,?,?::jsonb,?,?,?,?)")),
         values.toArray());
+  }
+
+  // 컨슈머는 같은 메시지를 다시 읽을 수 있어, 수집 서버가 받은 시각까지 같은 기록이 있으면 넣지 않는다.
+  // 도입사가 다시 보낸 이벤트는 받은 시각이 달라 새 행이 된다. 넣었으면 true다.
+  public boolean insertMessageIfAbsent(EventIngestMessage message, ErrorCode errorCode) {
+    OffsetDateTime acceptedAt = OffsetDateTime.ofInstant(message.acceptedAt(), ZoneOffset.UTC);
+    List<Object> parameters = new ArrayList<>();
+    parameters.add(message.organizationId());
+    parameters.add(message.environmentId());
+    parameters.add(message.transactionId());
+    parameters.add(message.customerId());
+    parameters.add(message.type());
+    parameters.add(message.occurredAt());
+    parameters.add(errorCode.getCode());
+    parameters.add(message.requestId());
+    parameters.add(message.actorType());
+    parameters.add(message.actorId());
+    parameters.add(acceptedAt);
+    parameters.add(message.organizationId());
+    if (message.environmentId() != null) parameters.add(message.environmentId());
+    parameters.add(message.transactionId());
+    parameters.add(errorCode.getCode());
+    parameters.add(acceptedAt);
+    int inserted =
+        jdbcTemplate.update(
+            "INSERT INTO event_rejection (organization_id,environment_id,transaction_id,customer_id,type,occurred_at,error_code,request_id,actor_type,actor_id,recorded_at)"
+                + " SELECT ?::uuid,?::uuid,?,?::uuid,?,?::timestamptz,?,?::uuid,?,?::uuid,?::timestamptz"
+                + " WHERE NOT EXISTS (SELECT 1 FROM event_rejection WHERE organization_id=?::uuid AND "
+                + (message.environmentId() == null
+                    ? "environment_id IS NULL"
+                    : "environment_id=?::uuid")
+                + " AND transaction_id=? AND error_code=? AND recorded_at=?::timestamptz)",
+            parameters.toArray());
+    return inserted > 0;
   }
 
   public EventRejectionsResponse search(

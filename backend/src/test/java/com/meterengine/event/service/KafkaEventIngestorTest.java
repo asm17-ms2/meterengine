@@ -64,7 +64,15 @@ class KafkaEventIngestorTest {
             new EventBatchParser(
                 Validation.buildDefaultValidatorFactory().getValidator(), jsonMapper),
             new EventIngestMetrics(meterRegistry),
-            new EventKafkaProperties("event.ingest", 6, (short) 3, false, PUBLISH_TIMEOUT, "test"),
+            new EventKafkaProperties(
+                "event.ingest",
+                6,
+                (short) 3,
+                false,
+                PUBLISH_TIMEOUT,
+                "test",
+                "event.dlq",
+                Duration.ofSeconds(1)),
             clock);
   }
 
