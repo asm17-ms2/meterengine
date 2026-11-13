@@ -8,7 +8,7 @@ K6_DIR=$(cd "$SCRIPT_DIR/../k6" && pwd)
 
 readonly DURATION_SECONDS="${DURATION_SECONDS:-1800}"
 readonly LOAD_STEP=load
-readonly LOAD_RATE=500
+readonly LOAD_RATE="${LOAD_RATE:-500}"
 readonly LOAD_TIMEOUT_SECONDS=65
 readonly APP_PROBE_STEP=app_probe
 readonly APP_PROBE_RATE=5
