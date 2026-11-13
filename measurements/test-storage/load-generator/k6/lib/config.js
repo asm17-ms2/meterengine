@@ -6,11 +6,17 @@ function invalid(name, value) {
   throw new Error(`${name} 값이 잘못됐다: ${value}`);
 }
 
-function requiredSecretEnv(name) {
-  if (!__ENV[name]) {
-    throw new Error(`${name} 환경변수가 없다. export ${name} 뒤 실행한다`);
+// 조직 여러 곳을 섞어 보낼 때는 API_KEYS에 조직마다 키 하나씩 쉼표로 이어 넣는다.
+function apiKeys() {
+  const keys = (__ENV.API_KEYS || __ENV.API_KEY || '').split(',').filter((key) => key !== '');
+  if (keys.length === 0) {
+    throw new Error('API_KEY 환경변수가 없다. export API_KEY 뒤 실행한다');
   }
-  return __ENV[name];
+  return keys;
+}
+
+function headersOf(apiKey) {
+  return { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` };
 }
 
 export function intEnv(name) {
@@ -28,10 +34,11 @@ export function stepEnv(name) {
   return STEP_PATTERN.test(value || '') ? value : invalid(name, value);
 }
 
-const API_KEY = requiredSecretEnv('API_KEY');
+const HEADERS_BY_ORGANIZATION = apiKeys().map(headersOf);
 
 export const config = {
   baseUrl: (__ENV.BASE_URL || DEFAULT_BASE_URL).replace(/\/$/, ''),
   resultDir: __ENV.RESULT_DIR || 'results',
-  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${API_KEY}` },
+  headers: HEADERS_BY_ORGANIZATION[0],
+  headersByOrganization: HEADERS_BY_ORGANIZATION,
 };

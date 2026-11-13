@@ -14,6 +14,9 @@ const DURATION_SECONDS = intEnv('DURATION_SECONDS');
 const PRE_ALLOCATED_VUS = Math.max(50, Math.ceil(RATE * 0.15));
 const MAX_VUS = Math.max(500, RATE);
 const DUPLICATE_PERIOD = 100;
+// 순번을 그대로 나눠 조직을 고르면 10건마다 도는 이벤트 유형과 맞물려 조직마다 유형이 치우친다. 큰 홀수를 곱해 섞는다.
+const SEQUENCE_MIX = 0x9e3779b1;
+const UINT32_RANGE = 2 ** 32;
 const STORED = 200;
 const ACCEPTED = 202;
 
@@ -45,8 +48,19 @@ export const options = {
   thresholds: SUBMETRICS_IN_SUMMARY,
 };
 
+// 키는 결과 파일에 남지 않게 setup 값에 넣지 않고, 같은 순서의 config.headersByOrganization에서 꺼내 쓴다.
 export function setup() {
-  return { organizationId: loadOrganizationId(), customerIds: loadCustomerIds(), startedAt: new Date().toISOString() };
+  const organizations = config.headersByOrganization.map((headers) => ({
+    id: loadOrganizationId(headers),
+    customerIds: loadCustomerIds(headers),
+  }));
+  return { organizations, startedAt: new Date().toISOString() };
+}
+
+// 다시 보내는 건도 처음 보낸 조직으로 가도록 이벤트 순번으로 고른다.
+function organizationIndex(eventSequence, organizationCount) {
+  const mixed = Math.imul(eventSequence, SEQUENCE_MIX) >>> 0;
+  return Math.floor((mixed / UINT32_RANGE) * organizationCount);
 }
 
 export default function (data) {
@@ -55,8 +69,10 @@ export default function (data) {
   const resend = isResend(sequence, DUPLICATE_PERIOD);
   const eventSequence = resend ? sequence - 1 : sequence;
   const id = transactionId(RUN_ID, STEP, eventSequence);
-  const res = http.post(`${config.baseUrl}/v1/events`, JSON.stringify(buildEvent(data.customerIds, id, eventSequence)), {
-    headers: config.headers,
+  const index = organizationIndex(eventSequence, data.organizations.length);
+  const event = buildEvent(data.organizations[index].customerIds, id, eventSequence);
+  const res = http.post(`${config.baseUrl}/v1/events`, JSON.stringify(event), {
+    headers: config.headersByOrganization[index],
     tags: { name: REQUEST },
     timeout: '30s',
   });
@@ -80,7 +96,7 @@ export function handleSummary(data) {
     rate: RATE,
     max_vus: MAX_VUS,
     duplicate_period: DUPLICATE_PERIOD,
-    organization_id: data.setup_data?.organizationId ?? null,
+    organization_ids: (data.setup_data?.organizations ?? []).map((organization) => organization.id),
     started_at: data.setup_data?.startedAt ?? null,
     ended_at: new Date().toISOString(),
   };

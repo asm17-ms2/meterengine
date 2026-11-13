@@ -9,7 +9,7 @@ readonly STORE_WAIT_SECONDS="${STORE_WAIT_SECONDS:-600}"
 readonly STORE_POLL_SECONDS=5
 
 count_ids() {
-	psql -X -q -A -t -F ' ' -v ON_ERROR_STOP=1 -v organization_id="$1" -v prefix="$2" -v iterations="$3" \
+	psql -X -q -A -t -F ' ' -v ON_ERROR_STOP=1 -v organization_ids="$1" -v prefix="$2" -v iterations="$3" \
 		-v period="$4" -v failed_ids_file="$5" -v started_at="$6" <<'SQL'
 CREATE TEMP TABLE failed (id text PRIMARY KEY);
 \set copy '\\copy failed FROM ' :'failed_ids_file'
@@ -19,7 +19,7 @@ SELECT :'prefix' || n AS id FROM generate_series(0, :iterations - 1) AS n
 WHERE n % :period <> :period - 1;
 CREATE TEMP TABLE stored AS
 SELECT transaction_id AS id, received_at FROM event
-WHERE organization_id = :'organization_id' AND starts_with(transaction_id, :'prefix');
+WHERE organization_id = ANY (string_to_array(:'organization_ids', ',')::uuid[]) AND starts_with(transaction_id, :'prefix');
 SELECT 'expected', count(*) FROM expected
 UNION ALL SELECT 'stored', count(*) FROM stored
 UNION ALL SELECT 'failed', count(*) FROM failed
@@ -54,9 +54,10 @@ main() {
 	[ -f "$console" ] || die "콘솔 출력 파일이 없다: $console"
 	[ "$(json "$file" '.k6.metrics.iterations.values.count')" = "$(json "$file" '.k6.metrics.events_started.values.count')" ] ||
 		die "중간에 끊긴 실행이라 대조하지 않는다"
-	local organization_id
-	organization_id=$(json "$file" '.metadata.organization_id // empty')
-	[ -n "$organization_id" ] || die "결과 파일에 metadata.organization_id 가 없다: $file"
+	# 조직 한 곳만 쓰던 때의 결과 파일과 장애 실험 결과에는 organization_id 하나만 있다.
+	local organization_ids
+	organization_ids=$(json "$file" '.metadata.organization_ids // [.metadata.organization_id // empty] | join(",")')
+	[ -n "$organization_ids" ] || die "결과 파일에 metadata.organization_ids 가 없다: $file"
 	[ -n "${PGHOST:-}" ] || use_sut_db
 
 	local failed_ids counts accepted count=count_ids
@@ -68,7 +69,7 @@ main() {
 		log "카프카 경로 실행이다. 컨슈머가 다 저장할 때까지 최대 ${STORE_WAIT_SECONDS}초 기다린다"
 		count=count_ids_when_stored
 	fi
-	counts=$("$count" "$organization_id" \
+	counts=$("$count" "$organization_ids" \
 		"$(json "$file" .run_id)-$(json "$file" .metadata.step)-" \
 		"$(json "$file" .k6.metrics.iterations.values.count)" "$(json "$file" .metadata.duplicate_period)" \
 		"$failed_ids" "$(json "$file" .metadata.started_at)") || die "대조 쿼리 실패"

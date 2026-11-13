@@ -47,7 +47,7 @@ export const options = {
 };
 
 export function setup() {
-  return { organizationId: loadOrganizationId(), customerIds: loadCustomerIds(), startedAt: new Date().toISOString() };
+  return { organizationId: loadOrganizationId(config.headers), customerIds: loadCustomerIds(config.headers), startedAt: new Date().toISOString() };
 }
 
 function duplicateFlag(res) {
