@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -174,6 +175,10 @@ class GlobalExceptionHandler {
   @ExceptionHandler(HttpMessageNotReadableException.class)
   ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException(
       HttpMessageNotReadableException exception, HttpServletRequest request) {
+    Optional<ContentTooLargeException> contentTooLarge = contentTooLargeCause(exception);
+    if (contentTooLarge.isPresent()) {
+      return handleBusinessException(contentTooLarge.get());
+    }
     notifyRequestBodyRejected(request, ErrorCode.MALFORMED_REQUEST_BODY);
     return respond(ErrorCode.MALFORMED_REQUEST_BODY);
   }
@@ -224,6 +229,16 @@ class GlobalExceptionHandler {
   ResponseEntity<ErrorResponse> handleException(Exception exception) {
     logger.error("unhandled exception", exception);
     return respond(ErrorCode.INTERNAL_SERVER_ERROR);
+  }
+
+  // 길이 없이 온 본문은 읽는 도중에 상한을 넘고, JSON 변환기가 그 예외를 감싸서 올린다.
+  private static Optional<ContentTooLargeException> contentTooLargeCause(Throwable exception) {
+    for (Throwable cause = exception.getCause(); cause != null; cause = cause.getCause()) {
+      if (cause instanceof ContentTooLargeException contentTooLarge) {
+        return Optional.of(contentTooLarge);
+      }
+    }
+    return Optional.empty();
   }
 
   private void notifyRequestBodyRejected(HttpServletRequest request, ErrorCode errorCode) {

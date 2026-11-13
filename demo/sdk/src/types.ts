@@ -10,7 +10,8 @@ export type IngestEventInput = Omit<IngestEventRequest, "transaction_id"> & { tr
 
 export interface IngestEventResponse {
   transaction_id: string;
-  duplicate: boolean;
+  // 서버가 받아 두고 뒤에서 저장하는 202 응답에는 없다. 저장 전이라 중복 여부를 아직 모른다.
+  duplicate?: boolean;
 }
 
 export interface IngestEventBatchRequest {
@@ -20,7 +21,8 @@ export interface IngestEventBatchRequest {
 export interface IngestEventBatchResult {
   index: number;
   transaction_id: string;
-  result: "stored" | "duplicate" | "rejected";
+  // accepted는 서버가 받아 두었고 저장은 뒤에서 한다는 뜻이다.
+  result: "stored" | "duplicate" | "rejected" | "accepted";
   error?: ErrorResponse;
 }
 

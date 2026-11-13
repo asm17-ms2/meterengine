@@ -21,7 +21,7 @@ from core.api_client import (
 )
 from csvdemo.csvio import read_csv_events
 from csvdemo.expected import Prediction, predict_send
-from core.jsonl_log import JsonlLogWriter, classify_outcome
+from core.jsonl_log import ACCEPTED_STATUS, JsonlLogWriter, classify_outcome
 from core.model import DEFAULT_BASE_URL, KST, Event, build_body_text, kst_month, loads_decimal, parse_rfc3339
 from csvdemo.render import Console, format_gate, format_send_pair, format_summary
 
@@ -29,6 +29,8 @@ LOGS_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "logs"
 )
 PREVIEW_LIMIT = 5
+# 묶음의 행별 결과를 기록의 판정으로 옮긴다. accepted는 받아 두고 저장은 뒤에서 한다는 뜻이라 new로 센다.
+BATCH_OUTCOMES = {"stored": "new", "accepted": "new", "duplicate": "duplicate", "rejected": "rejected"}
 
 
 def run_send(args, console: Console) -> int:
@@ -158,7 +160,7 @@ def _send_batches(events, client, writer, counts, notes, console, args):
                 stop = stop or single_problem is not None or outcome == "error"
             elif failure is None:
                 row = next(batch_rows)
-                outcome = {"stored": "new", "duplicate": "duplicate", "rejected": "rejected"}[row["result"]]
+                outcome = BATCH_OUTCOMES[row["result"]]
                 summary = row["result"]
                 if row.get("error"):
                     summary += ": " + parse_problem(400, row["error"]).summary()
@@ -195,7 +197,7 @@ def _post_batch(client: ApiClient, batched: List[Event]):
     except (TransportError, KeyboardInterrupt) as error:
         return None, None, "UNKNOWN: " + (str(error) or "전송 중 중단되어 저장 여부를 확인할 수 없습니다"), None
     rows = (result.body or {}).get("results") if isinstance(result.body, dict) else None
-    if result.status == 200 and isinstance(rows, list) and len(rows) == len(batched) and all(isinstance(row, dict) and row.get("index") == index and row.get("transaction_id") == batched[index].transaction_id and row.get("result") in ("stored", "duplicate", "rejected") for index, row in enumerate(rows)):
+    if result.status in (200, ACCEPTED_STATUS) and isinstance(rows, list) and len(rows) == len(batched) and all(isinstance(row, dict) and row.get("index") == index and row.get("transaction_id") == batched[index].transaction_id and row.get("result") in BATCH_OUTCOMES for index, row in enumerate(rows)):
         return result, rows, None, None
     if 400 <= result.status < 500:
         problem = parse_problem(result.status, result.body)
@@ -224,7 +226,9 @@ def _send_one(client: ApiClient, writer: JsonlLogWriter, seq: int, event: Event,
     if verbose:
         print("  요청: " + body_text)
         print("  응답: " + result.body_text)
-    if outcome in ("new", "duplicate"):
+    if outcome == "new" and result.status == ACCEPTED_STATUS:
+        summary = "%d accepted (%dms)" % (result.status, result.elapsed_ms)
+    elif outcome in ("new", "duplicate"):
         summary = "200 duplicate=%s (%dms)" % (str(result.body.get("duplicate")).lower(), result.elapsed_ms)
     elif outcome == "rejected":
         summary = "%d %s" % (result.status, parse_problem(result.status, result.body).summary())

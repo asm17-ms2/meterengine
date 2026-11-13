@@ -45,6 +45,22 @@ class GlobalExceptionHandlerTest {
   }
 
   @Test
+  void 읽다가_상한을_넘어_끊긴_본문은_413_request_body_too_large로_답한다() {
+    ResponseEntity<ErrorResponse> response =
+        globalExceptionHandler.handleHttpMessageNotReadableException(bodyCutOffAtLimit(), request);
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONTENT_TOO_LARGE);
+    assertThat(response.getBody()).isEqualTo(ErrorResponse.from(ErrorCode.REQUEST_BODY_TOO_LARGE));
+  }
+
+  @Test
+  void 읽다가_상한을_넘어_끊긴_본문은_본문_거절로_알리지_않는다() {
+    globalExceptionHandler.handleHttpMessageNotReadableException(bodyCutOffAtLimit(), request);
+
+    assertThat(notifiedErrorCodes).isEmpty();
+  }
+
+  @Test
   void 알림을_받는_쪽이_실패해도_400_오류_응답을_낸다() {
     GlobalExceptionHandler handlerWithFailingListener =
         new GlobalExceptionHandler(
@@ -60,5 +76,14 @@ class GlobalExceptionHandlerTest {
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     assertThat(response.getBody()).isEqualTo(ErrorResponse.from(ErrorCode.MALFORMED_REQUEST_BODY));
+  }
+
+  // JSON 변환기는 본문을 읽다가 난 예외를 자기 예외로 감싸서 올린다.
+  private static HttpMessageNotReadableException bodyCutOffAtLimit() {
+    RuntimeException wrappedByJsonParser =
+        new IllegalStateException(
+            "JSON 해석 실패", new ContentTooLargeException(ErrorCode.REQUEST_BODY_TOO_LARGE));
+    return new HttpMessageNotReadableException(
+        "읽다가 끊긴 본문", wrappedByJsonParser, new MockHttpInputMessage(new byte[0]));
   }
 }

@@ -109,6 +109,7 @@ public enum ErrorCode {
 
   // 413 Content Too Large
   UPLOAD_SIZE_EXCEEDED(HttpStatus.CONTENT_TOO_LARGE, "업로드 크기가 상한을 넘었습니다"),
+  REQUEST_BODY_TOO_LARGE(HttpStatus.CONTENT_TOO_LARGE, "요청 본문이 상한을 넘었습니다"),
 
   // 415 Unsupported Media Type
   REQUEST_TYPE_NOT_SUPPORTED(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "지원하지 않는 요청 Content-Type입니다"),
@@ -121,6 +122,8 @@ public enum ErrorCode {
 
   // 503 Service Unavailable
   REQUEST_TIMED_OUT(HttpStatus.SERVICE_UNAVAILABLE, "요청 처리 시간이 초과되었습니다"),
+  EVENT_INGEST_UNAVAILABLE(
+      HttpStatus.SERVICE_UNAVAILABLE, "이벤트를 받지 못했습니다. 같은 transaction_id로 다시 보내세요"),
   TOSS_PAYMENTS_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "토스페이먼츠 응답을 확인하지 못했습니다"),
   CAPTCHA_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "자동 가입 방지 확인 결과를 받지 못했습니다. 잠시 뒤 다시 시도하세요");
 
