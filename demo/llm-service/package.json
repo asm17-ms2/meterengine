@@ -11,7 +11,7 @@
     "seed": "node scripts/seed-demo.ts",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "node --test \"src/**/*.test.ts\""
+    "test": "node --test \"src/**/*.test.ts\" \"scripts/**/*.test.ts\""
   },
   "dependencies": {
     "@ant-design/icons": "6.3.4",

@@ -132,7 +132,7 @@ class ConsoleApp(App):
                 self.health.get("api_key") or "(없음)",
                 self.health.get("owner") or "(없음)",
             ),
-            "도입사  " + self._organization_text(),
+            "조직  " + self._organization_text(),
             "전송  new %s / 중복 %s / 거절 %s / 실패 %s / 건너뜀 %s"
             % tuple(counts.get(k, 0) for k in ("new", "duplicate", "rejected", "error", "skipped")),
         ]

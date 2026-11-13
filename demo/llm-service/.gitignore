@@ -7,3 +7,10 @@ next-env.d.ts
 data/
 playwright-report/
 test-results/
+# 초기화 스크립트의 출력(키와 암호가 든 설정, 상태 파일)과 앱 DB. 스크립트는 저장소 안의 경로를 거절하지만 한 번 더 막는다
+*.seed-state.json
+*.seed-state.json.tmp
+openab-config*.json
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal

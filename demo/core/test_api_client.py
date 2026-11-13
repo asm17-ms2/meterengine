@@ -90,8 +90,8 @@ class AuthorizationHeaderTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             ApiClient(backend.base_url, LIVE_KEY, environment="legacy")
 
-    def test_키의_도입사를_조회한다(self):
-        body = {"id": ORGANIZATION_ID, "name": "데모 도입사", "status": "active", "created_at": "2026-08-01T00:00:00Z"}
+    def test_키의_조직을_조회한다(self):
+        body = {"id": ORGANIZATION_ID, "name": "데모 조직", "status": "active", "created_at": "2026-08-01T00:00:00Z"}
         backend = self.backend(body=body)
         result = ApiClient(backend.base_url, LIVE_KEY).get_organization()
         self.assertEqual(backend.requests[0][:2], ("GET", "/v1/organization"))
@@ -110,11 +110,11 @@ class FakeClient:
 
 
 class RequireOrganizationTest(unittest.TestCase):
-    def test_200이면_도입사를_돌려준다(self):
+    def test_200이면_조직을_돌려준다(self):
         organization = require_organization(
-            FakeClient(200, {"id": ORGANIZATION_ID, "name": "데모 도입사", "status": "active"})
+            FakeClient(200, {"id": ORGANIZATION_ID, "name": "데모 조직", "status": "active"})
         )
-        self.assertEqual(organization, Organization(id=ORGANIZATION_ID, name="데모 도입사"))
+        self.assertEqual(organization, Organization(id=ORGANIZATION_ID, name="데모 조직"))
 
     def test_401이면_code를_보이고_멈춘다(self):
         with self.assertRaises(ApiRequestError) as caught:

@@ -478,7 +478,7 @@ class CustomerCacheScopeTest(unittest.TestCase):
             BridgeState(path, self.PROD).remember_customer("고객", OTHER_CUSTOMER)
             self.assertIsNone(BridgeState(path, self.LOCAL).cached_customer("고객"))
 
-    def test_scope는_전송_대상과_도입사와_키로_만든다(self):
+    def test_scope는_전송_대상과_조직과_키로_만든다(self):
         config = BridgeConfig(base_url="http://localhost:8080/", api_key=LIVE_KEY)
         self.assertTrue(config.scope("d7cee55d-8c82-4afc-b996-6749d8b26a4e").startswith(self.LOCAL + "|"))
         other = BridgeConfig(base_url=config.base_url, api_key="me_test_" + "a" * 32)
@@ -490,7 +490,7 @@ class CustomerCacheScopeTest(unittest.TestCase):
         self.assertNotIn(LIVE_KEY, scope)
         self.assertNotIn("2LtA", scope)
 
-    def test_scope_도입사가_UUID가_아니면_거부한다(self):
+    def test_scope_조직이_UUID가_아니면_거부한다(self):
         with self.assertRaises(ValueError):
             BridgeConfig().scope("이건-UUID가-아님")
 

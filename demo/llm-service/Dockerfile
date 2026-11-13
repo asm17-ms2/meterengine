@@ -13,7 +13,7 @@ RUN pnpm --filter @meterengine/llm-service build
 
 FROM node:24.22.1-bookworm-slim AS runner
 WORKDIR /app
-ENV NODE_ENV=production PORT=3200 HOSTNAME=0.0.0.0 NEXT_TELEMETRY_DISABLED=1 LUMEN_DATABASE_PATH=/data/lumen.sqlite
+ENV NODE_ENV=production PORT=3200 HOSTNAME=0.0.0.0 NEXT_TELEMETRY_DISABLED=1 OPENAB_DATABASE_PATH=/data/openab.sqlite
 COPY --from=builder --chown=node:node /app/llm-service/.next/standalone ./
 COPY --from=builder --chown=node:node /app/llm-service/.next/static ./llm-service/.next/static
 RUN mkdir /data && chown node:node /data && chmod 700 /data

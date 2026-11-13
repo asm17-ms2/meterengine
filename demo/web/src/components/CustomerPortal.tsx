@@ -47,9 +47,9 @@ export function CustomerPortal({ names, target, customers, month, data, isOperat
   const billed = data?.invoices.reduce((sum, invoice) => sum + invoice.total_amount, 0) ?? 0;
   const paid = data?.payments.filter((payment) => ["paid", "partially_canceled"].includes(payment.status)).reduce((sum, payment) => sum + payment.amount - payment.canceled_amount, 0) ?? 0;
   return <section className="customer-portal">
-    <div className="portal-context"><span>{isOperatorView ? "시연 운영: 고객 화면 설정" : "도입사 고객 화면"}</span>{isOperatorView && <Link href={`/customers?${new URLSearchParams({ target, customer_id: data?.customer.id ?? "", month })}`}>선택한 고객 화면 열기</Link>}</div>
+    <div className="portal-context"><span>{isOperatorView ? "고객 화면 미리보기" : "고객 화면"}</span>{isOperatorView && <Link href={`/customers?${new URLSearchParams({ target, customer_id: data?.customer.id ?? "", month })}`}>선택한 고객 화면 열기</Link>}</div>
     <header className="portal-header"><p className="portal-eyebrow">사용량과 납부 내역</p><Typography.Title level={1} style={{ margin: "8px 0" }}>{data?.customer.name ?? "고객 선택"}</Typography.Title><Typography.Text type="secondary">사용한 만큼의 요금과 결제 상태를 한곳에서 확인하세요.</Typography.Text></header>
-    {isOperatorView && <section className="demo-operator-controls"><h2>시연 대상 선택</h2><p>이 설정은 시연 운영 화면에만 표시합니다. 고객 화면에는 선택한 고객의 사용량과 납부 내역만 표시합니다.</p><form key={`${target}/${data?.customer.id}/${month}`} action="/customers" method="get" className="portal-filters">
+    {isOperatorView && <section className="demo-operator-controls"><h2>미리 볼 고객 선택</h2><p>이 선택 칸은 고객 화면에 나오지 않습니다. 고객 화면에는 고른 고객의 사용량과 납부 내역만 나옵니다.</p><form key={`${target}/${data?.customer.id}/${month}`} action="/customers" method="get" className="portal-filters">
       <input type="hidden" name="view" value="operator" />
       <label>연동 대상<select name="target" defaultValue={target} onChange={(event) => { const form = event.currentTarget.form; const customer = form?.elements.namedItem("customer_id"); if (customer instanceof HTMLSelectElement) customer.value = ""; form?.requestSubmit(); }}>{names.map((name) => <option key={name} value={name}>{name}</option>)}</select></label>
       <label>고객<select name="customer_id" defaultValue={data?.customer.id ?? ""}><option value="" disabled>고객 선택</option>{customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}</option>)}</select></label>
@@ -62,7 +62,7 @@ export function CustomerPortal({ names, target, customers, month, data, isOperat
       <label>청구 월<input type="month" name="month" defaultValue={month} required /></label>
       <Button htmlType="submit">내역 보기</Button>
     </form>}
-    {data === null ? <Card><Empty description="아직 고객이 없습니다. 도입사 콘솔에서 고객을 등록한 뒤 다시 불러오세요." /></Card> : <>
+    {data === null ? <Card><Empty description="아직 고객이 없습니다. MeterEngine 콘솔에서 고객을 등록한 뒤 다시 불러오세요." /></Card> : <>
       {data.errors.map((error, index) => <Alert key={index} type="warning" title={error} showIcon />)}
       <div className="portal-statement" aria-label="청구 요약">
         <div><p>{month} 현재 청구 예정</p><strong>{!data.hasDraftData ? "확인 필요" : data.draft === null ? "청구 예정 없음" : MONEY.format(data.draft.amount)}</strong><span>{!data.hasDraftData ? "청구 예정액을 불러오지 못했습니다" : data.draft === null ? "확정 내역은 아래에서 확인하세요" : "현재 집계 기준, 부가세 별도"}</span></div>

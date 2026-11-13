@@ -1,4 +1,4 @@
-const SERVICE_ERROR_BRAND = Symbol.for("meterengine.lumen.service-error.v1");
+const SERVICE_ERROR_BRAND = Symbol.for("meterengine.openab.service-error.v1");
 
 export type ServiceErrorDetails = {
   status: number;

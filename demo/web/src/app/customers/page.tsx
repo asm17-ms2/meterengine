@@ -17,7 +17,7 @@ async function loadPortalProps(params: Record<string, string | string[] | undefi
     const response = await client.listCustomers();
     const selected = typeof params.customer_id === "string" && params.customer_id !== "" ? params.customer_id : response.customers[0]?.id;
     if (selected !== undefined && !response.customers.some((customer) => customer.id === selected)) {
-      throw new Error("도입사에 속한 고객을 다시 선택하세요.");
+      throw new Error("이 조직에 속한 고객을 다시 선택하세요.");
     }
     const data = selected === undefined ? null : await loadCustomerPortal(client, selected, month);
     return { props: { names, target, customers: response.customers, month, data, isOperatorView: params.view === "operator" } };

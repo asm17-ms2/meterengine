@@ -166,19 +166,19 @@ class StatusTextTest(unittest.TestCase):
         app.health = health
         return app._status_text()
 
-    def test_가린_키와_도입사_확인_실패_code를_보여준다(self):
+    def test_가린_키와_조직_확인_실패_code를_보여준다(self):
         text = self.status_text(
             {"api_key": "me_live_****2LtA", "organization": None, "organization_error": "invalid_credentials"}
         )
         self.assertIn("me_live_****2LtA", text)
         self.assertIn("invalid_credentials", text)
 
-    def test_확인한_도입사를_보여준다(self):
+    def test_확인한_조직을_보여준다(self):
         text = self.status_text(
-            {"organization": {"id": "d7cee55d-8c82-4afc-b996-6749d8b26a4e", "name": "데모 도입사"},
+            {"organization": {"id": "d7cee55d-8c82-4afc-b996-6749d8b26a4e", "name": "데모 조직"},
              "organization_error": None}
         )
-        self.assertIn("데모 도입사", text)
+        self.assertIn("데모 조직", text)
 
 
 if __name__ == "__main__":
