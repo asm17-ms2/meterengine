@@ -356,6 +356,23 @@ sum by (instance) (jvm_memory_used_bytes{area="heap"}) / 1048576
 1000 * max by (instance) (jvm_gc_pause_seconds_max)
 ```
 
+### 조직 여러 곳을 섞어 재기
+
+컨슈머는 읽은 묶음을 조직별로 나눠 저장하므로, 조직이 섞이면 묶음 하나에 쿼리가 조직 수만큼 늘어난다. 이 차이를 재려면 조직마다 키가 하나씩 있어야 한다. 부하 발생기에서 조직과 키를 SUT DB에 직접 넣는다.
+
+```bash
+scripts/seed-organizations.sh 10 /root/.me-organization-keys
+export API_KEYS=$(paste -sd, /root/.me-organization-keys)
+scripts/run-ingest-steps.sh
+```
+
+- 이름이 `k6-organization-01`부터인 조직을 만들고 조직마다 live 모드의 `ingest`, `read` 키를 하나씩 넣는다. 원문은 키 파일(권한 600)에만 남고 DB에는 SHA-256만 들어간다.
+- 서버는 30초마다 키를 다시 읽는다. 넣고 30초 뒤부터 쓸 수 있다.
+- 다시 돌리면 있는 조직은 그대로 두고 앞서 넣은 키를 폐기한 뒤 새 키를 넣는다. 조직은 지우지 않는다.
+- `API_KEYS`가 있으면 `API_KEY`보다 먼저 쓴다. 이벤트는 조직에 고르게 나뉘고, 다시 보내는 건은 처음 보낸 조직으로 간다. 고객 100명은 조직마다 만든다.
+- 대조는 결과 파일에 적힌 조직을 모두 합쳐 센다. 명령은 조직 한 곳일 때와 같다.
+- RDS 장애 주입 실험(`run-fault.sh`)은 조직 한 곳만 쓴다. `API_KEYS`를 주면 첫 번째 키만 쓴다.
+
 ## RDS 장애 주입 실험
 
 초당 500건을 보내는 동안 RDS를 다른 AZ로 두 번 넘겨, 수집이 끊긴 시간과 받지 못한 건수를 잰다.
