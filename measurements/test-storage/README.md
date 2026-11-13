@@ -373,6 +373,20 @@ scripts/run-ingest-steps.sh
 - 대조는 결과 파일에 적힌 조직을 모두 합쳐 센다. 명령은 조직 한 곳일 때와 같다.
 - RDS 장애 주입 실험(`run-fault.sh`)은 조직 한 곳만 쓴다. `API_KEYS`를 주면 첫 번째 키만 쓴다.
 
+### 조회를 같이 걸기
+
+수집 부하가 도는 동안 같은 DB를 쓰는 조회가 얼마나 느려지는지 보려면, 부하 발생기에서 조회 탐침을 따로 띄운다. 수집 부하보다 먼저 시작하고 RUN_ID는 다르게 준다.
+
+```bash
+export RUN_ID=<RUN_ID>-read
+setsid nohup scripts/run-read-probe.sh > /root/$RUN_ID.log 2>&1 < /dev/null &
+```
+
+- 이벤트 한 건 찾기(`GET /v1/events/lookup`)와 한 고객의 이번 달 이벤트 목록(`GET /v1/events`)을 번갈아 부른다. 합쳐서 초당 4건이고 `READ_RATE`로 바꾼다. 길이는 `DURATION_SECONDS`(기본 1,800초)다.
+- 시작할 때 기준 이벤트 한 건을 넣고 그것이 저장될 때까지 60초 기다린다. 카프카 경로에서는 컨슈머가 돌고 있어야 시작된다.
+- 요청 줄은 `READ 종류 보낸시각ms 걸린ms status`이고 `k6/results/<RUN_ID>/<RUN_ID>-read-probe.console.log`에 쌓인다.
+- 목록 조회는 그 고객의 이벤트가 늘수록 느려진다. 수집 부하의 영향만 보려면 부하가 끝난 뒤의 값과 견준다.
+
 ## RDS 장애 주입 실험
 
 초당 500건을 보내는 동안 RDS를 다른 AZ로 두 번 넘겨, 수집이 끊긴 시간과 받지 못한 건수를 잰다.
