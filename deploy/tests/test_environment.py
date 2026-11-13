@@ -45,9 +45,11 @@ def staging():
 
 
 def write_target(directory, name, **changes):
-    target = {**staging(), "autoscaling_group_name": f"meterengine-{name}-app", **changes}
+    target = {**staging(), "autoscaling_group_name": f"meterengine-{name}-app",
+              "kafka_autoscaling_group_names": [f"meterengine-{name}-consumer", f"meterengine-{name}-ingest"], **changes}
     if name not in environment.GROUP_ENVIRONMENTS:
         del target["autoscaling_group_name"]
+        del target["kafka_autoscaling_group_names"]
     (directory / f"{name}.json").write_text(json.dumps(target))
     return target
 
@@ -67,6 +69,11 @@ class LoadTargetTest(unittest.TestCase):
         del target["autoscaling_group_name"]
         (self.directory / "staging.json").write_text(json.dumps(target))
         with self.assertRaisesRegex(ValueError, "필드"):
+            environment.load_target("staging", self.directory)
+
+    def test_load_rejects_kafka_groups_of_another_environment(self):
+        write_target(self.directory, "staging", kafka_autoscaling_group_names=["meterengine-production-consumer"])
+        with self.assertRaisesRegex(ValueError, "kafka_autoscaling_group_names"):
             environment.load_target("staging", self.directory)
 
     def test_load_rejects_group_for_sut(self):
@@ -166,6 +173,10 @@ class ValidateTargetTest(unittest.TestCase):
 
     def test_validate_accepts_matching_server(self):
         environment.validate_target(self.target, self.observed)
+
+    def test_validate_accepts_servers_of_the_kafka_groups(self):
+        for group in ("meterengine-staging-consumer", "meterengine-staging-ingest"):
+            environment.validate_target(self.target, {**self.observed, "autoscaling_group_name": group})
 
     def test_validate_rejects_other_group(self):
         production = environment.load_target("production", ENVIRONMENTS)

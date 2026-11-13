@@ -1,4 +1,7 @@
 locals {
+  kafka_enabled = var.kafka != null
+  # backend가 만드는 event.ingest 토픽의 파티션 수
+  kafka_ingest_partitions    = 6
   app_version_parameter_name = "${var.parameter_path}/app-version"
   # 부팅 템플릿이 받는 값의 전부다. 키는 deploy/tests의 시험이 템플릿과 대조한다.
   boot_template_vars = {
@@ -87,7 +90,12 @@ resource "aws_autoscaling_group" "app" {
       max_healthy_percentage = 200
       instance_warmup        = 180
     }
+    # 역할 태그는 새로 뜨는 서버에만 붙는다. 태그가 바뀌면 떠 있던 서버도 새로 띄워 역할이 섞인 채 남지 않게 한다.
+    triggers = ["tag"]
   }
+
+  # 새 서버는 뜰 때 카프카 파라미터를 읽는다. 읽는 쪽(컨슈머)과 수집 서버가 먼저 선 뒤에 이 그룹의 역할을 바꾼다.
+  depends_on = [aws_ssm_parameter.kafka, aws_autoscaling_group.consumer, aws_lb_listener_rule.ingest_to_ingest_servers]
 
   # 상태 확인으로 바꿀 때도 새 서버가 healthy가 된 뒤 옛 서버를 뺀다. 한 대뿐인 서버를 먼저 끄지 않는다.
   instance_maintenance_policy {
@@ -110,6 +118,16 @@ resource "aws_autoscaling_group" "app" {
     key                 = "Environment"
     value               = var.environment
     propagate_at_launch = true
+  }
+  # deploy.sh가 이 태그를 METERENGINE_ROLE로 넘긴다. 태그가 없으면 서버가 전부 맡는다.
+  # 카프카를 켜기 전에는 태그를 달지 않는다. 달기만 해도 위의 triggers가 서버를 새로 띄운다.
+  dynamic "tag" {
+    for_each = local.kafka_enabled ? { ServerRole = "api" } : {}
+    content {
+      key                 = tag.key
+      value               = tag.value
+      propagate_at_launch = true
+    }
   }
 
   # 원하는 대수는 확장 정책이 정한다.
