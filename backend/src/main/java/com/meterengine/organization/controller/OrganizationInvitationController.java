@@ -141,6 +141,7 @@ public class OrganizationInvitationController {
             code=invitation_unavailable: 만료됐거나 이미 수락 또는 취소된 초대다.
             code=organization_member_already_exists: 초대 이메일의 사용자가 이미 그 도입사에 소속돼 있다.
             code=email_already_exists: 수락을 처리하는 사이에 같은 이메일의 계정이 먼저 만들어졌다.
+            code=operator_membership_conflict: 초대 이메일의 사용자가 운영자다. 운영자는 조직에 소속될 수 없다.
             """)
   })
   public OrganizationInvitationAcceptanceResponse acceptOrganizationInvitation(

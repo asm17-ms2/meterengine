@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { environmentNoticeClass, environmentOptions, environmentQueryValue, isAllowedEnvironment, isClosedLegacyEnvironment, readEnvironment, showsLegacyEnvironment, withoutClosedLegacyEnvironment } from "../src/lib/environment.ts";
+import { environmentNoticeClass, environmentOptions, environmentQueryValue, isAllowedEnvironment, isClosedLegacyEnvironment, isLockedEnvironment, readEnvironment, showsLegacyEnvironment, withoutClosedLegacyEnvironment } from "../src/lib/environment.ts";
 
 test("only the live environment notice uses the warning style", () => {
   assert.match(environmentNoticeClass("live"), /\benvironment-notice-live\b/);
@@ -44,4 +44,10 @@ test("only a non-default environment is written to the address", () => {
   assert.equal(environmentQueryValue("test"), undefined);
   assert.equal(environmentQueryValue("live"), "live");
   assert.equal(environmentQueryValue("legacy"), "legacy");
+});
+
+test("until the live environment opens, only the test environment is usable", () => {
+  assert.equal(isLockedEnvironment("test", false), false);
+  for (const environment of ["live", "legacy"]) assert.equal(isLockedEnvironment(environment, false), true, environment);
+  for (const environment of ["test", "live", "legacy"]) assert.equal(isLockedEnvironment(environment, true), false, environment);
 });

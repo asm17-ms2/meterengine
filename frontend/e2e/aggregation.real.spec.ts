@@ -2,6 +2,7 @@ import { expect, test, type BrowserContext, type Locator, type Page } from "@pla
 import { randomUUID } from "node:crypto";
 import { CONSENT_DOCUMENTS, CONSENT_VERSION } from "../src/lib/auth/consents";
 import { consoleHeaders } from "./console-environment";
+import { openLiveEnvironment } from "./real-organization";
 
 const API_URL = process.env.S1_API_URL ?? "http://127.0.0.1:38147";
 const PASSWORD = "local-aggregation-e2e-password";
@@ -98,7 +99,7 @@ test("집계 10종과 단위 변환을 수집부터 사용량, 청구 예정액,
     const operatorToken = (await operator.json()).token;
     if (typeof operatorToken !== "string" || !operatorToken) throw new Error("운영자 검증 세션이 없습니다.");
     secrets.add(operatorToken);
-    expect((await request.put(`${API_URL}/v1/organizations/${organizationId}/status`, { headers: { Authorization: `Bearer ${operatorToken}` }, data: { status: "active" } })).status()).toBe(200);
+    openLiveEnvironment(organizationId);
 
     context = await browser.newContext({ baseURL: "http://localhost:33147", viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();

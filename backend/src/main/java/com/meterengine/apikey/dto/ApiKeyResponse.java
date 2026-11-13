@@ -27,7 +27,8 @@ public record ApiKeyResponse(
         OffsetDateTime expiresAt,
     @Schema(description = "키를 폐기한 시각. 폐기하지 않았으면 null") @JsonProperty("revoked_at")
         OffsetDateTime revokedAt,
-    @Schema(description = "인스턴스별 분당 요청 한도. null이면 무제한이다") @JsonProperty("rate_limit_per_minute")
+    @Schema(description = "인스턴스별 분당 요청 한도. null이면 무제한이다. 테스트 환경 키는 이 값과 플랫폼 상한 가운데 작은 쪽이 적용된다")
+        @JsonProperty("rate_limit_per_minute")
         Integer rateLimitPerMinute,
     @Schema(
             description = "서버 조회 시점의 키 상태. 폐기된 키는 만료 시각과 관계없이 revoked다",

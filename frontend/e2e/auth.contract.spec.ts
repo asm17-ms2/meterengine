@@ -83,11 +83,13 @@ test("signup sends displayed consent versions without stale Bearer or a password
   await page.getByLabel("비밀번호", { exact: true }).fill(LOGIN_PASSWORD);
   await page.getByRole("checkbox").nth(0).check();
   await page.getByRole("checkbox").nth(1).check();
-  await page.getByRole("button", { name: "가입 신청", exact: true }).click();
-  await expect(page).toHaveURL(/\/pending$/);
-  await expect(page.getByRole("heading", { level: 1, name: "가입 신청을 접수했어요", exact: true })).toBeVisible();
-  await expect(page.getByRole("complementary", { name: "가입 절차" }).locator('li[aria-current="step"]')).toContainText("가입 승인");
+  await page.getByRole("button", { name: "가입", exact: true }).click();
+  // 가입하면 승인을 기다리지 않고 이메일 인증으로 넘어간다.
+  await expect(page).toHaveURL(/\/email-verifications$/);
+  await expect(page.getByRole("heading", { level: 1, name: "메일함을 확인하세요", exact: true })).toBeVisible();
+  await expect(page.getByRole("complementary", { name: "가입 절차" }).locator('li[aria-current="step"]')).toContainText("이메일 인증");
   await expect(page.getByText("운영자", { exact: false })).toHaveCount(0);
+  await expect(page.getByText("승인", { exact: false })).toHaveCount(0);
   await page.reload();
   expect(await page.evaluate(() => localStorage.length + sessionStorage.length)).toBe(0);
   expect(await page.content()).not.toContain(LOGIN_PASSWORD);
@@ -104,7 +106,7 @@ test("signup shows the captcha outage message when the backend answers after the
   await page.getByLabel("비밀번호", { exact: true }).fill(LOGIN_PASSWORD);
   await page.getByRole("checkbox").nth(0).check();
   await page.getByRole("checkbox").nth(1).check();
-  await page.getByRole("button", { name: "가입 신청", exact: true }).click();
+  await page.getByRole("button", { name: "가입", exact: true }).click();
   await expect(page.getByText("확인 서비스가 응답하지 않아 요청을 받지 못했어요. 잠시 뒤 다시 시도해 주세요.")).toBeVisible({ timeout: 15_000 });
   await expect(page).toHaveURL(/\/signup$/);
 });
@@ -351,7 +353,7 @@ test("each screen has its own document title", async ({ page }) => {
   await page.goto("/login");
   await expect(page).toHaveTitle("로그인 | MeterEngine");
   await page.goto("/signup");
-  await expect(page).toHaveTitle("가입 신청 | MeterEngine");
+  await expect(page).toHaveTitle("가입 | MeterEngine");
   await login(page);
   await expectTenantUrl(page, "/customers");
   await expect(page).toHaveTitle("고객 | MeterEngine");
@@ -563,29 +565,15 @@ test("copy results are announced through a status region that is already present
   await expect(dialog.getByRole("status")).toHaveText("복사했어요.");
 });
 
-test("the operator user list sends the active organizations once instead of once per user", async ({ page, request }) => {
+test("the operator user list does not load organizations because an operator cannot attach an account to one", async ({ page, request }) => {
   await login(page, "operator@contract.local", "/admin/users");
   await expect(page).toHaveURL(/\/admin\/users$/);
   await request.post(`${FIXTURE_URL}/__control`, { data: { bulk: true } });
   const payload = await (await page.request.get("/admin/users", { headers: { RSC: "1" } })).text();
-  expect(payload).toContain("66666666-6666-4666-8666-000000000000");
-  const perUserReferences = payload.split(":props:organizations:").length - 1;
-  expect(perUserReferences).toBeLessThan(100);
-});
-
-test("the operator's own card keeps both actions on the same top edge when only one shows a disabled reason", async ({ page, request }) => {
-  await login(page, "operator@contract.local", "/admin/users");
-  await expect(page).toHaveURL(/\/admin\/users$/);
-  await request.post(`${FIXTURE_URL}/__control`, { data: { bulk: true } });
-  await page.goto("/admin/users");
-  const card = page.getByRole("article").filter({ hasText: "operator@contract.local" });
-  const attach = card.getByRole("button", { name: "조직 소속 연결", exact: true });
-  const remove = card.getByRole("button", { name: "플랫폼 운영 권한 제거", exact: true });
-  await expect(attach).toBeEnabled();
-  await expect(remove).toBeDisabled();
-  const attachBox = (await attach.boundingBox())!;
-  const removeBox = (await remove.boundingBox())!;
-  expect(Math.abs(attachBox.y - removeBox.y)).toBeLessThanOrEqual(0.5);
+  expect(payload).toContain("대량 사용자 0");
+  expect(payload).not.toContain("66666666-6666-4666-8666-000000000000");
+  const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
+  expect(calls.some((call: { path: string }) => call.path.startsWith("/v1/organizations"))).toBe(false);
 });
 
 test("accepting an invitation as a new account does not send a stale session", async ({ page, request }) => {
@@ -678,17 +666,29 @@ test("a one-time link that opens in a new tab says so", async ({ page }) => {
   await expect(dialog.getByRole("link", { name: "초대 링크 열기", exact: true })).toHaveAccessibleDescription("새 탭에서 열려요.");
 });
 
-test("an API key without a rate limit is listed as unlimited", async ({ page }) => {
+test("an API key without a rate limit takes the test environment limit, and is unlimited only in the live environment", async ({ page }) => {
   await login(page, "member@contract.local", "/integrations");
   await expectTenantUrl(page, "/integrations");
   await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
   const dialog = page.getByRole("dialog");
+  await expect(dialog.getByText("비우면 테스트 환경 한도를 적용해요.", { exact: false })).toBeVisible();
   await dialog.getByLabel(/^키 이름/).fill("한도 없는 키");
   await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
   await expect(dialog.locator(".secret-result")).toBeVisible();
   await page.reload();
   const table = page.locator(".workspace-desktop-table");
-  await expect(table.getByRole("row", { name: /한도 없는 키/ })).toContainText("무제한");
+  await expect(table.getByRole("row", { name: /한도 없는 키/ })).toContainText("테스트 환경 한도");
+  await expect(table.getByRole("row", { name: /한도 없는 키/ })).not.toContainText("무제한");
+  // 키는 발급한 환경에만 있으므로 실제 환경에서 따로 발급해 본다.
+  await page.goto(`/integrations?organization_id=${ORGANIZATION_ID}&environment=live`);
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(table.getByRole("row", { name: /한도 없는 키/ })).toHaveCount(0);
+  await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  await dialog.getByLabel(/^키 이름/).fill("실제 환경 한도 없는 키");
+  await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  await expect(dialog.locator(".secret-result")).toBeVisible();
+  await page.reload();
+  await expect(table.getByRole("row", { name: /실제 환경 한도 없는 키/ })).toContainText("무제한");
 });
 
 test("the sign-in frame starts its headings with the page h1", async ({ page }) => {
@@ -764,7 +764,7 @@ test("signup with a blank name asks for that name instead of a length limit", as
   await page.getByLabel("비밀번호", { exact: true }).fill(LOGIN_PASSWORD);
   await page.getByRole("checkbox").nth(0).check();
   await page.getByRole("checkbox").nth(1).check();
-  await page.getByRole("button", { name: "가입 신청", exact: true }).click();
+  await page.getByRole("button", { name: "가입", exact: true }).click();
   await expect(page.getByText("조직 이름을 입력하세요.", { exact: true })).toBeVisible();
   await expect(page.getByText("255자 이내", { exact: false })).toHaveCount(0);
   const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
@@ -788,22 +788,25 @@ test("a dangerous row action is a quiet link and its final confirmation carries 
   await expect(confirm).toHaveClass(/ant-btn-primary/);
 });
 
-test("the operator organization list shows the application time in the console KST format", async ({ page, request }) => {
+test("the operator organization list shows the signup time in the console KST format", async ({ page, request }) => {
   await login(page, "operator@contract.local", "/admin/organizations");
   await expect(page).toHaveURL(/\/admin\/organizations/);
   await request.post(`${FIXTURE_URL}/__control`, { data: { bulk: true } });
   await page.goto("/admin/organizations?status=all");
-  await expect(page.getByText(/^신청일 /).first()).toHaveText(/^신청일 \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} KST$/);
+  await expect(page.getByText(/^가입일 /).first()).toHaveText(/^가입일 \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} KST \/ 실제 환경 (사용 중|승인 전)$/);
 });
 
 test("the operator organization list asks the backend for the selected status", async ({ page, request }) => {
   await login(page, "operator@contract.local", "/admin/organizations");
   await expect(page).toHaveURL(/\/admin\/organizations/);
-  await page.goto("/admin/organizations?status=all");
-  await expect(page.getByRole("link", { name: "승인 대기" })).toBeVisible();
+  // 가입 승인이 없어 처음 여는 목록은 전체 조직이다.
+  await expect(page.getByRole("link", { name: "전체 조직" })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("link", { name: "승인 대기" })).toHaveCount(0);
+  await page.getByRole("link", { name: "사용 중", exact: true }).click();
+  await expect(page).toHaveURL(/status=active/);
   const paths = (await (await request.get(`${FIXTURE_URL}/__requests`)).json()).map((call: { path: string }) => call.path);
-  expect(paths).toContain("/v1/organizations?status=pending");
   expect(paths).toContain("/v1/organizations");
+  expect(paths).toContain("/v1/organizations?status=active");
 });
 
 test("a disabled operator action explains itself through its description", async ({ page }) => {
@@ -828,12 +831,12 @@ test("operator dialogs report invalid input inline instead of browser bubbles", 
   await expect(create.getByLabel(/^초기 비밀번호/)).toHaveAttribute("aria-invalid", "true");
   await request.post(`${FIXTURE_URL}/__control`, { data: { bulk: true } });
   await page.goto("/admin/users");
-  const card = page.getByRole("article").filter({ hasText: "operator@contract.local" });
-  await card.getByRole("button", { name: "조직 소속 연결", exact: true }).click();
-  const attach = page.getByRole("dialog", { name: "조직 소속 연결" });
-  await attach.getByRole("button", { name: "소속 연결", exact: true }).click();
-  await expect(attach.getByText("항목을 선택하세요.")).toBeVisible();
-  await expect(attach.getByLabel(/^연결할 조직/)).toHaveAttribute("aria-invalid", "true");
+  // 운영자는 계정을 조직에 붙이지 못하고, 조직에 소속된 계정은 운영자가 되지 못한다.
+  await expect(page.getByRole("button", { name: "조직 소속 연결" })).toHaveCount(0);
+  const joined = page.getByRole("article").filter({ hasText: "joined@contract.local" }).getByRole("button", { name: "플랫폼 운영자로 변경", exact: true });
+  await expect(joined).toBeDisabled();
+  await expect(joined).toHaveAccessibleDescription("조직에 소속된 계정은 플랫폼 운영자로 바꿀 수 없어요.");
+  await expect(page.getByRole("link", { name: "내 조직으로 이동" })).toHaveCount(0);
   const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
   expect(calls.some((call: { path: string; method: string }) => call.method === "POST" && (call.path === "/v1/user-accounts" || /^\/v1\/organizations\/[^/]+\/members$/.test(call.path)))).toBe(false);
 });
@@ -854,7 +857,7 @@ test("operator actions recheck current role after demotion", async ({ page, requ
   await login(page, "operator@contract.local", "/admin/users");
   await expect(page).toHaveURL(/\/admin\/users$/);
   await expect(page.getByRole("button", { name: "플랫폼 운영 권한 제거", exact: true })).toBeDisabled();
-  await page.getByRole("button", { name: "플랫폼 운영자로 변경", exact: true }).click();
+  await page.getByRole("article").filter({ hasText: "other@contract.local" }).getByRole("button", { name: "플랫폼 운영자로 변경", exact: true }).click();
   const cookie = (await page.context().cookies()).find(cookie => cookie.name === "me_session")!;
   await request.post(`${FIXTURE_URL}/__control`, { data: { demote: cookie.value } });
   await page.getByRole("button", { name: "플랫폼 운영자로 변경 확정" }).click();
@@ -1159,4 +1162,118 @@ test("operator list titles use the shared screen title size", async ({ page }) =
 test("registering a customer is the primary action in the customer list title row", async ({ page }) => {
   await login(page);
   await expect(page.getByRole("button", { name: "고객 등록", exact: true })).toHaveClass(/ant-btn-primary/);
+});
+
+const LOCKED_ORGANIZATION_ID = "aaaaaaaa-0000-4000-8000-000000000001";
+const LIVE_APPLICATION = { id: "bbbbbbbb-0000-4000-8000-000000000001", organization_id: LOCKED_ORGANIZATION_ID, organization_name: "새로 가입한 조직", business_registration_number: "1234567891", toss_payments_merchant_id: "contract-mid", status: "pending", business_status: "unchecked", tax_type: null, rejection_reason: null, created_at: "2026-11-01T00:00:00Z", reviewed_at: null, observed_toss_payments_merchant_id: null, merchant_id_checked_at: null };
+
+test("signup without email verification returns to login with a ready notice", async ({ page }) => {
+  await page.goto("/signup");
+  await page.getByLabel("조직 이름", { exact: true }).fill("새 도입사");
+  await page.getByLabel("담당자 이름", { exact: true }).fill("새 담당자");
+  // 가짜 서버는 verified로 시작하는 이메일을 인증이 꺼진 서버의 가입처럼 인증된 계정으로 돌려준다.
+  await page.getByLabel("이메일", { exact: true }).fill("verified@contract.local");
+  await page.getByLabel("비밀번호", { exact: true }).fill(LOGIN_PASSWORD);
+  await page.getByRole("checkbox").nth(0).check();
+  await page.getByRole("checkbox").nth(1).check();
+  await page.getByRole("button", { name: "가입", exact: true }).click();
+  await expect(page).toHaveURL(url => url.pathname === "/login" && url.searchParams.get("reason") === "signed_up");
+  await expect(page.getByText("가입했어요. 가입한 이메일과 비밀번호로 로그인하세요.", { exact: true })).toBeVisible();
+});
+
+test("a new organization works in the test environment and is sent to the application when it opens the live one", async ({ page }) => {
+  await login(page, "locked@contract.local", "/customers");
+  await expect(page).toHaveURL(url => url.pathname === "/customers" && url.searchParams.get("organization_id") === LOCKED_ORGANIZATION_ID);
+  await expect(page.getByRole("heading", { level: 1, name: "고객", exact: true })).toBeVisible();
+  await expect(page.locator(".environment-notice")).toContainText("실제 환경은 이용 신청이 승인되면 쓸 수 있어요.");
+  await page.getByRole("combobox", { name: "업무 환경", exact: true }).click();
+  await expect(page.locator(".ant-select-item-option")).toHaveText(["테스트 환경", "실제 환경 (승인 전)"]);
+  await page.locator(".ant-select-item-option", { hasText: "실제 환경" }).click();
+  // 신청 화면으로 가면 입력하던 내용이 사라지므로 먼저 묻는다.
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toContainText("실제 환경 이용 신청 화면으로 갈까요?");
+  await expect(dialog).toContainText("실제 환경은 이용 신청이 승인되면 쓸 수 있어요. 이 화면에서 입력하거나 고른 내용은 지워져요.");
+  await dialog.getByRole("button", { name: "취소", exact: true }).click();
+  await expect(page).toHaveURL(url => url.pathname === "/customers");
+  await page.getByRole("combobox", { name: "업무 환경", exact: true }).click();
+  await page.locator(".ant-select-item-option", { hasText: "실제 환경" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "이동", exact: true }).click();
+  await expect(page).toHaveURL(url => url.pathname === "/live-environment" && !url.searchParams.has("environment"));
+  await expect(page.getByRole("heading", { level: 1, name: "실제 환경 이용 신청", exact: true })).toBeVisible();
+  // 주소에 실제 환경을 직접 적어도 화면을 열지 않는다.
+  await page.goto(`/customers?organization_id=${LOCKED_ORGANIZATION_ID}&environment=live`);
+  await expect(page).toHaveURL(url => url.pathname === "/live-environment" && !url.searchParams.has("environment"));
+  await expect(page.getByText("운영자", { exact: false })).toHaveCount(0);
+});
+
+test("the application is rejected beside the field at once and waits for review after it passes", async ({ page, request }) => {
+  await login(page, "locked@contract.local", "/live-environment");
+  await expect(page.getByRole("heading", { level: 2, name: "실제 환경은 이용 신청이 승인되면 쓸 수 있어요", exact: true })).toBeVisible();
+  const form = page.locator("form.workspace-form");
+  await form.getByLabel(/^사업자등록번호/).fill("000-00-00000");
+  await form.getByLabel(/^토스페이먼츠 상점아이디/).fill("contract-mid");
+  await form.getByLabel(/^실결제 클라이언트 키/).fill("live_ck_contract");
+  await form.getByLabel(/^실결제 시크릿 키/).fill("live_sk_contract");
+  await form.getByRole("button", { name: "이용 신청", exact: true }).click();
+  await expect(form.locator(".field-error")).toHaveText("국세청에 등록되지 않은 사업자등록번호입니다");
+  await expect(form.getByLabel(/^사업자등록번호/)).toHaveAttribute("aria-invalid", "true");
+  await expect(form.getByLabel(/^토스페이먼츠 상점아이디/)).toHaveValue("contract-mid");
+  await form.getByLabel(/^사업자등록번호/).fill("123-45-67891");
+  await form.getByLabel(/^실결제 시크릿 키/).fill("live_sk_contract");
+  await form.getByRole("button", { name: "이용 신청", exact: true }).click();
+  await expect(page.getByRole("heading", { level: 2, name: "신청을 받았어요", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "이용 신청", exact: true })).toHaveCount(0);
+  const calls = (await (await request.get(`${FIXTURE_URL}/__requests`)).json()).filter((call: { path: string; method: string }) => call.path === "/v1/organization/live-environment-applications" && call.method === "POST");
+  // 잠긴 조직의 신청은 테스트 환경의 요청으로 간다.
+  expect(calls.map((call: { environment: string }) => call.environment)).toEqual(["test", "test"]);
+  expect(calls[1].body).toEqual({ business_registration_number: "1234567891", toss_payments_merchant_id: "contract-mid", toss_payments_client_key: "live_ck_contract", toss_payments_secret_key: "live_sk_contract" });
+  expect(await page.content()).not.toContain("live_sk_contract");
+});
+
+test("the operator rejects with a reason the organization reads, then approves the next application to open the live environment", async ({ page, request, browser }) => {
+  await request.post(`${FIXTURE_URL}/__control`, { data: { liveEnvironmentApplications: [LIVE_APPLICATION] } });
+  await login(page, "operator@contract.local", "/admin/live-environment-applications");
+  await expect(page).toHaveURL(/\/admin\/live-environment-applications$/);
+  const card = page.getByRole("article").filter({ hasText: "새로 가입한 조직" });
+  await expect(card).toContainText("자동 확인 못 함");
+  await expect(card).toContainText("승인하기 전에 사업자등록번호를 직접 확인하세요.");
+  await card.getByRole("button", { name: "신청 거절", exact: true }).click();
+  const reject = page.getByRole("dialog", { name: "신청 거절 확인" });
+  // 사유를 비우면 브라우저 말풍선이 아니라 칸 아래에서 알리고 요청을 보내지 않는다.
+  await reject.getByRole("button", { name: "신청 거절 확정", exact: true }).click();
+  await expect(reject.getByLabel(/^거절 사유/)).toHaveAttribute("aria-invalid", "true");
+  await expect(reject.getByLabel(/^거절 사유/)).toHaveAccessibleDescription(/거절 사유를 입력하세요\.$/);
+  await expect(reject.getByLabel(/^거절 사유/)).toBeFocused();
+  await reject.getByLabel(/^거절 사유/).fill("상점아이디가 계약서와 달라요.");
+  await reject.getByRole("button", { name: "신청 거절 확정", exact: true }).click();
+  // 검토를 마친 신청은 검토 대기 목록에서 빠지고 결과는 알림으로 남는다.
+  await expect(page.getByText("신청을 거절했어요.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "검토할 신청이 없어요", exact: true })).toBeVisible();
+
+  const memberContext = await browser.newContext({ baseURL: FRONTEND_ORIGIN });
+  const member = await memberContext.newPage();
+  await login(member, "locked@contract.local", "/live-environment");
+  await expect(member.getByRole("heading", { level: 2, name: "신청이 승인되지 않았어요", exact: true })).toBeVisible();
+  await expect(member.getByText("사유: 상점아이디가 계약서와 달라요.", { exact: true })).toBeVisible();
+  await expect(member.getByRole("button", { name: "이용 신청", exact: true })).toBeVisible();
+  // 승인되기 전에 연 화면이라 콘솔 틀은 실제 환경이 잠긴 것으로 알고 있다.
+  await member.goto(`/customers?organization_id=${LOCKED_ORGANIZATION_ID}`);
+  await expect(member.locator(".environment-notice")).toContainText("실제 환경은 이용 신청이 승인되면 쓸 수 있어요.");
+
+  await request.post(`${FIXTURE_URL}/__control`, { data: { liveEnvironmentApplications: [{ ...LIVE_APPLICATION, id: "bbbbbbbb-0000-4000-8000-000000000002", business_status: "operating", tax_type: "부가가치세 일반과세자" }] } });
+  await page.goto("/admin/live-environment-applications");
+  await page.getByRole("article").filter({ hasText: "새로 가입한 조직" }).getByRole("button", { name: "이용 승인", exact: true }).click();
+  const approve = page.getByRole("dialog", { name: "이용 승인 확인" });
+  await approve.getByRole("button", { name: "이용 승인 확정", exact: true }).click();
+  await expect(page.getByText("실제 환경 이용을 승인했어요.", { exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "승인", exact: true }).click();
+  await expect(page.getByRole("article").filter({ hasText: "새로 가입한 조직" })).toContainText("실제 결제가 아직 없어요. 첫 실제 결제 때 확인해요.");
+
+  // 새로 고치지 않고 화면만 옮겨도 틀이 열린 것을 알아 실제 환경으로 바꿀 수 있다.
+  await member.locator(".environment-notice").getByRole("link", { name: "실제 환경 이용 신청", exact: true }).click();
+  await expect(member.getByRole("heading", { level: 2, name: "실제 환경을 쓰고 있어요", exact: true })).toBeVisible();
+  await member.getByRole("combobox", { name: "업무 환경", exact: true }).click();
+  await expect(member.locator(".ant-select-item-option")).toHaveText(["테스트 환경", "실제 환경"]);
+  await expect(member.locator(".environment-notice")).not.toContainText("이용 신청");
+  await memberContext.close();
 });

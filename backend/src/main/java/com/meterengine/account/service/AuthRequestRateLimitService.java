@@ -14,6 +14,7 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.web.firewall.RequestRejectedException;
@@ -26,6 +27,9 @@ public class AuthRequestRateLimitService {
   private static final Logger logger = LoggerFactory.getLogger(AuthRequestRateLimitService.class);
   // 로그인 계정 한도는 계정과 IP 쌍으로 세고, 여러 IP에 나눈 시도는 이 배수의 계정 전체 상한으로 막는다.
   static final int LOGIN_ACCOUNT_TOTAL_MULTIPLIER = 10;
+  // 실제 환경 이용 신청은 거절돼도 국세청과 토스페이먼츠를 부르므로 조직마다 시도를 센다.
+  static final int LIVE_ENVIRONMENT_APPLICATION_LIMIT = 10;
+  static final Duration LIVE_ENVIRONMENT_APPLICATION_WINDOW = Duration.ofMinutes(30);
   private final AuthRequestRateLimitRepository authRequestRateLimitRepository;
   private final AuthRateLimitProperties authRateLimitProperties;
   private final List<Network> trustedProxies;
@@ -99,6 +103,29 @@ public class AuthRequestRateLimitService {
                 SecureTokens.hash(account),
                 authRateLimitProperties.signupAccountLimit())),
         authRateLimitProperties.signupWindow());
+  }
+
+  public void apply(UUID organizationId) {
+    if (!authRateLimitProperties.enabled()) return;
+    Optional<Rejection> rejection =
+        authRequestRateLimitRepository.consume(
+            new Bucket(
+                "live_environment_application",
+                SecureTokens.hash(organizationId.toString()),
+                LIVE_ENVIRONMENT_APPLICATION_LIMIT),
+            List.of(),
+            LIVE_ENVIRONMENT_APPLICATION_WINDOW.toSeconds());
+    if (rejection.isPresent()) {
+      if (rejection.get().firstInWindow())
+        logger.warn(
+            "Live environment application limited organization_id={} limit={} retry_after={}",
+            organizationId,
+            rejection.get().limit(),
+            rejection.get().retryAfterSeconds());
+      throw new TooManyRequestsException(
+          ErrorCode.RATE_LIMIT_EXCEEDED, rejection.get().retryAfterSeconds());
+    }
+    authRequestRateLimitRepository.cleanExpired();
   }
 
   private void check(

@@ -17,6 +17,7 @@ const SUCCESS_MESSAGES: Partial<Record<string, string>> = {
   restoreWebhookEndpoint: "수신 주소를 복원했어요.",
   retryWebhookDelivery: "통보를 발송 대기에 다시 넣었어요.",
   restoreBillableMetric: "미터를 복원했어요.",
+  createLiveEnvironmentApplication: "실제 환경 이용을 신청했어요.",
 };
 
 export function successMessage(operation: string): string {
@@ -25,6 +26,7 @@ export function successMessage(operation: string): string {
 
 const UNCONFIRMED_MESSAGES: Partial<Record<string, string>> = {
   updateTossPaymentsCredential: "토스페이먼츠 키 저장 결과를 확인하지 못했어요. 이 화면을 새로 조회해 토스페이먼츠 연동 목록의 저장 시각을 확인하고, 바뀌지 않았으면 다시 저장하세요.",
+  createLiveEnvironmentApplication: "신청 결과를 확인하지 못했어요. 이 화면을 새로 조회해 신청 내역에 있는지 확인하고, 없으면 다시 신청하세요.",
 };
 
 export function unconfirmedMessage(operation: string): string {
@@ -33,10 +35,17 @@ export function unconfirmedMessage(operation: string): string {
 
 const ERROR_MESSAGES: Partial<Record<string, string>> = {
   toss_payments_credential_missing: "현재 결제 모드의 토스페이먼츠 키가 없어요. 조직 설정의 토스페이먼츠 연동에서 키를 저장한 뒤 다시 시도하세요.",
+  live_environment_already_open: "이미 실제 환경을 쓰고 있어요. 화면을 새로 조회하세요.",
+  live_environment_application_in_progress: "확인 중인 신청이 있어요. 화면을 새로 조회해 신청 상태를 확인하세요.",
 };
 
-export function errorMessageForCode(code: string): string | undefined {
-  return ERROR_MESSAGES[code];
+// 같은 오류 코드라도 작업에 따라 다음에 할 일이 달라 작업별 문구를 먼저 찾는다.
+const OPERATION_ERROR_MESSAGES: Partial<Record<string, Partial<Record<string, string>>>> = {
+  createLiveEnvironmentApplication: { toss_payments_unavailable: "토스페이먼츠에서 키를 확인하지 못해 신청이 접수되지 않았어요. 잠시 뒤 다시 신청해 주세요." },
+};
+
+export function errorMessageForCode(code: string, operation?: string): string | undefined {
+  return (operation ? OPERATION_ERROR_MESSAGES[operation]?.[code] : undefined) ?? ERROR_MESSAGES[code];
 }
 
 export function staleCancellationMessage(operation: string, code?: string): string | undefined {

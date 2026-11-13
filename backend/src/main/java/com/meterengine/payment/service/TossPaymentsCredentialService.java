@@ -15,6 +15,7 @@ import com.meterengine.payment.client.TossPaymentsResult;
 import com.meterengine.payment.dto.ListTossPaymentsCredentialsResponse;
 import com.meterengine.payment.dto.TossPaymentsCredentialResponse;
 import com.meterengine.payment.dto.UpdateTossPaymentsCredentialRequest;
+import com.meterengine.payment.entity.PaymentSetting;
 import com.meterengine.payment.entity.TossPaymentsCredential;
 import com.meterengine.payment.entity.TossPaymentsCredentialId;
 import com.meterengine.payment.repository.PaymentArchiveRepository;
@@ -38,7 +39,7 @@ public class TossPaymentsCredentialService {
   private static final String CREDENTIAL_CHECK_ORDER_ID_PREFIX = "credential-check-";
   private static final String CLIENT_KEY_INFIX = "_ck_";
   private static final String SECRET_KEY_INFIX = "_sk_";
-  private static final String KEY_PREFIX_MESSAGE = "%s 모드의 키는 %s 뒤에 값이 이어져야 합니다";
+  private static final String KEY_PREFIX_MESSAGE = "%s 환경 키는 %s 뒤에 값이 이어져야 합니다";
   private static final String SECRET_KEY_CHARACTER_MESSAGE = "시크릿 키에는 콜론, 공백, ASCII 밖 문자를 쓸 수 없습니다";
   private static final String SECRET_KEY_REJECTED_MESSAGE = "토스페이먼츠가 받지 않는 시크릿 키입니다";
 
@@ -142,6 +143,17 @@ public class TossPaymentsCredentialService {
     return transactionTemplate.execute(status -> save(organizationId, mode, request));
   }
 
+  // 저장하지 않고 키만 확인한다. 실제 환경 이용 신청이 승인 전에 실결제 키를 확인할 때 쓴다.
+  public void check(String mode, UpdateTossPaymentsCredentialRequest request) {
+    checkPrefixes(mode, request);
+    verify(request.secretKey());
+  }
+
+  // check로 확인해 둔 키를 토스에 다시 묻지 않고 저장한다. 부른 쪽의 트랜잭션에 합류한다.
+  public void store(UUID organizationId, String mode, UpdateTossPaymentsCredentialRequest request) {
+    transactionTemplate.executeWithoutResult(status -> save(organizationId, mode, request));
+  }
+
   private TossPaymentsCredentialResponse save(
       UUID organizationId, String mode, UpdateTossPaymentsCredentialRequest request) {
     requireMode(mode);
@@ -184,17 +196,26 @@ public class TossPaymentsCredentialService {
     List<FieldError> errors = new ArrayList<>();
     String clientKeyPrefix = mode + CLIENT_KEY_INFIX;
     if (!hasValueAfterPrefix(request.clientKey(), clientKeyPrefix)) {
-      errors.add(new FieldError("client_key", KEY_PREFIX_MESSAGE.formatted(mode, clientKeyPrefix)));
+      errors.add(
+          new FieldError(
+              "client_key", KEY_PREFIX_MESSAGE.formatted(environmentName(mode), clientKeyPrefix)));
     }
     String secretKeyPrefix = mode + SECRET_KEY_INFIX;
     if (!hasValueAfterPrefix(request.secretKey(), secretKeyPrefix)) {
-      errors.add(new FieldError("secret_key", KEY_PREFIX_MESSAGE.formatted(mode, secretKeyPrefix)));
+      errors.add(
+          new FieldError(
+              "secret_key", KEY_PREFIX_MESSAGE.formatted(environmentName(mode), secretKeyPrefix)));
     } else if (!fitsBasicAuth(request.secretKey())) {
       errors.add(new FieldError("secret_key", SECRET_KEY_CHARACTER_MESSAGE));
     }
     if (!errors.isEmpty()) {
       throw new InvalidRequestException(ErrorCode.INVALID_TOSS_PAYMENTS_CREDENTIAL, errors);
     }
+  }
+
+  // 화면은 모드를 환경 이름으로 부르므로 오류 문구도 그 이름을 쓴다.
+  private static String environmentName(String mode) {
+    return PaymentSetting.LIVE.equals(mode) ? "실제" : "테스트";
   }
 
   private static boolean hasValueAfterPrefix(String key, String prefix) {

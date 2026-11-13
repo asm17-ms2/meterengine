@@ -1,7 +1,7 @@
 # 생성 파일: guide/scripts/make_overlay.py 로 다시 만든다. 손으로 고치지 않는다.
 overlay: 1.0.0
 info:
-  title: "MeterEngine 도입사 가이드용 조정"
+  title: "MeterEngine 가이드용 조정"
   version: "1.0.0"
 actions:
   # 경로가 모두 /v1/ 로 시작하므로 servers 에 /v1 을 붙이지 않는다.
@@ -19,9 +19,6 @@ actions:
   - target: "$.paths['/v1/organizations'].get"
     update:
       x-excluded: true
-  - target: "$.paths['/v1/organizations/{id}/members'].post"
-    update:
-      x-excluded: true
   - target: "$.paths['/v1/organizations/{id}/status'].put"
     update:
       x-excluded: true
@@ -32,6 +29,12 @@ actions:
     update:
       x-excluded: true
   - target: "$.paths['/v1/user-accounts/{id}/role'].put"
+    update:
+      x-excluded: true
+  - target: "$.paths['/v1/live-environment-applications'].get"
+    update:
+      x-excluded: true
+  - target: "$.paths['/v1/live-environment-applications/{id}/status'].put"
     update:
       x-excluded: true
   # x-excluded: 콘솔 세션
@@ -49,6 +52,12 @@ actions:
       x-excluded: true
   # x-excluded: 가입, 로그인, 초대
   - target: "$.paths['/v1/signups'].post"
+    update:
+      x-excluded: true
+  - target: "$.paths['/v1/email-verifications'].post"
+    update:
+      x-excluded: true
+  - target: "$.paths['/v1/email-verification-confirmations'].post"
     update:
       x-excluded: true
   - target: "$.paths['/v1/sessions'].post"
@@ -120,6 +129,9 @@ actions:
   - target: "$.paths['/v1/toss-payments-credentials/{mode}'].delete"
     update:
       x-hidden: true
+  - target: "$.paths['/v1/organization/live-environment-applications'].post"
+    update:
+      x-hidden: true
   # x-hidden: 세션 전용 관리(조회)
   - target: "$.paths['/v1/api-keys'].get"
     update:
@@ -128,6 +140,9 @@ actions:
     update:
       x-hidden: true
   - target: "$.paths['/v1/organization/members'].get"
+    update:
+      x-hidden: true
+  - target: "$.paths['/v1/organization/live-environment-applications'].get"
     update:
       x-hidden: true
   # x-hidden: 토스페이먼츠 웹훅 수신
@@ -141,7 +156,9 @@ actions:
         - name: "organization-environment-controller"
           x-group: "업무 환경"
         - name: "current-organization-controller"
-          x-group: "도입사 정보"
+          x-group: "조직 정보"
+        - name: "live-environment-application-controller"
+          x-group: "실제 환경 이용 신청 (콘솔 전용)"
         - name: "api-key-controller"
           x-group: "API 키 (콘솔 전용)"
         - name: "organization-people-controller"

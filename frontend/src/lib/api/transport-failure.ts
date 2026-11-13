@@ -4,6 +4,13 @@ export function maskApiPath(path: string): string {
 
 const UNREADABLE_READ_MESSAGE = "정보를 불러오지 못했어요. 잠시 뒤 다시 조회해 주세요.";
 
+// 한도 창이 30분까지라 1분부터는 분으로 말한다. 일찍 다시 보내지 않게 올림한다.
+export function rateLimitMessage(retryAfterSeconds: number | undefined): string {
+  if (!retryAfterSeconds) return "요청이 너무 많아요. 잠시 뒤 다시 시도해 주세요.";
+  const wait = retryAfterSeconds < 60 ? `${retryAfterSeconds}초` : `${Math.ceil(retryAfterSeconds / 60)}분`;
+  return `요청이 너무 많아요. ${wait} 뒤 다시 시도해 주세요.`;
+}
+
 export function unreadableErrorMessage(method: string): string {
   return method === "GET" ? UNREADABLE_READ_MESSAGE : "요청 결과를 확인하지 못했어요. 화면을 새로 조회해 반영됐는지 확인하세요.";
 }

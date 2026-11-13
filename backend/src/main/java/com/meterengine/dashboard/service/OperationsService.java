@@ -43,7 +43,7 @@ public class OperationsService {
                     row.getString("latest_status")));
     return new OperationsResponse(
         OffsetDateTime.now(clock),
-        count("select count(*) from organization where status = 'pending'"),
+        count("select count(*) from live_environment_application where status = 'pending'"),
         count("select count(*) from organization where status = 'active'"),
         count("select count(*) from user_account"),
         count("select count(*) from payment_attempt where status = 'pending' and mode = 'live'"),

@@ -15,6 +15,10 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, UUID> 
   @Query("SELECT u FROM UserAccount u WHERE lower(u.email) = lower(:email)")
   Optional<UserAccount> findByEmailIgnoreCase(@Param("email") String email);
 
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("SELECT u FROM UserAccount u WHERE lower(u.email) = lower(:email)")
+  Optional<UserAccount> findForUpdateByEmailIgnoreCase(@Param("email") String email);
+
   List<UserAccount> findByOrderByCreatedAtAscIdAsc();
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)

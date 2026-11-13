@@ -106,6 +106,7 @@ public class UserAccountController {
       description =
           """
           사용자의 역할을 바꾸고 바뀐 사용자를 돌려준다. 바뀐 역할은 그 사용자의 다음 요청부터 적용된다.
+          조직에 소속된 사용자는 operator로 바꿀 수 없다. 운영자 역할과 조직 소속은 함께 가질 수 없다.
           operator 로그인 세션만 부를 수 있다.
           """)
   @ApiResponses({
@@ -123,7 +124,18 @@ public class UserAccountController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=user_account_not_found: 그런 사용자가 없다")
+        description = "code=user_account_not_found: 그런 사용자가 없다"),
+    @ApiResponse(
+        responseCode = "409",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description =
+            """
+            code=last_operator_required: 마지막 운영자를 member로 내리려 했다.
+            code=operator_membership_conflict: 조직에 소속된 사용자를 operator로 바꾸려 했다.
+            """)
   })
   public UserAccountResponse updateUserAccountRole(
       @AuthenticationPrincipal AuthenticatedPrincipal principal,

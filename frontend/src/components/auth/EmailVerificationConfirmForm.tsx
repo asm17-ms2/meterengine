@@ -9,7 +9,7 @@ export function EmailVerificationConfirmForm({ token }: { token: string }) {
   const [state, action, isPending] = useActionState<ConfirmEmailVerificationState, FormData>(confirmEmailVerificationAction, {});
   const feedbackRef = useRef<HTMLDivElement>(null);
   useEffect(() => { if (state.message) feedbackRef.current?.focus(); }, [state]);
-  if (state.done) return <div className="auth-form"><div ref={feedbackRef} tabIndex={-1}><Alert type="success" showIcon title={<span role="status">{state.message}</span>} /></div><Link className="primary-link" href="/pending">다음 단계로</Link></div>;
+  if (state.done) return <div className="auth-form"><div ref={feedbackRef} tabIndex={-1}><Alert type="success" showIcon title={<span role="status">{state.message}</span>} /></div><Link className="primary-link" href="/login">로그인</Link></div>;
   return <form onSubmit={event => { event.preventDefault(); const data = new FormData(event.currentTarget); startTransition(() => action(data)); }} className="auth-form" aria-busy={isPending}>
     {state.message && <div ref={feedbackRef} tabIndex={-1}><Alert type="error" showIcon title={<span role="alert">{state.message}</span>} /></div>}
     <input type="hidden" name="token" value={token} />

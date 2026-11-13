@@ -2,7 +2,8 @@ import "server-only";
 
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
-import { readEnvironment, type WorkspaceEnvironment } from "@/lib/environment";
+import { LIVE_ENVIRONMENT_PATH, readEnvironment, type WorkspaceEnvironment } from "@/lib/environment";
+import { workspaceHref } from "@/lib/workspace-href";
 import { requestApi, type Result } from "@/lib/api/transport";
 import { readSessionToken, requireTenantSession } from "@/lib/auth/session";
 import { hasScope, tenantRequestScope } from "@/lib/auth/permissions";
@@ -20,6 +21,8 @@ async function tenantRequest<T>(path: string, options: { method?: "GET" | "POST"
   const result = await requestApi<T>(path, { ...options, organizationId: (await headers()).get("x-meterengine-organization-id") || session.organization!.id, environment: environment === "legacy" ? undefined : environment, token: await readSessionToken() });
   if (!result.ok && result.error.status === 401) redirect(expiredLoginHref((await headers()).get("x-meterengine-current-path")));
   if (!result.ok && result.error.code === "organization_not_active") redirect("/organizations");
+  // 화면을 연 뒤에 잠긴 환경으로 요청이 가면 이용 신청 화면으로 보낸다.
+  if (!result.ok && result.error.code === "live_environment_locked") redirect(workspaceHref(LIVE_ENVIRONMENT_PATH, new URLSearchParams({ organization_id: session.organization!.id })));
   return result;
 }
 

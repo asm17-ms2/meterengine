@@ -4912,6 +4912,127 @@ paths:
       summary: 고객 인보이스 조회 링크 폐기
       tags:
       - invoice-view-link-controller
+  /v1/live-environment-applications:
+    get:
+      description: |
+        모든 조직의 신청을 최근 것부터 돌려준다. status를 주면 그 상태의 신청만 돌려준다.
+        승인한 신청은 승인 뒤 첫 실제 결제 응답의 상점아이디를 observed_toss_payments_merchant_id에 담는다. 신청한 값과 다르면 운영자가 확인한다.
+        operator 로그인 세션만 부를 수 있다. 페이지를 나누지 않는다.
+      operationId: listLiveEnvironmentApplications
+      parameters:
+      - description: 상태로 좁힌다. 생략하면 모든 상태다.
+        in: query
+        name: status
+        required: false
+        schema:
+          type: string
+          enum:
+          - pending
+          - approved
+          - rejected
+          pattern: pending|approved|rejected
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ListLiveEnvironmentApplicationsResponse"
+          description: 신청 목록. 없으면 live_environment_applications가 빈 배열이다
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=validation_error: status가 pending, approved, rejected가\
+            \ 아니다"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
+      summary: 실제 환경 이용 신청 목록 조회
+      tags:
+      - live-environment-application-controller
+  /v1/live-environment-applications/{id}/status:
+    put:
+      description: |
+        검토 중인 신청을 승인하거나 거절하고 바뀐 신청을 돌려준다.
+        승인하면 신청한 조직의 실제 환경이 열려 그 조직이 실제 환경과 실제 키를 쓸 수 있다.
+        거절은 rejection_reason이 있어야 하고, 신청한 조직이 그 사유를 읽는다. 거절된 조직은 다시 신청할 수 있다.
+        operator 로그인 세션만 부를 수 있다.
+      operationId: updateLiveEnvironmentApplicationStatus
+      parameters:
+      - description: 검토할 신청의 ID.
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateLiveEnvironmentApplicationStatusRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/LiveEnvironmentApplicationResponse"
+          description: 검토를 마친 신청
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=validation_error: status가 approved나 rejected가 아니거나, 거\
+            절인데 rejection_reason이 비었거나, 승인인데 rejection_reason을 보냈거나, 경로의 UUID 형식이\
+            \ 틀렸다"
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=live_environment_application_not_found: 그런 신청이 없다"
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=live_environment_application_already_reviewed: 이미 승인하\
+            거나 거절한 신청이다"
+      summary: 실제 환경 이용 신청 검토
+      tags:
+      - live-environment-application-controller
   /v1/operations:
     get:
       description: "운영자 세션으로 전체 도입사와 결제, 통보 장애, DB의 예약 작업 마지막 성공 시각을 확인한다. 결제 실패는\
@@ -5210,6 +5331,7 @@ paths:
             code=invitation_unavailable: 만료됐거나 이미 수락 또는 취소된 초대다.
             code=organization_member_already_exists: 초대 이메일의 사용자가 이미 그 도입사에 소속돼 있다.
             code=email_already_exists: 수락을 처리하는 사이에 같은 이메일의 계정이 먼저 만들어졌다.
+            code=operator_membership_conflict: 초대 이메일의 사용자가 운영자다. 운영자는 조직에 소속될 수 없다.
       security: []
       summary: 본인의 초대 수락
       tags:
@@ -5390,6 +5512,119 @@ paths:
       summary: 도입사 초대 취소
       tags:
       - organization-people-controller
+  /v1/organization/live-environment-applications:
+    get:
+      description: |
+        조직이 낸 신청을 최근 것부터 돌려준다. 거절된 신청의 사유는 rejection_reason에 있다.
+        로그인 세션만 부를 수 있다. 페이지를 나누지 않는다.
+      operationId: listOrganizationLiveEnvironmentApplications
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ListLiveEnvironmentApplicationsResponse"
+          description: 신청 목록. 없으면 live_environment_applications가 빈 배열이다
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 도입사가 정해지지 않은 로그인 세션이다.
+            code=organization_not_active: 도입사가 활성 상태가 아니다.
+            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
+      summary: 조직의 실제 환경 이용 신청 목록 조회
+      tags:
+      - live-environment-application-controller
+    post:
+      description: |
+        조직의 실제 환경을 열어 달라고 신청한다. 운영자가 승인하면 실제 환경이 열린다.
+        실제 환경이 잠긴 조직이 부르므로 X-MeterEngine-Environment를 test로 보낸다. 로그인 세션만 부를 수 있다.
+        신청할 때 바로 확인하는 것: 사업자등록번호의 검증 숫자, 국세청 사업자 상태, 토스페이먼츠 실제 결제 키.
+        등록되지 않은 번호와 폐업 사업자는 거절한다. 휴업 사업자는 받고 business_status를 suspended로 남긴다.
+        국세청 조회 결과를 받지 못하면 신청은 받고 business_status를 unchecked로 남긴다.
+        토스페이먼츠 키는 확인을 마치면 실제 환경의 live 키로 저장한다. 실제 환경이 열리기 전에는 쓰이지 않는다.
+        created_at은 KST(+09:00)로 나온다.
+      operationId: createLiveEnvironmentApplication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLiveEnvironmentApplicationRequest"
+        required: true
+      responses:
+        "201":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/LiveEnvironmentApplicationResponse"
+          description: 받은 신청. status는 pending이다
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=validation_error: 필수 값이 비었거나, 길이를 넘었거나, 문자열에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있다.
+            code=invalid_business_registration_number: 사업자등록번호가 열 자리 숫자가 아니거나 검증 숫자가 틀렸거나, 국세청에 등록되지 않았거나, 폐업한 사업자다. 이유는 errors의 business_registration_number에 있다.
+            code=invalid_toss_payments_credential: 키가 live_ck_, live_sk_로 시작하지 않거나 토스페이먼츠가 시크릿 키를 거절했다. 어느 필드인지는 errors의 toss_payments_client_key, toss_payments_secret_key에 있다.
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=live_environment_locked: X-MeterEngine-Environment를 test로\
+            \ 보내지 않았다"
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=live_environment_already_open: 이미 실제 환경이 열린 조직이다.
+            code=live_environment_application_in_progress: 검토 중인 신청이 있다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=rate_limit_exceeded: 조직의 신청 시도가 30분에 10번을 넘었다. 국세청과 토스페이먼츠 확인에서 거절된 시도도 센다.
+            Retry-After 헤더의 초만큼 기다린 뒤 다시 보낸다.
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 초
+              required: true
+              schema:
+                type: integer
+              style: simple
+        "503":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=toss_payments_unavailable: 토스페이먼츠 응답으로 키가 유효한지 확인하지 못\
+            했다. 신청은 받지 않았다"
+      summary: 실제 환경 이용 신청
+      tags:
+      - live-environment-application-controller
   /v1/organization/members:
     get:
       description: 소속이 사용 중이거나 보관된 사용자를 조회한다. 기본은 전체다.
@@ -5813,74 +6048,6 @@ paths:
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이다.
             code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
       summary: 도입사 목록 조회
-      tags:
-      - organization-controller
-  /v1/organizations/{id}/members:
-    post:
-      description: |
-        사용자를 도입사에 소속시킨다. 소속된 사용자는 로그인 세션의 도입사를 이 도입사로 바꿀 수 있다.
-        operator 로그인 세션만 부를 수 있다.
-      operationId: createOrganizationMember
-      parameters:
-      - description: 사용자를 소속시킬 도입사의 ID.
-        in: path
-        name: id
-        required: true
-        schema:
-          type: string
-          format: uuid
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateOrganizationMemberRequest"
-        required: true
-      responses:
-        "201":
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/OrganizationMemberResponse"
-          description: 만든 소속
-        "400":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          description: "code=validation_error: user_account_id가 없거나 UUID 형식이 아니거나\
-            , 경로의 UUID 형식이 틀렸다"
-        "401":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          description: |
-            code=authentication_required: Authorization 헤더가 없다.
-            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다.
-        "403":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          description: |
-            code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이다.
-            code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
-        "404":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          description: |
-            code=organization_not_found: 그런 도입사가 없다.
-            code=user_account_not_found: 그런 사용자가 없다.
-        "409":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          description: "code=organization_member_already_exists: 이미 이 도입사에 소속된 사용자\
-            다"
-      summary: 도입사 소속 추가
       tags:
       - organization-controller
   /v1/organizations/{id}/status:
@@ -7004,7 +7171,9 @@ paths:
     post:
       description: |
         도입사와 그 도입사에 소속된 member 사용자를 만들고 필수 동의를 기록한다.
-        도입사는 pending으로 만들어지고 운영자가 승인해 active가 될 때까지 로그인하면 403(organization_not_active)이다.
+        도입사는 active로 만들어져 운영자 승인 없이 바로 로그인해 테스트 환경을 쓴다.
+        실제 환경은 잠겨 있고(live_environment_opened_at이 null) 실제 환경 이용 신청이 승인되면 열린다.
+        잠긴 동안 실제 환경이나 환경 헤더 없는 요청은 403(live_environment_locked)이다.
         이메일은 소문자로 바꿔 저장한다.
         서버가 이메일 인증을 켰으면 user_account.email_verified가 false이고, 커밋 뒤 인증 메일을 보낸다.
         메일을 보내지 못해도 가입은 201이며 POST /v1/email-verifications로 다시 받는다.
@@ -7070,7 +7239,7 @@ paths:
           description: "code=captcha_unavailable: 캡차 확인 결과를 받지 못해 가입을 받지 않았다. 잠시 뒤\
             \ 다시 시도한다"
       security: []
-      summary: 가입 신청
+      summary: 가입
       tags:
       - signup-controller
   /v1/toss-payments-credentials:
@@ -7773,6 +7942,7 @@ paths:
     put:
       description: |
         사용자의 역할을 바꾸고 바뀐 사용자를 돌려준다. 바뀐 역할은 그 사용자의 다음 요청부터 적용된다.
+        조직에 소속된 사용자는 operator로 바꿀 수 없다. 운영자 역할과 조직 소속은 함께 가질 수 없다.
         operator 로그인 세션만 부를 수 있다.
       operationId: updateUserAccountRole
       parameters:
@@ -7825,6 +7995,14 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
           description: "code=user_account_not_found: 그런 사용자가 없다"
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=last_operator_required: 마지막 운영자를 member로 내리려 했다.
+            code=operator_membership_conflict: 조직에 소속된 사용자를 operator로 바꾸려 했다.
       summary: 사용자 역할 변경
       tags:
       - user-account-controller
@@ -8409,7 +8587,8 @@ components:
         rate_limit_per_minute:
           type: integer
           format: int32
-          description: 인스턴스별 분당 요청 한도. null이면 무제한이다
+          description: 인스턴스별 분당 요청 한도. null이면 무제한이다. 테스트 환경 키는 이 값과 플랫폼 상한 가운데 작은
+            쪽이 적용된다
         revoked_at:
           type: string
           format: date-time
@@ -8461,7 +8640,8 @@ components:
         rate_limit_per_minute:
           type: integer
           format: int32
-          description: 인스턴스별 분당 요청 한도. null이면 무제한이다
+          description: 인스턴스별 분당 요청 한도. null이면 무제한이다. 테스트 환경 키는 이 값과 플랫폼 상한 가운데 작은
+            쪽이 적용된다
         revoked_at:
           type: string
           format: date-time
@@ -8709,7 +8889,8 @@ components:
         rate_limit_per_minute:
           type: integer
           format: int32
-          description: 이 키의 인스턴스별 분당 요청 한도. 양수이며 생략하거나 null이면 무제한이다
+          description: 이 키의 인스턴스별 분당 요청 한도. 양수이며 생략하거나 null이면 무제한이다. 테스트 환경 키는 이 값과
+            플랫폼 상한 가운데 작은 쪽이 적용된다
         replaced_api_key_id:
           type: string
           format: uuid
@@ -8852,6 +9033,34 @@ components:
           description: "유효 기간(일). 생략하면 30일, 1일부터 90일까지"
           maximum: 90
           minimum: 1
+    CreateLiveEnvironmentApplicationRequest:
+      type: object
+      properties:
+        business_registration_number:
+          type: string
+          description: 사업자등록번호. 숫자 열 자리이고 하이픈과 공백은 빼고 읽는다
+          example: "1234567891"
+          maxLength: 20
+          minLength: 0
+        toss_payments_client_key:
+          type: string
+          description: 실제 결제에 쓸 토스페이먼츠 클라이언트 키. live_ck_로 시작한다
+          minLength: 1
+        toss_payments_merchant_id:
+          type: string
+          description: 토스페이먼츠가 발급한 상점아이디(MID). 승인 뒤 첫 결제 응답의 값과 견준다
+          maxLength: 64
+          minLength: 0
+        toss_payments_secret_key:
+          type: string
+          description: 실제 결제에 쓸 토스페이먼츠 시크릿 키. live_sk_로 시작한다. 암호화해 저장하고 어떤 응답에도 원문을
+            싣지 않는다
+          minLength: 1
+      required:
+      - business_registration_number
+      - toss_payments_client_key
+      - toss_payments_merchant_id
+      - toss_payments_secret_key
     CreateManagedMemberRequest:
       type: object
       properties:
@@ -8898,22 +9107,6 @@ components:
           minItems: 1
       required:
       - email
-    CreateOrganizationMemberRequest:
-      type: object
-      properties:
-        scopes:
-          type: array
-          description: 부여할 권한. 생략하면 조회 전용. 첫 대표관리자는 관리 권한을 받는다
-          items:
-            type: string
-            pattern: ^(ingest|read|admin)$
-          minItems: 1
-        user_account_id:
-          type: string
-          format: uuid
-          description: 도입사에 소속시킬 사용자
-      required:
-      - user_account_id
     CreatePaymentCancellationRequest:
       type: object
       properties:
@@ -9380,6 +9573,7 @@ components:
           - invalid_webhook_url
           - invalid_webhook_event_type
           - captcha_failed
+          - invalid_business_registration_number
           - authentication_required
           - invalid_credentials
           - permission_denied
@@ -9387,6 +9581,7 @@ components:
           - environment_mismatch
           - consent_required
           - email_not_verified
+          - live_environment_locked
           - customer_not_found
           - event_not_found
           - billable_metric_not_found
@@ -9406,6 +9601,7 @@ components:
           - webhook_delivery_not_found
           - invitation_not_found
           - email_verification_not_found
+          - live_environment_application_not_found
           - method_not_allowed
           - response_type_not_acceptable
           - resource_version_conflict
@@ -9445,7 +9641,11 @@ components:
           - last_owner_required
           - owner_scopes_required
           - last_operator_required
+          - operator_membership_conflict
           - api_key_unavailable
+          - live_environment_already_open
+          - live_environment_application_in_progress
+          - live_environment_application_already_reviewed
           - upload_size_exceeded
           - request_type_not_supported
           - rate_limit_exceeded
@@ -10009,6 +10209,13 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/InvoiceResponse"
+    ListLiveEnvironmentApplicationsResponse:
+      type: object
+      properties:
+        live_environment_applications:
+          type: array
+          items:
+            $ref: "#/components/schemas/LiveEnvironmentApplicationResponse"
     ListManagedMembersResponse:
       type: object
       properties:
@@ -10116,6 +10323,66 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/WebhookEndpointResponse"
+    LiveEnvironmentApplicationResponse:
+      type: object
+      properties:
+        business_registration_number:
+          type: string
+        business_status:
+          type: string
+          description: "신청할 때 국세청 상태조회로 본 사업자 상태. operating은 계속사업자, suspended는 휴업자\
+            , unchecked는 조회 결과를 받지 못해 자동 확인을 못 한 신청이다"
+          enum:
+          - operating
+          - suspended
+          - unchecked
+        created_at:
+          type: string
+          format: date-time
+        id:
+          type: string
+          format: uuid
+        merchant_id_checked_at:
+          type:
+          - string
+          - "null"
+          format: date-time
+          description: 상점아이디를 견준 시각. 아직 실제 결제가 없으면 null
+        observed_toss_payments_merchant_id:
+          type:
+          - string
+          - "null"
+          description: 승인 뒤 토스페이먼츠 결제 응답에서 처음 본 상점아이디. 아직 실제 결제가 없으면 null
+        organization_id:
+          type: string
+          format: uuid
+        organization_name:
+          type: string
+        rejection_reason:
+          type:
+          - string
+          - "null"
+          description: 거절 사유. rejected일 때만 있다
+        reviewed_at:
+          type:
+          - string
+          - "null"
+          format: date-time
+          description: 승인하거나 거절한 시각. 검토 전이면 null
+        status:
+          type: string
+          description: 신청 상태
+          enum:
+          - pending
+          - approved
+          - rejected
+        tax_type:
+          type:
+          - string
+          - "null"
+          description: 국세청이 돌려준 과세유형 명칭. 조회 결과를 받지 못했으면 null
+        toss_payments_merchant_id:
+          type: string
     ManagedMemberResponse:
       type: object
       properties:
@@ -10190,7 +10457,7 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/OperationsJob"
-        pending_organization_count:
+        pending_live_environment_application_count:
           type: integer
           format: int64
         pending_payment_count:
@@ -10277,24 +10544,6 @@ components:
           $ref: "#/components/schemas/OrganizationInvitationResponse"
         token:
           type: string
-    OrganizationMemberResponse:
-      type: object
-      properties:
-        created_at:
-          type: string
-          format: date-time
-        organization_id:
-          type: string
-          format: uuid
-        organization_role:
-          type: string
-        scopes:
-          type: array
-          items:
-            type: string
-        user_account_id:
-          type: string
-          format: uuid
     OrganizationResponse:
       type: object
       properties:
@@ -10304,6 +10553,12 @@ components:
         id:
           type: string
           format: uuid
+        live_environment_opened_at:
+          type:
+          - string
+          - "null"
+          format: date-time
+          description: 실제 환경을 연 시각. null이면 실제 환경이 잠겨 있어 테스트 환경만 쓴다
         name:
           type: string
         status:
@@ -10846,6 +11101,12 @@ components:
         id:
           type: string
           format: uuid
+        live_environment_opened_at:
+          type:
+          - string
+          - "null"
+          format: date-time
+          description: 실제 환경을 연 시각. null이면 실제 환경이 잠겨 있어 테스트 환경만 쓴다
         name:
           type: string
         status:
@@ -11113,6 +11374,26 @@ components:
           minLength: 0
       required:
       - name
+    UpdateLiveEnvironmentApplicationStatusRequest:
+      type: object
+      properties:
+        rejection_reason:
+          type:
+          - string
+          - "null"
+          description: 거절 사유. rejected일 때만 보내고 신청한 조직이 그대로 읽는다
+          maxLength: 500
+          minLength: 0
+        status:
+          type: string
+          description: 검토 결과
+          enum:
+          - approved
+          - rejected
+          minLength: 1
+          pattern: approved|rejected
+      required:
+      - status
     UpdateOrganizationMemberRoleRequest:
       type: object
       properties:

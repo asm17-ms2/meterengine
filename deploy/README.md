@@ -402,6 +402,9 @@ ALB는 받은 `X-Forwarded-For` 뒤에 접속 주소를 붙이므로 맨 오른�
 | `turnstile-secret-key` | SecureString | 선택. Turnstile 위젯의 비밀 키. 백엔드만 읽는다. `turnstile-enabled`가 `true`인데 비어 있으면 백엔드가 뜨지 못한다 |
 | `turnstile-site-key` | String | 선택. Turnstile 위젯의 사이트 키. 프론트가 가입 화면과 인증 메일 다시 받기 화면에 위젯을 띄울 때 쓴다. 없으면 위젯을 띄우지 않는다 |
 | `turnstile-allowed-hostnames` | String | 코드가 만든다. Turnstile 결과의 hostname이 이 목록(쉼표 구분)에 있어야 통과한다 |
+| `business-registration-lookup-enabled` | String | 선택. `true`면 실제 환경 이용 신청을 받을 때 국세청 사업자 상태조회(공공데이터포털)로 사업자등록번호를 확인하고, 등록되지 않았거나 폐업한 번호는 그 자리에서 거절한다. 없으면 compose가 `false`를 넣고, 신청은 조회 없이 "자동 확인 못 함"으로 받는다("실제 환경 이용 신청의 사업자 조회 켜기") |
+| `nts-service-key` | SecureString | 선택. 공공데이터포털에서 받은 국세청 사업자등록정보 서비스의 인증키. `business-registration-lookup-enabled`가 `true`인데 비어 있으면 백엔드가 뜨지 못한다 |
+| `api-key-test-rate-limit-per-minute` | String | 선택. 테스트 환경 API 키의 분당 요청 상한. 키에 넣은 한도와 이 값 가운데 작은 쪽을 쓴다. 없으면 compose가 `300`을 넣는다. 1보다 작거나 숫자가 아니면 백엔드가 뜨지 않는다. 서버마다 따로 세므로 서버가 N대면 키 하나가 분당 N배까지 지나간다 |
 | `frontend-api-key` | SecureString | 이 버전의 compose는 읽지 않는다. 옛 프론트가 백엔드를 부르던 API 키 원문이고, 옛 버전으로 되돌리는 배포가 요구해 남긴다 |
 | `app-version` | String | 앱 서버가 띄울 커밋 SHA 40자. CD와 `rollout.sh`가 쓰고 서버가 부팅 때 읽는다. Terraform은 자리 값 `unset`만 만들고 되돌리지 않는다. `prod.env`에는 들어가지 않는다 |
 
@@ -481,22 +484,44 @@ aws ssm put-parameter --name /meterengine/production/turnstile-enabled --type St
 aws ssm put-parameter --name /meterengine/production/email-verification-enabled --type String --overwrite --value true
 ```
 
+### 실제 환경 이용 신청의 사업자 조회 켜기
+
+- 꺼진 채로 배포된다. 꺼져 있으면 실제 환경 이용 신청을 국세청 조회 없이 받고, 운영자 화면에 "자동 확인 못 함"으로 보인다.
+- 인증키는 공공데이터포털 "국세청_사업자등록정보 진위확인 및 상태조회 서비스"의 것이다. 포털이 주는 인코딩한 값과 원문 가운데 어느 쪽을 넣어도 된다.
+- 인증키를 먼저 등록하고 켠다. 켰는데 키가 없으면 백엔드가 뜨지 못한다.
+- 켠 뒤 들어온 신청이 운영자 화면에 "계속사업자"나 "휴업자"로 보이는지 본다. 인증키가 틀렸거나 국세청이 답하지 않으면 신청은 그대로 받고 "자동 확인 못 함"으로 남는다. 이때 백엔드 로그에 WARN `NTS business status lookup failed`나 `returned no usable result`가 남는다.
+
+```bash
+aws ssm put-parameter --name /meterengine/production/nts-service-key --type SecureString --value '<인증키>'
+aws ssm put-parameter --name /meterengine/production/business-registration-lookup-enabled --type String --overwrite --value true
+```
+
 ### 수집 경로 예열
 
 새 서버의 백엔드는 readiness를 열기 전에 자기 수집 API를 불러 데운다. 동작은 [`backend/README.md`](../backend/README.md#수집-경로-예열)에 있다. 환경마다 예열 도입사, 고객, ingest 키를 한 번 만들어 Parameter Store에 넣는다. 넣기 전에는 예열 없이 뜬다.
 
 - staging도 이 세 값은 Terraform이 만들지 않고 손으로 넣는다. 키는 비밀값이고 도입사 id와 고객 id는 그 환경 DB에서 만들어야 생긴다.
 
-1. 가입 화면(`https://<호스트>/signup`)에서 도입사 이름을 `MeterEngine 예열 (삭제 금지)`로 가입한다. 비밀번호는 무작위로 만들고 보관하지 않는다.
-2. [`backend/README.md`](../backend/README.md#배포-환경의-운영-키-발급) "배포 환경의 운영 키 발급"의 1, 2단계로 운영자 세션을 열고, 그 도입사를 active로 승인한다.
-3. 같은 절의 3단계로 운영자를 그 도입사에 소속시키고 세션의 도입사를 바꾼다.
+1. 가입 화면(`https://<호스트>/signup`)에서 도입사 이름을 `MeterEngine 예열 (삭제 금지)`로 가입한다. 키를 그 계정으로 발급하므로 비밀번호는 4단계가 끝날 때까지 갖고 있다가 버린다. 가입 메일 인증을 켠 환경이면 메일을 받을 수 있는 주소로 가입해 인증한다.
+2. 새로 가입한 도입사는 실제 환경이 잠겨 있어 4의 키 발급이 403 `live_environment_locked`다. 예열과 측정처럼 운영 쪽이 쓰는 도입사는 이용 신청을 거치지 않고 그 환경 DB에서 직접 연다. 서버에 붙어 `sudo -i` 한 뒤 실행하고 `UPDATE 1`이 나오는지 본다. 도입사 id는 가입 응답의 `organization.id`다. 이미 예열 도입사가 있는 환경은 이 절차를 다시 밟지 않는다.
+
+```bash
+ORGANIZATION_ID=<도입사 id>
+export PGPASSWORD=$(grep '^DB_PASSWORD=' /etc/meterengine/prod.env | cut -d= -f2-)
+DB_HOST=$(grep '^DB_HOST=' /etc/meterengine/prod.env | cut -d= -f2-)
+DB_NAME=$(grep '^DB_NAME=' /etc/meterengine/prod.env | cut -d= -f2-)
+DB_USERNAME=$(grep '^DB_USERNAME=' /etc/meterengine/prod.env | cut -d= -f2-)
+docker run --rm -e PGPASSWORD postgres:18 psql \
+  "host=$DB_HOST port=5432 dbname=$DB_NAME user=$DB_USERNAME sslmode=require" \
+  -c "UPDATE organization SET live_environment_opened_at = now() WHERE id = '$ORGANIZATION_ID' AND live_environment_opened_at IS NULL"
+```
+
+- 이 방법은 토스페이먼츠 실결제 키를 넣지 않고 감사 기록도 남기지 않는다. 결제를 받는 도입사는 이용 신청으로 연다.
+
+3. [`backend/README.md`](../backend/README.md#배포-환경의-운영-키-발급) "배포 환경의 운영 키 발급"의 1, 2단계로 가입한 계정의 세션을 연다. 운영자 계정은 도입사에 소속될 수 없어 이 키를 발급하지 못한다.
 4. 키와 고객을 만들고 Parameter Store에 넣은 뒤 로그아웃한다.
 
 ```bash
-# 2. pending 목록에서 예열 도입사 id를 찾아 승인한다
-api "$BASE/v1/organizations?status=pending"
-api -X PUT $BASE/v1/organizations/<도입사 id>/status -d '{"status":"active"}'
-
 # 4. live 모드에 ingest 스코프만 주고 분당 한도는 두지 않는다. 응답의 secret이 원문이다
 api $BASE/v1/api-keys -d '{"label":"수집 경로 예열","mode":"live","scopes":["ingest"]}'
 read -rsp '예열 키: ' WARMUP_KEY && echo

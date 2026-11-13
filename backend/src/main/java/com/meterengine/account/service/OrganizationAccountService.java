@@ -57,6 +57,14 @@ public class OrganizationAccountService implements OrganizationAccounts {
   }
 
   @Override
+  @Transactional
+  public Optional<OrganizationPerson> lock(String email) {
+    return userAccountRepository
+        .findForUpdateByEmailIgnoreCase(email)
+        .map(OrganizationAccountService::person);
+  }
+
+  @Override
   @Transactional(readOnly = true)
   public boolean exists(UUID userAccountId) {
     return userAccountRepository.existsById(userAccountId);
@@ -112,7 +120,11 @@ public class OrganizationAccountService implements OrganizationAccounts {
 
   private static OrganizationPerson person(UserAccount user) {
     return new OrganizationPerson(
-        user.getId(), user.getEmail(), user.getName(), user.isConsentRequired());
+        user.getId(),
+        user.getEmail(),
+        user.getName(),
+        user.isConsentRequired(),
+        UserAccount.OPERATOR.equals(user.getRole()));
   }
 
   private static OffsetDateTime now() {

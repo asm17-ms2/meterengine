@@ -5,13 +5,10 @@ import com.meterengine.global.security.AuthenticatedPrincipal;
 import com.meterengine.global.security.EnvironmentReady;
 import com.meterengine.global.security.OperatorAccess;
 import com.meterengine.global.validation.StorableText;
-import com.meterengine.organization.dto.CreateOrganizationMemberRequest;
 import com.meterengine.organization.dto.ListOrganizationsResponse;
-import com.meterengine.organization.dto.OrganizationMemberResponse;
 import com.meterengine.organization.dto.OrganizationResponse;
 import com.meterengine.organization.dto.UpdateOrganizationStatusRequest;
 import com.meterengine.organization.entity.Organization;
-import com.meterengine.organization.service.OrganizationMemberService;
 import com.meterengine.organization.service.OrganizationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -22,16 +19,13 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
 import java.util.UUID;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -40,13 +34,9 @@ import org.springframework.web.bind.annotation.RestController;
 public class OrganizationController {
 
   private final OrganizationService organizationService;
-  private final OrganizationMemberService organizationMemberService;
 
-  OrganizationController(
-      OrganizationService organizationService,
-      OrganizationMemberService organizationMemberService) {
+  OrganizationController(OrganizationService organizationService) {
     this.organizationService = organizationService;
-    this.organizationMemberService = organizationMemberService;
   }
 
   @GetMapping
@@ -127,52 +117,5 @@ public class OrganizationController {
       @Parameter(description = "상태를 바꿀 도입사의 ID.") @PathVariable UUID id,
       @Valid @RequestBody UpdateOrganizationStatusRequest request) {
     return OrganizationResponse.from(organizationService.update(principal, id, request.status()));
-  }
-
-  @PostMapping("/{id}/members")
-  @ResponseStatus(HttpStatus.CREATED)
-  @OperatorAccess
-  @Operation(
-      summary = "도입사 소속 추가",
-      description =
-          """
-          사용자를 도입사에 소속시킨다. 소속된 사용자는 로그인 세션의 도입사를 이 도입사로 바꿀 수 있다.
-          operator 로그인 세션만 부를 수 있다.
-          """)
-  @ApiResponses({
-    @ApiResponse(responseCode = "201", description = "만든 소속"),
-    @ApiResponse(
-        responseCode = "400",
-        content =
-            @Content(
-                mediaType = "application/json",
-                schema = @Schema(implementation = ErrorResponse.class)),
-        description =
-            "code=validation_error: user_account_id가 없거나 UUID 형식이 아니거나, 경로의 UUID 형식이 틀렸다"),
-    @ApiResponse(
-        responseCode = "404",
-        content =
-            @Content(
-                mediaType = "application/json",
-                schema = @Schema(implementation = ErrorResponse.class)),
-        description =
-            """
-            code=organization_not_found: 그런 도입사가 없다.
-            code=user_account_not_found: 그런 사용자가 없다.
-            """),
-    @ApiResponse(
-        responseCode = "409",
-        content =
-            @Content(
-                mediaType = "application/json",
-                schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=organization_member_already_exists: 이미 이 도입사에 소속된 사용자다")
-  })
-  public OrganizationMemberResponse createOrganizationMember(
-      @AuthenticationPrincipal AuthenticatedPrincipal principal,
-      @Parameter(description = "사용자를 소속시킬 도입사의 ID.") @PathVariable UUID id,
-      @Valid @RequestBody CreateOrganizationMemberRequest request) {
-    return OrganizationMemberResponse.from(
-        organizationMemberService.create(principal, id, request.userAccountId(), request.scopes()));
   }
 }

@@ -74,6 +74,8 @@ pnpm build
 
 상단 업무 환경은 URL의 `environment`와 API 환경 헤더로 유지한다. 값이 없으면 테스트 환경이고, 프론트는 테스트 환경에서도 API에 `X-MeterEngine-Environment: test`를 보낸다(백엔드는 헤더가 없으면 기존 데이터로 본다). 767px 이하에서는 헤더에 업무 환경만 두고 권한 범위와 새로 조회, 로그아웃은 메뉴 서랍에 둔다.
 
+실제 환경이 잠긴 도입사(세션의 `organization.live_environment_opened_at`이 `null`이다)는 테스트 환경만 쓴다. 업무 환경에서 실제 환경을 고르거나 잠긴 환경의 주소를 직접 열면 `/live-environment`로 보낸다. 공유 레이아웃은 화면을 옮길 때 다시 실행되지 않으므로 환경 선택(`EnvironmentSwitch`), 콘솔 레이아웃, API 응답의 `live_environment_locked`(`src/lib/api/client.ts`) 세 곳에서 본다. 같은 이유로 승인된 뒤에도 콘솔 틀은 잠긴 것으로 남으므로, `/live-environment`가 열린 도입사를 보면 틀을 한 번 새로 고친다(`LiveEnvironmentShellRefresh`). 잠긴 도입사에는 기존 데이터 환경도 보이지 않는다.
+
 기존 데이터(`environment=legacy`)는 런타임 `METERENGINE_SHOW_LEGACY_ENVIRONMENT=true`를 준 서버에서만 업무 환경 목록에 나온다. 서버에서만 읽는 값이라 같은 이미지라도 서버마다 다르게 줄 수 있다. 기본은 꺼짐이고 운영 compose도 이 값을 넣지 않는다. 테스트 환경으로 옮긴 자료에 문제가 있어 옛 범위를 봐야 할 때만 켠다. 꺼진 서버에서 업무 화면을 `environment=legacy`로 열면 `environment`만 뺀 같은 주소(테스트 환경)로 보내고 다른 쿼리는 그대로 둔다. 로그인 뒤 돌아갈 주소(`returnTo`)에 들어 있던 legacy도 뺀다. 서버 액션, GET이 아닌 요청, 내보내기처럼 업무 화면이 아닌 경로는 400으로 거절한다.
 
 ## 컨테이너 이미지
@@ -103,7 +105,7 @@ docker run -p 3000:3000 \
 - `src/lib/config.ts`, 인증과 API 클라이언트는 `server-only`다. 브라우저는 백엔드를 직접 호출하지 않는다.
 - 필터 선택지도 `no-store`로 조회한다. 같은 세션 토큰으로 도입사를 바꿀 수 있어 Authorization만으로 응답을 캐시하지 않는다. 고객과 미터 변경 뒤에는 `revalidatePath`로 화면을 갱신한다.
 
-사용자와 API 키의 권한은 각각 지정한다. 새 사용자와 초대, 플랫폼에서 연결한 소속의 기본 권한은 `read`다.
+사용자와 API 키의 권한은 각각 지정한다. 새 사용자와 초대의 기본 권한은 `read`다.
 
 | 권한 | 허용하는 업무 |
 | --- | --- |
@@ -111,7 +113,7 @@ docker run -p 3000:3000 \
 | `ingest` | 고객 등록과 이벤트 단건, 배치 수집. 조회에는 `read`도 필요 |
 | `admin` | 조회와 수집을 포함한 과금 업무 변경, 로그인 사용자의 API 키 발급, 권한 변경과 폐기 |
 | 대표관리자 (`owner`) | 전체 관리와 사용자, 초대 관리. 전체 관리 권한 제거 불가 |
-| 플랫폼 운영자 (`operator`) | 플랫폼의 도입사 승인, 소속 연결과 운영자 관리. 도입사 업무 권한과 별개 |
+| 플랫폼 운영자 (`operator`) | 실제 환경 이용 신청 검토, 도입사 정지와 재개, 운영자 관리. 도입사에 소속될 수 없어 도입사의 업무 자료를 보지 못한다 |
 
 - 사용자의 권한은 선택한 도입사마다 다르다. 직접 생성과 초대에서 지정하며, 초대 수락 후에도 유지한다. 대표관리자가 사용자 관리에서 변경한다.
 - API 키의 권한 변경은 키 원문을 다시 발급하지 않는다. 다른 키의 관리와 도입사 사용자 관리는 로그인 세션으로만 한다.
@@ -123,7 +125,7 @@ docker run -p 3000:3000 \
 | 경로 | 내용 |
 | --- | --- |
 | `src/app/(console)/` | 라우트. 화면마다 `page.tsx`, 쓰기 화면은 `actions.ts`, `state.ts` |
-| `src/app/(public)/` | 로그인, 가입 신청, 승인 안내 화면과 그 Server Action |
+| `src/app/(public)/` | 로그인, 가입, 이메일 인증 화면과 그 Server Action |
 | `src/app/organizations/` | 소속 도입사 선택과 전환 |
 | `src/app/account/` | 첫 로그인 때 계정 이용 안내 확인 |
 | `src/app/organization-invitations/` | 초대 링크 확인과 수락 |
@@ -170,7 +172,7 @@ docker run -p 3000:3000 \
 
 | 경로 | 사용자 과업 |
 | --- | --- |
-| `/` | 서비스 소개 (로그인 없이 보는 첫 화면, 로그인과 가입 신청 링크) |
+| `/` | 서비스 소개 (로그인 없이 보는 첫 화면, 로그인과 가입 링크) |
 | `/overview` | 미완료 설정, 과금 경고와 월별 예정액, 확정액, 결제 대기액, 순수납 확인, 전체 월의 미해결 결제 |
 | `/customers`, `/customers/{id}` | 외부 ID로 고객 연결, 보관과 복원, 사용량, 청구, 수납과 카드 등록 연결 |
 | `/usage`, `/events` | 집계, 미터 미연결, 값 오류, 미래 시각과 음수 수량 진단, 원본 로그 조회 |
@@ -183,12 +185,13 @@ docker run -p 3000:3000 \
 | `/members` | 사용자 관리 (계정 직접 생성, 초대 링크, 업무 권한과 역할 변경, 소속 보관, 초대 이력) |
 | `/audit` | 감사 기록 (도입사의 변경 기록과 API 요청 기록 조회) |
 | `/settings` | 환경별 공급자와 토스페이먼츠 키. 기존 데이터 환경을 켠 서버에서는 그 환경의 결제 모드 설정 |
-| `/admin`, `/admin/organizations`, `/admin/users` | 전체 운영 현황, 가입 승인, 사용자 권한과 소속 연결 관리 |
+| `/live-environment` | 실제 환경 이용 신청서와 신청 내역. 메뉴에는 없고, 업무 환경에서 잠긴 환경을 고르거나 환경 안내문의 링크로 간다 |
+| `/admin`, `/admin/organizations`, `/admin/users` | 전체 운영 현황, 도입사 목록과 정지, 운영자 계정과 권한 관리 |
+| `/admin/live-environment-applications` | 실제 환경 이용 신청 검토 (국세청 조회 결과와 상점아이디 확인, 승인과 사유를 적은 거절) |
 | `/admin/audit` | 운영자의 플랫폼 감사 기록 조회 |
 | `/payment-method-registrations/{token}` | 일회용 링크 확인과 동의, 토스 카드 인증, 등록 결과 확인 |
 | `/login` | 로그인. 계정 역할에 따라 도입사 업무나 플랫폼 운영 화면으로 간다 |
-| `/signup` | 도입사 가입 신청과 필수 동의 |
-| `/pending` | 가입 신청 뒤 승인 안내 |
+| `/signup` | 도입사 가입과 필수 동의. 가입하면 바로 로그인할 수 있고, 이메일 인증을 켠 서버에서는 인증 안내로 간다 |
 | `/terms`, `/privacy` | 로그인 없이 이용약관과 개인정보 처리방침 전문 확인 |
 | `/email-verifications` | 가입 뒤 인증 메일 안내와 다시 받기. 인증 전 로그인은 `?reason=unverified`로 온다 |
 | `/email-verifications/{token}` | 메일 속 인증 링크 확인. 메일 검사기가 열어도 인증되지 않게 버튼을 눌러야 인증한다 |
@@ -225,7 +228,7 @@ pnpm exec playwright test -c playwright.payment.config.ts
 pnpm exec playwright test -c playwright.workspace.config.ts  # 결과 폴더는 WORKSPACE_CONTRACT_OUTPUT_DIR
 ```
 
-실제 S1 Spring 서버를 별도 테스트 DB로 `38147`에 실행한 뒤 아래를 실행한다. 테스트는 가입, 승인, 로그인과 고객 등록을 수행하므로 운영 환경을 지정하지 않는다. 테스트 설정은 로컬 HTTP 주소만 허용한다.
+실제 S1 Spring 서버를 별도 테스트 DB로 `38147`에 실행한 뒤 아래를 실행한다. 테스트는 가입, 로그인과 고객 등록을 수행하므로 운영 환경을 지정하지 않는다. 테스트 설정은 로컬 HTTP 주소만 허용한다.
 
 ```bash
 S1_API_URL=http://127.0.0.1:38147 \
@@ -236,8 +239,8 @@ pnpm test:e2e:real
 
 결제와 환경 분리까지 이어지는 실제 스택 시나리오는 같은 변수로 `pnpm exec playwright test -c playwright.mvp.config.ts`를 돌린다. 백엔드는 `local` 프로파일(사설 주소 웹훅 허용)로, `TOSSPAYMENTS_BASE_URL=http://127.0.0.1:38447`과 `UNBILLED_USAGE_REPORT_CRON='*/20 * * * * *'`를 주고 띄운다. 미청구 사용량 통보의 기본 주기(매일 09:00)로는 `mvp.real.spec.ts`의 통보 대기 단계가 실패한다. 토스 대역 `38447`은 설정이 띄우며 `MVP_EXTERNAL_PG_FIXTURE=1`이면 띄우지 않는다. `MVP_REUSE_FRONTEND=1`이면 이미 뜬 `33147` FE를 쓴다.
 
-`playwright.mvp.config.ts` 시나리오 가운데 `customer-payment-retry`, `invoice-links`, `permissions`는 테스트 DB를 `docker exec ... psql`로 직접 고친다. `E2E_DB_CONTAINER`에 `S1_API_URL` 백엔드가 쓰는 PostgreSQL 컨테이너 이름(기본 `meterengine-0696-e2e`)을, `E2E_BACKEND_ENV_FILE`에 백엔드를 띄운 `TOSSPAYMENTS_BASE_URL`을 담은 JSON 파일(기본 `/private/tmp/meterengine-orchestration-0696/backend-e2e-environment.json`, 값은 `{"TOSSPAYMENTS_BASE_URL":"http://127.0.0.1:38447"}`)을 지정한다.
+`playwright.mvp.config.ts` 시나리오는 테스트 DB를 `docker exec ... psql`로 직접 고친다. 가입한 도입사는 실제 환경이 잠겨 있어, 잠금이 아닌 기능을 보는 시나리오는 가입 뒤 `e2e/real-organization.ts`의 `openLiveEnvironment`로 실제 환경을 열고 시작한다. `customer-payment-retry`, `invoice-links`, `permissions`는 그 밖의 행도 고친다. `E2E_DB_CONTAINER`에 `S1_API_URL` 백엔드가 쓰는 PostgreSQL 컨테이너 이름(기본 `meterengine-0696-e2e`)을, `E2E_BACKEND_ENV_FILE`에 백엔드를 띄운 `TOSSPAYMENTS_BASE_URL`을 담은 JSON 파일(기본 `/private/tmp/meterengine-orchestration-0696/backend-e2e-environment.json`, 값은 `{"TOSSPAYMENTS_BASE_URL":"http://127.0.0.1:38447"}`)을 지정한다.
 
 실제 검증용 FE는 `33147`을 쓴다. `E2E_OPERATOR_EMAIL`, `E2E_OPERATOR_PASSWORD`는 해당 테스트 DB의 소속 없는 운영자 계정이어야 한다. 결과는 `/tmp/meterengine-fe-onboarding-results-real`, 계약 테스트 결과는 같은 경로의 `-contract`에 둔다.
 
-가입, 초대 수락, 첫 로그인 화면은 `/terms`, `/privacy`를 동의 문서로 건다. 서버에 남기는 판은 `src/lib/auth/consents.ts`의 `CONSENT_VERSION`(시행일)이고, 두 문서의 본문을 바꾸면 이 날짜도 바꾼다. 두 문서는 법률 검토를 받지 않았다. S1에 동의 이력 조회 API가 없어 승인 화면에서 동의 내역은 조회하지 않는다.
+가입, 초대 수락, 첫 로그인 화면은 `/terms`, `/privacy`를 동의 문서로 건다. 서버에 남기는 판은 `src/lib/auth/consents.ts`의 `CONSENT_VERSION`(시행일)이고, 두 문서의 본문을 바꾸면 이 날짜도 바꾼다. 두 문서는 법률 검토를 받지 않았다. S1에 동의 이력 조회 API가 없어 운영자 화면에서 동의 내역은 조회하지 않는다.

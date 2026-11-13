@@ -13,7 +13,7 @@ export function ReviewAction({ id, label, target, value, kind, disabledReason }:
     {disabledReason ? <Flex vertical gap={4} align="flex-start"><Button danger={isDanger} disabled aria-describedby={hintId}>{label}</Button><span id={hintId} className="field-hint">{disabledReason}</span></Flex> : <Button danger={isDanger} onClick={() => setIsOpen(true)}>{label}</Button>}
     <Modal className="workspace-dialog" width="min(560px, calc(100vw - 32px))" style={{ top: 24 }} styles={{ body: { maxHeight: "calc(100dvh - 200px)", overflowY: "auto", padding: 8, marginInline: -8 } }} title={`${label} 확인`} open={isOpen} onCancel={() => setIsOpen(false)} footer={null} closable={!isPending} mask={{ closable: !isPending }} keyboard={!isPending}>
       <p><strong>{target}</strong></p>
-      <p>{kind === "signup" ? (value === "active" ? "승인하면 이 조직의 사용자가 로그인할 수 있어요." : "거절한 가입은 다시 승인할 수 없어요.") : (value === "operator" ? "플랫폼 운영자는 모든 조직의 가입과 플랫폼 권한을 관리할 수 있어요. 조직 안에서 관리자를 추가하는 것과는 별개예요." : "플랫폼 운영 화면에 접근하지 못하게 해요. 조직 소속이 있으면 그대로 두고, 소속이 없으면 콘솔에도 접근할 수 없어요.")}</p>
+      <p>{kind === "signup" ? (value === "active" ? "승인하면 이 조직의 사용자가 로그인해 테스트 환경을 쓸 수 있어요." : "거절한 가입은 다시 승인할 수 없어요.") : (value === "operator" ? "플랫폼 운영자는 실제 환경 이용 신청을 검토하고 플랫폼 권한을 관리해요. 운영자 계정은 조직에 소속될 수 없어요." : "플랫폼 운영 화면에 접근하지 못하게 해요. 조직의 초대를 받기 전에는 콘솔도 쓸 수 없어요.")}</p>
       <form action={action}>
         <input type="hidden" name="id" value={id} /><input type="hidden" name={kind === "signup" ? "status" : "role"} value={value} />
         {state.message && <Alert type={state.done ? "success" : "error"} showIcon title={<span role={state.done ? "status" : "alert"}>{state.message}</span>} />}

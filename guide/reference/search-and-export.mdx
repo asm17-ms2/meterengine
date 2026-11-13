@@ -168,20 +168,20 @@ curl -sS -o events-2026-10.csv \
 
 ## 자기 기록과 맞추기
 
-한 달이 끝난 뒤 도입사 시스템의 사용 기록과 MeterEngine의 숫자를 맞추는 순서의 예입니다.
+한 달이 끝난 뒤 자사 시스템의 사용 기록과 MeterEngine의 숫자를 맞추는 순서의 예입니다.
 
 <Steps>
 <Step title="이벤트를 내려받는다">
 `GET /v1/events/export?month=YYYY-MM&sort=received_at&order=desc`로 그 달 이벤트를 내려받습니다. 10,000행을 넘으면 `customer_id`나 `from`, `to`로 나눕니다.
 </Step>
 <Step title="빠진 이벤트를 찾는다">
-도입사 시스템에 기록한 `transaction_id` 목록과 CSV의 `transaction_id` 열을 비교합니다. CSV에 없으면 저장되지 않았거나 발생 시각이 다른 달입니다. `GET /v1/events/lookup?transaction_id=값`으로 하나씩 확인할 수 있습니다. 원인은 [이벤트가 청구에 안 보일 때](/troubleshooting/events-not-billed)를 보세요.
+자사 시스템에 기록한 `transaction_id` 목록과 CSV의 `transaction_id` 열을 비교합니다. CSV에 없으면 저장되지 않았거나 발생 시각이 다른 달입니다. `GET /v1/events/lookup?transaction_id=값`으로 하나씩 확인할 수 있습니다. 원인은 [이벤트가 청구에 안 보일 때](/troubleshooting/events-not-billed)를 보세요.
 </Step>
 <Step title="마감 뒤에 받은 이벤트를 찾는다">
 `received_at`이 다음 달 1일 13:00 KST 이후인 행은 저장은 됐지만 그 달 청구에 들지 않았습니다. 마감 규칙은 [시간 규칙](/concepts/time-rules)을 보세요.
 </Step>
 <Step title="사용량과 금액을 맞춘다">
-확정 전이면 `GET /v1/usage/export`와 `GET /v1/invoices/draft/export`로, 확정 뒤면 `GET /v1/invoices/export`로 고객별 수량과 금액을 내려받아 도입사 쪽 계산과 비교합니다. 청구 예정액은 세금을 뺀 공급가액이고 인보이스의 `total_amount`는 세금을 포함합니다. 금액 용어는 [예정액, 확정액, 수납액](/concepts/amounts)을 보세요.
+확정 전이면 `GET /v1/usage/export`와 `GET /v1/invoices/draft/export`로, 확정 뒤면 `GET /v1/invoices/export`로 고객별 수량과 금액을 내려받아 자사 계산과 비교합니다. 청구 예정액은 세금을 뺀 공급가액이고 인보이스의 `total_amount`는 세금을 포함합니다. 금액 용어는 [예정액, 확정액, 수납액](/concepts/amounts)을 보세요.
 </Step>
 </Steps>
 

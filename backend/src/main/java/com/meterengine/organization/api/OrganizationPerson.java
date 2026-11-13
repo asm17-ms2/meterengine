@@ -2,7 +2,9 @@ package com.meterengine.organization.api;
 
 import java.util.UUID;
 
-public record OrganizationPerson(UUID id, String email, String name, boolean consentRequired) {
+// operator는 플랫폼 운영자 계정인지다. 운영자는 조직에 소속될 수 없다.
+public record OrganizationPerson(
+    UUID id, String email, String name, boolean consentRequired, boolean operator) {
   // 계정 입력 규칙의 정본. organization은 account를 가져올 수 없어 여기 두고 UserAccount가 가리킨다.
   public static final int NAME_MAX_LENGTH = 255;
   public static final int EMAIL_MAX_LENGTH = 254;

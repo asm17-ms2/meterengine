@@ -24,7 +24,7 @@ export function proxy(request: NextRequest) {
     return new NextResponse("업무 환경을 확인하세요.", { status: 400 });
   }
   requestHeaders.set("x-meterengine-environment", readEnvironment(environment));
-  if (["/", "/login", "/signup", "/pending", "/terms", "/privacy", "/health", "/favicon.ico", "/icon.svg", "/apple-icon.png", "/brand/meterengine-mark.svg", "/brand/meterengine-mark.png", "/invoice-links", "/invoice-links/lookup", "/invoice-links/payment-retries", "/email-verifications"].includes(path) || path.startsWith("/_next/") || path.startsWith("/payment-method-registrations/") || path.startsWith("/organization-invitations/") || path.startsWith("/email-verifications/")) return NextResponse.next({ request: { headers: forwardedHeaders } });
+  if (["/", "/login", "/signup", "/terms", "/privacy", "/health", "/favicon.ico", "/icon.svg", "/apple-icon.png", "/brand/meterengine-mark.svg", "/brand/meterengine-mark.png", "/invoice-links", "/invoice-links/lookup", "/invoice-links/payment-retries", "/email-verifications"].includes(path) || path.startsWith("/_next/") || path.startsWith("/payment-method-registrations/") || path.startsWith("/organization-invitations/") || path.startsWith("/email-verifications/")) return NextResponse.next({ request: { headers: forwardedHeaders } });
   if (!request.cookies.get("me_session")?.value && !request.headers.has("next-action")) {
     const url = new URL("/login", request.url);
     url.searchParams.set("returnTo", path + request.nextUrl.search);

@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -760,6 +761,147 @@ class PaymentEnvironmentIntegrationTest {
                 Integer.class,
                 organizationId))
         .isZero();
+  }
+
+  @Test
+  void 실제_결제_응답의_상점아이디가_신청한_값과_다르면_신청과_감사_기록에_남기고_결제는_끝낸다() {
+    UUID application = insertApprovedApplication("applied-mid");
+    tossApprovesWithMerchant("other-mid");
+
+    UUID attempt = createAttempt("live", payable("live").invoice());
+
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT status FROM payment_attempt WHERE id=?", String.class, attempt))
+        .isEqualTo("done");
+    Map<String, Object> row =
+        jdbcTemplate.queryForMap(
+            "SELECT observed_toss_payments_merchant_id, merchant_id_checked_at FROM"
+                + " live_environment_application WHERE id=?",
+            application);
+    assertThat(row).containsEntry("observed_toss_payments_merchant_id", "other-mid");
+    assertThat(row.get("merchant_id_checked_at")).isNotNull();
+    Map<String, Object> audit =
+        jdbcTemplate.queryForMap(
+            "SELECT actor_type, target_type, target_id, environment_id, detail::text AS detail FROM"
+                + " audit_log WHERE organization_id=? AND"
+                + " action='live_environment_merchant_id_mismatched'",
+            organizationId);
+    assertThat(audit)
+        .containsEntry("actor_type", "system")
+        .containsEntry("target_type", "live_environment_application")
+        .containsEntry("target_id", application.toString())
+        .containsEntry("environment_id", null);
+    assertThat((String) audit.get("detail")).contains("applied-mid").contains("other-mid");
+  }
+
+  @Test
+  void 실제_결제_응답의_상점아이디가_신청한_값과_같으면_본_값과_시각만_남기고_다음_결제에서는_다시_견주지_않는다() {
+    UUID application = insertApprovedApplication("applied-mid");
+    tossApprovesWithMerchant("applied-mid");
+    Payable live = payable("live");
+
+    createAttempt("live", live.invoice());
+    Object checkedAt = merchantCheckedAt(application);
+    tossApprovesWithMerchant("other-mid");
+    createAttempt("live", nextInvoice(live));
+
+    assertThat(checkedAt).isNotNull();
+    assertThat(merchantCheckedAt(application)).isEqualTo(checkedAt);
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT observed_toss_payments_merchant_id FROM live_environment_application WHERE"
+                    + " id=?",
+                String.class,
+                application))
+        .isEqualTo("applied-mid");
+    assertThat(countMerchantMismatches()).isZero();
+  }
+
+  @Test
+  void 테스트_결제와_상점아이디가_없는_응답은_신청의_상점아이디를_견주지_않는다() {
+    UUID application = insertApprovedApplication("applied-mid");
+    tossApprovesWithMerchant("other-mid");
+    createAttempt("test", payable("test").invoice());
+    tossApprovesWithMerchant(null);
+    createAttempt("live", payable("live").invoice());
+
+    assertThat(merchantCheckedAt(application)).isNull();
+    assertThat(countMerchantMismatches()).isZero();
+  }
+
+  // setUp의 응답이 걸린 뒤라 when()으로 다시 걸면 그 응답이 null 인자로 불린다. doAnswer로 바꿔 건다.
+  private void tossApprovesWithMerchant(String merchantId) {
+    doAnswer(
+            invocation -> {
+              TossPaymentsApproveBillingRequest request = invocation.getArgument(2);
+              return new TossPaymentsResult.Success<>(
+                  new TossPaymentsPayment(
+                      merchantId,
+                      "payment-" + request.orderId(),
+                      request.orderId(),
+                      "DONE",
+                      request.amount(),
+                      request.amount(),
+                      List.of()));
+            })
+        .when(toss)
+        .approveBilling(anyString(), anyString(), any(), anyString(), isNull());
+  }
+
+  private UUID nextInvoice(Payable payable) {
+    return invoiceRepository
+        .saveAndFlush(
+            new Invoice(
+                UUID.randomUUID(),
+                organizationId,
+                payable.customer(),
+                "고객",
+                "2026-09",
+                1000,
+                100,
+                OffsetDateTime.parse("2026-10-01T04:00:00Z"),
+                OffsetDateTime.now(),
+                environment("live")))
+        .getId();
+  }
+
+  private UUID insertApprovedApplication(String merchantId) {
+    UUID application = UUID.randomUUID();
+    UUID userAccountId =
+        jdbcTemplate.queryForObject(
+            "SELECT user_account_id FROM organization_member WHERE organization_id=?",
+            UUID.class,
+            organizationId);
+    jdbcTemplate.update(
+        """
+        INSERT INTO live_environment_application
+          (id, organization_id, business_registration_number, toss_payments_merchant_id, status,
+           business_status, applicant_user_account_id, created_at, reviewer_user_account_id,
+           reviewed_at)
+        VALUES (?, ?, '1234567891', ?, 'approved', 'operating', ?, now(), ?, now())
+        """,
+        application,
+        organizationId,
+        merchantId,
+        userAccountId,
+        userAccountId);
+    return application;
+  }
+
+  private Object merchantCheckedAt(UUID application) {
+    return jdbcTemplate.queryForObject(
+        "SELECT merchant_id_checked_at FROM live_environment_application WHERE id=?",
+        Object.class,
+        application);
+  }
+
+  private int countMerchantMismatches() {
+    return jdbcTemplate.queryForObject(
+        "SELECT count(*) FROM audit_log WHERE organization_id=? AND"
+            + " action='live_environment_merchant_id_mismatched'",
+        Integer.class,
+        organizationId);
   }
 
   private UUID insertAttempt(Payable payable, String mode, boolean failed) {

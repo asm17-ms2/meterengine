@@ -10,6 +10,9 @@ public interface OrganizationAccounts {
 
   Optional<OrganizationPerson> find(String email);
 
+  // 계정 행을 잠가 역할 변경과 겹치지 않게 읽는다.
+  Optional<OrganizationPerson> lock(String email);
+
   boolean exists(UUID userAccountId);
 
   OrganizationPerson create(String email, String name, String password);

@@ -59,7 +59,7 @@ class SignupIntegrationTest {
   }
 
   @Test
-  void 가입하면_201과_pending_도입사와_member를_돌려주고_소속과_동의_행을_남긴다() {
+  void 가입하면_201과_active_조직과_member를_돌려주고_소속과_동의_행을_남긴다() {
     MvcTestResult result = signup("New.User@Example.com", PASSWORD, BOTH_CONSENTS);
 
     assertThat(result).hasStatus(201);
@@ -68,7 +68,7 @@ class SignupIntegrationTest {
     UUID userAccountId = UUID.fromString(JsonPath.read(body, "$.user_account.id"));
     assertThat((Map<String, Object>) JsonPath.read(body, "$.organization"))
         .containsExactlyInAnyOrderEntriesOf(
-            Map.of("id", organizationId.toString(), "name", "가입 도입사", "status", "pending"));
+            Map.of("id", organizationId.toString(), "name", "가입 도입사", "status", "active"));
     assertThat((Map<String, Object>) JsonPath.read(body, "$.user_account"))
         .containsExactlyInAnyOrderEntriesOf(
             Map.of(
@@ -81,7 +81,13 @@ class SignupIntegrationTest {
     assertThat(
             jdbcTemplate.queryForObject(
                 "SELECT status FROM organization WHERE id = ?", String.class, organizationId))
-        .isEqualTo("pending");
+        .isEqualTo("active");
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT live_environment_opened_at IS NULL FROM organization WHERE id = ?",
+                Boolean.class,
+                organizationId))
+        .isTrue();
     Map<String, Object> userAccount =
         jdbcTemplate.queryForMap(
             "SELECT email, name, role, password_hash FROM user_account WHERE id = ?",
@@ -136,43 +142,58 @@ class SignupIntegrationTest {
   }
 
   @Test
-  void 가입한_member는_승인_전에_로그인하면_403_organization_not_active다() {
-    assertThat(signup("pending@example.com", PASSWORD, BOTH_CONSENTS)).hasStatus(201);
+  void 가입한_member는_운영자_승인_없이_바로_로그인하고_실제_환경이_잠긴_조직을_받는다() {
+    MvcTestResult signup = signup("instant@example.com", PASSWORD, BOTH_CONSENTS);
+    assertThat(signup).hasStatus(201);
+    String organizationId = JsonPath.read(body(signup), "$.organization.id");
 
-    assertThat(login("pending@example.com", PASSWORD))
-        .hasStatus(403)
+    MvcTestResult login = login("instant@example.com", PASSWORD);
+
+    assertThat(login).hasStatus(201);
+    assertThat(login).bodyJson().extractingPath("$.organization.id").isEqualTo(organizationId);
+    assertThat(login).bodyJson().extractingPath("$.organization.status").isEqualTo("active");
+    assertThat(login)
         .bodyJson()
-        .extractingPath("$.code")
-        .isEqualTo(ErrorCode.ORGANIZATION_NOT_ACTIVE.getCode());
+        .extractingPath("$.organization.live_environment_opened_at")
+        .isNull();
   }
 
   @Test
-  void operator가_승인하면_가입한_member가_로그인하고_현재_도입사를_조회한다() {
-    MvcTestResult signup = signup("approved@example.com", PASSWORD, BOTH_CONSENTS);
-    assertThat(signup).hasStatus(201);
-    String organizationId = JsonPath.read(body(signup), "$.organization.id");
-    String operator = TestCredentials.issueOperatorSession(jdbcTemplate);
+  void 가입한_조직은_테스트_환경만_쓰고_실제_환경과_환경_헤더_없는_요청은_403_live_environment_locked다() {
+    assertThat(signup("locked@example.com", PASSWORD, BOTH_CONSENTS)).hasStatus(201);
+    String authorization =
+        TestCredentials.BEARER_PREFIX
+            + JsonPath.read(body(login("locked@example.com", PASSWORD)), "$.token");
 
-    assertThat(
-            mvc.put()
-                .uri("/v1/organizations/{id}/status", organizationId)
-                .header(AUTHORIZATION, operator)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"status\":\"active\"}")
-                .exchange())
-        .hasStatusOk();
+    assertThat(customers(authorization, "test")).hasStatusOk();
+    for (String environment : new String[] {"live", "legacy", null}) {
+      assertThat(customers(authorization, environment))
+          .as(String.valueOf(environment))
+          .hasStatus(403)
+          .bodyJson()
+          .extractingPath("$.code")
+          .isEqualTo(ErrorCode.LIVE_ENVIRONMENT_LOCKED.getCode());
+    }
+  }
 
-    MvcTestResult login = login("approved@example.com", PASSWORD);
-    assertThat(login).hasStatus(201);
-    String authorization = TestCredentials.BEARER_PREFIX + JsonPath.read(body(login), "$.token");
-    MvcTestResult organization =
-        mvc.get().uri("/v1/organization").header(AUTHORIZATION, authorization).exchange();
-    assertThat(organization)
-        .hasStatusOk()
+  @Test
+  void 가입한_조직은_실제_환경과_기존_데이터_범위의_API_키를_발급하지_못한다() {
+    assertThat(signup("no-live-key@example.com", PASSWORD, BOTH_CONSENTS)).hasStatus(201);
+    String authorization =
+        TestCredentials.BEARER_PREFIX
+            + JsonPath.read(body(login("no-live-key@example.com", PASSWORD)), "$.token");
+
+    assertThat(createApiKey(authorization, "test", "test")).hasStatus(201);
+    assertThat(createApiKey(authorization, "live", "live"))
+        .hasStatus(403)
         .bodyJson()
-        .extractingPath("$.id")
-        .isEqualTo(organizationId);
-    assertThat(organization).bodyJson().extractingPath("$.status").isEqualTo("active");
+        .extractingPath("$.code")
+        .isEqualTo(ErrorCode.LIVE_ENVIRONMENT_LOCKED.getCode());
+    assertThat(createApiKey(authorization, null, "live"))
+        .hasStatus(403)
+        .bodyJson()
+        .extractingPath("$.code")
+        .isEqualTo(ErrorCode.LIVE_ENVIRONMENT_LOCKED.getCode());
   }
 
   @Test
@@ -308,6 +329,23 @@ class SignupIntegrationTest {
         .contentType(MediaType.APPLICATION_JSON)
         .content(requestBody("가입 도입사", "가입자", email, password, consents))
         .exchange();
+  }
+
+  private MvcTestResult customers(String authorization, String environment) {
+    var request = mvc.get().uri("/v1/customers").header(AUTHORIZATION, authorization);
+    if (environment != null) request = request.header("X-MeterEngine-Environment", environment);
+    return request.exchange();
+  }
+
+  private MvcTestResult createApiKey(String authorization, String environment, String mode) {
+    var request =
+        mvc.post()
+            .uri("/v1/api-keys")
+            .header(AUTHORIZATION, authorization)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"label\":\"키\",\"mode\":\"%s\",\"scopes\":[\"read\"]}".formatted(mode));
+    if (environment != null) request = request.header("X-MeterEngine-Environment", environment);
+    return request.exchange();
   }
 
   private static String requestBody(

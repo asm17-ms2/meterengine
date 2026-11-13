@@ -32,6 +32,14 @@ export function withoutClosedLegacyEnvironment(path: string, showLegacy: boolean
   return url.pathname + url.search + url.hash;
 }
 
+/** 실제 환경 이용 신청 화면. 실제 환경이 잠긴 조직은 다른 환경 대신 여기로 간다. */
+export const LIVE_ENVIRONMENT_PATH = "/live-environment";
+
+/** 실제 환경을 열기 전에는 테스트 환경만 쓸 수 있다. */
+export function isLockedEnvironment(environment: WorkspaceEnvironment, isLiveEnvironmentOpen: boolean): boolean {
+  return environment !== "test" && !isLiveEnvironmentOpen;
+}
+
 /** URL에 적을 환경 값. 기본 환경은 적지 않는다. */
 export function environmentQueryValue(environment: WorkspaceEnvironment): WorkspaceEnvironment | undefined {
   return environment === DEFAULT_ENVIRONMENT ? undefined : environment;
@@ -50,7 +58,7 @@ export function environmentNoticeClass(environment: WorkspaceEnvironment): strin
 }
 
 export function environmentReadyPath(path: string): boolean {
-  return ["/overview", "/customers", "/billable-metrics", "/billable-metric-prices", "/pricing", "/usage", "/events", "/event-issues", "/event-rejections", "/billing", "/invoices", "/payments", "/integrations", "/settings", "/members", "/audit"].some(prefix => path === prefix || path.startsWith(`${prefix}/`));
+  return ["/overview", "/customers", "/billable-metrics", "/billable-metric-prices", "/pricing", "/usage", "/events", "/event-issues", "/event-rejections", "/billing", "/invoices", "/payments", "/integrations", "/settings", LIVE_ENVIRONMENT_PATH, "/members", "/audit"].some(prefix => path === prefix || path.startsWith(`${prefix}/`));
 }
 
 export function environmentSwitchPath(path: string): string {

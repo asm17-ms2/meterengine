@@ -192,7 +192,7 @@ const draft = await response.json();
 {/* 확인 필요: 배포 서버 자동 확정 켜는 시점 */}
 `auto_finalize_enabled`, `auto_finalize_at`, `auto_finalize_running`, `auto_finalize_held`는 자동 확정이 꺼져 있을 때의 값입니다. 자동 확정 필드의 뜻은 [자동 확정과 보류](/billing/auto-finalization)를 보세요.
 
-도입사 쪽 계산과 맞출 때 보는 필드입니다.
+자사 계산과 맞출 때 보는 필드입니다.
 
 <ResponseField name="customers[].amount" type="integer">
 고객의 청구 예정액(공급가액, 원)입니다. `lines[].amount`의 합과 같습니다.
@@ -207,7 +207,7 @@ const draft = await response.json();
 금액과 구간 판정에 쓴 정확한 수량의 분자입니다. `quantity`는 표시용이므로 금액을 다시 계산할 때는 `quantity_numerator / quantity_denominator x unit_price`를 계산한 뒤 10원 미만을 버립니다.
 </ResponseField>
 <ResponseField name="unpriced_usages" type="array">
-단가가 없어 라인과 금액에서 빠진 조합의 사용량입니다. 도입사가 이 조합에도 요금을 매겨 계산했다면 이 차이만큼 금액이 어긋납니다.
+단가가 없어 라인과 금액에서 빠진 조합의 사용량입니다. 자사 계산에서 이 조합에도 요금을 매겼다면 이 차이만큼 금액이 어긋납니다.
 </ResponseField>
 
 확정한 인보이스는 `GET /v1/invoices/{id}`로 봅니다. 위 예시를 확정하면 `supply_amount`는 12500, `tax_amount`는 1250, `total_amount`는 13750이고 `lines`는 다섯 줄입니다. 확정 방법은 [인보이스 수동 확정](/billing/finalize-invoices)을 보세요.
