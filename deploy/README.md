@@ -438,7 +438,7 @@ aws ssm get-parameter --name /meterengine/production/operator-password --with-de
 
 - 둘 다 꺼진 채로 배포된다. 꺼져 있으면 가입과 로그인은 이 기능이 없던 때와 같다.
 - SES 도메인 인증(`meterengine.com`), Easy DKIM과 Route53 DKIM CNAME 셋, MAIL FROM 도메인(`mail.meterengine.com`의 MX와 SPF), DMARC TXT는 콘솔에서 만들어 Terraform 밖에 있다. 이 자원을 Terraform으로 가져오는(import) 일이 남았다.
-- Terraform은 앱 서버 역할의 `ses:SendEmail`(identity `meterengine.com`, 보내는 주소 `no-reply@meterengine.com`만)과 파라미터 `mail-sender`, `mail-from`, `turnstile-allowed-hostnames`를 만든다(`terraform/production/ses.tf`, `parameters.tf`, `app_fleet` 모듈).
+- Terraform은 앱 서버 역할의 `ses:SendEmail`(identity `meterengine.com`과 그 기본 구성 세트 `my-first-configuration-set`, 보내는 주소 `no-reply@meterengine.com`만)과 파라미터 `mail-sender`, `mail-from`, `turnstile-allowed-hostnames`를 만든다(`terraform/production/ses.tf`, `parameters.tf`, `app_fleet` 모듈).
 - 아래 순서로 켠다. 앞 단계가 끝나기 전에 다음 값을 켜지 않는다.
   1. Terraform을 apply해 발송 권한과 파라미터 셋을 만든다. SES 콘솔에서 도메인 인증과 DKIM이 여전히 `Verified`인지 본다.
   2. SES 콘솔에서 프로덕션 액세스(샌드박스 해제)를 신청하고 승인을 기다린다. 승인 전에는 인증한 주소로만 메일이 간다.
@@ -454,6 +454,7 @@ aws ssm get-parameter --name /meterengine/production/operator-password --with-de
   - Turnstile 위젯을 production과 따로 만든다. 도메인은 `staging.meterengine.com`이다. 키 둘과 켜는 값은 `/meterengine/staging/` 아래에 넣는다.
   - Terraform은 `mail-sender`, `mail-from`(`MeterEngine Staging <no-reply@meterengine.com>`), `turnstile-allowed-hostnames`(`staging.meterengine.com`)를 만든다(`terraform/staging/parameters.tf`).
   - 메일 발송 권한은 Terraform이 만들지 않는다. IAM 콘솔에서 역할 `meterengine-staging-app`에 아래 인라인 정책을 직접 단다. 받는 주소가 목록에 맞을 때만 보내지므로 팀 밖 주소로는 메일이 가지 않는다. 정책이 없으면 발송이 모두 거절된다.
+  - 자원에는 identity와 그 기본 구성 세트를 같이 적는다. 구성 세트가 빠지면 SES가 발송을 403으로 거절한다.
   - 받는 주소는 소문자로 적는다. 앱이 주소를 소문자로 바꿔 보내고 조건은 대소문자를 가린다. `*`를 쓸 수 있어 `<이름>+*@gmail.com`처럼 적으면 한 사람이 주소를 바꿔 가며 여러 번 가입해 볼 수 있다.
   - 주소를 더하거나 뺄 때는 콘솔에서 이 정책의 목록만 고친다. 저장하면 바로 적용되고 apply는 이 정책을 지우지 않는다.
 
@@ -464,7 +465,10 @@ aws ssm get-parameter --name /meterengine/production/operator-password --with-de
     {
       "Effect": "Allow",
       "Action": "ses:SendEmail",
-      "Resource": "arn:aws:ses:ap-northeast-2:928618307647:identity/meterengine.com",
+      "Resource": [
+        "arn:aws:ses:ap-northeast-2:928618307647:identity/meterengine.com",
+        "arn:aws:ses:ap-northeast-2:928618307647:configuration-set/my-first-configuration-set"
+      ],
       "Condition": {
         "StringEquals": { "ses:FromAddress": "no-reply@meterengine.com" },
         "ForAllValues:StringLike": { "ses:Recipients": ["<받을 주소>", "<이름>+*@gmail.com"] }

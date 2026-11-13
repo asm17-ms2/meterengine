@@ -202,6 +202,10 @@ run "production_sends_signup_mail_from_one_address" {
     error_message = "The app may send only through the hand-made meterengine.com SES identity."
   }
   assert {
+    condition     = local.email_configuration_set_arn == "arn:aws:ses:ap-northeast-2:928618307647:configuration-set/my-first-configuration-set"
+    error_message = "SES also checks the identity's default configuration set, so the app role must name it."
+  }
+  assert {
     condition     = aws_ssm_parameter.signup["mail-from"].value == "MeterEngine <no-reply@meterengine.com>" && aws_ssm_parameter.signup["mail-sender"].value == "ses"
     error_message = "The app sends signup mail through SES from the no-reply address."
   }
@@ -229,8 +233,9 @@ run "app_role_sends_only_from_the_signup_address" {
     app_egress_ports                   = [443]
     monitoring_security_group_id       = "sg-33333333333333333"
     email_sender = {
-      identity_arn = "arn:aws:ses:ap-northeast-2:928618307647:identity/meterengine.com"
-      from_address = "no-reply@meterengine.com"
+      identity_arn          = "arn:aws:ses:ap-northeast-2:928618307647:identity/meterengine.com"
+      configuration_set_arn = "arn:aws:ses:ap-northeast-2:928618307647:configuration-set/my-first-configuration-set"
+      from_address          = "no-reply@meterengine.com"
     }
   }
 
@@ -238,10 +243,13 @@ run "app_role_sends_only_from_the_signup_address" {
     condition = anytrue([
       for statement in jsondecode(aws_iam_role_policy.app.policy).Statement :
       statement.Action == ["ses:SendEmail"] &&
-      statement.Resource == "arn:aws:ses:ap-northeast-2:928618307647:identity/meterengine.com" &&
+      statement.Resource == [
+        "arn:aws:ses:ap-northeast-2:928618307647:identity/meterengine.com",
+        "arn:aws:ses:ap-northeast-2:928618307647:configuration-set/my-first-configuration-set",
+      ] &&
       statement.Condition.StringEquals["ses:FromAddress"] == "no-reply@meterengine.com"
     ])
-    error_message = "The app role may send only from the signup address of the production identity."
+    error_message = "The app role may send only from the signup address, through the production identity and its default configuration set."
   }
 }
 
