@@ -38,6 +38,8 @@ services:
     volumes:
       # 파일이 아니라 디렉터리를 마운트해야 git checkout으로 바뀐 설정이 컨테이너에 보인다.
       - ./monitoring/prometheus:/etc/prometheus:ro
+      # 저장소에 적을 수 없는 대상(만들 때마다 주소가 바뀌는 MSK 브로커)을 서버에 써 둔 파일로 받는다. 파일이 없으면 긁지 않는다.
+      - /etc/meterengine/prometheus-targets:/etc/prometheus-targets:ro
       - prometheus-data:/prometheus
     ports:
       - "127.0.0.1:9090:9090"

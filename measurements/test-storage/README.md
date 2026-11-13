@@ -9,7 +9,7 @@
 
 | 경로 | 내용 |
 | --- | --- |
-| `sut/terraform/` | ALB(ACM 인증서), 오토스케일링 그룹(m7g.large, 최소 0, 최대 3), 버전 파라미터, RDS db.m7g.large(PostgreSQL 18.4, Single-AZ), 보안 그룹, IAM 역할, 파라미터, 도메인, 자동 중지 |
+| `sut/terraform/` | ALB(ACM 인증서), 오토스케일링 그룹(m7g.large, 최소 0, 최대 3), 버전 파라미터, RDS db.m7g.large(PostgreSQL 18.4, Single-AZ), 보안 그룹, IAM 역할, 파라미터, 도메인, 자동 중지. 켰을 때만 MSK 클러스터(브로커 3대)와 컨슈머 서버 오토스케일링 그룹("카프카 경로" 참고) |
 | `sut/scripts/` | 배포, exporter 사용자 만들기, 켜고 끄기, 앱 서버 목록, 부하 실험 중 CPU와 메모리 기록 켜기 |
 | `load-generator/terraform/` | 부하 발생기 EC2 m7g.large, 보안 그룹, IAM 역할, 자동 중지 |
 | `load-generator/k6/` | k6 스크립트 |
@@ -124,7 +124,7 @@ done
 
 - 서버는 미리 구운 이미지로 떠 레포를 받고 배포까지 마친 뒤에 `healthy`가 된다. 헬스 체크 유예는 600초다. 늦으면 서버의 `/var/log/cloud-init-output.log`를 본다.
 - 켜 둔 동안의 apply에는 모두 `-var asg_min_size=1`을 붙인다. 빼면 최소가 0으로 돌아간다.
-- 끌 때는 `sut-stop.sh`로 최소와 원하는 대수를 0으로 내리고, 서버가 다 빠지면 RDS를 멈춘다. 지우지는 않는다. 최소 0은 Terraform 기본값이라 다음 `-var` 없는 apply와 어긋나지 않는다.
+- 끌 때는 `sut-stop.sh`로 수집 서버 그룹과 컨슈머 서버 그룹의 최소와 원하는 대수를 0으로 내리고, 서버가 다 빠지면 RDS를 멈춘다. 지우지는 않는다. 최소 0은 Terraform 기본값이라 다음 `-var` 없는 apply와 어긋나지 않는다. MSK 클러스터는 남는다("카프카 경로"의 끄기 참고).
 
 ```bash
 measurements/test-storage/sut/scripts/sut-stop.sh
@@ -484,6 +484,100 @@ curl -fo work/<RUN_ID>/<RUN_ID>-backend.log http://localhost:8000/<RUN_ID>-backe
 - "RDS Multi-AZ" 절대로 `-var` 없이 apply 해 끈다. plan에 destroy가 없어야 한다.
 - `lg-stop.sh`와 `sut-stop.sh`로 끈다.
 
+## 카프카 경로
+
+수집 API가 요청 안에서 DB에 저장하지 않고 카프카에 발행하고, 컨슈머 서버가 읽어 DB에 넣는 경로를 잰다. 평소에는 꺼 둔다.
+
+| 무엇 | 내용 |
+| --- | --- |
+| MSK 클러스터 | `kafka.m7g.large` 브로커 3대, 가용 영역 세 곳(2a, 2b, 2c). 카프카 3.9, ZooKeeper 방식. TLS(9094 포트)만 열고 인증은 하지 않는다 |
+| 수집 서버 | 기존 오토스케일링 그룹. `ServerRole=ingest` 태그가 붙어 발행만 한다 |
+| 컨슈머 서버 | 오토스케일링 그룹 `meterengine-test-storage-consumer`. `ServerRole=consumer`, 대수 고정, ALB에 붙지 않는다 |
+| 서버가 읽는 값 | 파라미터 `event-write-path`, `kafka-bootstrap-servers`, `kafka-security-protocol`, `kafka-create-topics`, `kafka-consumer-threads`. 켰을 때만 있다 |
+| 컨슈머 스레드 | 서버마다 파티션 수를 컨슈머 서버 대수로 나눈 만큼 띄워 파티션마다 스레드 하나가 붙는다. 2대면 3개씩이다 |
+| 브로커 로그 | CloudWatch Logs 그룹 `/meterengine/test-storage/kafka-broker`, 7일 보관. 브로커를 재부팅했을 때 리더를 다시 뽑은 시각을 여기서 본다 |
+| 토픽 | `event.ingest`(파티션 6, 복제 3, 보관 7일), `event.dlq`(파티션 1, 복제 3, 보관 30일). 먼저 뜬 backend가 만든다 |
+
+- `deploy.sh`가 서버의 `ServerRole` 태그를 읽어 backend에 `METERENGINE_ROLE`로 넘긴다. 태그가 없거나 `all`이면 한 서버가 전부 맡는다.
+- `sut-deploy.sh`는 수집 서버 그룹만 새 서버로 바꾼다. 컨슈머 서버는 0대로 내렸다가 다시 띄워야 새 버전으로 뜬다.
+- 인증이 없는 것은 이 계정이 속한 조직의 정책이 IAM 인증에 쓰는 `kafka-cluster` 권한을 막기 때문이다. 브로커에 붙을 수 있는 쪽은 보안 그룹이 수집 서버와 컨슈머 서버로 좁힌다. 붙은 서버는 모든 토픽을 읽고 쓸 수 있다.
+- ZooKeeper 방식인 것은 staging, production이 쓸 `kafka.t3.small`이 KRaft를 고를 수 없어서다. KRaft로 재려면 `-var kafka_version=3.9.x.kraft`를 준다.
+- 켠 동안에는 예약 작업(집계, 인보이스 확정)을 도는 서버가 없다. 수집과 저장만 잰다.
+- 2c 프라이빗 서브넷(`10.0.160.0/20`)은 이 루트가 만들고, 카프카를 꺼도 남는다. 서브넷은 비용이 없다.
+
+### 켜기
+
+서버가 0대일 때 켠다. 클러스터를 만드는 데 30분쯤 걸리고, 서버는 그 뒤에 뜬다.
+
+```bash
+terraform -chdir=measurements/test-storage/sut/terraform apply \
+  -var kafka_enabled=true -var asg_min_size=1 -var consumer_count=2
+```
+
+- 한 번에 켜도 Terraform이 클러스터와 카프카 파라미터를 다 만든 뒤에 수집 서버와 컨슈머 서버의 대수를 올린다. 브로커 주소 파라미터는 클러스터가 다 만들어져야 값이 나온다.
+- 서버는 부팅할 때 파라미터를 한 번만 읽는다. 파라미터가 없을 때 뜬 서버는 오류 없이 요청 안에서 DB에 저장하고, 컨슈머 서버는 아무것도 읽지 않는다.
+- 서버 없이 클러스터만 먼저 만들려면 `-var kafka_enabled=true`만 준다.
+- 이 순서는 apply가 대수를 올려 새로 뜨는 서버만 지킨다. 이미 떠 있던 서버는 태그와 파라미터를 다시 읽지 않는다. 0대로 내렸다가 다시 띄운다.
+- `consumer_count`는 6까지다. `event.ingest`의 파티션이 6개라 그보다 많으면 남는 서버가 논다.
+
+### 브로커 지표
+
+브로커 주소는 클러스터를 만들 때마다 바뀌어 수집 설정에 적어 둘 수 없다. 클러스터를 만든 뒤 한 번 부르면 공용 모니터링 서버의 Prometheus가 브로커 3대를 긁는다.
+
+```bash
+measurements/test-storage/sut/scripts/kafka-monitoring-targets.sh register
+```
+
+- 서버 지표(CPU, 디스크, 네트워크)는 15초, 카프카 내부 지표는 60초마다 긁는다. AWS가 내부 지표를 60초보다 자주 긁지 말라고 한다.
+- Prometheus에서 `up{job=~"kafka-.*", env="test-storage"}`가 브로커마다 1이면 긁히는 것이다.
+- 끄기 전에 `kafka-monitoring-targets.sh clear`로 대상 파일을 지운다. 남겨 두면 없는 브로커가 down으로 보인다.
+
+### 토픽과 컨슈머 들여다보기
+
+브로커 보안 그룹이 SUT 서버만 들여서, 일하는 서버 하나에서 카프카 명령줄 도구를 돌려 결과를 찍는다. 읽기만 한다.
+
+```bash
+measurements/test-storage/sut/scripts/kafka-tool.sh lag     # 파티션마다 읽은 자리, 밀린 양, 맡은 스레드
+measurements/test-storage/sut/scripts/kafka-tool.sh topics  # 파티션, 리더, 복제본, 토픽 설정
+measurements/test-storage/sut/scripts/kafka-tool.sh dlq 10  # DLQ의 앞에서부터 10건. 이유는 failure_reason 헤더
+```
+
+### 값을 바꿔 가며 재기
+
+아래 값은 파라미터로 넣으면 다음에 뜨는 서버가 읽는다. 넣지 않으면 backend 기본값이다. 파라미터 이름은 환경변수 이름을 소문자와 하이픈으로 바꾼 것이다(`KAFKA_PRODUCER_LINGER_MS`는 `kafka-producer-linger-ms`).
+
+| 환경변수 | 기본값 | 무엇 |
+| --- | --- | --- |
+| `KAFKA_PRODUCER_LINGER_MS` | 25 | 프로듀서가 묶으려고 기다리는 시간(ms) |
+| `KAFKA_PRODUCER_BATCH_SIZE` | 16384 | 프로듀서 묶음 하나의 상한(바이트) |
+| `KAFKA_PRODUCER_COMPRESSION_TYPE` | lz4 | 프로듀서 압축. `none`, `lz4`, `zstd` |
+| `KAFKA_PRODUCER_DELIVERY_TIMEOUT_MS` | 15000 | 프로듀서가 재시도까지 합쳐 기다리는 시간(ms) |
+| `KAFKA_PUBLISH_TIMEOUT` | 20s | 요청 스레드가 발행을 기다리는 상한. 위 값보다 길게 둔다 |
+| `KAFKA_CONSUMER_MAX_POLL_RECORDS` | 500 | 컨슈머가 한 트랜잭션에 넣는 묶음 크기 |
+| `KAFKA_CONSUMER_SESSION_TIMEOUT_MS` | 15000 | 죽은 컨슈머의 파티션을 다른 서버에 넘기기까지 기다리는 시간(ms) |
+
+```bash
+aws ssm put-parameter --overwrite --type String --name /meterengine/test-storage/kafka-producer-linger-ms --value 50
+```
+
+- 떠 있는 서버는 다시 읽지 않는다. 0대로 내렸다가 다시 띄운다.
+- 실험이 끝나면 넣은 파라미터를 지운다. Terraform이 만든 것이 아니라 끄기 apply로 지워지지 않는다.
+
+### 끄기
+
+**MSK는 멈출 수 없고, 있는 동안 과금된다.** 04:00 예약과 `sut-stop.sh`는 서버만 0대로 내리고 클러스터는 남긴다. 실험이 끝나면 아래 순서로 직접 지운다. 토픽과 메시지도 같이 지워진다.
+
+```bash
+measurements/test-storage/sut/scripts/sut-stop.sh
+terraform -chdir=measurements/test-storage/sut/terraform apply
+```
+
+1. `sut-stop.sh`가 수집 서버 그룹, 컨슈머 서버 그룹을 차례로 0대로 내리고 RDS를 멈춘다.
+2. 변수 없는 apply가 클러스터와 카프카 파라미터를 지운다. `kafka_enabled`의 기본값이 false다.
+
+- apply만으로는 서버가 내려가지 않는다. Terraform은 두 그룹의 원하는 대수를 바꾸지 않아 최소만 0이 되고 떠 있던 서버는 남는다.
+- 서버를 남긴 채 클러스터를 지우지 않는다. 떠 있는 수집 서버는 지워진 브로커에 계속 발행하려 해 503을 낸다.
+
 ## 상태 파일과 지우기
 
 - 상태 파일은 apply한 컴퓨터에만 있고 커밋하지 않는다. 잃으면 Terraform으로 지울 수 없으니 지우지 않는다.
@@ -507,4 +601,5 @@ terraform -chdir=measurements/test-storage/sut/terraform destroy
 - 켜 둔 동안 시간당 약 $0.34(앱 서버 한 대 $0.10, RDS $0.23, 공인 IP $0.005). 앱 서버가 늘면 한 대에 약 $0.10씩 더 든다. RDS Multi-AZ를 켠 동안은 RDS 몫이 약 두 배다.
 - 꺼 둔 동안 앱 서버는 0대라 EC2, EBS, 공인 IP 비용이 없다. RDS 스토리지 월 약 $3에 ALB 고정비 월 약 $16(시간당 $0.0225)이 더 든다. ALB는 끌 수 없어 켜고 끄기와 상관없이 나간다.
 - 부하 발생기는 켜 둔 동안 시간당 약 $0.11(EC2 $0.10, 공인 IP $0.005), 꺼 둔 동안 월 약 $2(EBS).
+- 카프카를 켠 동안 MSK 브로커 3대와 저장소가 더 든다. 2026-11-04에 잡은 값은 20시간에 약 $15다. 컨슈머 서버는 한 대에 시간당 약 $0.10이다.
 - SUT RDS가 있는 동안 cloudwatch exporter의 CloudWatch API 호출이 RDS 한 대 몫만큼 늘어 월 약 $17이 더 든다. exporter 설정([`deploy/cloudwatch/config.yml`](../../deploy/cloudwatch/config.yml))이 계정의 RDS를 모두 읽기 때문이다.

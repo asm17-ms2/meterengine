@@ -82,6 +82,13 @@ tf_out() {
 	printf '%s' "$value"
 }
 
+# 그 출력을 더하기 전에 apply한 상태에는 출력이 없다. 그때는 실패하지 않고 빈 값을 낸다.
+tf_out_or_empty() {
+	local name="$1"
+	[ -n "${TF_DIR:-}" ] || die "TF_DIR이 정해지지 않았다"
+	terraform -chdir="$TF_DIR" output -raw "$name" 2>/dev/null || true
+}
+
 ec2_state() {
 	local instance_id="$1"
 	aws ec2 describe-instances \
@@ -168,6 +175,15 @@ require_in_service_instances() {
 	[ -n "$instances" ] ||
 		die "오토스케일링 그룹 $asg_name 에 일하는 서버가 없다. sut-deploy.sh로 버전을 기록한 뒤 apply -var asg_min_size=1로 띄운다"
 	printf '%s\n' "$instances"
+}
+
+asg_exists() {
+	local asg_name="$1" count
+	count=$(aws autoscaling describe-auto-scaling-groups \
+		--auto-scaling-group-names "$asg_name" \
+		--query 'length(AutoScalingGroups)' \
+		--output text) || die "오토스케일링 그룹 $asg_name 을 읽지 못했다"
+	[ "$count" != 0 ]
 }
 
 # 종료 중인 서버까지 다 빠질 때까지 기다린다.
