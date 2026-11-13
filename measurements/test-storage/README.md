@@ -512,16 +512,16 @@ measurements/test-storage/sut/scripts/kafka-tool.sh dlq 10  # DLQ의 앞에서�
 
 | 환경변수 | 기본값 | 무엇 |
 | --- | --- | --- |
-| `KAFKA_PRODUCER_LINGER_MS` | 5 | 프로듀서가 묶으려고 기다리는 시간(ms) |
+| `KAFKA_PRODUCER_LINGER_MS` | 25 | 프로듀서가 묶으려고 기다리는 시간(ms) |
 | `KAFKA_PRODUCER_BATCH_SIZE` | 16384 | 프로듀서 묶음 하나의 상한(바이트) |
-| `KAFKA_PRODUCER_COMPRESSION_TYPE` | none | 프로듀서 압축. `lz4`, `zstd` |
+| `KAFKA_PRODUCER_COMPRESSION_TYPE` | lz4 | 프로듀서 압축. `none`, `lz4`, `zstd` |
 | `KAFKA_PRODUCER_DELIVERY_TIMEOUT_MS` | 15000 | 프로듀서가 재시도까지 합쳐 기다리는 시간(ms) |
 | `KAFKA_PUBLISH_TIMEOUT` | 20s | 요청 스레드가 발행을 기다리는 상한. 위 값보다 길게 둔다 |
 | `KAFKA_CONSUMER_MAX_POLL_RECORDS` | 500 | 컨슈머가 한 트랜잭션에 넣는 묶음 크기 |
 | `KAFKA_CONSUMER_SESSION_TIMEOUT_MS` | 45000 | 죽은 컨슈머의 파티션을 다른 서버에 넘기기까지 기다리는 시간(ms) |
 
 ```bash
-aws ssm put-parameter --overwrite --type String --name /meterengine/test-storage/kafka-producer-linger-ms --value 25
+aws ssm put-parameter --overwrite --type String --name /meterengine/test-storage/kafka-producer-linger-ms --value 50
 ```
 
 - 떠 있는 서버는 다시 읽지 않는다. 0대로 내렸다가 다시 띄운다.

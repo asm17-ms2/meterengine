@@ -14,9 +14,9 @@ KAFKA_TUNING_DEFAULTS = {
     "KAFKA_CONSUMER_THREADS": "1",
     "KAFKA_CONSUMER_MAX_POLL_RECORDS": "500",
     "KAFKA_CONSUMER_SESSION_TIMEOUT_MS": "45000",
-    "KAFKA_PRODUCER_LINGER_MS": "5",
+    "KAFKA_PRODUCER_LINGER_MS": "25",
     "KAFKA_PRODUCER_BATCH_SIZE": "16384",
-    "KAFKA_PRODUCER_COMPRESSION_TYPE": "none",
+    "KAFKA_PRODUCER_COMPRESSION_TYPE": "lz4",
     "KAFKA_PRODUCER_DELIVERY_TIMEOUT_MS": "15000",
     "KAFKA_PUBLISH_TIMEOUT": "20s",
 }
@@ -67,8 +67,8 @@ class KafkaEnvironmentTest(unittest.TestCase):
 
     def test_compose_passes_the_tuning_values_when_set(self):
         values = {"KAFKA_CONSUMER_THREADS": "3", "KAFKA_CONSUMER_MAX_POLL_RECORDS": "1000",
-                  "KAFKA_CONSUMER_SESSION_TIMEOUT_MS": "15000", "KAFKA_PRODUCER_LINGER_MS": "25",
-                  "KAFKA_PRODUCER_BATCH_SIZE": "65536", "KAFKA_PRODUCER_COMPRESSION_TYPE": "lz4",
+                  "KAFKA_CONSUMER_SESSION_TIMEOUT_MS": "15000", "KAFKA_PRODUCER_LINGER_MS": "50",
+                  "KAFKA_PRODUCER_BATCH_SIZE": "65536", "KAFKA_PRODUCER_COMPRESSION_TYPE": "zstd",
                   "KAFKA_PRODUCER_DELIVERY_TIMEOUT_MS": "30000", "KAFKA_PUBLISH_TIMEOUT": "35s"}
         backend = backend_environment(values)
         for name, value in values.items():
