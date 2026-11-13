@@ -18,6 +18,17 @@ export function listOrganizations(status?: OrganizationStatus) {
   return operatorRequest<{ organizations: OrganizationResponse[] }>(status ? `/v1/organizations?status=${status}` : "/v1/organizations");
 }
 
+export type LiveEnvironmentApplicationStatus = "pending" | "approved" | "rejected";
+export type LiveEnvironmentApplicationResponse = {
+  id: string; organization_id: string; organization_name: string; business_registration_number: string; toss_payments_merchant_id: string;
+  status: LiveEnvironmentApplicationStatus; business_status: "operating" | "suspended" | "unchecked"; tax_type: string | null; rejection_reason: string | null;
+  created_at: string; reviewed_at: string | null; observed_toss_payments_merchant_id: string | null; merchant_id_checked_at: string | null;
+};
+
+export function listLiveEnvironmentApplications(status?: LiveEnvironmentApplicationStatus) {
+  return operatorRequest<{ live_environment_applications: LiveEnvironmentApplicationResponse[] }>(status ? `/v1/live-environment-applications?status=${status}` : "/v1/live-environment-applications");
+}
+
 export function listUserAccounts() {
   return operatorRequest<{ user_accounts: UserAccountResponse[] }>("/v1/user-accounts");
 }

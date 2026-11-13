@@ -308,6 +308,58 @@ class PaymentAttemptIntegrationTest {
   }
 
   @Test
+  void 환경_없는_옛_범위의_live_결제는_실제_환경_이용_신청의_상점아이디를_견주지_않는다() {
+    Payable payable = payableInvoice("live");
+    String session = TestCredentials.issueMemberSession(jdbcTemplate, payable.organizationId());
+    UUID userAccountId =
+        jdbcTemplate.queryForObject(
+            "SELECT user_account_id FROM organization_member WHERE organization_id=?",
+            UUID.class,
+            payable.organizationId());
+    UUID application = UUID.randomUUID();
+    jdbcTemplate.update(
+        """
+        INSERT INTO live_environment_application
+          (id, organization_id, business_registration_number, toss_payments_merchant_id, status,
+           business_status, applicant_user_account_id, created_at, reviewer_user_account_id,
+           reviewed_at)
+        VALUES (?, ?, '1234567891', 'applied-mid', 'approved', 'operating', ?, now(), ?, now())
+        """,
+        application,
+        payable.organizationId(),
+        userAccountId,
+        userAccountId);
+    tossReturns(
+        new TossPaymentsResult.Success<>(
+            new TossPaymentsPayment(
+                "other-mid", LIVE_PAYMENT_KEY, "order", "DONE", 13200L, 13200L, null)));
+
+    assertThat(
+            mvc.post()
+                .uri("/v1/invoices/{id}/payment-attempts", payable.invoiceId())
+                .header("Authorization", session)
+                .exchange())
+        .hasStatus(201)
+        .bodyJson()
+        .extractingPath("$.status")
+        .isEqualTo("done");
+
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT merchant_id_checked_at FROM live_environment_application WHERE id=?",
+                Object.class,
+                application))
+        .isNull();
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM audit_log WHERE organization_id=? AND"
+                    + " action='live_environment_merchant_id_mismatched'",
+                Integer.class,
+                payable.organizationId()))
+        .isZero();
+  }
+
+  @Test
   void live_모드에서_테스트_코드를_보내면_400이고_시도를_남기지_않는다() {
     Payable payable = payableInvoice("live");
 

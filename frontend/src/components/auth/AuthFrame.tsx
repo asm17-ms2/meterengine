@@ -2,9 +2,9 @@ import Link from "next/link";
 
 const STEPS: Record<"signup" | "join" | "operator" | "login", [string, string][]> = {
   login: [["로그인", "가입한 이메일이나 받은 계정으로 로그인"], ["약관 동의", "처음 로그인할 때 필요하면 확인"], ["업무 시작", "고객, 사용량, 청구 확인"]],
-  operator: [["계정 확인", "플랫폼 운영자가 생성한 계정으로 로그인"], ["약관 동의", "이용약관과 개인정보 처리방침 확인"], ["플랫폼 운영 시작", "조직 승인과 플랫폼 권한 관리"]],
+  operator: [["계정 확인", "플랫폼 운영자가 생성한 계정으로 로그인"], ["약관 동의", "이용약관과 개인정보 처리방침 확인"], ["플랫폼 운영 시작", "실제 환경 이용 신청 검토와 플랫폼 권한 관리"]],
   join: [["계정 확인", "초대받은 계정이나 지금 로그인한 계정 확인"], ["약관 동의", "이용약관과 개인정보 처리방침 확인"], ["소속 조직으로 이동", "받은 권한으로 업무 시작"]],
-  signup: [["가입 신청", "조직과 담당자 정보 입력"], ["가입 승인", "승인 후 로그인"], ["연동 시작", "고객과 요금을 등록하고 사용량 보내기"]],
+  signup: [["가입", "조직과 담당자 정보 입력"], ["이메일 인증", "메일로 받은 링크 열기"], ["연동 시작", "테스트 환경에서 고객과 요금을 등록하고 사용량 보내기"]],
 };
 
 export function AuthFrame({ title, description, children, variant = "signup", currentStep }: { title: string; description: string; children: React.ReactNode; variant?: "signup" | "join" | "operator" | "login"; currentStep?: 1 | 2 | 3 }) {

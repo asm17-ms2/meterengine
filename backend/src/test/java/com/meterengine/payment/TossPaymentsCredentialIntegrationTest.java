@@ -135,7 +135,7 @@ class TossPaymentsCredentialIntegrationTest {
             """
             {
               "code": "invalid_toss_payments_credential", "message": "%s",
-              "errors": [{"field": "secret_key", "message": "test 모드의 키는 test_sk_ 뒤에 값이 이어져야 합니다"}]
+              "errors": [{"field": "secret_key", "message": "테스트 환경 키는 test_sk_ 뒤에 값이 이어져야 합니다"}]
             }
             """
                 .formatted(ErrorCode.INVALID_TOSS_PAYMENTS_CREDENTIAL.getMessage()));

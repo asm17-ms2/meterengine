@@ -1,12 +1,11 @@
 import { expect, test, type Page, type APIRequestContext } from "@playwright/test";
 import { closeSync, fchmodSync, mkdirSync, openSync, writeFileSync } from "node:fs";
 import { consoleHeaders } from "./console-environment";
+import { openLiveEnvironment } from "./real-organization";
 
 const API_URL = process.env.S1_API_URL ?? "http://127.0.0.1:38147";
 const PG_URL = "http://127.0.0.1:38447";
 const PASSWORD = "local-member-e2e-password";
-const OPERATOR_EMAIL = process.env.E2E_OPERATOR_EMAIL ?? "operator@fe-e2e.local";
-const OPERATOR_PASSWORD = process.env.E2E_OPERATOR_PASSWORD ?? "local-operator-e2e-password";
 const kstMonth = (date: Date) => new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit" }).format(date);
 
 async function login(page: Page, email: string, password = PASSWORD, returnTo = "") {
@@ -36,7 +35,7 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
   const customerName = `MVP 고객 ${suffix}`;
   const metricCode = `mvp-units-${suffix}`;
   const month = kstMonth(new Date());
-  await test.step("새 도입사 가입과 운영자 승인", async () => {
+  await test.step("새 조직 가입과 바로 로그인", async () => {
     await page.goto("/signup");
     await page.getByLabel("조직 이름", { exact: true }).fill(organizationName);
     await page.getByLabel("담당자 이름", { exact: true }).fill("MVP 담당자");
@@ -44,19 +43,14 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     await page.getByLabel("비밀번호", { exact: true }).fill(PASSWORD);
     await page.getByRole("checkbox").nth(0).check();
     await page.getByRole("checkbox").nth(1).check();
-    await page.getByRole("button", { name: "가입 신청", exact: true }).click();
-    await expect(page).toHaveURL(/\/pending$/);
-    const operatorContext = await browser.newContext();
-    const operator = await operatorContext.newPage();
-    await login(operator, OPERATOR_EMAIL, OPERATOR_PASSWORD, "/admin/organizations");
-    await expect(operator).toHaveURL(/\/admin\/organizations$/);
-    const card = operator.getByRole("article").filter({ has: operator.getByRole("heading", { name: organizationName, exact: true }) });
-    await card.getByRole("button", { name: "가입 승인", exact: true }).click();
-    await operator.getByRole("button", { name: "가입 승인 확정", exact: true }).click();
-    await expect(card).toHaveCount(0);
-    await operatorContext.close();
+    await page.getByRole("button", { name: "가입", exact: true }).click();
+    // 이메일 인증을 끈 로컬 서버에서는 가입하자마자 로그인 화면으로 간다. 운영자 승인은 없다.
+    await expect(page).toHaveURL(/\/login\?reason=signed_up$/);
     await login(page, email, PASSWORD, "/customers");
     await expect(page).toHaveURL(/\/customers(?:\?.*)?$/);
+    // 이 시나리오는 환경 헤더 없는 준비 요청과 실제 환경을 함께 쓰므로 실제 환경을 열고 시작한다.
+    const session = await (await page.request.get(`${API_URL}/v1/sessions/current`, { headers: { Authorization: `Bearer ${await tokenOf(page)}` } })).json();
+    openLiveEnvironment(session.organization.id);
   });
   const memberToken = await tokenOf(page);
   const memberHeaders = consoleHeaders(memberToken);

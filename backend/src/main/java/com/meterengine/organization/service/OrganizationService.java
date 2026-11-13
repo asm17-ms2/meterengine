@@ -67,6 +67,9 @@ public class OrganizationService {
     }
     String previousStatus = organization.getStatus();
     organization.transitionTo(status);
+    if (Organization.PENDING.equals(previousStatus) && Organization.ACTIVE.equals(status)) {
+      organization.lockLiveEnvironment();
+    }
     applicationEventPublisher.publishEvent(
         new OrganizationStatusChangedEvent(organizationId, Organization.ACTIVE.equals(status)));
     auditLogService.record(

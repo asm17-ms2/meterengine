@@ -2,6 +2,7 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { CONSENT_DOCUMENTS, CONSENT_VERSION } from "../src/lib/auth/consents";
 import { consoleHeaders } from "./console-environment";
+import { openLiveEnvironment } from "./real-organization";
 
 const API_URL = process.env.S1_API_URL ?? "http://127.0.0.1:38147";
 const PG_URL = "http://127.0.0.1:38447";
@@ -115,7 +116,7 @@ test("보관을 지원하는 모든 도입사 목록에서 상태별 조회와 �
     expect(operator.status()).toBe(201);
     const operatorToken = (await operator.json()).token;
     secrets.add(operatorToken);
-    expect((await request.put(`${API_URL}/v1/organizations/${organizationId}/status`, { headers: { Authorization: `Bearer ${operatorToken}` }, data: { status: "active" } })).status()).toBe(200);
+    openLiveEnvironment(organizationId);
     await page.goto("/login?returnTo=%2Fcustomers");
     await page.getByLabel("이메일", { exact: true }).fill(email);
     await page.getByLabel("비밀번호", { exact: true }).fill(PASSWORD);

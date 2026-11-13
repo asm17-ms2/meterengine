@@ -47,7 +47,8 @@ class TossPaymentsClientTest {
        "approvedAt":"2026-10-25T10:00:00+09:00","cancels":null,"mId":"tvivarepublica"}
       """;
   private static final TossPaymentsPayment PAYMENT =
-      new TossPaymentsPayment("pk-1", "order-000001", "DONE", 10000, 10000, List.of());
+      new TossPaymentsPayment(
+          "tvivarepublica", "pk-1", "order-000001", "DONE", 10000, 10000, List.of());
 
   private MockRestServiceServer server;
   private SimpleMeterRegistry meterRegistry;
@@ -307,6 +308,32 @@ class TossPaymentsClientTest {
         client.findPaymentByOrderId(SECRET_KEY, "order-000001");
 
     assertThat(result).isEqualTo(new TossPaymentsResult.Rejected<>(404, "NOT_FOUND_PAYMENT", "없음"));
+  }
+
+  @Test
+  void 결제_응답의_상점아이디를_mId로_읽고_없으면_null이다() {
+    server
+        .expect(requestTo(BASE + "/v1/payments/pk-1"))
+        .andRespond(
+            withSuccess(
+                """
+                {"mId":"tosspayments","paymentKey":"pk-1","orderId":"order-000001",
+                 "status":"DONE","totalAmount":10000,"balanceAmount":10000}
+                """,
+                MediaType.APPLICATION_JSON));
+    server
+        .expect(requestTo(BASE + "/v1/payments/pk-2"))
+        .andRespond(
+            withSuccess(
+                """
+                {"paymentKey":"pk-2","orderId":"order-000002","status":"DONE",
+                 "totalAmount":10000,"balanceAmount":10000}
+                """,
+                MediaType.APPLICATION_JSON));
+
+    assertThat(success(client.findPayment(SECRET_KEY, "pk-1")).merchantId())
+        .isEqualTo("tosspayments");
+    assertThat(success(client.findPayment(SECRET_KEY, "pk-2")).merchantId()).isNull();
   }
 
   @Test

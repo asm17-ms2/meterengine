@@ -53,6 +53,10 @@ public class Organization implements Persistable<UUID> {
   @Column(name = "business_address")
   private String businessAddress;
 
+  // null이면 실제 환경이 잠겨 있다. 가입한 조직은 null로 시작하고 이용 신청이 승인되면 채운다.
+  @Column(name = "live_environment_opened_at")
+  private OffsetDateTime liveEnvironmentOpenedAt;
+
   @Transient private boolean isNew;
 
   protected Organization() {}
@@ -101,6 +105,25 @@ public class Organization implements Persistable<UUID> {
       throw new IllegalStateException(status + " -> " + nextStatus);
     }
     this.status = nextStatus;
+  }
+
+  public OffsetDateTime getLiveEnvironmentOpenedAt() {
+    return liveEnvironmentOpenedAt;
+  }
+
+  public boolean isLiveEnvironmentOpen() {
+    return liveEnvironmentOpenedAt != null;
+  }
+
+  // 가입 대기 조직은 가입 승인을 받던 때의 서버가 만들어 열린 채 들어온다. 승인할 때 가입한 조직처럼 잠근다.
+  public void lockLiveEnvironment() {
+    this.liveEnvironmentOpenedAt = null;
+  }
+
+  public void openLiveEnvironment(OffsetDateTime openedAt) {
+    if (liveEnvironmentOpenedAt == null) {
+      this.liveEnvironmentOpenedAt = openedAt;
+    }
   }
 
   public String getBusinessRegistrationNumber() {

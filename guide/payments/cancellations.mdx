@@ -53,7 +53,7 @@ curl "https://meterengine.com/v1/invoices/7b0c2f4e-5a1d-4c8e-9f3b-2d6a8e1c4b70/p
 ```
 </Step>
 <Step title="멱등 키를 만들어 저장한다">
-취소 요청마다 UUID를 하나 만들어 도입사 쪽에 저장합니다. 응답을 받지 못해 다시 보낼 때 같은 값을 씁니다.
+취소 요청마다 UUID를 하나 만들어 자사 시스템에 저장합니다. 응답을 받지 못해 다시 보낼 때 같은 값을 씁니다.
 </Step>
 <Step title="취소를 요청한다">
 `POST /v1/payment-attempts/{id}/cancellations`에 사유와 금액을 보냅니다. `amount`를 빼면 남은 결제 금액 전부를 취소합니다.

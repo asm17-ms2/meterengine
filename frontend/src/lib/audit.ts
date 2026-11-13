@@ -5,7 +5,7 @@ export function auditActorLabel(actorType: string, actorId: string | null, names
 }
 
 export const AUDIT_ACTIONS: Record<string, string> = {
-  api_request_completed: "API 요청", session_created: "로그인", session_deleted: "로그아웃", signup_created: "가입 신청",
+  api_request_completed: "API 요청", session_created: "로그인", session_deleted: "로그아웃", signup_created: "가입",
   organization_status_updated: "조직 상태 변경", user_account_created: "운영자 계정 생성", user_account_role_updated: "플랫폼 권한 변경", organization_member_created: "사용자 추가",
   organization_member_archived: "사용자 소속 보관", organization_member_role_updated: "역할 변경", organization_invitation_created: "초대 링크 발급",
   organization_invitation_accepted: "초대 수락", organization_invitation_revoked: "초대 취소", api_key_created: "API 키 발급", api_key_deleted: "API 키 폐기",
@@ -19,6 +19,8 @@ export const AUDIT_ACTIONS: Record<string, string> = {
   user_account_password_updated: "비밀번호 변경", payment_setting_updated: "결제 모드 변경", toss_payments_credential_updated: "토스페이먼츠 키 저장", toss_payments_credential_archived: "토스페이먼츠 키 보관",
   supplier_updated: "공급자 정보 변경", payment_method_created: "카드 등록", payment_method_archived: "등록 카드 보관", webhook_endpoint_created: "수신 주소 등록", webhook_endpoint_updated: "수신 주소 수정",
   webhook_endpoint_archived: "수신 주소 보관", webhook_endpoint_restored: "수신 주소 복원", webhook_delivery_retried: "통보 다시 보내기",
+  live_environment_application_created: "실제 환경 이용 신청", live_environment_application_approved: "실제 환경 이용 신청 승인", live_environment_application_rejected: "실제 환경 이용 신청 거절",
+  live_environment_merchant_id_mismatched: "상점아이디 불일치",
 };
 
 // 지금은 남기지 않는 행동은 옛 기록을 읽을 이름만 두고 행동 조건 선택지에서는 뺀다.

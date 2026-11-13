@@ -16,15 +16,19 @@ SERVER = "https://meterengine.com"
 # 가이드가 링크하지 않는 경로. 페이지를 만들지 않는다.
 EXCLUDED = {
     "운영자 전용": [
-        "getOperations", "listOperationsAuditLogs", "listOrganizations", "createOrganizationMember",
+        "getOperations", "listOperationsAuditLogs", "listOrganizations",
         "updateOrganizationStatus", "createUserAccount", "listUserAccounts", "updateUserAccountRole",
+        "listLiveEnvironmentApplications", "updateLiveEnvironmentApplicationStatus",
     ],
     "콘솔 세션": ["getSession", "deleteSession", "updateSessionOrganization", "acceptSessionConsents"],
-    "가입, 로그인, 초대": ["createSignup", "createSession", "previewOrganizationInvitation", "acceptOrganizationInvitation"],
+    "가입, 로그인, 초대": [
+        "createSignup", "createEmailVerification", "confirmEmailVerification", "createSession",
+        "previewOrganizationInvitation", "acceptOrganizationInvitation",
+    ],
     "MeterEngine 화면용 공개 경로": ["getPaymentMethodRegistration", "createBillingKey", "getPublicInvoice", "createInvoicePaymentRetry"],
     "화면 보조 options": ["suggestCustomers", "suggestBillableMetrics"],
 }
-# 도입사가 쓰지만 API 키로 부를 수 없는 경로. 페이지는 만들고 탐색에서 숨긴다.
+# 콘솔에서 쓰지만 API 키로 부를 수 없는 경로. 페이지는 만들고 탐색에서 숨긴다.
 HIDDEN = {
     "세션 전용 관리(관리자)": [
         "createApiKey", "deleteApiKey", "updateApiKeyScopes",
@@ -32,14 +36,19 @@ HIDDEN = {
         "removeOrganizationMember", "revokeOrganizationInvitation", "updateOrganizationMemberRole",
         "updateOrganizationMemberScopes",
         "updatePaymentSetting", "updateTossPaymentsCredential", "deleteTossPaymentsCredential",
+        "createLiveEnvironmentApplication",
     ],
-    "세션 전용 관리(조회)": ["listApiKeys", "listOrganizationAuditLogs", "listOrganizationMembers"],
+    "세션 전용 관리(조회)": [
+        "listApiKeys", "listOrganizationAuditLogs", "listOrganizationMembers",
+        "listOrganizationLiveEnvironmentApplications",
+    ],
     "토스페이먼츠 웹훅 수신": ["receiveTossPaymentsWebhook"],
 }
 # 태그 표시 이름. 나열 순서가 최상위 tags 순서다. 모든 operation이 제외된 태그는 넣지 않는다.
 TAG_NAMES = [
     ("organization-environment-controller", "업무 환경"),
-    ("current-organization-controller", "도입사 정보"),
+    ("current-organization-controller", "조직 정보"),
+    ("live-environment-application-controller", "실제 환경 이용 신청 (콘솔 전용)"),
     ("api-key-controller", "API 키 (콘솔 전용)"),
     ("organization-people-controller", "구성원과 초대 (콘솔 전용)"),
     ("audit-log-controller", "감사 기록 (콘솔 전용)"),
@@ -148,7 +157,7 @@ def main():
     w("# 생성 파일: guide/scripts/make_overlay.py 로 다시 만든다. 손으로 고치지 않는다.")
     w("overlay: 1.0.0")
     w("info:")
-    w('  title: "MeterEngine 도입사 가이드용 조정"')
+    w('  title: "MeterEngine 가이드용 조정"')
     w('  version: "1.0.0"')
     w("actions:")
     w("  # 경로가 모두 /v1/ 로 시작하므로 servers 에 /v1 을 붙이지 않는다.")

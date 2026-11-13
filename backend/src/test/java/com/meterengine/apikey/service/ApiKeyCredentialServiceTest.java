@@ -3,8 +3,10 @@ package com.meterengine.apikey.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.meterengine.TestClock;
+import com.meterengine.apikey.config.ApiKeyProperties;
 import com.meterengine.global.security.OrganizationStatusChangedEvent;
 import com.meterengine.global.security.SecureTokens;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.Set;
 import java.util.UUID;
@@ -14,10 +16,16 @@ class ApiKeyCredentialServiceTest {
 
   private static final OffsetDateTime NOW = OffsetDateTime.parse("2026-11-08T00:00:00Z");
 
+  private static final int TEST_LIMIT = 100;
+
   private final ApiKeyTable apiKeyTable = new ApiKeyTable();
   private final TestClock clock = new TestClock();
   private final ApiKeyCredentialService apiKeyCredentialService =
-      new ApiKeyCredentialService(apiKeyTable, clock);
+      new ApiKeyCredentialService(
+          apiKeyTable,
+          clock,
+          new ApiKeyProperties(
+              Duration.ofHours(24), Duration.ZERO, Duration.ofSeconds(30), TEST_LIMIT));
 
   private final String rawKey = SecureTokens.generate("me_live_");
 
@@ -51,6 +59,41 @@ class ApiKeyCredentialServiceTest {
     apiKeyTable.put(snapshotExpiringAt(NOW));
 
     assertThat(apiKeyCredentialService.authenticate(rawKey)).isEmpty();
+  }
+
+  @Test
+  void 테스트_환경_키의_한도는_키에_넣은_값과_플랫폼_상한_가운데_작은_쪽이다() {
+    assertThat(limitOf(snapshot(UUID.randomUUID(), "test", null))).isEqualTo(TEST_LIMIT);
+    assertThat(limitOf(snapshot(UUID.randomUUID(), "test", TEST_LIMIT + 1))).isEqualTo(TEST_LIMIT);
+    assertThat(limitOf(snapshot(UUID.randomUUID(), "test", TEST_LIMIT - 1)))
+        .isEqualTo(TEST_LIMIT - 1);
+  }
+
+  @Test
+  void 실제_환경_키와_환경이_없는_키의_한도는_키에_넣은_값_그대로다() {
+    assertThat(limitOf(snapshot(UUID.randomUUID(), "live", null))).isNull();
+    assertThat(limitOf(snapshot(UUID.randomUUID(), "live", TEST_LIMIT + 1)))
+        .isEqualTo(TEST_LIMIT + 1);
+    assertThat(limitOf(snapshot(null, "test", null))).isNull();
+    assertThat(limitOf(snapshot(null, "test", TEST_LIMIT + 1))).isEqualTo(TEST_LIMIT + 1);
+  }
+
+  private Integer limitOf(ApiKeySnapshot snapshot) {
+    apiKeyTable.put(snapshot);
+    return apiKeyCredentialService.authenticate(rawKey).orElseThrow().rateLimitPerMinute();
+  }
+
+  private ApiKeySnapshot snapshot(UUID environmentId, String mode, Integer rateLimitPerMinute) {
+    return new ApiKeySnapshot(
+        ApiKeyHash.of(rawKey),
+        UUID.randomUUID(),
+        UUID.randomUUID(),
+        environmentId,
+        mode,
+        Set.of("ingest"),
+        rateLimitPerMinute,
+        null,
+        null);
   }
 
   private ApiKeySnapshot snapshotExpiringAt(OffsetDateTime expiresAt) {

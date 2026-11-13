@@ -26,7 +26,7 @@ export async function loginAction(_prev: ActionState, data: FormData): Promise<A
   const result = await requestApi<SessionTokenResponse>("/v1/sessions", { method: "POST", body: { email, password }, clientIp });
   if (!result.ok) {
     if (result.error.code === "email_not_verified") redirect("/email-verifications?reason=unverified");
-    if (result.error.code === "organization_not_active") return { message: "지금은 콘솔을 이용할 수 없어요. 가입 승인 전이거나, 승인되지 않았거나, 이용이 정지됐거나, 조직에서 접근이 중단됐을 수 있어요." };
+    if (result.error.code === "organization_not_active") return { message: "지금은 콘솔을 이용할 수 없어요. 조직 이용이 정지됐거나 소속이 보관됐을 수 있어요. 조직의 대표관리자에게 확인하세요." };
     if (result.error.status === 401) return { message: "이메일 또는 비밀번호가 맞지 않아요." };
     return { message: toDisplayMessage(result.error) };
   }
@@ -62,5 +62,6 @@ export async function signupAction(_prev: ActionState, data: FormData): Promise<
     },
   });
   if (!result.ok) return { message: captchaMessage(result.error) ?? toDisplayMessage(result.error) };
-  redirect(result.data.user_account.email_verified === false ? "/email-verifications" : "/pending");
+  // 이메일 인증을 쓰지 않는 서버에서는 가입하자마자 로그인할 수 있다.
+  redirect(result.data.user_account.email_verified === false ? "/email-verifications" : "/login?reason=signed_up");
 }

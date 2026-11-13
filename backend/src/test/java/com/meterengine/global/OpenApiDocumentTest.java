@@ -406,7 +406,8 @@ class OpenApiDocumentTest {
         List.of(
             paths.path("/v1/organizations").path("get"),
             paths.path("/v1/organizations/{id}/status").path("put"),
-            paths.path("/v1/organizations/{id}/members").path("post"),
+            paths.path("/v1/live-environment-applications").path("get"),
+            paths.path("/v1/live-environment-applications/{id}/status").path("put"),
             paths.path("/v1/user-accounts").path("get"),
             paths.path("/v1/user-accounts/{id}/role").path("put"));
 
@@ -451,7 +452,11 @@ class OpenApiDocumentTest {
     assertErrorResponse(responses, "403", "code=permission_denied", "code=consent_required");
     assertErrorResponse(responses, "404", "code=invitation_not_found");
     assertErrorResponse(
-        responses, "409", "code=invitation_unavailable", "code=organization_member_already_exists");
+        responses,
+        "409",
+        "code=invitation_unavailable",
+        "code=organization_member_already_exists",
+        "code=operator_membership_conflict");
   }
 
   @Test

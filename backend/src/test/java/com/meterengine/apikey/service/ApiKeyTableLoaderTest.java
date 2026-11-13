@@ -40,7 +40,7 @@ class ApiKeyTableLoaderTest {
           apiKeyTable,
           apiKeySnapshotRepository,
           activeOrganizations,
-          new ApiKeyProperties(Duration.ofHours(24), Duration.ZERO, REFRESH_INTERVAL),
+          new ApiKeyProperties(Duration.ofHours(24), Duration.ZERO, REFRESH_INTERVAL, 300),
           clock,
           meterRegistry);
 

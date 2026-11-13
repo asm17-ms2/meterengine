@@ -17,6 +17,7 @@ public enum ErrorCode {
   INVALID_WEBHOOK_URL(HttpStatus.BAD_REQUEST, "올바른 웹훅 URL을 입력하세요"),
   INVALID_WEBHOOK_EVENT_TYPE(HttpStatus.BAD_REQUEST, "지원하지 않는 웹훅 이벤트 종류입니다"),
   CAPTCHA_FAILED(HttpStatus.BAD_REQUEST, "자동 가입 방지 확인을 통과하지 못했습니다. 확인을 다시 마친 뒤 보내세요"),
+  INVALID_BUSINESS_REGISTRATION_NUMBER(HttpStatus.BAD_REQUEST, "실제 환경을 신청할 수 없는 사업자등록번호입니다"),
 
   // 401 Unauthorized
   AUTHENTICATION_REQUIRED(HttpStatus.UNAUTHORIZED, "인증 정보가 없습니다"),
@@ -28,6 +29,9 @@ public enum ErrorCode {
   ENVIRONMENT_MISMATCH(HttpStatus.FORBIDDEN, "API 키의 환경과 요청 환경이 다릅니다"),
   CONSENT_REQUIRED(HttpStatus.FORBIDDEN, "서비스 이용 안내와 개인정보 처리 안내에 본인이 동의해야 합니다"),
   EMAIL_NOT_VERIFIED(HttpStatus.FORBIDDEN, "이메일 인증을 마치지 않은 계정입니다"),
+  LIVE_ENVIRONMENT_LOCKED(
+      HttpStatus.FORBIDDEN,
+      "실제 환경 이용 승인 전에는 테스트 환경만 쓸 수 있습니다. X-MeterEngine-Environment를 test로 보내세요"),
 
   // 404 Not Found
   CUSTOMER_NOT_FOUND(HttpStatus.NOT_FOUND, "고객을 찾을 수 없습니다"),
@@ -49,6 +53,7 @@ public enum ErrorCode {
   WEBHOOK_DELIVERY_NOT_FOUND(HttpStatus.NOT_FOUND, "웹훅 전송 기록을 찾을 수 없습니다"),
   INVITATION_NOT_FOUND(HttpStatus.NOT_FOUND, "초대 링크를 찾을 수 없습니다"),
   EMAIL_VERIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "인증 링크가 없거나 만료되었거나 이미 사용되었습니다"),
+  LIVE_ENVIRONMENT_APPLICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "실제 환경 이용 신청을 찾을 수 없습니다"),
 
   // 405 Method Not Allowed
   METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "이 경로에서 허용하지 않는 메서드입니다"),
@@ -96,7 +101,11 @@ public enum ErrorCode {
   LAST_OWNER_REQUIRED(HttpStatus.CONFLICT, "마지막 대표 관리자는 제거하거나 권한을 낮출 수 없습니다"),
   OWNER_SCOPES_REQUIRED(HttpStatus.CONFLICT, "대표관리자는 관리 권한이 필요합니다"),
   LAST_OPERATOR_REQUIRED(HttpStatus.CONFLICT, "마지막 운영자는 권한을 낮출 수 없습니다"),
+  OPERATOR_MEMBERSHIP_CONFLICT(HttpStatus.CONFLICT, "운영자 역할과 조직 소속은 함께 가질 수 없습니다"),
   API_KEY_UNAVAILABLE(HttpStatus.CONFLICT, "폐기되거나 만료된 API 키의 권한은 변경할 수 없습니다"),
+  LIVE_ENVIRONMENT_ALREADY_OPEN(HttpStatus.CONFLICT, "이미 실제 환경을 쓰고 있습니다"),
+  LIVE_ENVIRONMENT_APPLICATION_IN_PROGRESS(HttpStatus.CONFLICT, "검토 중인 실제 환경 이용 신청이 있습니다"),
+  LIVE_ENVIRONMENT_APPLICATION_ALREADY_REVIEWED(HttpStatus.CONFLICT, "이미 검토를 마친 신청입니다"),
 
   // 413 Content Too Large
   UPLOAD_SIZE_EXCEEDED(HttpStatus.CONTENT_TOO_LARGE, "업로드 크기가 상한을 넘었습니다"),

@@ -1,6 +1,7 @@
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { CONSENT_DOCUMENTS, CONSENT_VERSION } from "../src/lib/auth/consents";
+import { openLiveEnvironment } from "./real-organization";
 
 const API_URL = process.env.S1_API_URL ?? "http://127.0.0.1:38147";
 const FRONTEND_URL = "http://localhost:33147";
@@ -78,10 +79,7 @@ test("직접 생성과 초대, 본인 동의와 권한, 감사 조회와 고객 
       const { token } = await operator.json();
       if (typeof token !== "string" || !token) throw new Error("운영자 검증 세션을 받지 못했습니다.");
       secrets.add(token);
-      const approval = await request.put(`${API_URL}/v1/organizations/${organization.id}/status`, {
-        headers: { Authorization: `Bearer ${token}` }, data: { status: "active" },
-      });
-      expect(approval.status()).toBe(200);
+      openLiveEnvironment(organization.id);
     });
 
     const owner = await newPage();

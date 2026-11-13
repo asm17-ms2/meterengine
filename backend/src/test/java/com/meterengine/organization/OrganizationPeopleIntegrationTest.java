@@ -276,6 +276,37 @@ class OrganizationPeopleIntegrationTest {
   }
 
   @Test
+  void 운영자_계정은_초대를_수락하지_못하고_409_operator_membership_conflict다() {
+    String invited = TestCredentials.issueOperatorSession(jdbcTemplate);
+    UUID invitedId = userId(invited);
+    String email =
+        jdbcTemplate.queryForObject(
+            "SELECT email FROM user_account WHERE id=?", String.class, invitedId);
+    String token = invite(email);
+
+    assertThat(post("/v1/organization-invitations/" + token + "/accept", invited, Map.of()))
+        .hasStatus(409)
+        .bodyJson()
+        .extractingPath("$.code")
+        .isEqualTo("operator_membership_conflict");
+    entityManager.flush();
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM organization_member WHERE user_account_id=?",
+                Integer.class,
+                invitedId))
+        .isZero();
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT accepted_at IS NULL FROM organization_invitation WHERE organization_id=?"
+                    + " AND email=?",
+                Boolean.class,
+                organizationId,
+                email))
+        .isTrue();
+  }
+
+  @Test
   void 기존계정_초대는_같은_이메일의_로그인본인만_수락한다() {
     UUID otherOrg = UUID.randomUUID();
     String invited = TestCredentials.issueMemberSession(jdbcTemplate, otherOrg);
@@ -537,6 +568,43 @@ class OrganizationPeopleIntegrationTest {
         .extractingPath("$.invitations[?(@.email == '" + email + "')].status")
         .asArray()
         .containsExactlyInAnyOrder("revoked", "accepted");
+  }
+
+  // README "대표관리자가 없는 도입사"의 조회와 복구 쿼리가 기대는 동작을 지킨다.
+  @Test
+  void 대표관리자가_없는_도입사는_DB에서_구성원을_owner로_올리면_사용자를_관리한다() {
+    String ownerless =
+        """
+        SELECT o.id FROM organization o
+        WHERE NOT EXISTS (
+          SELECT 1 FROM organization_member m
+          WHERE m.organization_id = o.id AND m.role = 'owner' AND m.revoked_at IS NULL)
+        """;
+    UUID other = UUID.randomUUID();
+    String member = TestCredentials.issueMemberSession(jdbcTemplate, other);
+    UUID memberId = userId(member);
+    jdbcTemplate.update(
+        "UPDATE organization_member SET role='member', scopes=ARRAY['read']::VARCHAR[]"
+            + " WHERE organization_id=? AND user_account_id=?",
+        other,
+        memberId);
+    Map<String, String> newcomer =
+        Map.of("email", UUID.randomUUID() + "@example.com", "name", "새 사용자", "password", PASSWORD);
+
+    assertThat(jdbcTemplate.queryForList(ownerless, UUID.class)).contains(other);
+    assertThat(post("/v1/organization/members", member, newcomer)).hasStatus(403);
+
+    int promoted =
+        jdbcTemplate.update(
+            "UPDATE organization_member SET role = 'owner', scopes = ARRAY['admin']::VARCHAR[]"
+                + " WHERE organization_id = ? AND user_account_id = ? AND revoked_at IS NULL",
+            other,
+            memberId);
+    entityManager.clear();
+
+    assertThat(promoted).isEqualTo(1);
+    assertThat(jdbcTemplate.queryForList(ownerless, UUID.class)).doesNotContain(other);
+    assertThat(post("/v1/organization/members", member, newcomer)).hasStatus(201);
   }
 
   private int acceptAfter(CountDownLatch start, String path) {

@@ -1,5 +1,5 @@
 const MONTHLY_PATHS = ["/overview", "/usage", "/events", "/event-issues", "/event-rejections", "/billing", "/invoices", "/payments", "/pricing", "/customers"];
-const WORKSPACE_PATHS = [...MONTHLY_PATHS, "/billable-metrics", "/billable-metric-prices", "/integrations", "/settings", "/members", "/audit"];
+const WORKSPACE_PATHS = [...MONTHLY_PATHS, "/billable-metrics", "/billable-metric-prices", "/integrations", "/settings", "/live-environment", "/members", "/audit"];
 
 export function workspaceHref(path: string, source: string | URLSearchParams, options: { inheritFilters?: boolean } = {}): string {
   if (!path.startsWith("/") || path.startsWith("//")) return path;

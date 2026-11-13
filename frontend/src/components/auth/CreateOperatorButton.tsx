@@ -73,7 +73,7 @@ function CreateOperatorDialog({ onClose }: { onClose: () => void }) {
       setDismissedErrors(current => ({ state, names: current.state === state ? [...current.names, name] : [name] }));
       setClientErrors(current => Object.fromEntries(Object.entries(current).filter(([key]) => key !== name)));
     }} className="workspace-form" aria-busy={isPending}>
-      <p className="muted">MeterEngine의 가입 승인과 플랫폼 권한을 관리할 계정을 만들어요. 조직 소속은 추가하지 않아요.</p>
+      <p className="muted">실제 환경 이용 신청을 검토하고 플랫폼 권한을 관리할 계정을 만들어요. 운영자 계정은 조직에 소속될 수 없어요.</p>
       <p className="field-hint">새 운영자는 처음 로그인할 때 약관과 개인정보 처리방침에 동의해야 운영을 시작할 수 있어요. 초기 로그인 정보는 그 운영자에게 안전하게 전달하세요.</p>
       {hasFeedback && <div ref={feedbackRef} tabIndex={-1} className="form-feedback"><Alert showIcon type={state.isUnconfirmed ? "warning" : "error"} title={state.message}
         description={Object.keys(errors).length ? <ul>{Object.entries(errors).map(([name, error]) => <li key={name}><a href={`#${formId}-${name}`} onClick={event => { event.preventDefault(); document.getElementById(`${formId}-${name}`)?.focus(); }}>{FIELDS.find(field => field.name === name)?.label}: {error}</a></li>)}</ul> : undefined} /></div>}

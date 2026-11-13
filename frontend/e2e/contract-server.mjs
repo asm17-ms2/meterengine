@@ -1,10 +1,14 @@
 import { createServer } from "node:http";
 
 const organizations = [
-  { id: "11111111-1111-4111-8111-111111111111", name: "계약 테스트 도입사", status: "active" },
-  { id: "22222222-2222-4222-8222-222222222222", name: "다른 도입사", status: "active" },
-  { id: "33333333-3333-4333-8333-333333333333", name: "정지된 도입사", status: "suspended" },
+  { id: "11111111-1111-4111-8111-111111111111", name: "계약 테스트 도입사", status: "active", live_environment_opened_at: "2026-01-01T00:00:00Z" },
+  { id: "22222222-2222-4222-8222-222222222222", name: "다른 도입사", status: "active", live_environment_opened_at: "2026-01-01T00:00:00Z" },
+  { id: "33333333-3333-4333-8333-333333333333", name: "정지된 도입사", status: "suspended", live_environment_opened_at: "2026-01-01T00:00:00Z" },
 ];
+// 가입만 하고 실제 환경 이용을 신청하지 않은 조직. locked@contract.local로 로그인한다.
+const newLockedOrganization = () => ({ id: "aaaaaaaa-0000-4000-8000-000000000001", name: "새로 가입한 조직", status: "active", live_environment_opened_at: null });
+let lockedOrganization = newLockedOrganization();
+let liveEnvironmentApplications = [];
 let sessions = new Map();
 let requests = [];
 let outage = false;
@@ -35,7 +39,8 @@ const server = createServer(async (req, res) => {
   else if (path === "/__control" && req.method === "POST") {
     if (body.reset) { sessions = new Map(); requests = []; outage = false; customers = []; failures = {}; bulk = false; apiKeys = []; }
     if (typeof body.bulk === "boolean") bulk = body.bulk;
-    if (body.reset) { unresolvedInvoicePayments = []; captchaDelayMs = 0; }
+    if (body.reset) { unresolvedInvoicePayments = []; captchaDelayMs = 0; lockedOrganization = newLockedOrganization(); liveEnvironmentApplications = []; }
+    if (Array.isArray(body.liveEnvironmentApplications)) liveEnvironmentApplications = body.liveEnvironmentApplications;
     if (typeof body.captchaDelayMs === "number") captchaDelayMs = body.captchaDelayMs;
     if (Array.isArray(body.unresolvedInvoicePayments)) unresolvedInvoicePayments = body.unresolvedInvoicePayments;
     if (body.fail) failures = { ...failures, ...body.fail };
@@ -49,7 +54,7 @@ const server = createServer(async (req, res) => {
     result = { status: 200, body: {} };
   } else if (path === "/__requests") result = { status: 200, body: requests };
   else {
-    requests.push({ path: req.url, method: req.method, hasAuthorization: Boolean(req.headers.authorization), hasOrganizationHeader: Boolean(req.headers["x-organization-id"]), consents: body.consents, description: body.description, clientIp: req.headers["x-meterengine-client-ip"] });
+    requests.push({ path: req.url, method: req.method, hasAuthorization: Boolean(req.headers.authorization), hasOrganizationHeader: Boolean(req.headers["x-organization-id"]), consents: body.consents, description: body.description, clientIp: req.headers["x-meterengine-client-ip"], ...(path.includes("live-environment-applications") ? { environment: req.headers["x-meterengine-environment"], body } : {}) });
     if (outage) result = failure(503, "service_unavailable", "서버를 잠시 사용할 수 없습니다.");
     // 백엔드가 Siteverify를 기다리다 끊긴 경우를 흉내 낸다. 프론트의 기본 제한 5초보다 늦게 답한다.
     else if (captchaDelayMs > 0 && req.method === "POST" && ["/v1/signups", "/v1/email-verifications"].includes(path)) {
@@ -57,14 +62,14 @@ const server = createServer(async (req, res) => {
       result = failure(503, "captcha_unavailable", "자동 가입 방지 확인 결과를 받지 못했습니다. 잠시 뒤 다시 시도하세요");
     }
     else if (failures[path]) result = failure(failures[path], failures[path] === 403 ? "permission_denied" : "internal_error", failures[path] === 403 ? "접근 권한이 없습니다." : "서버에서 요청을 처리하지 못했습니다.");
-    else if (path === "/v1/signups" && req.method === "POST") result = { status: 201, body: { organization: { ...organizations[0], status: "pending" }, user_account: { id: "member", email: body.email, name: body.name, role: "member" } } };
+    else if (path === "/v1/signups" && req.method === "POST") result = { status: 201, body: { organization: { ...organizations[0], live_environment_opened_at: null }, user_account: { id: "member", email: body.email, name: body.name, role: "member", email_verified: body.email.startsWith("verified") } } };
     else if (path === "/v1/email-verification-confirmations" && req.method === "POST") result = failure(404, "email_verification_not_found", "인증 링크가 없거나 만료되었거나 이미 사용되었습니다");
     else if (path === "/v1/sessions" && req.method === "POST") {
       if (body.email === "pending@contract.local") result = failure(403, "organization_not_active", "활성 상태가 아닌 조직입니다");
-      else if (!(body.email === "invited@contract.local" && body.password === "invited-password") && (!["member@contract.local", "operator@contract.local"].includes(body.email) || body.password !== "contract-password")) result = failure(401, "invalid_credentials", "인증 정보가 올바르지 않습니다.");
+      else if (!(body.email === "invited@contract.local" && body.password === "invited-password") && (!["member@contract.local", "operator@contract.local", "locked@contract.local"].includes(body.email) || body.password !== "contract-password")) result = failure(401, "invalid_credentials", "인증 정보가 올바르지 않습니다.");
       else {
         const role = body.email.startsWith("operator") ? "operator" : "member";
-        const created = { user_account: { id: "44444444-4444-4444-8444-444444444444", email: body.email, name: role === "operator" ? "테스트 운영자" : "테스트 사용자", role }, organization: role === "operator" ? null : organizations[0], organization_role: role === "operator" ? null : "owner", scopes: role === "operator" ? [] : ["admin"], organizations: role === "operator" ? [] : organizations, expires_at: expiresAt() };
+        const created = { user_account: { id: "44444444-4444-4444-8444-444444444444", email: body.email, name: role === "operator" ? "테스트 운영자" : "테스트 사용자", role }, organization: role === "operator" ? null : body.email.startsWith("locked") ? lockedOrganization : organizations[0], organization_role: role === "operator" ? null : "owner", scopes: role === "operator" ? [] : ["admin"], organizations: role === "operator" ? [] : body.email.startsWith("locked") ? [lockedOrganization] : organizations, expires_at: expiresAt() };
         const issued = `contract-${Date.now()}-${sessions.size}`;
         sessions.set(issued, created);
         result = { status: 201, body: { token: issued, user_account: created.user_account, organization: created.organization, organization_role: created.organization_role, scopes: created.scopes, expires_at: created.expires_at } };
@@ -80,12 +85,34 @@ const server = createServer(async (req, res) => {
       const org = session.organizations.find(item => item.id === body.organization_id);
       if (!org) result = failure(403, "permission_denied", "접근 권한이 없습니다.");
       else { session.organization = org; result = { status: 200, body: session }; }
-    } else if (path.startsWith("/v1/organizations") || path.startsWith("/v1/user-accounts")) {
+    } else if (path.startsWith("/v1/organizations") || path.startsWith("/v1/user-accounts") || path.startsWith("/v1/live-environment-applications")) {
       if (session.user_account.role !== "operator") result = failure(403, "permission_denied", "접근 권한이 없습니다.");
-      else if (path === "/v1/organizations") result = { status: 200, body: { organizations: bulk ? Array.from({ length: 30 }, (_, index) => ({ id: bulkId("66666666-6666-4666-8666-", index), name: `대량 도입사 ${index}`, status: "active", created_at: new Date().toISOString() })) : [] } };
-      else if (path === "/v1/user-accounts") result = { status: 200, body: { user_accounts: [{ ...session.user_account, organizations: [], created_at: new Date().toISOString() }, { id: "55555555-5555-4555-8555-555555555555", email: "other@contract.local", name: "다른 사용자", role: "member", organizations: [], created_at: new Date().toISOString() }].concat(bulk ? Array.from({ length: 30 }, (_, index) => ({ id: bulkId("77777777-7777-4777-8777-", index), email: `bulk-${index}@contract.local`, name: `대량 사용자 ${index}`, role: "member", organizations: [], created_at: new Date().toISOString() })) : []) } };
+      else if (path === "/v1/live-environment-applications") result = { status: 200, body: { live_environment_applications: liveEnvironmentApplications.filter(application => !url.searchParams.get("status") || application.status === url.searchParams.get("status")) } };
+      else if (/^\/v1\/live-environment-applications\/[^/]+\/status$/.test(path) && req.method === "PUT") {
+        const application = liveEnvironmentApplications.find(candidate => path === `/v1/live-environment-applications/${candidate.id}/status`);
+        if (!application) result = failure(404, "live_environment_application_not_found", "실제 환경 이용 신청을 찾을 수 없습니다");
+        else if (application.status !== "pending") result = failure(409, "live_environment_application_already_reviewed", "이미 검토를 마친 신청입니다");
+        else {
+          Object.assign(application, { status: body.status, rejection_reason: body.rejection_reason ?? null, reviewed_at: new Date().toISOString() });
+          if (body.status === "approved") lockedOrganization.live_environment_opened_at = new Date().toISOString();
+          result = { status: 200, body: application };
+        }
+      }
+      else if (path === "/v1/organizations") result = { status: 200, body: { organizations: bulk ? Array.from({ length: 30 }, (_, index) => ({ id: bulkId("66666666-6666-4666-8666-", index), name: `대량 도입사 ${index}`, status: "active", live_environment_opened_at: index % 2 ? new Date().toISOString() : null, created_at: new Date().toISOString() })) : [] } };
+      else if (path === "/v1/user-accounts") result = { status: 200, body: { user_accounts: [{ ...session.user_account, organizations: [], created_at: new Date().toISOString() }, { id: "55555555-5555-4555-8555-555555555555", email: "other@contract.local", name: "다른 사용자", role: "member", organizations: [], created_at: new Date().toISOString() }, { id: "55555555-5555-4555-8555-555555555556", email: "joined@contract.local", name: "소속 사용자", role: "member", organizations: [organizations[0]], created_at: new Date().toISOString() }].concat(bulk ? Array.from({ length: 30 }, (_, index) => ({ id: bulkId("77777777-7777-4777-8777-", index), email: `bulk-${index}@contract.local`, name: `대량 사용자 ${index}`, role: "member", organizations: [], created_at: new Date().toISOString() })) : []) } };
       else result = { status: 200, body: {} };
     } else if (!session.organization || session.organization.status !== "active") result = failure(403, "organization_not_active", "활성 상태가 아닌 조직입니다");
+    else if (!session.organization.live_environment_opened_at && req.headers["x-meterengine-environment"] !== "test") result = failure(403, "live_environment_locked", "실제 환경 이용 승인 전에는 테스트 환경만 쓸 수 있습니다. X-MeterEngine-Environment를 test로 보내세요");
+    else if (path === "/v1/organization/live-environment-applications" && req.method === "GET") result = { status: 200, body: { live_environment_applications: liveEnvironmentApplications.filter(application => application.organization_id === session.organization.id) } };
+    else if (path === "/v1/organization/live-environment-applications" && req.method === "POST") {
+      // 0000000000은 국세청에 등록되지 않은 번호로 본다.
+      if (body.business_registration_number === "0000000000") result = { status: 400, body: { code: "invalid_business_registration_number", message: "실제 환경을 신청할 수 없는 사업자등록번호입니다", errors: [{ field: "business_registration_number", message: "국세청에 등록되지 않은 사업자등록번호입니다" }] } };
+      else {
+        const application = { id: crypto.randomUUID(), organization_id: session.organization.id, organization_name: session.organization.name, business_registration_number: body.business_registration_number, toss_payments_merchant_id: body.toss_payments_merchant_id, status: "pending", business_status: "operating", tax_type: "부가가치세 일반과세자", rejection_reason: null, created_at: new Date().toISOString(), reviewed_at: null, observed_toss_payments_merchant_id: null, merchant_id_checked_at: null };
+        liveEnvironmentApplications.unshift(application);
+        result = { status: 201, body: application };
+      }
+    }
     else if (path === "/v1/customers/search") {
       const q = (url.searchParams.get("q") ?? "").toLowerCase();
       const filtered = customers.filter(customer => !q || `${customer.name} ${customer.external_id ?? ""} ${customer.billing_email ?? ""}`.toLowerCase().includes(q));
@@ -110,7 +137,8 @@ const server = createServer(async (req, res) => {
     } else if (path === "/v1/dashboard") result = { status: 200, body: { month: url.searchParams.get("month") ?? "2026-10", calculated_at: new Date().toISOString(), customer_count: customers.length, billable_metric_count: 0, active_api_key_count: 0, event_count: 0, supplier_configured: false, payment_configured: false, payment_mode: "test", draft_supply_amount: 0, finalized_total_amount: 0, collected_amount: 0, canceled_amount: 0, outstanding_amount: 0, failed_payment_count: 0, unpriced_usage_count: 0, negative_usage_count: 0, invoice_payments: [], unresolved_invoice_payments: unresolvedInvoicePayments, draft_invoice: { customers: [] } } };
     else if (path === "/v1/billable-metrics") result = { status: 200, body: { billable_metrics: [] } };
     else if (path === "/v1/organization/invitations" && req.method === "POST") result = { status: 201, body: { id: crypto.randomUUID(), email: body.email, scopes: body.scopes, token: "me_invite_ContractIssued000000000000000001" } };
-    else if (path === "/v1/api-keys" && req.method === "GET") result = { status: 200, body: { api_keys: apiKeys } };
+    // 키는 발급한 환경에만 있으므로 환경 헤더로 거른다.
+    else if (path === "/v1/api-keys" && req.method === "GET") result = { status: 200, body: { api_keys: apiKeys.filter(key => !req.headers["x-meterengine-environment"] || key.mode === req.headers["x-meterengine-environment"]) } };
     else if (path === "/v1/api-keys" && req.method === "POST") {
       const key = { id: crypto.randomUUID(), label: body.label, mode: body.mode, scopes: body.scopes, last_four: "0000", expires_at: null, revoked_at: null, rate_limit_per_minute: body.rate_limit_per_minute ?? null, status: "active" };
       apiKeys.push(key);

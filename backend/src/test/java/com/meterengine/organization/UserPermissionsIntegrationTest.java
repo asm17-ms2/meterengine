@@ -419,52 +419,6 @@ class UserPermissionsIntegrationTest {
   }
 
   @Test
-  void 플랫폼_소속추가는_조회가_기본이고_보관된_대표도_명시한_권한으로_복원된다() {
-    UUID otherOrganization = UUID.randomUUID();
-    String target = TestCredentials.issueMemberSession(jdbcTemplate, otherOrganization);
-    UUID id = userId(target);
-    String operator = TestCredentials.issueOperatorSession(jdbcTemplate);
-    String path = "/v1/organizations/" + organizationId + "/members";
-    MvcTestResult attached = post(path, operator, Map.of("user_account_id", id));
-    assertThat(attached).hasStatus(201);
-    assertThat(scopes(attached)).containsExactly("read");
-    assertThat(
-            put(
-                "/v1/organization/members/" + id + "/role",
-                owner,
-                Map.of("organization_role", "owner")))
-        .hasStatusOk();
-    assertThat(
-            mvc.delete()
-                .uri("/v1/organization/members/" + id)
-                .header(AUTHORIZATION, owner)
-                .exchange())
-        .hasStatus(204);
-    MvcTestResult restored = post(path, operator, Map.of("user_account_id", id));
-    assertThat(restored).hasStatus(201);
-    assertThat(scopes(restored)).containsExactly("read");
-    assertThat(JsonPath.<String>read(body(restored), "$.organization_role")).isEqualTo("member");
-    assertThat(scopes(get("/v1/sessions/current", target))).containsExactly("admin");
-  }
-
-  @Test
-  void 첫_소속은_대표관리자로_만들어_관리권한을_잃지_않는다() {
-    UUID emptyOrganization = UUID.randomUUID();
-    jdbcTemplate.update(
-        "INSERT INTO organization(id,name) VALUES(?, '처음 시작하는 도입사')", emptyOrganization);
-    String target = TestCredentials.issueMemberSession(jdbcTemplate, organizationId);
-    String operator = TestCredentials.issueOperatorSession(jdbcTemplate);
-    MvcTestResult attached =
-        post(
-            "/v1/organizations/" + emptyOrganization + "/members",
-            operator,
-            Map.of("user_account_id", userId(target), "scopes", List.of("read")));
-    assertThat(attached).hasStatus(201);
-    assertThat(scopes(attached)).containsExactly("admin");
-    assertThat(JsonPath.<String>read(body(attached), "$.organization_role")).isEqualTo("owner");
-  }
-
-  @Test
   void 새_계정과_초대의_잘못된_권한은_저장하기_전에_거절한다() {
     for (List<String> invalid : List.of(List.<String>of(), List.of("operator"))) {
       String email = UUID.randomUUID() + "@permissions.example";

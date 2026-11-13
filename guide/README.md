@@ -1,6 +1,6 @@
 # guide
 
-도입사(MeterEngine을 도입해 자기 서비스 과금에 쓰는 회사의 개발자와 운영자)용 온보딩 가이드와 API 참조다. Mintlify로 만든다. 이 README는 Mintlify가 기본으로 무시해 사이트에 나오지 않는다.
+MeterEngine을 자사 서비스 과금에 쓰는 조직의 개발자와 운영자를 위한 온보딩 가이드와 API 참조다. Mintlify로 만든다. 이 README는 Mintlify가 기본으로 무시해 사이트에 나오지 않는다.
 
 ## 미리보기
 

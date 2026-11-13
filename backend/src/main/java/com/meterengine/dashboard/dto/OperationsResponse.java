@@ -6,7 +6,8 @@ import java.util.List;
 
 public record OperationsResponse(
     @JsonProperty("calculated_at") OffsetDateTime calculatedAt,
-    @JsonProperty("pending_organization_count") long pendingOrganizationCount,
+    @JsonProperty("pending_live_environment_application_count")
+        long pendingLiveEnvironmentApplicationCount,
     @JsonProperty("active_organization_count") long activeOrganizationCount,
     @JsonProperty("user_account_count") long userAccountCount,
     @JsonProperty("pending_payment_count") long pendingPaymentCount,

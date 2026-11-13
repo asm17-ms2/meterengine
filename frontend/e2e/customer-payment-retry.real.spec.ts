@@ -4,6 +4,7 @@ import { execFileSync } from "node:child_process";
 import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { CONSENT_DOCUMENTS, CONSENT_VERSION } from "../src/lib/auth/consents";
 import { consoleHeaders } from "./console-environment";
+import { openLiveEnvironment } from "./real-organization";
 
 const API_URL = process.env.S1_API_URL ?? "http://127.0.0.1:38147";
 const FRONTEND_URL = process.env.CUSTOMER_RETRY_FRONTEND_URL ?? "http://localhost:33147";
@@ -95,7 +96,7 @@ async function fixture(request: APIRequestContext, names: string[], secrets: Set
   const operatorToken = (await operator.json()).token as string;
   secrets.add(operatorToken);
   const operatorHeaders = { Authorization: `Bearer ${operatorToken}` };
-  expect((await request.put(`${API_URL}/v1/organizations/${organizationId}/status`, { headers: operatorHeaders, data: { status: "active" } })).status()).toBe(200);
+  openLiveEnvironment(organizationId);
   const sessionResponse = await request.post(`${API_URL}/v1/sessions`, { data: { email, password: PASSWORD } });
   expect(sessionResponse.status()).toBe(201);
   const session = (await sessionResponse.json()).token as string;

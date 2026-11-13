@@ -100,9 +100,9 @@ class EmailVerificationIntegrationTest {
   }
 
   @Test
-  void 메일의_토큰으로_인증하면_로그인이_인증_단계를_지나고_승인되면_로그인된다() {
+  void 메일의_토큰으로_인증하면_운영자_승인_없이_바로_로그인된다() {
     String email = newEmail();
-    String organizationId = JsonPath.read(body(signup(email)), "$.organization.id");
+    signup(email);
 
     assertThat(confirm(tokenIn(sender().next(email)))).hasStatus(204);
 
@@ -112,9 +112,6 @@ class EmailVerificationIntegrationTest {
                 Boolean.class,
                 email))
         .isTrue();
-    assertThat(errorCode(login(email, PASSWORD))).isEqualTo("organization_not_active");
-    jdbcTemplate.update(
-        "UPDATE organization SET status = 'active' WHERE id = ?::uuid", organizationId);
     assertThat(login(email, PASSWORD)).hasStatus(201);
   }
 

@@ -78,7 +78,8 @@ class OrganizationIntegrationTest {
         .extracting(organization -> organization.get("id"))
         .containsExactly(first.toString(), second.toString(), third.toString());
     Map<String, Object> last = organizations.getLast();
-    assertThat(last).containsOnlyKeys("id", "name", "status", "created_at");
+    assertThat(last)
+        .containsOnlyKeys("id", "name", "status", "created_at", "live_environment_opened_at");
     assertThat(last).containsEntry("name", "셋째 도입사").containsEntry("status", "active");
     assertThat(OffsetDateTime.parse((String) last.get("created_at")))
         .isAtSameInstantAs(OffsetDateTime.parse("2100-01-03T00:00:00Z"));
@@ -204,6 +205,26 @@ class OrganizationIntegrationTest {
   }
 
   @Test
+  void 가입_대기_도입사를_승인하면_실제_환경을_잠그고_재개는_열린_도입사를_잠그지_않는다() {
+    UUID pending = insertOrganization("옛 서버가 만든 도입사", "pending", "2100-01-01T00:00:00Z");
+    UUID suspended = insertOrganization("정지된 도입사", "suspended", "2100-01-02T00:00:00Z");
+
+    assertThat(updateStatus(operator, pending, "active")).hasStatusOk();
+    assertThat(updateStatus(operator, suspended, "active")).hasStatusOk();
+
+    entityManager.flush();
+    assertThat(liveEnvironmentOpenedAt(pending)).isNull();
+    assertThat(liveEnvironmentOpenedAt(suspended)).isNotNull();
+  }
+
+  private Object liveEnvironmentOpenedAt(UUID organizationId) {
+    return jdbcTemplate
+        .queryForMap(
+            "SELECT live_environment_opened_at FROM organization WHERE id = ?", organizationId)
+        .get("live_environment_opened_at");
+  }
+
+  @Test
   void 상태_본문이_비거나_모르는_값이면_400_validation_error다() {
     UUID organizationId = insertOrganization("본문 도입사", "pending", "2100-01-01T00:00:00Z");
 
@@ -253,114 +274,29 @@ class OrganizationIntegrationTest {
   // --- 소속 추가 ---
 
   @Test
-  void 소속을_더하면_201이고_member가_그_도입사로_전환해_고객_목록이_바뀐다() {
-    UUID first = UUID.randomUUID();
-    String member = TestCredentials.issueMemberSession(jdbcTemplate, first);
-    UUID userAccountId = userAccountIdOf(member);
-    UUID second = insertOrganization("둘째 도입사", "active", "2100-01-01T00:00:00Z");
-    insertCustomer(first, "첫 도입사 고객");
-    insertCustomer(second, "둘째 도입사 고객");
-
-    MvcTestResult result = createMember(operator, second, userAccountId);
-
-    assertThat(result).hasStatus(201);
-    String body = body(result);
-    assertThat((Map<String, Object>) JsonPath.read(body, "$"))
-        .containsOnlyKeys(
-            "organization_id", "user_account_id", "created_at", "organization_role", "scopes")
-        .containsEntry("organization_id", second.toString())
-        .containsEntry("user_account_id", userAccountId.toString())
-        .containsEntry("organization_role", "owner")
-        .containsEntry("scopes", List.of("admin"));
-    assertThat(OffsetDateTime.parse(JsonPath.read(body, "$.created_at")))
-        .isBetween(OffsetDateTime.now().minusMinutes(1), OffsetDateTime.now().plusMinutes(1));
-
-    assertThat(
-            mvc.put()
-                .uri("/v1/sessions/current/organization")
-                .header(AUTHORIZATION, member)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"organization_id\":\"%s\"}".formatted(second))
-                .exchange())
-        .hasStatusOk();
-    assertThat(mvc.get().uri("/v1/customers").header(AUTHORIZATION, member).exchange())
-        .hasStatusOk()
-        .bodyJson()
-        .extractingPath("$.customers[*].name")
-        .asArray()
-        .containsExactly("둘째 도입사 고객");
-  }
-
-  @Test
-  void 소속_추가는_대상_도입사의_감사_행을_운영자_행위자로_남긴다() {
-    UUID operatorId = userAccountIdOf(operator);
-    UUID userAccountId =
-        userAccountIdOf(TestCredentials.issueMemberSession(jdbcTemplate, UUID.randomUUID()));
-    UUID organizationId = insertOrganization("소속 감사 도입사", "active", "2100-01-01T00:00:00Z");
-
-    assertThat(createMember(operator, organizationId, userAccountId)).hasStatus(201);
-
-    entityManager.flush();
-    assertThat(
-            jdbcTemplate.queryForMap(
-                """
-                SELECT actor_type, actor_id, organization_id, target_type, target_id
-                FROM audit_log WHERE action = 'organization_member_created' AND organization_id = ?
-                """,
-                organizationId))
-        .containsEntry("actor_type", "user_account")
-        .containsEntry("actor_id", operatorId)
-        .containsEntry("organization_id", organizationId)
-        .containsEntry("target_type", "user_account")
-        .containsEntry("target_id", userAccountId.toString());
-  }
-
-  @Test
-  void 이미_소속된_사용자를_다시_소속시키면_409_organization_member_already_exists다() {
-    UUID organizationId = UUID.randomUUID();
-    UUID userAccountId =
-        userAccountIdOf(TestCredentials.issueMemberSession(jdbcTemplate, organizationId));
-
-    assertThat(createMember(operator, organizationId, userAccountId))
-        .hasStatus(409)
-        .bodyJson()
-        .extractingPath("$.code")
-        .isEqualTo(ErrorCode.ORGANIZATION_MEMBER_ALREADY_EXISTS.getCode());
-  }
-
-  @Test
-  void 없는_도입사나_사용자를_소속시키면_404다() {
+  void 운영자가_사용자를_조직에_소속시키는_경로는_없다() {
     UUID organizationId = insertOrganization("소속 도입사", "active", "2100-01-01T00:00:00Z");
     UUID userAccountId =
         userAccountIdOf(TestCredentials.issueMemberSession(jdbcTemplate, UUID.randomUUID()));
-
-    assertThat(createMember(operator, UUID.randomUUID(), userAccountId))
-        .hasStatus(404)
-        .bodyJson()
-        .extractingPath("$.code")
-        .isEqualTo(ErrorCode.ORGANIZATION_NOT_FOUND.getCode());
-    assertThat(createMember(operator, organizationId, UUID.randomUUID()))
-        .hasStatus(404)
-        .bodyJson()
-        .extractingPath("$.code")
-        .isEqualTo(ErrorCode.USER_ACCOUNT_NOT_FOUND.getCode());
-  }
-
-  @Test
-  void 소속_본문에_사용자가_없으면_400_validation_error다() {
-    UUID organizationId = insertOrganization("소속 도입사", "active", "2100-01-01T00:00:00Z");
 
     assertThat(
             mvc.post()
                 .uri(ORGANIZATIONS + "/{id}/members", organizationId)
                 .header(AUTHORIZATION, operator)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{}")
+                .content("{\"user_account_id\":\"%s\"}".formatted(userAccountId))
                 .exchange())
-        .hasStatus(400)
+        .hasStatus(404)
         .bodyJson()
         .extractingPath("$.code")
-        .isEqualTo(ErrorCode.VALIDATION_ERROR.getCode());
+        .isEqualTo(ErrorCode.ENDPOINT_NOT_FOUND.getCode());
+    entityManager.flush();
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM organization_member WHERE organization_id = ?",
+                Integer.class,
+                organizationId))
+        .isZero();
   }
 
   // --- 접근 ---
@@ -370,14 +306,12 @@ class OrganizationIntegrationTest {
     UUID organizationId = UUID.randomUUID();
     String member = TestCredentials.issueMemberSession(jdbcTemplate, organizationId);
     String apiKey = TestCredentials.issueApiKey(jdbcTemplate, organizationId);
-    UUID userAccountId = userAccountIdOf(member);
 
     for (String authorization : List.of(member, apiKey)) {
       for (MvcTestResult result :
           List.of(
               mvc.get().uri(ORGANIZATIONS).header(AUTHORIZATION, authorization).exchange(),
-              updateStatus(authorization, organizationId, "suspended"),
-              createMember(authorization, organizationId, userAccountId))) {
+              updateStatus(authorization, organizationId, "suspended"))) {
         assertThat(result)
             .hasStatus(403)
             .bodyJson()
@@ -439,16 +373,6 @@ class OrganizationIntegrationTest {
         .exchange();
   }
 
-  private MvcTestResult createMember(
-      String authorization, UUID organizationId, UUID userAccountId) {
-    return mvc.post()
-        .uri(ORGANIZATIONS + "/{id}/members", organizationId)
-        .header(AUTHORIZATION, authorization)
-        .contentType(MediaType.APPLICATION_JSON)
-        .content("{\"user_account_id\":\"%s\"}".formatted(userAccountId))
-        .exchange();
-  }
-
   private UUID userAccountIdOf(String authorization) {
     return jdbcTemplate.queryForObject(
         "SELECT user_account_id FROM user_session WHERE token_hash = sha256(convert_to(?, 'UTF8'))",
@@ -463,11 +387,6 @@ class OrganizationIntegrationTest {
         name,
         status,
         createdAt);
-  }
-
-  private void insertCustomer(UUID organizationId, String name) {
-    jdbcTemplate.update(
-        "INSERT INTO customer (organization_id, name) VALUES (?, ?)", organizationId, name);
   }
 
   private static String body(MvcTestResult result) {

@@ -4,6 +4,7 @@ import { closeSync, fchmodSync, mkdirSync, openSync, writeFileSync } from "node:
 import { CONSENT_DOCUMENTS, CONSENT_VERSION } from "../src/lib/auth/consents";
 import { ENVIRONMENT_LABELS, environmentQueryValue } from "../src/lib/environment";
 import { formatKoreanMonth } from "../src/lib/format";
+import { openLiveEnvironment } from "./real-organization";
 
 const API_URL = process.env.S1_API_URL ?? "http://127.0.0.1:38147";
 const PG_URL = "http://127.0.0.1:38447";
@@ -42,7 +43,7 @@ test("한 조직의 test와 live가 같은 고객 외부 ID와 미터 코드로 
     const email = `environment-${suffix}@fe-e2e.local`;
     const signup = await json<{ organization: { id: string } }>(await request.post(`${API_URL}/v1/signups`, { data: { organization_name: `환경 격리 ${suffix}`, name: "환경 검증 대표", email, password: PASSWORD, consents: CONSENT_DOCUMENTS.map(({ document }) => ({ document, document_version: CONSENT_VERSION })) } }), 201);
     const organizationId = signup.organization.id;
-    await json(await request.put(`${API_URL}/v1/organizations/${organizationId}/status`, { headers: { Authorization: `Bearer ${operator.token}` }, data: { status: "active" } }));
+    openLiveEnvironment(organizationId);
     const session = await json<{ token: string }>(await request.post(`${API_URL}/v1/sessions`, { data: { email, password: PASSWORD } }), 201);
     secrets.add(session.token);
     await page.context().addCookies([{ name: "me_session", value: session.token, url: "http://localhost:33147", httpOnly: true, sameSite: "Lax" }]);

@@ -3,11 +3,11 @@
 import { createContext, useContext } from "react";
 import { hasScope, type AccessScope, type OrganizationRole } from "@/lib/auth/permissions";
 
-type TenantAccessValue = { organizationId?: string; scopes: readonly string[]; organizationRole?: OrganizationRole | null };
+type TenantAccessValue = { organizationId?: string; scopes: readonly string[]; organizationRole?: OrganizationRole | null; isLiveEnvironmentOpen?: boolean };
 const TenantAccessContext = createContext<TenantAccessValue | null>(null);
 
-export function TenantAccessProvider({ organizationId, scopes, organizationRole, children }: TenantAccessValue & { children: React.ReactNode }) {
-  return <TenantAccessContext.Provider value={{ organizationId, scopes, organizationRole }}>{children}</TenantAccessContext.Provider>;
+export function TenantAccessProvider({ organizationId, scopes, organizationRole, isLiveEnvironmentOpen, children }: TenantAccessValue & { children: React.ReactNode }) {
+  return <TenantAccessContext.Provider value={{ organizationId, scopes, organizationRole, isLiveEnvironmentOpen }}>{children}</TenantAccessContext.Provider>;
 }
 
 export function useTenantAccess() {

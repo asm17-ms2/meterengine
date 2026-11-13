@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test, { mock } from "node:test";
-import { describeTransportFailure, malformedResponseMessage, maskApiPath, unreadableErrorMessage } from "../src/lib/api/transport-failure.ts";
+import { describeTransportFailure, malformedResponseMessage, maskApiPath, rateLimitMessage, unreadableErrorMessage } from "../src/lib/api/transport-failure.ts";
 
 test("a timeout and a connection failure become different errors with status 0", () => {
   const log = mock.method(console, "error", () => {});
@@ -38,4 +38,12 @@ test("the failure log line hides tokens, ids and query strings", () => {
   } finally {
     log.mock.restore();
   }
+});
+
+test("a rate limit tells the wait in seconds under a minute and in whole minutes rounded up above it", () => {
+  assert.equal(rateLimitMessage(undefined), "요청이 너무 많아요. 잠시 뒤 다시 시도해 주세요.");
+  assert.equal(rateLimitMessage(42), "요청이 너무 많아요. 42초 뒤 다시 시도해 주세요.");
+  assert.equal(rateLimitMessage(60), "요청이 너무 많아요. 1분 뒤 다시 시도해 주세요.");
+  assert.equal(rateLimitMessage(61), "요청이 너무 많아요. 2분 뒤 다시 시도해 주세요.");
+  assert.equal(rateLimitMessage(1742), "요청이 너무 많아요. 30분 뒤 다시 시도해 주세요.");
 });

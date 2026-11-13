@@ -93,9 +93,13 @@ class SessionIntegrationTest {
                 "email", "first@example.com",
                 "name", "세션 테스트 사용자",
                 "role", "member"));
-    assertThat((Map<String, Object>) JsonPath.read(body, "$.organization"))
-        .containsExactlyInAnyOrderEntriesOf(
-            Map.of("id", first.toString(), "name", "첫 활성 도입사", "status", "active"));
+    Map<String, Object> organization = JsonPath.read(body, "$.organization");
+    assertThat(organization)
+        .containsOnlyKeys("id", "name", "status", "live_environment_opened_at")
+        .containsEntry("id", first.toString())
+        .containsEntry("name", "첫 활성 도입사")
+        .containsEntry("status", "active");
+    assertThat(organization.get("live_environment_opened_at")).isNotNull();
     entityManager.flush();
     assertThat(
             jdbcTemplate.queryForMap(
@@ -285,10 +289,20 @@ class SessionIntegrationTest {
                 "name", "세션 테스트 사용자",
                 "role", "member"));
     assertThat((String) JsonPath.read(body, "$.organization.id")).isEqualTo(first.toString());
-    assertThat((List<Map<String, Object>>) JsonPath.read(body, "$.organizations"))
+    List<Map<String, Object>> organizations = JsonPath.read(body, "$.organizations");
+    assertThat(organizations)
+        .allSatisfy(
+            organization ->
+                assertThat(organization)
+                    .containsOnlyKeys("id", "name", "status", "live_environment_opened_at"));
+    assertThat(organizations)
+        .extracting(
+            organization -> organization.get("id"),
+            organization -> organization.get("name"),
+            organization -> organization.get("status"))
         .containsExactly(
-            Map.of("id", first.toString(), "name", "첫 도입사", "status", "active"),
-            Map.of("id", second.toString(), "name", "둘째 도입사", "status", "suspended"));
+            org.assertj.core.groups.Tuple.tuple(first.toString(), "첫 도입사", "active"),
+            org.assertj.core.groups.Tuple.tuple(second.toString(), "둘째 도입사", "suspended"));
     assertThat(OffsetDateTime.parse(JsonPath.read(body, "$.expires_at")))
         .isAtSameInstantAs(OffsetDateTime.parse(JsonPath.read(body(login), "$.expires_at")));
   }
