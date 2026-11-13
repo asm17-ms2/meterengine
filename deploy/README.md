@@ -38,7 +38,7 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
 - 도메인: https://meterengine.com (Route 53 호스티드 존). apex, www, grafana 레코드는 ALB 별칭이고 Terraform이 관리한다. 아래 "도메인" 참조.
 - 앱 서버: 오토스케일링 그룹 `meterengine-production-app`(t4g.medium, arm64, Amazon Linux 2023, ap-northeast-2). "앱 서버 오토스케일링 그룹" 참조.
 - DB: RDS `meterengine-db` (db.t4g.small, PostgreSQL 18, 단일 AZ).
-- staging은 ALB, 오토스케일링 그룹 `meterengine-staging-app`, DB `meterengine-staging-db`(db.t4g.small)를 따로 쓴다.
+- staging은 ALB, 오토스케일링 그룹 `meterengine-staging-app`, DB `meterengine-staging-db`(db.t4g.small)를 따로 쓴다. ALB는 인터넷에 열려 있지 않고 콘솔에서 넣은 IP만 받는다. 아래 "스테이징 접근" 참조.
 - production과 staging은 실사용자가 없는 흐름 확인용이다. t4g 계열은 CPU 크레딧을 넘겨 쓰면 요금이 붙어, 부하 시험은 측정 환경(test-sjpark-m7g, test-sjpark-t4g, test-storage)에서만 한다.
 - 이미지: ECR `meterengine-backend`, `meterengine-frontend`(staging은 `meterengine-staging-backend`, `meterengine-staging-frontend`). 태그는 배포한 커밋의 git SHA 40자.
   - 레지스트리 `928618307647.dkr.ecr.ap-northeast-2.amazonaws.com`.
@@ -68,6 +68,16 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
 - 도메인 레코드는 staging `terraform/staging/dns.tf`, production `terraform/production/dns.tf`(apex, www, grafana)가 정한다. production의 세 레코드는 손으로 만든 것을 import 블록으로 가져온다.
 - apex, www, grafana 레코드는 ALB 별칭이고 삭제 보호가 걸려 있다. ALB를 가리키므로 앱 서버를 최소 1대로 둔다.
 - production `dns.tf`는 도입사 가이드의 `docs.meterengine.com`도 정한다. ALB가 아니라 Mintlify를 가리키는 CNAME과 인증서 발급용 TXT 두 개이고 삭제 보호는 없다([`guide/README.md`](../guide/README.md) "배포").
+
+### 스테이징 접근
+
+- staging은 팀만 쓴다. ALB 보안 그룹 `meterengine-staging-alb`의 인바운드 규칙을 Terraform이 만들지 않고(`terraform/staging/main.tf`의 `alb_public_ingress = false`), 들어올 주소를 콘솔에서 직접 넣는다.
+- 넣는 법: EC2 > 보안 그룹 > `meterengine-staging-alb` > 인바운드 규칙 편집에서 HTTPS(443)에 공인 IP를 `/32`로 넣고, 설명에 누구의 어느 자리 IP인지 적는다. 80은 HTTPS로 돌려보내기만 하므로 넣지 않아도 된다.
+- 토스페이먼츠 웹훅처럼 밖에서 들어와야 하는 요청도 같은 방식으로 보내는 쪽 주소를 넣는다.
+  - 토스페이먼츠가 웹훅을 보내는 IP는 [토스페이먼츠 보안 문서](https://docs.tosspayments.com/reference/using-api/security)에 있다. 넣지 않으면 웹훅이 오지 않고, 결제 상태는 주기 대사 작업이 토스에서 다시 조회해 맞춘다.
+- 손으로 넣은 규칙은 apply가 지우지 않는다. Terraform이 이 그룹의 규칙을 독점 관리하지 않아서다. 규칙은 그룹당 60개까지다.
+- IP가 바뀌면 옛 규칙을 지우고 새로 넣는다. 규칙이 하나도 없으면 아무도 들어오지 못한다.
+- GitHub 러너도 닿지 못하므로 staging 배포는 외부 확인을 건너뛴다("자동 배포").
 
 ## 사전 준비
 
@@ -110,6 +120,7 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
 ```
 
 - 최소 대수가 0인 그룹은 버전만 기록하고(`recorded_only=true`) 외부 확인을 건너뛴다. 새 서버가 뜰 때 이 값을 읽는다.
+- staging은 ALB가 콘솔에서 넣은 IP만 받아 외부 확인을 건너뛴다(`cd-staging.yml`의 `external_check: false`). 새 서버가 모든 대상 그룹에서 healthy인지는 `rollout.sh`가 본다.
 - Caddy와 블루그린으로 도는 커밋(`deploy/caddy/Caddyfile`이 있는 커밋)은 오토스케일링 그룹 서버에서 뜨지 않아 거절한다.
 - **AWS 역할의 신뢰 정책은 GitHub Environment(`production`, `staging`) 한정이고, 각 Environment는 자기 브랜치에서만 돈다. 다른 브랜치에서 실행하면 막힌다.** PR 단계에서는 CD를 시험할 수 없다.
 - 같은 SHA의 이미지가 ECR에 이미 있으면 빌드를 건너뛴다.
@@ -363,7 +374,7 @@ ALB는 받은 `X-Forwarded-For` 뒤에 접속 주소를 붙이므로 맨 오른�
 
 - 전부 Parameter Store `/meterengine/<환경>/` 아래에 있다. 아래 명령은 production 기준이다.
 - 파라미터 이름이 대문자 환경변수 이름이 된다 (`db-host` -> `DB_HOST`).
-- staging은 모든 파라미터를 `deploy/terraform/staging/parameters.tf`가 만든다.
+- staging은 `deploy/terraform/staging/parameters.tf`가 만든다. 가입 캡차의 키와 켜는 값(`turnstile-site-key`, `turnstile-secret-key`, `turnstile-enabled`, `email-verification-enabled`), 예열 값 셋은 손으로 넣는다.
 - production은 DB 접속 정보, `invoice-auto-finalize-enabled`, 가입 메일의 `mail-sender`, `mail-from`, `turnstile-allowed-hostnames`만 `deploy/terraform/production/parameters.tf`가 갖고, 비밀값과 공개 저장소에 올리지 않는 값은 아래 명령으로 손으로 등록한다. 코드가 갖는 값을 손으로 바꾸면 다음 apply가 되돌린다.
 
 | 파라미터 | 타입 | 쓰이는 곳 |
@@ -439,6 +450,29 @@ aws ssm get-parameter --name /meterengine/production/operator-password --with-de
   8. 새 주소로 가입해 메일이 오는지 보고, 지표 `meterengine_email_verification_send_total`의 `outcome="success"`가 오르는지 본다. `outcome="logged"`가 오르거나 기동 로그에 `Email verification is required but the mail sender only logs`가 있으면 발송기가 `log`다. 바로 `email-verification-enabled`를 `false`로 되돌린다.
 - 메일 발송 실패는 가입을 막지 않는다. 백엔드 로그의 WARN과 지표 `meterengine_email_verification_send_total{outcome="failure"}`로 본다.
 - 보낸 뒤의 반송과 스팸 신고는 CloudWatch 경보가 본다. 인증을 켜기 전에 Slack 구독을 걸어 둔다("메일 발송 경보").
+- staging도 같은 순서로 켠다. 다른 점은 아래와 같다.
+  - Turnstile 위젯을 production과 따로 만든다. 도메인은 `staging.meterengine.com`이다. 키 둘과 켜는 값은 `/meterengine/staging/` 아래에 넣는다.
+  - Terraform은 `mail-sender`, `mail-from`(`MeterEngine Staging <no-reply@meterengine.com>`), `turnstile-allowed-hostnames`(`staging.meterengine.com`)를 만든다(`terraform/staging/parameters.tf`).
+  - 메일 발송 권한은 Terraform이 만들지 않는다. IAM 콘솔에서 역할 `meterengine-staging-app`에 아래 인라인 정책을 직접 단다. 받는 주소가 목록에 맞을 때만 보내지므로 팀 밖 주소로는 메일이 가지 않는다. 정책이 없으면 발송이 모두 거절된다.
+  - 받는 주소는 소문자로 적는다. 앱이 주소를 소문자로 바꿔 보내고 조건은 대소문자를 가린다. `*`를 쓸 수 있어 `<이름>+*@gmail.com`처럼 적으면 한 사람이 주소를 바꿔 가며 여러 번 가입해 볼 수 있다.
+  - 주소를 더하거나 뺄 때는 콘솔에서 이 정책의 목록만 고친다. 저장하면 바로 적용되고 apply는 이 정책을 지우지 않는다.
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "ses:SendEmail",
+      "Resource": "arn:aws:ses:ap-northeast-2:928618307647:identity/meterengine.com",
+      "Condition": {
+        "StringEquals": { "ses:FromAddress": "no-reply@meterengine.com" },
+        "ForAllValues:StringLike": { "ses:Recipients": ["<받을 주소>", "<이름>+*@gmail.com"] }
+      }
+    }
+  ]
+}
+```
 
 ```bash
 aws ssm put-parameter --name /meterengine/production/turnstile-site-key --type String --value '<사이트 키>'

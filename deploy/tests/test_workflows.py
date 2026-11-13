@@ -71,8 +71,15 @@ class WorkflowTest(unittest.TestCase):
 
     def test_external_check_goes_through_the_alb_only_after_a_real_rollout(self):
         source = DEPLOY.read_text()
-        self.assertIn("if: steps.rollout.outputs.recorded_only == 'false'\n", source)
+        self.assertIn("if: steps.rollout.outputs.recorded_only == 'false' && inputs.external_check\n", source)
         self.assertIn('--connect-to "$SITE_DOMAIN:443:$ALB_DNS_NAME:443"', source)
+
+    def test_only_staging_skips_the_external_check(self):
+        # 스테이징 ALB는 팀 IP만 받아 GitHub 러너가 닿지 못한다. 나머지 환경은 기본값으로 확인한다.
+        self.assertRegex(DEPLOY.read_text(), r"      external_check:\n(?:        .*\n)*?        type: boolean\n        default: true\n")
+        self.assertIn("      external_check: false\n", STAGING.read_text())
+        for path in (PRODUCTION, MEASUREMENT):
+            self.assertNotIn("external_check", path.read_text())
 
     def test_deploy_job_outlasts_rollout_and_recovery(self):
         self.assertIn("timeout-minutes: 50\n", DEPLOY.read_text())

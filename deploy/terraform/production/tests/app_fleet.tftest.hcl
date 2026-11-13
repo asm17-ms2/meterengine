@@ -244,3 +244,16 @@ run "app_role_sends_only_from_the_signup_address" {
     error_message = "The app role may send only from the signup address of the production identity."
   }
 }
+
+run "production_alb_stays_open_to_the_internet" {
+  command = plan
+  override_resource {
+    target = module.service.aws_db_instance.app
+    values = { id = "db-72GJNZYUHSQRXAKNQGC7ECV7UI" }
+  }
+
+  assert {
+    condition     = module.app_fleet.alb_public_ingress_ports == toset(["80", "443"])
+    error_message = "Production serves the public site, so Terraform keeps 80 and 443 open."
+  }
+}
