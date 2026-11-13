@@ -382,10 +382,10 @@ export RUN_ID=<RUN_ID>-read
 setsid nohup scripts/run-read-probe.sh > /root/$RUN_ID.log 2>&1 < /dev/null &
 ```
 
-- 이벤트 한 건 찾기(`GET /v1/events/lookup`)와 한 고객의 이번 달 이벤트 목록(`GET /v1/events`)을 번갈아 부른다. 합쳐서 초당 4건이고 `READ_RATE`로 바꾼다. 길이는 `DURATION_SECONDS`(기본 1,800초)다.
+- 이벤트 한 건 찾기(`GET /v1/events/lookup`)를 초당 4건 부른다. 속도는 `READ_RATE`, 길이는 `DURATION_SECONDS`(기본 1,800초)로 바꾼다.
+- `READS=lookup,list`를 주면 한 고객의 이번 달 이벤트 목록(`GET /v1/events`)도 번갈아 부른다. 목록 조회는 그 도입사의 이벤트를 다 훑으므로 행이 많을 때는 켜지 않는다. 1,060만 행에서 초당 2건을 걸었더니 모두 10초 시간 제한에 걸렸고 한 건 찾기까지 같이 느려졌다.
 - 시작할 때 기준 이벤트 한 건을 넣고 그것이 저장될 때까지 60초 기다린다. 카프카 경로에서는 컨슈머가 돌고 있어야 시작된다.
 - 요청 줄은 `READ 종류 보낸시각ms 걸린ms status`이고 `k6/results/<RUN_ID>/<RUN_ID>-read-probe.console.log`에 쌓인다.
-- 목록 조회는 그 고객의 이벤트가 늘수록 느려진다. 수집 부하의 영향만 보려면 부하가 끝난 뒤의 값과 견준다.
 
 ## RDS 장애 주입 실험
 

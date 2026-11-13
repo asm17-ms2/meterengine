@@ -15,7 +15,12 @@ const PAGE_SIZE = 20;
 const MIN_VUS = 20;
 const OK = 200;
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
-const READS = ['lookup', 'list'];
+const KNOWN_READS = ['lookup', 'list'];
+// 목록 조회는 그 도입사의 이벤트를 다 훑어서 행이 많으면 그것만으로 DB를 채운다. 그래서 따로 켠다.
+const READS = (__ENV.READS || 'lookup').split(',');
+if (READS.some((read) => !KNOWN_READS.includes(read))) {
+  throw new Error(`READS 값이 잘못됐다: ${__ENV.READS}`);
+}
 
 export const options = {
   summaryTrendStats: ['med', 'p(99)', 'max'],
