@@ -11,14 +11,14 @@ function requireOk(res, action) {
   return res;
 }
 
-function createCustomer(name) {
-  const res = http.post(`${config.baseUrl}/v1/customers`, JSON.stringify({ name, external_id: name }), { headers: config.headers });
+function createCustomer(headers, name) {
+  const res = http.post(`${config.baseUrl}/v1/customers`, JSON.stringify({ name, external_id: name }), { headers });
   return requireOk(res, `고객 ${name} 생성`).json('id');
 }
 
-export function loadCustomerIds() {
+export function loadCustomerIds(headers) {
   return Array.from({ length: CUSTOMER_COUNT }, (_, index) => {
     const name = `${NAME_PREFIX}${String(index + 1).padStart(3, '0')}`;
-    return createCustomer(name);
+    return createCustomer(headers, name);
   });
 }

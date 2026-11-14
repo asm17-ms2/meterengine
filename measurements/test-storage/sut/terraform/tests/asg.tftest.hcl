@@ -54,3 +54,22 @@ run "replacement_keeps_a_healthy_server" {
     error_message = "Health replacement must start a new server first and wait as long as staging and production."
   }
 }
+
+run "servers_pull_only_from_the_test_storage_image_repositories" {
+  command = plan
+
+  assert {
+    condition     = sort(keys(aws_ecr_repository.image)) == tolist(["meterengine-test-storage-backend", "meterengine-test-storage-frontend"])
+    error_message = "Branch images for this environment must go to its own repositories, not staging's. An image in the staging repository can be deployed to staging by hand."
+  }
+
+  assert {
+    condition     = alltrue([for repo in aws_ecr_repository.image : repo.image_tag_mutability == "IMMUTABLE"])
+    error_message = "A commit tag must always mean the same image, or a rerun measures something else."
+  }
+
+  assert {
+    condition     = sort(local.ecr_repos) == sort(keys(aws_ecr_repository.image))
+    error_message = "The server role must pull only the repositories this root creates."
+  }
+}

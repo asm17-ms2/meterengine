@@ -210,6 +210,16 @@ class DeployEnvironmentTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("IMAGE_REPOSITORY_PREFIX=meterengine-staging\n", self.env_file.read_text())
 
+    def test_server_without_a_role_runs_every_role(self):
+        result = self.deploy("staging", SHA)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("METERENGINE_ROLE=all\n", self.env_file.read_text())
+
+    def test_server_role_reaches_env_file(self):
+        result = self.deploy("staging", SHA, METERENGINE_ROLE="consumer")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("METERENGINE_ROLE=consumer\n", self.env_file.read_text())
+
     def test_image_from_other_repository_stops_deploy(self):
         self.set_preflight(image_prefix="meterengine-staging")
         result = self.deploy("staging", SHA)
@@ -398,6 +408,63 @@ class StorageSutDeployTest(unittest.TestCase):
     def test_commit_with_rollout_script_is_accepted(self):
         result = self.run_functions(f"require_deployable_commit {SHA}", tree=[f"{SHA}^{{commit}}", f"{SHA}:deploy/rollout.sh"])
         self.assertEqual(result.returncode, 0, result.stderr)
+
+
+class StoragePushImagesTest(unittest.TestCase):
+    SCRIPT = MEASUREMENTS / "test-storage/sut/scripts/push-images.sh"
+    # show는 그 커밋의 환경 파일을 PREFIX 접두로 보여 주고, archive는 빈 tar를 낸다.
+    FAKE_GIT = r"""#!/bin/sh
+case "$3" in
+branch) echo origin/branch ;;
+show) printf '{"image_repository_prefix": "%s"}\n' "$PREFIX" ;;
+archive) tar -cf - -T /dev/null ;;
+esac
+"""
+    FAKE_AWS = r"""#!/bin/sh
+printf 'aws %s\n' "$*" >>"$TRACE"
+case "$*" in
+*get-caller-identity*) echo 111122223333 ;;
+*describe-images*) exit 1 ;;
+esac
+"""
+    FAKE_DOCKER = r"""#!/bin/sh
+printf 'docker %s\n' "$*" >>"$TRACE"
+[ "$1" != login ] || cat >/dev/null
+"""
+
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory(prefix="meterengine-push-")
+        self.addCleanup(temp.cleanup)
+        self.root = Path(temp.name)
+        self.trace = self.root / "trace"
+        self.trace.touch()
+        bin_dir = self.root / "bin"
+        bin_dir.mkdir()
+        for name, body in (("git", self.FAKE_GIT), ("aws", self.FAKE_AWS), ("docker", self.FAKE_DOCKER)):
+            path = bin_dir / name
+            path.write_text(body)
+            path.chmod(path.stat().st_mode | stat.S_IEXEC)
+        self.env = dict(os.environ, PATH=f"{bin_dir}{os.pathsep}{os.environ['PATH']}", TRACE=str(self.trace))
+
+    def push(self, prefix):
+        self.trace.write_text("")
+        return subprocess.run(["bash", str(self.SCRIPT), SHA], env={**self.env, "PREFIX": prefix}, cwd=self.root,
+                              text=True, capture_output=True, timeout=30)
+
+    def test_commit_of_this_environment_is_pushed_to_its_repositories(self):
+        result = self.push("meterengine-test-storage")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for component in ("backend", "frontend"):
+            self.assertIn(f"amazonaws.com/meterengine-test-storage-{component}:{SHA} ", self.trace.read_text())
+
+    def test_commit_pointing_at_another_repository_stops_before_aws_and_docker(self):
+        for prefix in ("meterengine-staging", "meterengine", "meterengine-test-sjpark"):
+            with self.subTest(prefix=prefix):
+                result = self.push(prefix)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(f"image_repository_prefix가 {prefix} ", result.stderr)
+                self.assertIn("meterengine-test-storage", result.stderr)
+                self.assertEqual(self.trace.read_text(), "")
 
 
 if __name__ == "__main__":

@@ -86,14 +86,14 @@ measurements/test-storage/sut/scripts/sut-deploy.sh <SHA 40자>
 [sut-deploy] https://test-storage.meterengine.com/usage -> https://test-storage.meterengine.com/usage 가 200 을 돌려줬다(1회 시도)
 ```
 
-- SHA를 빼면 ECR 두 저장소 모두에 이미지가 있고 `deploy/rollout.sh`가 있는 가장 최근 develop 커밋을 쓴다.
-- 저장소는 `deploy/environments/test-storage.json`의 `image_repository_prefix`로 정한다. staging 저장소(`meterengine-staging-backend`, `-frontend`)라 릴리스 전에 develop 커밋을 잰다. 옛 main 커밋은 이 값을 `meterengine`으로 되돌린 커밋으로 띄운다.
+- SHA를 빼면 ECR 두 저장소 모두에 이미지가 있고 `deploy/rollout.sh`가 있는 가장 최근 develop 커밋을 쓴다. 이미지를 직접 올린 커밋만 후보가 되므로 SHA를 주는 편이 분명하다.
+- 저장소는 `deploy/environments/test-storage.json`의 `image_repository_prefix`로 정한다. 이 환경만 쓰는 저장소(`meterengine-test-storage-backend`, `-frontend`)라 머지 전 브랜치도 잰다. CD가 올려 주지 않으므로 잴 커밋의 이미지를 `push-images.sh <SHA>`로 직접 올린다. 이 저장소를 쓰기 전의 커밋은 다른 저장소를 가리켜 띄우지 못한다.
 - SUT에는 CD가 없다. develop이 바뀌어도 직접 배포할 때까지 그대로다.
 - ECR은 태그 이미지를 최근 10개만 남긴다. 같은 SHA로 다시 재려면 이미지가 남아 있는지 먼저 본다.
 
 ```bash
-aws ecr describe-images --region ap-northeast-2 --repository-name meterengine-backend --image-ids imageTag=<SHA>
-aws ecr describe-images --region ap-northeast-2 --repository-name meterengine-frontend --image-ids imageTag=<SHA>
+aws ecr describe-images --region ap-northeast-2 --repository-name meterengine-test-storage-backend --image-ids imageTag=<SHA>
+aws ecr describe-images --region ap-northeast-2 --repository-name meterengine-test-storage-frontend --image-ids imageTag=<SHA>
 ```
 
 - 버전 파라미터가 커밋 SHA가 아니면(처음 만든 값 `unset`) `asg_min_size`를 1 이상으로 올리는 plan이 멈춘다. 서버가 부팅 중 실패해 교체만 되풀이하지 않게 막는다.
@@ -287,6 +287,8 @@ scripts/run-ingest-steps.sh
 
 실험 뒤 보낸 것과 저장된 것을 대조한다. 보낸 이벤트의 1%는 같은 id로 다시 보내므로, 단계마다 `유실 0건, 재전송 N건 중 duplicate N건`이 나와야 한다.
 
+- 카프카 경로에서는 응답이 202이고 `duplicate`가 없다. 대조는 컨슈머가 다 저장할 때까지 최대 `STORE_WAIT_SECONDS`(기본 600초) 기다린 뒤 유실만 본다. 재전송을 중복으로 판정한 건수는 컨슈머 지표 `meterengine_event_consume_total{result="duplicate"}`로 본다.
+
 ```bash
 for f in k6/results/<RUN_ID>/*-ingest-r*.json; do scripts/reconcile.sh "$f"; done
 ```
@@ -355,6 +357,37 @@ sum by (instance) (jvm_memory_used_bytes{area="heap"}) / 1048576
 1000 * max by (instance) (jvm_gc_pause_seconds_max)
 ```
 
+### 조직 여러 곳을 섞어 재기
+
+컨슈머는 읽은 묶음을 조직별로 나눠 저장하므로, 조직이 섞이면 묶음 하나에 쿼리가 조직 수만큼 늘어난다. 이 차이를 재려면 조직마다 키가 하나씩 있어야 한다. 부하 발생기에서 조직과 키를 SUT DB에 직접 넣는다.
+
+```bash
+scripts/seed-organizations.sh 10 /root/.me-organization-keys
+export API_KEYS=$(paste -sd, /root/.me-organization-keys)
+scripts/run-ingest-steps.sh
+```
+
+- 이름이 `k6-organization-01`부터인 조직을 만들고 조직마다 live 모드의 `ingest`, `read` 키를 하나씩 넣는다. 원문은 키 파일(권한 600)에만 남고 DB에는 SHA-256만 들어간다.
+- 서버는 30초마다 키를 다시 읽는다. 넣고 30초 뒤부터 쓸 수 있다.
+- 다시 돌리면 있는 조직은 그대로 두고 앞서 넣은 키를 폐기한 뒤 새 키를 넣는다. 조직은 지우지 않는다.
+- `API_KEYS`가 있으면 `API_KEY`보다 먼저 쓴다. 이벤트는 조직에 고르게 나뉘고, 다시 보내는 건은 처음 보낸 조직으로 간다. 고객 100명은 조직마다 만든다.
+- 대조는 결과 파일에 적힌 조직을 모두 합쳐 센다. 명령은 조직 한 곳일 때와 같다.
+- RDS 장애 주입 실험(`run-fault.sh`)은 조직 한 곳만 쓴다. `API_KEYS`를 주면 첫 번째 키만 쓴다.
+
+### 조회를 같이 걸기
+
+수집 부하가 도는 동안 같은 DB를 쓰는 조회가 얼마나 느려지는지 보려면, 부하 발생기에서 조회 탐침을 따로 띄운다. 수집 부하보다 먼저 시작하고 RUN_ID는 다르게 준다.
+
+```bash
+export RUN_ID=<RUN_ID>-read
+setsid nohup scripts/run-read-probe.sh > /root/$RUN_ID.log 2>&1 < /dev/null &
+```
+
+- 이벤트 한 건 찾기(`GET /v1/events/lookup`)를 초당 4건 부른다. 속도는 `READ_RATE`, 길이는 `DURATION_SECONDS`(기본 1,800초)로 바꾼다.
+- `READS=lookup,list`를 주면 한 고객의 이번 달 이벤트 목록(`GET /v1/events`)도 번갈아 부른다. 목록 조회는 그 도입사의 이벤트를 다 훑으므로 행이 많을 때는 켜지 않는다. 1,060만 행에서 초당 2건을 걸었더니 모두 10초 시간 제한에 걸렸고 한 건 찾기까지 같이 느려졌다.
+- 시작할 때 기준 이벤트 한 건을 넣고 그것이 저장될 때까지 60초 기다린다. 카프카 경로에서는 컨슈머가 돌고 있어야 시작된다.
+- 요청 줄은 `READ 종류 보낸시각ms 걸린ms status`이고 `k6/results/<RUN_ID>/<RUN_ID>-read-probe.console.log`에 쌓인다.
+
 ## RDS 장애 주입 실험
 
 초당 500건을 보내는 동안 RDS를 다른 AZ로 두 번 넘겨, 수집이 끊긴 시간과 받지 못한 건수를 잰다.
@@ -377,6 +410,7 @@ tail -f /root/$RUN_ID.log
 ```
 
 - 30분 동안 초당 500건을 보낸다. 앱 탐침(초당 5건, 시간 제한 3초)과 1초 DB 탐침이 함께 돈다.
+- 속도는 `LOAD_RATE`, 길이는 `DURATION_SECONDS`(초)로 바꾼다. 요청이 오래 붙잡히는 장애에서 처리 스레드가 다 차는지 보려면 속도를 올린다. 요청마다 한 줄씩 남기므로 부하 발생기 CPU를 같이 본다.
 - 둘째 줄에 주입 가능 시각(시작 3분 뒤)과 끝나는 시각이 찍힌다. 앞 3분은 비교 기준 구간이다. 두 번째 주입은 끝나기 10분 전까지 한다.
 - 주입 전에 `k6/results/$RUN_ID/$RUN_ID-ingest-app_probe.console.log`의 줄이 늘고 있는지 본다. 앱 탐침이 멈추면 앱 몫을 잴 수 없다.
 - 중간에 멈출 때는 `kill -- -"$(pgrep -of scripts/run-fault.sh)"`로 k6까지 함께 끈다.

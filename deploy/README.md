@@ -19,6 +19,9 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
 | agents | node-exporter, cAdvisor |
 
 - `deploy.sh`는 env 파일과 컨테이너를 건드리기 전에 Parameter Store `db-host`의 RDS 식별자를 환경 파일과 대조하고, staging과 production은 이 서버가 환경 파일의 오토스케일링 그룹(`autoscaling_group_name`) 서버인지도 인스턴스 메타데이터 태그로 대조한다. 다르면 멈춘다.
+- `deploy.sh`는 인스턴스 메타데이터에서 서버의 `ServerRole` 태그도 읽어 backend에 `METERENGINE_ROLE`로 넘긴다. 같은 파라미터 경로를 쓰는 서버들의 역할을 이 태그로 가른다.
+  - 값은 `all`(전부), `ingest`(수집 API), `consumer`(카프카를 읽어 저장), `api`(관리 API와 예약 작업)다. 카프카 컨슈머는 `all`과 `consumer`에서만, 예약 작업은 `all`과 `api`에서만 돈다.
+  - 태그가 없으면 `all`이다. 모르는 값이거나 태그를 읽지 못하면 배포를 멈춘다.
 
 아래 그림과 항목은 production 기준이다.
 
@@ -405,6 +408,13 @@ ALB는 받은 `X-Forwarded-For` 뒤에 접속 주소를 붙이므로 맨 오른�
 | `business-registration-lookup-enabled` | String | 선택. `true`면 실제 환경 이용 신청을 받을 때 국세청 사업자 상태조회(공공데이터포털)로 사업자등록번호를 확인하고, 등록되지 않았거나 폐업한 번호는 그 자리에서 거절한다. 없으면 compose가 `false`를 넣고, 신청은 조회 없이 "자동 확인 못 함"으로 받는다("실제 환경 이용 신청의 사업자 조회 켜기") |
 | `nts-service-key` | SecureString | 선택. 공공데이터포털에서 받은 국세청 사업자등록정보 서비스의 인증키. `business-registration-lookup-enabled`가 `true`인데 비어 있으면 백엔드가 뜨지 못한다 |
 | `api-key-test-rate-limit-per-minute` | String | 선택. 테스트 환경 API 키의 분당 요청 상한. 키에 넣은 한도와 이 값 가운데 작은 쪽을 쓴다. 없으면 compose가 `300`을 넣는다. 1보다 작거나 숫자가 아니면 백엔드가 뜨지 않는다. 서버마다 따로 세므로 서버가 N대면 키 하나가 분당 N배까지 지나간다 |
+| `event-write-path` | String | 선택. 수집 API가 받은 이벤트를 보내는 곳. `direct`면 요청 안에서 DB에 저장하고, `kafka`면 카프카에 발행한 뒤 202로 답한다. 없으면 compose가 `direct`를 넣는다 |
+| `kafka-bootstrap-servers` | String | 선택. 카프카 브로커 주소. `event-write-path`가 `direct`면 브로커에 연결하지 않는다. 없으면 compose가 `localhost:9092`를 넣는다 |
+| `kafka-security-protocol` | String | 선택. 브로커와 통신하는 방식. MSK는 TLS만 받으므로 `SSL`을 넣는다. 없으면 compose가 `PLAINTEXT`를 넣는다 |
+| `kafka-create-topics` | String | 선택. `true`면 백엔드가 뜰 때 없는 토픽(`event.ingest`, `event.dlq`)을 만든다. 이미 있는 토픽의 설정은 건드리지 않는다. 없으면 compose가 `false`를 넣는다 |
+| `kafka-consumer-threads`, `kafka-consumer-max-poll-records`, `kafka-consumer-session-timeout-ms` | String | 선택. 서버 한 대에서 토픽을 읽는 스레드 수, 한 번에 읽는 묶음의 최대 건수, 컨슈머 서버가 죽었을 때 그 파티션을 다른 서버에 넘기기까지 기다리는 시간(ms). 없으면 compose가 `1`, `500`, `15000`을 넣는다. 스레드는 모든 컨슈머 서버를 합쳐 파티션 수까지만 일한다 |
+| `kafka-producer-linger-ms`, `kafka-producer-batch-size`, `kafka-producer-compression-type` | String | 선택. 수집 서버가 발행할 메시지를 모으는 시간(ms), 한 묶음의 최대 크기(바이트), 압축 방식. 없으면 compose가 `25`, `16384`, `lz4`를 넣는다 |
+| `kafka-producer-delivery-timeout-ms`, `kafka-publish-timeout` | String | 선택. 프로듀서가 재시도를 합쳐 발행 하나에 쓰는 전체 시간(ms)과 요청 스레드가 발행을 기다리는 상한. 없으면 compose가 `15000`, `20s`를 넣는다. 발행 대기가 전체 시간보다 길어야 프로듀서가 먼저 결론을 낸다 |
 | `frontend-api-key` | SecureString | 이 버전의 compose는 읽지 않는다. 옛 프론트가 백엔드를 부르던 API 키 원문이고, 옛 버전으로 되돌리는 배포가 요구해 남긴다 |
 | `app-version` | String | 앱 서버가 띄울 커밋 SHA 40자. CD와 `rollout.sh`가 쓰고 서버가 부팅 때 읽는다. Terraform은 자리 값 `unset`만 만들고 되돌리지 않는다. `prod.env`에는 들어가지 않는다 |
 
