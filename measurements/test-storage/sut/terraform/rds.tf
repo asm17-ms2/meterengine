@@ -11,7 +11,9 @@ resource "aws_db_instance" "sut" {
   engine_version = "18.4"
   instance_class = var.db_instance_class
 
-  allocated_storage     = 20
+  # 초당 10,000건이면 시간당 약 17GB가 쌓인다. 자동 확장은 한 번 늘리면 6시간 동안 다시 못 늘려 실험 중에는 믿지 못한다.
+  # RDS 디스크는 줄일 수 없다. 줄이려면 DB를 새로 만든다.
+  allocated_storage     = 100
   max_allocated_storage = var.db_max_allocated_storage
   storage_type          = "gp3"
   storage_encrypted     = true

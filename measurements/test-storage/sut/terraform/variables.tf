@@ -39,8 +39,8 @@ variable "asg_max_size" {
   default     = 3
 
   validation {
-    condition     = var.asg_max_size >= 1 && var.asg_max_size <= 12
-    error_message = "asg_max_size는 1에서 12 사이여야 한다."
+    condition     = var.asg_max_size >= 1 && var.asg_max_size <= 20
+    error_message = "asg_max_size는 1에서 20 사이여야 한다."
   }
 }
 
@@ -59,7 +59,7 @@ variable "ami_id" {
 variable "db_max_allocated_storage" {
   description = "SUT RDS 스토리지 자동 확장 상한(GB)"
   type        = number
-  default     = 100
+  default     = 200
 }
 
 variable "db_multi_az" {
