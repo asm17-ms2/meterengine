@@ -9,9 +9,9 @@
 
 | 경로 | 내용 |
 | --- | --- |
-| `sut/terraform/` | ALB(ACM 인증서), 오토스케일링 그룹(m7g.large, 최소 0, 최대 3), 버전 파라미터, RDS db.m7g.large(PostgreSQL 18.4, Single-AZ), 보안 그룹, IAM 역할, 파라미터, 도메인, 자동 중지. 켰을 때만 MSK 클러스터(브로커 3대)와 컨슈머 서버 오토스케일링 그룹("카프카 경로" 참고) |
+| `sut/terraform/` | ALB(ACM 인증서), 오토스케일링 그룹(m7g.large, 최소 0, 최대 3. 최대는 `asg_max_size`로 올린다), 버전 파라미터, RDS db.m7g.large(PostgreSQL 18.4, Single-AZ), 보안 그룹, IAM 역할, 파라미터, 도메인, 자동 중지. 켰을 때만 MSK 클러스터(브로커 3대)와 컨슈머 서버 오토스케일링 그룹("카프카 경로" 참고) |
 | `sut/scripts/` | 배포, exporter 사용자 만들기, 켜고 끄기, 앱 서버 목록, 부하 실험 중 CPU와 메모리 기록 켜기 |
-| `load-generator/terraform/` | 부하 발생기 EC2 m7g.large, 보안 그룹, IAM 역할, 자동 중지 |
+| `load-generator/terraform/` | 부하 발생기 EC2 m7g.large(`instance_type`으로 키운다), 보안 그룹, IAM 역할, 자동 중지 |
 | `load-generator/k6/` | k6 스크립트 |
 | `load-generator/scripts/` | 켜고 끄기, 실험 실행, 보낸 것과 저장된 것 대조 |
 | [`scripts/sut-cpu-report.sh`](scripts/sut-cpu-report.sh) | 단계별, 컨테이너별 SUT CPU 표. 쓰는 법은 "부하 실험" |
@@ -356,6 +356,22 @@ sum by (instance) (jvm_memory_used_bytes{area="heap"}) / 1048576
 1000 * sum by (instance) (rate(jvm_gc_pause_seconds_sum[1m]))
 1000 * max by (instance) (jvm_gc_pause_seconds_max)
 ```
+
+### 초당 4,000건 넘게 재기
+
+기본 구성은 초당 4,000건까지다. 수집 서버는 3대까지만 늘고, 부하 발생기(m7g.large)는 4,000건에서 CPU가 64%였다. 더 올리는 날에는 셋을 같이 바꾼다.
+
+```bash
+terraform -chdir=measurements/test-storage/load-generator/terraform apply -var instance_type=c7g.2xlarge
+terraform -chdir=measurements/test-storage/sut/terraform apply \
+  -var kafka_enabled=true -var consumer_count=2 -var asg_max_size=10 -var asg_min_size=8
+RATES="2000 4000 5000 6000 7000 8000 9000 10000" scripts/run-ingest-steps.sh
+```
+
+- 수집 서버 한 대는 CPU 80%에서 초당 약 1,570건에서 1,800건을 받았다(Discussion #601). 받을 양을 이 값으로 나눠 대수를 정한다.
+- 자동 확장이 따라오는 시간이 결과에 섞이지 않게 `asg_min_size`로 처음부터 필요한 대수를 띄운다.
+- 부하 발생기 유형을 바꾸는 apply는 서버를 멈췄다 켠다. 끝나면 `-var` 없는 apply로 되돌린다.
+- 켜 둔 동안의 SUT apply에는 `asg_max_size`도 계속 붙인다. 빼면 최대가 3으로 돌아가 최소를 넘지 못해 plan이 멈춘다.
 
 ### 조직 여러 곳을 섞어 재기
 

@@ -28,8 +28,19 @@ variable "asg_min_size" {
   default     = 0
 
   validation {
-    condition     = var.asg_min_size >= 0 && var.asg_min_size <= 3
-    error_message = "asg_min_size는 0에서 3 사이여야 한다. 최대 대수가 3이다."
+    condition     = var.asg_min_size >= 0 && var.asg_min_size <= var.asg_max_size
+    error_message = "asg_min_size는 0에서 asg_max_size 사이여야 한다."
+  }
+}
+
+variable "asg_max_size" {
+  description = "ASG 최대 대수. 한 대가 받는 양을 넘겨 재는 날에만 -var로 올린다(초당 10,000건은 8대쯤)"
+  type        = number
+  default     = 3
+
+  validation {
+    condition     = var.asg_max_size >= 1 && var.asg_max_size <= 12
+    error_message = "asg_max_size는 1에서 12 사이여야 한다."
   }
 }
 

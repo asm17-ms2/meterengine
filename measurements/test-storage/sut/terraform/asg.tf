@@ -43,7 +43,7 @@ resource "aws_launch_template" "sut" {
 resource "aws_autoscaling_group" "sut" {
   name             = "${local.prefix}-sut"
   min_size         = var.asg_min_size
-  max_size         = 3
+  max_size         = var.asg_max_size
   desired_capacity = var.asg_min_size
   # 2026-11-02 여러 대 측정과 같은 조건으로 2a 하나에 둔다. 운영은 가용 영역 두 곳으로 나눈다.
   vpc_zone_identifier = [data.aws_subnet.public_2a.id]
