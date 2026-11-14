@@ -11,4 +11,6 @@ public record EventKafkaProperties(
     @DefaultValue("3") short replicas,
     @DefaultValue("false") boolean createTopics,
     @DefaultValue("20s") Duration publishTimeout,
-    @DefaultValue("unknown") String producerName) {}
+    @DefaultValue("unknown") String producerName,
+    @DefaultValue("event.dlq") String deadLetterTopic,
+    @DefaultValue("1s") Duration consumeRetryInterval) {}

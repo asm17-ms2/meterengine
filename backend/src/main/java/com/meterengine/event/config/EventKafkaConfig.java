@@ -1,12 +1,18 @@
 package com.meterengine.event.config;
 
+import com.meterengine.event.client.EventConsumeRetryListener;
+import com.meterengine.global.config.ConditionalOnServerRole;
+import com.meterengine.global.config.ServerRole;
 import java.time.Duration;
+import java.util.Map;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.common.config.TopicConfig;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.TopicBuilder;
+import org.springframework.kafka.listener.DefaultErrorHandler;
+import org.springframework.util.backoff.FixedBackOff;
 
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnProperty(name = EventKafkaConfig.WRITE_PATH, havingValue = EventKafkaConfig.KAFKA)
@@ -17,6 +23,8 @@ public class EventKafkaConfig {
   public static final String KAFKA = "kafka";
 
   private static final Duration RETENTION = Duration.ofDays(7);
+  private static final Duration DEAD_LETTER_RETENTION = Duration.ofDays(30);
+  private static final int DEAD_LETTER_PARTITIONS = 1;
   private static final int MIN_IN_SYNC_REPLICAS = 2;
 
   // 운영 토픽은 클러스터 쪽에서 만든다. 로컬과 시험에서만 켠다.
@@ -31,5 +39,35 @@ public class EventKafkaConfig {
         .config(TopicConfig.MIN_IN_SYNC_REPLICAS_CONFIG, Integer.toString(minInSyncReplicas))
         .config(TopicConfig.UNCLEAN_LEADER_ELECTION_ENABLE_CONFIG, "false")
         .build();
+  }
+
+  // 다시 해도 안 되는 메시지만 와서 양이 거의 없다. 한 줄로 남아야 재처리가 쉬워 파티션은 하나다.
+  @Bean
+  @ConditionalOnProperty(name = "meterengine.event.kafka.create-topics", havingValue = "true")
+  NewTopic eventDeadLetterTopic(EventKafkaProperties properties) {
+    int minInSyncReplicas = Math.min(MIN_IN_SYNC_REPLICAS, properties.replicas());
+    return TopicBuilder.name(properties.deadLetterTopic())
+        .partitions(DEAD_LETTER_PARTITIONS)
+        .replicas(properties.replicas())
+        .config(TopicConfig.RETENTION_MS_CONFIG, Long.toString(DEAD_LETTER_RETENTION.toMillis()))
+        .config(TopicConfig.MIN_IN_SYNC_REPLICAS_CONFIG, Integer.toString(minInSyncReplicas))
+        .config(TopicConfig.UNCLEAN_LEADER_ELECTION_ENABLE_CONFIG, "false")
+        .build();
+  }
+
+  // 저장에 실패하면 오프셋을 넘기지 않고 같은 묶음을 될 때까지 다시 읽는다. DB가 돌아오면 이어서 간다.
+  @Bean
+  @ConditionalOnServerRole({ServerRole.ALL, ServerRole.CONSUMER})
+  DefaultErrorHandler eventIngestErrorHandler(
+      EventKafkaProperties properties, EventConsumeRetryListener eventConsumeRetryListener) {
+    DefaultErrorHandler errorHandler =
+        new DefaultErrorHandler(
+            new FixedBackOff(
+                properties.consumeRetryInterval().toMillis(), FixedBackOff.UNLIMITED_ATTEMPTS));
+    // 기본값은 ClassCastException 같은 몇 가지를 다시 하지 않고 묶음을 버린다. 수집 서버가 이미 받았다고 답한
+    // 이벤트라 버릴 수 없다. 우리 버그여도 그 자리에 멈춰, 고친 코드가 배포되면 이어서 가게 한다.
+    errorHandler.setClassifications(Map.of(), true);
+    errorHandler.setRetryListeners(eventConsumeRetryListener);
+    return errorHandler;
   }
 }
