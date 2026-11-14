@@ -121,6 +121,7 @@ jobs:
           target=$(git show "$SHA:deploy/environments/$DEPLOY_ENV.json")
           {
             echo "AUTOSCALING_GROUP=$(jq -er .autoscaling_group_name <<<"$target")"
+            echo "KAFKA_AUTOSCALING_GROUPS=$(jq -r '(.kafka_autoscaling_group_names // []) | join(" ")' <<<"$target")"
             echo "VERSION_PARAMETER=$(jq -er .parameter_path <<<"$target")/app-version"
             echo "IMAGE_REPOSITORY_PREFIX=$(jq -er .image_repository_prefix <<<"$target")"
             echo "SITE_DOMAIN=$(jq -er .site_domain <<<"$target")"
@@ -138,6 +139,25 @@ jobs:
           for component in backend frontend; do
             aws ecr describe-images --repository-name "$IMAGE_REPOSITORY_PREFIX-$component" \
               --image-ids imageTag="$SHA" >/dev/null || { echo "ECR $IMAGE_REPOSITORY_PREFIX-$component 에 $SHA 이미지가 없다"; exit 1; }
+          done
+
+      # 카프카를 켠 환경에만 있는 서버 그룹(컨슈머, 수집)을 먼저 바꾼다. 새 메시지를 읽을 쪽이 먼저 올라가야 한다.
+      # 그룹이 없으면(카프카를 켜지 않은 환경) 건너뛴다.
+      - name: 카프카 서버 그룹 배포
+        run: |
+          set -euo pipefail
+          # 뒤 그룹이 실패했을 때 되돌릴 값은 첫 그룹을 바꾸기 전의 값이다.
+          previous=$(aws ssm get-parameter --name "$VERSION_PARAMETER" --query Parameter.Value --output text)
+          export ROLLOUT_PREVIOUS="$previous"
+          echo "ROLLOUT_PREVIOUS=$previous" >> "$GITHUB_ENV"
+          for group in $KAFKA_AUTOSCALING_GROUPS; do
+            found=$(aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names "$group" \
+              --query 'AutoScalingGroups[0].AutoScalingGroupName' --output text)
+            if [ "$found" != "$group" ]; then
+              echo "$group 이 없어 건너뛴다"
+              continue
+            fi
+            ./deploy/rollout.sh "$group" "$VERSION_PARAMETER" "$SHA" >/dev/null
           done
 
       # 버전 파라미터에 SHA를 쓰고 서버를 하나씩 새로 바꾼다. 최소 대수가 0이면 기록만 한다.

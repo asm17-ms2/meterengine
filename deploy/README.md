@@ -99,6 +99,7 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
 - `/etc/meterengine/prod.env`는 배포할 때마다 `deploy.sh`가 Parameter Store 값으로 새로 쓴다.
 - `deploy/environments/<환경>.json`의 값이다.
   - `autoscaling_group_name`은 staging과 production에만 적고, `meterengine-<환경>-app`이어야 한다.
+  - `kafka_autoscaling_group_names`는 카프카를 켰을 때만 있는 서버 그룹(`-consumer`, `-ingest`)이다. 배포가 이 그룹들도 새 버전으로 바꾸고, 그 서버들은 부팅 때 자기 그룹 이름을 여기서 찾는다. 그룹이 없으면 배포가 건너뛴다.
   - 프론트는 `https://<site_domain>`에서 온 공개 인보이스 조회와 결제 재시도만 받는다. compose가 이 값을 `METERENGINE_PUBLIC_ORIGIN`으로 넣는다.
   - compose는 프론트에 `METERENGINE_SHOW_LEGACY_ENVIRONMENT`를 넣지 않는다. staging과 production 모두 콘솔 업무 환경 목록에 기존 데이터가 나오지 않는다. 테스트 환경으로 옮긴 자료에 문제가 있어 옛 범위를 봐야 할 때만 compose의 frontend `environment`에 `METERENGINE_SHOW_LEGACY_ENVIRONMENT: "true"`를 넣어 배포한다.
   - `site_aliases`는 지금 배포에서 쓰지 않는다. 별칭 리다이렉트는 ALB 규칙(Terraform)이 정한다.
@@ -715,6 +716,56 @@ aws ec2 describe-images --owners self --filters Name=tag:Role,Values=app-image \
 ```
 
 - compose 버전을 올릴 때는 provision.sh와 `terraform/monitoring/bootstrap.sh`를 같이 고친다. 각 파일이 같은 버전과 sha256을 따로 고정하고, 서로 다르면 deploy 시험이 실패한다.
+
+## 카프카 켜기와 끄기
+
+staging과 production은 `kafka_enabled` 변수로 수집 경로를 고른다. 기본값은 꺼짐이다. 설정값의 근거는 [Discussion #601](https://github.com/asm17-ms2/meterengine/discussions/601)이다.
+
+| 상태 | 있는 것 | 서버 그룹 |
+| --- | --- | --- |
+| 꺼짐 | 카프카 관련 자원이 없다 | `meterengine-<환경>-app` 하나가 전부 맡고 요청마다 DB에 저장한다 |
+| 켜짐 | MSK 클러스터(kafka.t3.small 브로커 3대, 브로커마다 100GB), 카프카 파라미터 다섯 개, 수집용 대상 그룹과 ALB 규칙 | `-app`은 관리 API, 화면, 예약 작업을 맡는다(역할 api). `-ingest`가 이벤트를 받아 카프카에 넣고(역할 ingest, 1대에서 3대), `-consumer`가 카프카를 읽어 DB에 넣는다(역할 consumer, staging 1대, production 2대) |
+
+이벤트를 받는 두 주소(`POST /v1/events`, `POST /v1/event-batches`)만 `-ingest` 그룹으로 가고 나머지는 `-app` 그룹으로 간다.
+
+### 켜기 전에 끝낼 일
+
+staging은 사용자가 없어 첫째 일 없이도 켜 볼 수 있다. production은 여섯 가지가 모두 끝난 뒤에 켠다.
+
+1. 인보이스 확정이 컨슈머가 밀린 것을 다 읽은 뒤에 돌게 한다. 컨슈머는 받은 시각을 접수 시각으로 적으므로, 마감 전에 받고 확정 뒤에 저장된 이벤트는 어느 인보이스에도 들지 않는다.
+2. 경보를 서버 역할별로 가른다. 지금 경보는 환경 단위로 세서 `-app` 서버가 죽어도 다른 그룹이 살아 있으면 울리지 않는다.
+3. 브로커를 공용 모니터링에 등록한다. 포트는 열리지만 대상 파일을 쓰는 스크립트가 측정 환경 전용이다.
+4. 컨슈머가 밀린 양을 보는 대시보드를 만든다. 수집 대상 그룹(`ingst-`)의 ALB 지표도 수집 설정에 더한다.
+5. 데모 CLI와 OTel 브리지가 202를 성공으로 받게 고친다. 지금은 200만 성공으로 본다.
+6. production의 GitHub 배포 역할에 `-ingest`와 `-consumer` 그룹의 새로 고침 권한을 더한다. 이 역할은 Terraform 밖에 있다.
+
+### 켜기
+
+```sh
+terraform -chdir=deploy/terraform/staging apply -var kafka_enabled=true
+```
+
+- 순서는 Terraform이 지킨다. 클러스터(약 30분), 파라미터, `-consumer`와 `-ingest` 그룹, 수집 요청을 돌리는 ALB 규칙 순으로 만들고, 마지막에 `-app` 그룹의 서버를 api 역할로 하나씩 교체한다.
+- 서버는 뜰 때 역할 태그와 카프카 파라미터를 한 번 읽는다. 그래서 `-app` 그룹은 태그가 바뀌면 서버를 새로 띄우게 해 두었다. 교체하는 동안 옛 서버(요청마다 저장)와 새 서버가 잠깐 같이 돌아도 같은 이벤트는 `transaction_id`로 걸러진다.
+- 켠 상태는 코드에 남지 않는다. 켠 뒤에는 이 환경의 모든 apply에 `-var kafka_enabled=true`를 붙이거나 `TF_VAR_kafka_enabled=true`를 둔다. 빼고 apply하면 아래 "끄기"가 된다.
+- 브로커가 들어가는 프라이빗 서브넷 가운데 2c는 측정 환경 루트(`measurements/test-storage/sut/terraform`)가 만든다. 그 루트를 destroy하면 이 환경의 plan이 멈춘다.
+
+켠 뒤의 배포는 `-consumer`, `-ingest`, `-app` 순서로 세 그룹을 모두 새 버전으로 바꾼다(환경 파일의 `kafka_autoscaling_group_names`).
+
+- 뒤 그룹이 실패하면 버전 파라미터는 배포 전 값으로 돌아가지만, 먼저 바뀐 그룹의 서버는 새 버전으로 남는다. 고친 커밋이나 이전 커밋으로 다시 배포해 맞춘다.
+- `-consumer` 그룹은 대상 그룹이 없어 서버가 InService인지만 본다. 앱이 떴는지는 컨슈머 지표(`meterengine_event_consume_total`)로 확인한다.
+- 이 조각이 들어가기 전의 커밋으로 롤백하면 `-app` 그룹만 바뀐다. 켠 환경에서는 그런 커밋으로 롤백하지 않는다.
+
+### 끄기
+
+MSK는 멈출 수 없고 떠 있는 동안 과금된다. 변수를 빼고 apply하면 컨슈머 그룹과 클러스터가 먼저 지워지고, 그 뒤에 `-app` 그룹이 요청마다 저장하는 쪽으로 교체된다.
+
+- 끄는 동안 받은 이벤트는 잃을 수 있다. 컨슈머가 내려간 뒤에도 서버가 열린 연결로 발행에 성공해 202로 응답하면, 그 이벤트는 읽히지 않은 채 클러스터와 함께 지워진다. 그 뒤로는 `-app` 서버가 교체될 때까지 503으로 응답한다.
+- 그래서 수집이 들어오지 않는 시간에 끈다. 끄기 전에 `sum(meterengine_event_ingest_total{result="accepted"})`와 `sum(meterengine_event_consume_total)`의 증가가 같은지 Prometheus에서 직접 보아 밀린 것이 없는지 확인한다.
+
+```sh
+terraform -chdir=deploy/terraform/staging apply
+```
 
 ## 모니터링
 

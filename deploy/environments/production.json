@@ -1,5 +1,6 @@
 {
   "autoscaling_group_name": "meterengine-production-app",
+  "kafka_autoscaling_group_names": ["meterengine-production-consumer", "meterengine-production-ingest"],
   "database_identifier": "meterengine-db",
   "parameter_path": "/meterengine/production",
   "site_domain": "meterengine.com",

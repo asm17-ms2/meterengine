@@ -96,3 +96,22 @@ variable "email_sender" {
   })
   default = null
 }
+
+# 카프카를 켜면 서버 그룹이 셋으로 나뉜다. 원래 그룹은 관리 API, 화면, 예약 작업을 맡고 새 그룹 둘이 수집과 저장을 맡는다.
+# null이면 서버 그룹 하나가 전부 맡고 요청마다 DB에 저장한다.
+variable "kafka" {
+  type = object({
+    bootstrap_servers = string
+    ingest_min_size   = number
+    consumer_count    = number
+  })
+  default = null
+  validation {
+    condition     = var.kafka == null ? true : var.kafka.ingest_min_size >= 1 && var.kafka.ingest_min_size <= 3
+    error_message = "Ingest minimum size must be between 1 and the maximum of 3."
+  }
+  validation {
+    condition     = var.kafka == null ? true : var.kafka.consumer_count >= 1 && var.kafka.consumer_count <= 6
+    error_message = "Consumer count must be between 1 and 6. The event.ingest topic has six partitions, so more servers would sit idle."
+  }
+}

@@ -19,6 +19,8 @@ GROUP_ENVIRONMENTS = (*SERVICE_ENVIRONMENTS, "test-sjpark-m7g", "test-sjpark-t4g
 PROFILES = {"agents"}
 FIELDS = {"autoscaling_group_name", "database_identifier", "parameter_path", "site_domain", "site_aliases", "compose_profiles",
           "image_repository_prefix", "backend_mem_limit", "backend_max_ram_percentage"}
+# 카프카를 켠 환경에만 있는 서버 그룹. CD가 이 그룹들도 새 버전으로 바꾸고, 그 서버들은 부팅 때 자기 그룹 이름을 여기서 찾는다.
+OPTIONAL_FIELDS = {"kafka_autoscaling_group_names"}
 REQUIRED_PARAMETERS = ["DB_HOST", "DB_PORT", "DB_NAME", "DB_USERNAME", "DB_PASSWORD", "CRYPTO_ENCRYPTION_KEY", "OPERATOR_EMAIL", "OPERATOR_PASSWORD"]
 IMDS = "http://169.254.169.254/latest"
 HTTP_OK = "200"
@@ -33,10 +35,13 @@ def load_target(name: str, directory: Path) -> dict:
         raise ValueError(f"환경 이름은 {', '.join((*SERVICE_ENVIRONMENTS, *SUT_ENVIRONMENTS))} 중 하나여야 한다: {name}")
     target = json.loads((directory / f"{name}.json").read_text())
     in_group = name in GROUP_ENVIRONMENTS
-    if not isinstance(target, dict) or set(target) != (FIELDS if in_group else FIELDS - {"autoscaling_group_name"}):
+    if not isinstance(target, dict) or set(target) - OPTIONAL_FIELDS != (FIELDS if in_group else FIELDS - {"autoscaling_group_name"}):
         raise ValueError(f"{name}.json의 필드가 다르다")
     if in_group and target["autoscaling_group_name"] != f"meterengine-{name}-app":
         raise ValueError(f"{name}.json의 autoscaling_group_name은 meterengine-{name}-app이어야 한다")
+    kafka_groups = target.get("kafka_autoscaling_group_names", [])
+    if not isinstance(kafka_groups, list) or any(group not in (f"meterengine-{name}-consumer", f"meterengine-{name}-ingest") for group in kafka_groups):
+        raise ValueError(f"{name}.json의 kafka_autoscaling_group_names는 meterengine-{name}-consumer와 meterengine-{name}-ingest만 담는다")
     if not re.fullmatch(r"[a-z][a-z0-9-]*", str(target["database_identifier"])):
         raise ValueError(f"{name}.json의 database_identifier는 전체 주소가 아니라 RDS 식별자다")
     for key in ("parameter_path", "site_domain", "image_repository_prefix", "backend_mem_limit"):
@@ -59,9 +64,14 @@ def load_target(name: str, directory: Path) -> dict:
 
 def validate_target(target: dict, observed: dict) -> None:
     # 환경 파일에 그룹 이름이 없는 test-storage는 DB만 대조한다. 나머지는 그 환경의 오토스케일링 그룹 서버여야 한다.
-    for key in ("autoscaling_group_name", "database_identifier") if "autoscaling_group_name" in target else ("database_identifier",):
-        if target.get(key) != observed.get(key):
-            raise ValueError(f"{key}가 환경 파일과 다릅니다. 이 서버의 값: {observed.get(key) or '없음'}")
+    if "autoscaling_group_name" in target and observed.get("autoscaling_group_name") not in server_group_names(target):
+        raise ValueError(f"autoscaling_group_name가 환경 파일과 다릅니다. 이 서버의 값: {observed.get('autoscaling_group_name') or '없음'}")
+    if target.get("database_identifier") != observed.get("database_identifier"):
+        raise ValueError(f"database_identifier가 환경 파일과 다릅니다. 이 서버의 값: {observed.get('database_identifier') or '없음'}")
+
+
+def server_group_names(target: dict) -> list:
+    return [target["autoscaling_group_name"], *target.get("kafka_autoscaling_group_names", [])]
 
 
 def database_identifier(host: str) -> str:

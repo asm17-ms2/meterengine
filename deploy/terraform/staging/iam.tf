@@ -17,9 +17,19 @@ resource "aws_iam_role" "github_deploy" {
   }] })
 }
 resource "aws_iam_role_policy" "github_deploy" {
-  name = "staging-deploy-only"
-  role = aws_iam_role.github_deploy.id
-  policy = jsonencode({ Version = "2012-10-17", Statement = [
+  name   = "staging-deploy-only"
+  role   = aws_iam_role.github_deploy.id
+  policy = jsonencode({ Version = "2012-10-17", Statement = concat(local.github_deploy_statements, local.github_deploy_kafka_statements) })
+}
+
+locals {
+  # 카프카를 켜면 배포가 수집 서버 그룹과 컨슈머 서버 그룹도 새로 고친다.
+  github_deploy_kafka_statements = [
+    for arns in [module.app_fleet.kafka_autoscaling_group_arns] :
+    { Effect = "Allow", Action = ["autoscaling:StartInstanceRefresh", "autoscaling:CancelInstanceRefresh"], Resource = arns }
+    if var.kafka_enabled
+  ]
+  github_deploy_statements = [
     { Effect = "Allow", Action = ["ecr:GetAuthorizationToken"], Resource = "*" },
     { Effect = "Allow", Action = ["ecr:BatchCheckLayerAvailability", "ecr:InitiateLayerUpload", "ecr:UploadLayerPart", "ecr:CompleteLayerUpload", "ecr:PutImage", "ecr:BatchGetImage", "ecr:DescribeImages"], Resource = local.ecr_repositories },
     # 롤링 배포: 버전 파라미터에 SHA를 쓰고 오토스케일링 그룹을 새로 고친다.
@@ -28,5 +38,5 @@ resource "aws_iam_role_policy" "github_deploy" {
     { Effect = "Allow", Action = ["elasticloadbalancing:DescribeLoadBalancers", "elasticloadbalancing:DescribeTargetGroups", "elasticloadbalancing:DescribeTargetHealth"], Resource = "*" },
     { Effect = "Allow", Action = ["ssm:GetParameter", "ssm:PutParameter"], Resource = local.app_version_parameter_arn },
     { Effect = "Deny", Action = ["ssm:GetParameter", "ssm:GetParameters", "ssm:GetParametersByPath", "ssm:GetParameterHistory", "ssm:StartSession"], NotResource = [local.app_version_parameter_arn] }
-  ] })
+  ]
 }

@@ -37,6 +37,7 @@ module "app_fleet" {
   scaling_target_average_cpu_percent = 60
   alb_deletion_protection            = false
   monitoring_security_group_id       = data.aws_security_group.monitoring.id
+  kafka                              = local.app_fleet_kafka
   # 스테이징은 팀만 쓴다. 들어올 IP는 콘솔에서 ALB 보안 그룹에 직접 넣는다(deploy/README.md "스테이징 접근").
   alb_public_ingress = false
 }

@@ -13,6 +13,10 @@ REFRESH_WAIT_POLLS=60
 TARGET_HEALTH_WAIT_POLLS=20
 RECOVERY_WAIT_POLLS=80
 ACTIVE_STATUSES="Pending InProgress Cancelling RollbackInProgress Baking"
+# 요청을 받는 그룹은 새 서버가 healthy가 된 뒤 옛 서버를 뺀다.
+APP_REFRESH_PREFERENCES='{"MinHealthyPercentage":100,"MaxHealthyPercentage":200,"SkipMatching":false}'
+# 컨슈머 그룹은 먼저 내리고 띄운다. 새 서버를 먼저 띄우면 파티션을 두 번 다시 나눈다.
+CONSUMER_REFRESH_PREFERENCES='{"MinHealthyPercentage":50,"SkipMatching":false}'
 
 group=
 parameter=
@@ -20,6 +24,7 @@ sha=
 previous=
 target_groups=
 alb_dns_name=
+refresh_preferences=$APP_REFRESH_PREFERENCES
 
 log() { printf '[rollout] %s\n' "$*" >&2; }
 die() {
@@ -59,7 +64,7 @@ start_refresh() {
 	errors=$(mktemp)
 	# Terraform의 instance_refresh 블록과 같은 값이다. 바꾸면 둘을 같이 바꾼다.
 	if id=$(aws autoscaling start-instance-refresh --auto-scaling-group-name "$group" --strategy Rolling \
-		--preferences '{"MinHealthyPercentage":100,"MaxHealthyPercentage":200,"SkipMatching":false}' \
+		--preferences "$refresh_preferences" \
 		--query InstanceRefreshId --output text 2>"$errors"); then
 		rm -f "$errors"
 		printf '%s' "$id"
@@ -182,13 +187,23 @@ main() {
 		die "오토스케일링 그룹 $group 을 읽지 못했다"
 	[ "$found" = "$group" ] || die "오토스케일링 그룹 $group 이 없다"
 	target_groups=$(describe_group 'TargetGroupARNs') || die "오토스케일링 그룹 $group 의 대상 그룹을 읽지 못했다"
-	alb_dns_name=$(find_alb_dns_name) || die "오토스케일링 그룹 $group 앞의 ALB를 찾지 못했다"
+	# 컨슈머 서버 그룹처럼 요청을 받지 않는 그룹은 대상 그룹과 ALB가 없다. 서버가 InService인지만 본다.
+	if [ -z "$target_groups" ] || [ "$target_groups" = None ]; then
+		target_groups=
+		refresh_preferences=$CONSUMER_REFRESH_PREFERENCES
+	else
+		alb_dns_name=$(find_alb_dns_name) || die "오토스케일링 그룹 $group 앞의 ALB를 찾지 못했다"
+	fi
 
 	active=$(active_refreshes) || die "새로 고침 상태를 읽지 못했다"
 	[ -z "$active" ] || die "진행 중인 새로 고침($active)이 있어 버전을 쓰지 않았다. 끝난 뒤 다시 배포한다"
 
-	previous=$(aws ssm get-parameter --name "$parameter" --query Parameter.Value --output text) ||
-		die "버전 파라미터 $parameter 를 읽지 못했다"
+	# 서버 그룹 여러 개를 차례로 바꿀 때는 처음에 읽은 값을 넘겨받는다. 앞 그룹이 이미 새 SHA를 써서 다시 읽으면 되돌릴 값을 잃는다.
+	previous=${ROLLOUT_PREVIOUS:-}
+	if [ -z "$previous" ]; then
+		previous=$(aws ssm get-parameter --name "$parameter" --query Parameter.Value --output text) ||
+			die "버전 파라미터 $parameter 를 읽지 못했다"
+	fi
 	write_version "$sha" || die "버전 파라미터 $parameter 에 쓰지 못했다"
 	log "버전 파라미터 $parameter: $previous -> $sha"
 
