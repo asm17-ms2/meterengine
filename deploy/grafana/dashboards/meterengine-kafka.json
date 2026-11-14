@@ -374,6 +374,84 @@
       }
     },
     {
+      "id": 20,
+      "type": "timeseries",
+      "title": "저장 속도 조절로 기다린 시간",
+      "description": "컨슈머가 초당 저장 건수 상한을 지키려고 묶음을 넣기 전에 기다린 시간을 서버마다 더한 값이다. 1이면 스레드 하나가 내내 기다린 것과 같다. 상한을 켜지 않았거나 밀린 것이 없으면 0이다. 지표: `meterengine_event_consume_throttle_seconds_sum`",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 18
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (env, instance) (rate(meterengine_event_consume_throttle_seconds_sum{env=~\"$env\"}[$__rate_interval]))",
+          "legendFormat": "{{env}} {{instance}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "기다린 묶음의 평균 기다림",
+      "description": "기다린 묶음 하나가 평균 얼마나 기다렸는지다. 5초가 한 번에 기다리는 상한이라, 여기에 가까우면 상한 값이 받는 양보다 낮게 잡힌 것이다. 지표: `meterengine_event_consume_throttle_seconds_sum`, `meterengine_event_consume_throttle_seconds_count`",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 18
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (env) (rate(meterengine_event_consume_throttle_seconds_sum{env=~\"$env\"}[$__rate_interval])) / sum by (env) (rate(meterengine_event_consume_throttle_seconds_count{env=~\"$env\"}[$__rate_interval]))",
+          "legendFormat": "{{env}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "min": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
       "id": 10,
       "type": "row",
       "title": "브로커",
@@ -383,7 +461,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 18
+        "y": 26
       }
     },
     {
@@ -395,7 +473,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 19
+        "y": 27
       },
       "datasource": {
         "type": "prometheus",
@@ -435,7 +513,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 19
+        "y": 27
       },
       "datasource": {
         "type": "prometheus",
@@ -475,7 +553,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 19
+        "y": 27
       },
       "datasource": {
         "type": "prometheus",
@@ -515,7 +593,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 27
+        "y": 35
       },
       "datasource": {
         "type": "prometheus",
@@ -559,7 +637,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 27
+        "y": 35
       },
       "datasource": {
         "type": "prometheus",
@@ -599,7 +677,7 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 27
+        "y": 35
       },
       "datasource": {
         "type": "prometheus",
@@ -640,7 +718,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 35
+        "y": 43
       }
     },
     {
@@ -652,7 +730,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 36
+        "y": 44
       },
       "datasource": {
         "type": "prometheus",
@@ -691,7 +769,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 36
+        "y": 44
       },
       "datasource": {
         "type": "prometheus",
