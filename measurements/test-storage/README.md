@@ -555,6 +555,7 @@ measurements/test-storage/sut/scripts/kafka-tool.sh dlq 10  # DLQ의 앞에서�
 | `KAFKA_PUBLISH_TIMEOUT` | 20s | 요청 스레드가 발행을 기다리는 상한. 위 값보다 길게 둔다 |
 | `KAFKA_CONSUMER_MAX_POLL_RECORDS` | 500 | 컨슈머가 한 트랜잭션에 넣는 묶음 크기 |
 | `KAFKA_CONSUMER_SESSION_TIMEOUT_MS` | 15000 | 죽은 컨슈머의 파티션을 다른 서버에 넘기기까지 기다리는 시간(ms) |
+| `KAFKA_CONSUMER_MAX_RECORDS_PER_SECOND` | 0 | 컨슈머 서버 한 대가 초당 DB에 넣는 건수의 상한. 0이면 묶지 않는다 |
 
 ```bash
 aws ssm put-parameter --overwrite --type String --name /meterengine/test-storage/kafka-producer-linger-ms --value 50

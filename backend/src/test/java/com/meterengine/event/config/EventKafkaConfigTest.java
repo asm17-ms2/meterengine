@@ -34,7 +34,8 @@ class EventKafkaConfigTest {
           Duration.ofSeconds(20),
           "test",
           "event.dlq",
-          Duration.ofMillis(1));
+          Duration.ofMillis(1),
+          0);
 
   private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
   private final DefaultErrorHandler errorHandler =

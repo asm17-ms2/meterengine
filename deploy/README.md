@@ -414,6 +414,7 @@ ALB는 받은 `X-Forwarded-For` 뒤에 접속 주소를 붙이므로 맨 오른�
 | `kafka-security-protocol` | String | 선택. 브로커와 통신하는 방식. MSK는 TLS만 받으므로 `SSL`을 넣는다. 없으면 compose가 `PLAINTEXT`를 넣는다 |
 | `kafka-create-topics` | String | 선택. `true`면 백엔드가 뜰 때 없는 토픽(`event.ingest`, `event.dlq`)을 만든다. 이미 있는 토픽의 설정은 건드리지 않는다. 없으면 compose가 `false`를 넣는다 |
 | `kafka-consumer-threads`, `kafka-consumer-max-poll-records`, `kafka-consumer-session-timeout-ms` | String | 선택. 서버 한 대에서 토픽을 읽는 스레드 수, 한 번에 읽는 묶음의 최대 건수, 컨슈머 서버가 죽었을 때 그 파티션을 다른 서버에 넘기기까지 기다리는 시간(ms). 없으면 compose가 `1`, `500`, `15000`을 넣는다. 스레드는 모든 컨슈머 서버를 합쳐 파티션 수까지만 일한다 |
+| `kafka-consumer-max-records-per-second` | String | 선택. 컨슈머 서버 한 대가 초당 DB에 넣는 건수의 상한. 밀린 이벤트를 비울 때 DB가 꽉 차지 않게 넣는 속도를 늦춘다. 없으면 compose가 `0`을 넣고 `0`이면 늦추지 않는다. 평소 받는 양보다 작으면 밀린 것이 줄지 않으므로, 컨슈머 서버가 한 대만 남아도 받는 양보다 크게 잡는다. 음수면 백엔드가 뜨지 않는다 |
 | `kafka-producer-linger-ms`, `kafka-producer-batch-size`, `kafka-producer-compression-type` | String | 선택. 수집 서버가 발행할 메시지를 모으는 시간(ms), 한 묶음의 최대 크기(바이트), 압축 방식. 없으면 compose가 `25`, `16384`, `lz4`를 넣는다 |
 | `kafka-producer-delivery-timeout-ms`, `kafka-publish-timeout` | String | 선택. 프로듀서가 재시도를 합쳐 발행 하나에 쓰는 전체 시간(ms)과 요청 스레드가 발행을 기다리는 상한. 없으면 compose가 `15000`, `20s`를 넣는다. 발행 대기가 전체 시간보다 길어야 프로듀서가 먼저 결론을 낸다 |
 | `frontend-api-key` | SecureString | 이 버전의 compose는 읽지 않는다. 옛 프론트가 백엔드를 부르던 API 키 원문이고, 옛 버전으로 되돌리는 배포가 요구해 남긴다 |

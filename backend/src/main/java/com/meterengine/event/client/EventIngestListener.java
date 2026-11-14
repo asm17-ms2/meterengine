@@ -3,6 +3,7 @@ package com.meterengine.event.client;
 import com.meterengine.event.config.EventKafkaConfig;
 import com.meterengine.event.dto.EventIngestRecord;
 import com.meterengine.event.service.EventConsumeService;
+import com.meterengine.event.service.EventConsumeThrottle;
 import com.meterengine.global.config.ConditionalOnServerRole;
 import com.meterengine.global.config.ServerRole;
 import java.util.LinkedHashMap;
@@ -21,13 +22,17 @@ import org.springframework.stereotype.Component;
 public class EventIngestListener {
 
   private final EventConsumeService eventConsumeService;
+  private final EventConsumeThrottle eventConsumeThrottle;
 
-  EventIngestListener(EventConsumeService eventConsumeService) {
+  EventIngestListener(
+      EventConsumeService eventConsumeService, EventConsumeThrottle eventConsumeThrottle) {
     this.eventConsumeService = eventConsumeService;
+    this.eventConsumeThrottle = eventConsumeThrottle;
   }
 
   @KafkaListener(topics = "${meterengine.event.kafka.topic:event.ingest}")
   public void onRecords(List<ConsumerRecord<String, byte[]>> consumerRecords) {
+    eventConsumeThrottle.awaitTurn(consumerRecords.size());
     eventConsumeService.consume(
         consumerRecords.stream().map(EventIngestListener::eventIngestRecord).toList());
   }

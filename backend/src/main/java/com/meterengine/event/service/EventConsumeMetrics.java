@@ -15,6 +15,7 @@ public class EventConsumeMetrics {
 
   static final String CONSUME_COUNTER_NAME = "meterengine.event.consume";
   static final String STORAGE_DELAY_TIMER_NAME = "meterengine.event.storage.delay";
+  static final String THROTTLE_TIMER_NAME = "meterengine.event.consume.throttle";
   static final String RESULT_TAG = "result";
   static final String REASON_TAG = "reason";
   static final String STORED = "stored";
@@ -43,6 +44,7 @@ public class EventConsumeMetrics {
 
   private final MeterRegistry meterRegistry;
   private final Timer storageDelay;
+  private final Timer throttle;
 
   EventConsumeMetrics(MeterRegistry meterRegistry) {
     this.meterRegistry = meterRegistry;
@@ -50,6 +52,10 @@ public class EventConsumeMetrics {
         Timer.builder(STORAGE_DELAY_TIMER_NAME)
             .description("저장한 이벤트의 수집 서버가 받은 시각부터 DB에 들어간 시각까지 걸린 시간")
             .serviceLevelObjectives(STORAGE_DELAY_BOUNDARIES)
+            .register(meterRegistry);
+    this.throttle =
+        Timer.builder(THROTTLE_TIMER_NAME)
+            .description("컨슈머가 초당 저장 건수의 상한을 지키려고 묶음을 넣기 전에 기다린 시간")
             .register(meterRegistry);
     // 아직 세지 않은 조합도 0으로 내 두어야 첫 증가가 rate에 잡힌다.
     counter(STORED, NO_REASON);
@@ -64,6 +70,10 @@ public class EventConsumeMetrics {
     counter(STORED, NO_REASON).increment();
     // 수집 서버와 컨슈머 서버의 시계가 조금 어긋나 음수가 나오면 바로 저장한 것으로 본다.
     this.storageDelay.record(storageDelay.isNegative() ? Duration.ZERO : storageDelay);
+  }
+
+  public void recordThrottled(Duration wait) {
+    throttle.record(wait);
   }
 
   public void recordDuplicate(int eventCount) {

@@ -72,7 +72,8 @@ class KafkaEventIngestorTest {
                 PUBLISH_TIMEOUT,
                 "test",
                 "event.dlq",
-                Duration.ofSeconds(1)),
+                Duration.ofSeconds(1),
+                0),
             clock);
   }
 
