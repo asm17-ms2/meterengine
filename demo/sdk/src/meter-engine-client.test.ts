@@ -7,7 +7,14 @@ import {
   MeterEngineConnectionError,
   MeterEngineTimeoutError,
 } from "./index.ts";
-import type { IngestEventInput, IngestEventRequest, InvoiceLineResponse, MeterEngineClientOptions } from "./index.ts";
+import type {
+  IngestEventBatchResult,
+  IngestEventInput,
+  IngestEventRequest,
+  IngestEventResponse,
+  InvoiceLineResponse,
+  MeterEngineClientOptions,
+} from "./index.ts";
 
 const BASE_URL = "http://localhost:8080";
 const API_KEY = "me_live_0123456789abcdefghijABCDEFGHIJKL";
@@ -416,6 +423,27 @@ test("duplicate와 rejected 결과를 그대로 돌려준다", async () => {
     },
   ];
   const { client } = createClient([json(200, { results })]);
+
+  const response = await client.ingestEventBatch(events(2));
+
+  assert.deepEqual(response, { results });
+});
+
+test("202로 받아 둔 단건은 duplicate 없는 응답을 그대로 돌려준다", async () => {
+  const accepted: IngestEventResponse = { transaction_id: "tx-1" };
+  const { client } = createClient([json(202, accepted)]);
+
+  const response = await client.ingestEvent(event(1));
+
+  assert.deepEqual(response, accepted);
+});
+
+test("202로 받아 둔 묶음의 accepted 결과를 그대로 돌려준다", async () => {
+  const results: IngestEventBatchResult[] = [
+    { index: 0, transaction_id: "tx-0", result: "accepted" },
+    { index: 1, transaction_id: "tx-1", result: "accepted" },
+  ];
+  const { client } = createClient([json(202, { results })]);
 
   const response = await client.ingestEventBatch(events(2));
 

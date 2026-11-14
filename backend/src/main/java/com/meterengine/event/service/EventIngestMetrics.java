@@ -23,6 +23,7 @@ public class EventIngestMetrics {
   static final String ENVIRONMENT_TAG = "environment";
 
   private static final String STORED = "stored";
+  private static final String ACCEPTED = "accepted";
   private static final String DUPLICATE = "duplicate";
   private static final String REJECTED = "rejected";
   private static final String FAILED = "failed";
@@ -62,7 +63,7 @@ public class EventIngestMetrics {
     this.meterRegistry = meterRegistry;
     // 아직 받지 않은 조합도 0으로 내 두어야 첫 증가가 rate에 잡힌다.
     for (String environment : ENVIRONMENTS) {
-      for (String result : List.of(STORED, DUPLICATE, FAILED)) {
+      for (String result : List.of(STORED, ACCEPTED, DUPLICATE, FAILED)) {
         ingestCounter(result, NO_REASON, environment);
       }
       for (ErrorCode reason : REJECTION_REASONS) {
@@ -76,9 +77,14 @@ public class EventIngestMetrics {
   public void recordStored(Duration arrivalDelay) {
     String environment = currentEnvironment();
     ingestCounter(STORED, NO_REASON, environment).increment();
-    // 도입사 시계가 조금 빨라 지연이 음수면 바로 도착한 것으로 보고 0을 넣는다.
-    Duration nonNegativeDelay = arrivalDelay.isNegative() ? Duration.ZERO : arrivalDelay;
-    arrivalDelayTimer(environment).record(nonNegativeDelay);
+    recordArrivalDelay(environment, arrivalDelay);
+  }
+
+  // 카프카에 발행한 건이다. 저장과 중복은 컨슈머가 판정하므로 여기서는 모른다.
+  public void recordAccepted(Duration arrivalDelay) {
+    String environment = currentEnvironment();
+    ingestCounter(ACCEPTED, NO_REASON, environment).increment();
+    recordArrivalDelay(environment, arrivalDelay);
   }
 
   public void recordDuplicate() {
@@ -94,6 +100,12 @@ public class EventIngestMetrics {
     ingestCounter(FAILED, NO_REASON, currentEnvironment()).increment(eventCount);
   }
 
+  private void recordArrivalDelay(String environment, Duration arrivalDelay) {
+    // 도입사 시계가 조금 빨라 지연이 음수면 바로 도착한 것으로 보고 0을 넣는다.
+    Duration nonNegativeDelay = arrivalDelay.isNegative() ? Duration.ZERO : arrivalDelay;
+    arrivalDelayTimer(environment).record(nonNegativeDelay);
+  }
+
   private Counter ingestCounter(String result, String reason, String environment) {
     return ingestCountersByKey.computeIfAbsent(
         new IngestCounterKey(result, reason, environment), this::registerIngestCounter);
@@ -101,7 +113,7 @@ public class EventIngestMetrics {
 
   private Counter registerIngestCounter(IngestCounterKey key) {
     return Counter.builder(INGEST_COUNTER_NAME)
-        .description("이벤트 수집 결과 건수. result는 저장, 중복, 거절, 저장 실패이고 reason은 거절한 오류 code다")
+        .description("이벤트 수집 결과 건수. result는 저장, 발행, 중복, 거절, 저장이나 발행 실패이고 reason은 거절한 오류 code다")
         .tag(RESULT_TAG, key.result())
         .tag(REASON_TAG, key.reason())
         .tag(ENVIRONMENT_TAG, key.environment())
@@ -115,7 +127,7 @@ public class EventIngestMetrics {
 
   private Timer registerArrivalDelayTimer(String environment) {
     return Timer.builder(ARRIVAL_DELAY_TIMER_NAME)
-        .description("저장한 이벤트의 발생 시각부터 받은 시각까지 걸린 시간")
+        .description("저장하거나 발행한 이벤트의 발생 시각부터 받은 시각까지 걸린 시간")
         .serviceLevelObjectives(ARRIVAL_DELAY_BOUNDARIES)
         .tag(ENVIRONMENT_TAG, environment)
         .register(meterRegistry);

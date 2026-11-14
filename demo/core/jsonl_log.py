@@ -11,10 +11,15 @@ FORMAT_VERSION = 1
 
 OUTCOMES = ("new", "duplicate", "rejected", "error")
 
+# 서버가 받아 두고 저장과 중복 판정은 뒤에서 할 때의 상태다. duplicate가 없으니 new로 센다.
+ACCEPTED_STATUS = 202
+
 
 def classify_outcome(status: Optional[int], body) -> str:
     if status == 200 and isinstance(body, dict) and "duplicate" in body:
         return "duplicate" if body["duplicate"] else "new"
+    if status == ACCEPTED_STATUS and isinstance(body, dict) and "transaction_id" in body:
+        return "new"
     if status is not None and 400 <= status < 500:
         return "rejected"
     return "error"

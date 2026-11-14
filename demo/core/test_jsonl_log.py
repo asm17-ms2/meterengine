@@ -229,6 +229,13 @@ class ClassifyOutcomeTest(unittest.TestCase):
         self.assertEqual(classify_outcome(200, {"duplicate": False}), "new")
         self.assertEqual(classify_outcome(200, {"duplicate": True}), "duplicate")
 
+    def test_202는_duplicate가_없어도_new다(self):
+        self.assertEqual(classify_outcome(202, {"transaction_id": "evt-1"}), "new")
+
+    def test_202이지만_transaction_id가_없으면_error다(self):
+        self.assertEqual(classify_outcome(202, {}), "error")
+        self.assertEqual(classify_outcome(202, None), "error")
+
     def test_4xx는_rejected다(self):
         self.assertEqual(classify_outcome(400, {"code": "validation_error"}), "rejected")
         self.assertEqual(classify_outcome(404, {"code": "customer_not_found"}), "rejected")

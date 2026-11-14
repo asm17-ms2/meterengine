@@ -186,6 +186,18 @@ class SendOneTest(SenderTestCase):
 
         self.assertEqual(sender.state.cached_customer("meterengine"), DEMO_CUSTOMER)
 
+    def test_202로_받아_둔_이벤트는_new로_센다(self):
+        class Accepting:
+            def post_event(self, body_text):
+                return FakeResult(202, {"transaction_id": "req_01"})
+
+        sender = self.sender(resolver=FakeResolver(), client=Accepting())
+        sender.state.remember_session("sess-1", "meterengine")
+        sender._send_one(API_REQUEST, "api_request", "sess-1")
+
+        self.assertEqual(sender.counts["new"], 1)
+        self.assertEqual(sender.counts["error"], 0)
+
 
 class DenyTest(SenderTestCase):
     def test_묶인_뒤에_deny로_바뀐_프로젝트는_보내지_않는다(self):
