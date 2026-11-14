@@ -30,8 +30,18 @@ def parameter_names(group):
     return [f"{PARAMETERS['path_prefix']}/{group}/{name}" for name in names]
 
 
+def kafka_parameter_name(env):
+    return f"{PARAMETERS['path_prefix']}/{env}/{PARAMETERS['kafka_bootstrap_parameter']}"
+
+
 def scrape_jobs():
     return dict(re.findall(r"^  - job_name: (\S+)\n((?:(?!  - job_name).*\n)*)", SHARED_PROMETHEUS_CONFIG.read_text(), re.M))
+
+
+def kept_broker_metrics():
+    """브로커 job이 남기는 지표의 정규식을 YAML의 줄 이음을 풀어 돌려준다."""
+    keep = re.search(r'regex: "((?:.*\\\n)*.*)"\n\s+action: keep', scrape_jobs()["kafka-broker"]).group(1)
+    return re.sub(r"\\\n\s*", "", keep)
 
 
 @unittest.skipUnless(shutil.which("docker"), "Docker required")
@@ -100,6 +110,13 @@ class SharedPrometheusConfigTest(unittest.TestCase):
         self.assertIn("source_labels: [__meta_ec2_tag_Environment]\n        target_label: env", jobs["backend"])
         self.assertIn("- *env_from_tag\n      - *instance_from_id\n", jobs["node"])
 
+    # 카프카를 켠 환경은 서버 그룹이 역할로 나뉜다. 역할별 경보가 이 라벨로 그룹을 가른다.
+    def test_app_servers_carry_their_server_role_tag(self):
+        jobs = scrape_jobs()
+        self.assertIn("source_labels: [__meta_ec2_tag_ServerRole]\n        target_label: server_role", jobs["backend"])
+        for job in ("backend", "node"):
+            self.assertRegex(jobs[job], r"- (&|\*)role_from_tag", job)
+
     def test_no_environment_backend_is_dropped(self):
         self.assertNotIn("action: drop", scrape_jobs()["backend"])
 
@@ -111,6 +128,18 @@ class SharedPrometheusConfigTest(unittest.TestCase):
     # AWS는 브로커의 JMX 지표를 60초보다 자주 긁지 말라고 한다. 전체 기본값 15초가 그대로 적용되면 안 된다.
     def test_kafka_broker_jmx_is_scraped_no_faster_than_a_minute(self):
         self.assertIn("scrape_interval: 60s\n", scrape_jobs()["kafka-broker"])
+
+    def test_kafka_broker_metrics_are_trimmed_except_in_measurement_environments(self):
+        kept = re.compile(kept_broker_metrics())
+        self.assertIn("source_labels: [env, __name__, name]", scrape_jobs()["kafka-broker"])
+        for sample, expected in (
+            ("staging;kafka_consumer_group_ConsumerLagMetrics_Value;SumOffsetLag", True),
+            ("production;kafka_server_BrokerTopicMetrics_Count;MessagesInPerSec", True),
+            ("staging;kafka_network_RequestMetrics_Count;TotalTimeMs", False),
+            ("production;java_lang_Memory_HeapMemoryUsage_used;", False),
+            ("test-storage;kafka_network_RequestMetrics_Count;TotalTimeMs", True),
+        ):
+            self.assertEqual(bool(kept.fullmatch(sample)), expected, sample)
 
     def test_every_environment_database_is_scraped_with_its_env(self):
         targets = re.findall(r'targets: \["postgres-exporter-([a-z0-9-]+):9187"\]\n\s+labels: \{ env: ([a-z0-9-]+) \}', scrape_jobs()["postgres"])
@@ -142,6 +171,8 @@ class StartScriptTest(unittest.TestCase):
                    'names = sys.argv[sys.argv.index("--names") + 1:]\n'
                    'open(os.environ["TRACE"], "a").write("aws " + " ".join(names) + "\\n")\n'
                    'values = json.load(open(os.environ["VALUES"]))\n'
+                   # 읽기 권한이 없는 이름이 하나라도 섞이면 AWS는 호출 전체를 거절한다.
+                   'if any(values.get(n) == "access-denied" for n in names): sys.exit(254)\n'
                    'print(json.dumps({"Parameters": [{"Name": n, "Value": values[n]} for n in names if n in values],'
                    ' "InvalidParameters": [n for n in names if n not in values]}))\' "$@"',
         }
@@ -166,8 +197,9 @@ class StartScriptTest(unittest.TestCase):
     def test_reads_each_group_in_one_call_within_the_api_limit(self):
         self.assertEqual(self.run_start().returncode, 0)
         groups = [parameter_names(group) for group in ("monitoring", *PARAMETERS["environments"])]
-        self.assertEqual(self.calls("aws"), groups)
-        self.assertTrue(all(len(names) <= 10 for names in groups))
+        kafka = [kafka_parameter_name(env) for env in PARAMETERS["environments"]]
+        self.assertEqual(self.calls("aws"), [*groups, kafka])
+        self.assertTrue(all(len(names) <= 10 for names in [*groups, kafka]))
         self.assertEqual(stat.S_IMODE(self.env_file.stat().st_mode), 0o600)
         self.assertIn("TEST_STORAGE_DB_HOST=value\n", self.env_file.read_text())
 
@@ -179,6 +211,44 @@ class StartScriptTest(unittest.TestCase):
         self.assertIn(["compose", "-f", str(self.root / "repo/deploy/compose.monitoring.yml"), "--env-file", str(self.env_file),
                        "rm", "--stop", "--force", "postgres-exporter-staging"], self.calls("docker"))
         self.assertNotIn("STAGING_", self.env_file.read_text())
+
+    # 브로커 주소는 클러스터를 만들 때마다 바뀌고 저장소에 없다. 파라미터가 있는 환경만 대상 파일이 있어야 한다.
+    def test_broker_target_files_follow_each_environment_kafka_parameter(self):
+        targets = self.root / "etc/prometheus-targets"
+        targets.mkdir()
+        (targets / "kafka-jmx-production.json").write_text("[]")
+        self.values[kafka_parameter_name("staging")] = "b-1.example.com:9094,b-2.example.com:9094"
+        self.assertEqual(self.run_start().returncode, 0)
+        self.assertEqual(sorted(path.name for path in targets.iterdir()), ["kafka-jmx-staging.json", "kafka-node-staging.json"])
+        for kind, port in (("jmx", 11001), ("node", 11002)):
+            self.assertEqual(json.loads((targets / f"kafka-{kind}-staging.json").read_text()),
+                             [{"targets": [f"b-1.example.com:{port}", f"b-2.example.com:{port}"], "labels": {"env": "staging"}}])
+
+    # 뒤 환경의 값이 어긋나도 앞 환경의 파일까지 바꾼 채로 멈추지 않는다.
+    def test_malformed_broker_address_stops_before_compose_and_writes_nothing(self):
+        self.values[kafka_parameter_name("production")] = "b-1.example.com:9094"
+        self.values[kafka_parameter_name("staging")] = 'b-1.example.com:9094", "x'
+        self.assertNotEqual(self.run_start().returncode, 0)
+        self.assertEqual(self.calls("docker"), [])
+        self.assertFalse((self.root / "etc/prometheus-targets").exists())
+
+    # 새 start.sh를 모니터링 Terraform apply보다 먼저 올리면 브로커 주소를 읽을 권한이 없다. 돌던 컨테이너는 그대로 둔다.
+    def test_unreadable_broker_parameters_stop_before_compose(self):
+        self.values[kafka_parameter_name("staging")] = "access-denied"
+        result = self.run_start()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.calls("docker"), [])
+        self.assertIn("deploy/terraform/monitoring", result.stderr)
+
+    # 설정 파일만 바뀌면 up -d가 컨테이너를 다시 만들지 않는다. 다시 띄워야 새로 읽을 대상 그룹이 반영된다.
+    def test_cloudwatch_exporter_restarts_to_reread_its_config(self):
+        self.assertEqual(self.run_start().returncode, 0)
+        self.assertIn(["restart", "cloudwatch-exporter"], [call[-2:] for call in self.calls("docker")])
+
+    def test_exporter_ports_match_the_cluster_module(self):
+        module = (DEPLOY / "terraform/modules/kafka/main.tf").read_text()
+        ports = dict(re.findall(r"^readonly KAFKA_(JMX|NODE)_PORT=(\d+)$", START.read_text(), re.M))
+        self.assertEqual(ports, {"JMX": re.search(r"jmx\s+= (\d+)", module).group(1), "NODE": re.search(r"node\s+= (\d+)", module).group(1)})
 
     def test_placeholder_secret_stops_before_compose(self):
         self.values["/meterengine/monitoring/grafana-github-client-id"] = "unset"

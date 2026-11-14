@@ -82,6 +82,13 @@ class AlbMetricsTest(unittest.TestCase):
 
     def test_relabel_covers_every_app_target_group_prefix(self):
         self.assertEqual({"front-", "back-"}, set(name_prefixes(APP_FLEET / "alb.tf")))
+        self.assertEqual({"ingst-"}, set(name_prefixes(APP_FLEET / "kafka.tf")))
+
+    # 카프카를 켠 환경은 이벤트 수집 요청이 따로 선 대상 그룹으로 간다. 읽지 않으면 그 요청이 ALB 패널에서 사라진다.
+    def test_ingest_target_group_is_read_and_labelled(self):
+        dimension = target_group_dimension("ingst-")
+        self.assertTrue(select_regexes()["TargetGroup"].fullmatch(dimension))
+        self.assertEqual("ingest", relabel({"target_group": dimension}).get("service"))
 
     def test_exporter_reads_app_target_groups_but_not_grafana(self):
         regex = select_regexes()["TargetGroup"]

@@ -1,7 +1,7 @@
 locals {
   ssm_arn = "arn:aws:ssm:ap-northeast-2:928618307647"
   # 이름 목록은 start.sh와 같은 파일에서 온다. 목록 밖의 DB 마스터 비밀번호와 암호화 키는 읽지 못한다.
-  readable_parameters = [for name in concat(local.monitoring_parameter_names, local.environment_parameter_names) : "${local.ssm_arn}:parameter${name}"]
+  readable_parameters = [for name in concat(local.monitoring_parameter_names, local.environment_parameter_names, local.kafka_parameter_names) : "${local.ssm_arn}:parameter${name}"]
   parameter_reads     = ["ssm:GetParameter", "ssm:GetParameters"]
 }
 
