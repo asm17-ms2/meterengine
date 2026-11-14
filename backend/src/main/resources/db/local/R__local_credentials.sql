@@ -29,13 +29,15 @@ ON CONFLICT (organization_id, user_account_id) DO UPDATE SET
   revoked_at = NULL;
 
 INSERT INTO api_key
-  (id, organization_id, mode, label, key_hash, last_four, scopes, created_at) VALUES
-  ('e0c3a216-82f4-40fe-babe-e35b49ebd24a', 'd7cee55d-8c82-4afc-b996-6749d8b26a4e', 'live',
-   '로컬 개발 live',
-   decode('53106e7ff3b325d28c49f68e1acfb7ac7e3f00801459dd2eced21a47362d003d', 'hex'),
-   '2LtA', '{admin}', now()),
-  ('b5e65980-3d64-47fa-9b59-0ba963529bc6', 'd7cee55d-8c82-4afc-b996-6749d8b26a4e', 'test',
-   '로컬 개발 test',
-   decode('e1212355d0b77a0d18734b983f453fecdeb9983ca340dd79b313b21032bedcaf', 'hex'),
-   'CeVC', '{admin}', now())
-ON CONFLICT DO NOTHING;
+  (id, organization_id, environment_id, mode, label, key_hash, last_four, scopes, created_at)
+SELECT seed.id::uuid, environment.organization_id, environment.id, environment.mode, seed.label,
+  decode(seed.key_hash, 'hex'), seed.last_four, '{admin}', now()
+FROM organization_environment environment
+JOIN (VALUES
+  ('e0c3a216-82f4-40fe-babe-e35b49ebd24a', 'live', '로컬 개발 live',
+   '53106e7ff3b325d28c49f68e1acfb7ac7e3f00801459dd2eced21a47362d003d', '2LtA'),
+  ('b5e65980-3d64-47fa-9b59-0ba963529bc6', 'test', '로컬 개발 test',
+   'e1212355d0b77a0d18734b983f453fecdeb9983ca340dd79b313b21032bedcaf', 'CeVC'))
+  AS seed(id, mode, label, key_hash, last_four) ON seed.mode = environment.mode
+WHERE environment.organization_id = 'd7cee55d-8c82-4afc-b996-6749d8b26a4e'
+ON CONFLICT (id) DO UPDATE SET environment_id = EXCLUDED.environment_id;
