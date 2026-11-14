@@ -10,6 +10,7 @@ from core.model import API_KEY_ENV
 from csvdemo import send_cmd
 
 KEY = "me_live_QouOFuCiJyAbC0VGK1ltUCkG4IZM2LtA"
+TEST_KEY = "me_test_wiCp766QYNqhyYm4Z7Xq9wYosNvQCeVC"
 CSV = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sample-events-edge.csv")
 
 
@@ -70,9 +71,9 @@ class MainApiKeyTest(unittest.TestCase):
         self.assertNotIn(KEY, out + err)
         self.assertEqual(RejectingClient.created, [KEY])
 
-    def test_키를_주지_않으면_로컬_키를_쓴다(self):
+    def test_키를_주지_않으면_로컬_test_키를_쓴다(self):
         self.main(["send", "--csv", CSV, "--dry-run"])
-        self.assertEqual(RejectingClient.created, [KEY])
+        self.assertEqual(RejectingClient.created, [TEST_KEY])
 
 
 if __name__ == "__main__":
