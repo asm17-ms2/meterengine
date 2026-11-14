@@ -87,7 +87,7 @@ python3 demo/meterdemo.py verify (--log <JSONL> | --csv <CSV>) [옵션]
 | 옵션 | 기본값 | 내용 |
 |---|---|---|
 | `--base-url` | `http://localhost:8080` | 백엔드 주소. `verify`는 로그 헤더 값을 우선한다 |
-| `--api-key` | 환경변수 `METERENGINE_API_KEY`, 없으면 로컬 live 키 | `Authorization: Bearer`로 보내는 API 키 |
+| `--api-key` | 환경변수 `METERENGINE_API_KEY`, 없으면 로컬 test 키 | `Authorization: Bearer`로 보내는 API 키 |
 | `--environment` | 환경변수 `METERENGINE_ENVIRONMENT`, 없으면 키의 환경 | `test` 또는 `live`. 키와 다른 환경 요청은 거절된다. |
 | `--timeout` | `10` | HTTP 타임아웃 초 |
 | `--no-color` | 끔 | ANSI 색 비활성화 |
@@ -96,7 +96,7 @@ python3 demo/meterdemo.py verify (--log <JSONL> | --csv <CSV>) [옵션]
 
 - 형식이 틀리면 아무것도 보내지 않고 끝난다.
 - 로컬 키는 `backend/src/main/resources/db/local/R__local_credentials.sql`에 있다. 배포 환경 키는 운영자 세션으로 발급한다(스코프 `ingest`, `read`).
-  - 로컬 test 키는 데모 도입사의 테스트 환경, live 키는 실제 환경 키다. 로컬 시드의 고객과 미터는 테스트 환경에만 있어 로컬에서는 test 키를 `--api-key`나 `METERENGINE_API_KEY`로 준다. 키와 다른 환경을 지정하면 403 `environment_mismatch`다.
+  - 로컬 test 키는 데모 도입사의 테스트 환경, live 키는 실제 환경 키다. 로컬 시드의 고객과 미터는 테스트 환경에만 있어 키를 주지 않으면 test 키를 쓴다. 키와 다른 환경을 지정하면 403 `environment_mismatch`다.
 - 시작할 때 `GET /v1/organization`으로 키의 조직을 확인한다. 이때나 `send` 전송 중에 401이나 403을 받으면 code를 보여 주고 멈춘다. 종료 코드는 2다.
 - 화면과 기록에는 키를 `me_live_****abcd`처럼 가려서 보인다. 실행 기록 머리말에는 키 대신 조직 id(`organization_id`)를 남긴다. 옛 기록의 조직 값은 읽지 않는다.
 

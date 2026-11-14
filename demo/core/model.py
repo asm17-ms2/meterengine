@@ -9,7 +9,7 @@ from typing import Mapping, Optional
 
 KST = timezone(timedelta(hours=9))
 
-DEFAULT_API_KEY = "me_live_QouOFuCiJyAbC0VGK1ltUCkG4IZM2LtA"
+DEFAULT_API_KEY = "me_test_wiCp766QYNqhyYm4Z7Xq9wYosNvQCeVC"
 DEFAULT_BASE_URL = "http://localhost:8080"
 API_KEY_ENV = "METERENGINE_API_KEY"
 
