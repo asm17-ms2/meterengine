@@ -73,6 +73,11 @@ class MonitoringComposeTest(unittest.TestCase):
         self.assertEqual(self.services["cloudwatch-exporter"]["environment"]["JAVA_TOOL_OPTIONS"], "-Xmx256m")
         self.assertLess(256 * MIB, int(self.services["cloudwatch-exporter"]["mem_limit"]))
 
+    # 브로커 주소는 저장소에 없고 서버의 이 디렉터리에만 있다. 마운트가 빠지면 대상 파일을 써도 긁지 않는다.
+    def test_prometheus_mounts_the_written_targets_directory(self):
+        sources = [volume["source"] for volume in self.services["prometheus"]["volumes"] if volume["target"] == "/etc/prometheus-targets"]
+        self.assertEqual(sources, ["/etc/meterengine/prometheus-targets"])
+
     def test_grafana_admits_only_the_github_org(self):
         env = self.services["grafana"]["environment"]
         self.assertEqual({key: env[key] for key in (
@@ -97,6 +102,15 @@ class SharedPrometheusConfigTest(unittest.TestCase):
 
     def test_no_environment_backend_is_dropped(self):
         self.assertNotIn("action: drop", scrape_jobs()["backend"])
+
+    def test_kafka_brokers_are_read_from_written_target_files(self):
+        jobs = scrape_jobs()
+        self.assertIn("files: [/etc/prometheus-targets/kafka-jmx-*.json]", jobs["kafka-broker"])
+        self.assertIn("files: [/etc/prometheus-targets/kafka-node-*.json]", jobs["kafka-node"])
+
+    # AWS는 브로커의 JMX 지표를 60초보다 자주 긁지 말라고 한다. 전체 기본값 15초가 그대로 적용되면 안 된다.
+    def test_kafka_broker_jmx_is_scraped_no_faster_than_a_minute(self):
+        self.assertIn("scrape_interval: 60s\n", scrape_jobs()["kafka-broker"])
 
     def test_every_environment_database_is_scraped_with_its_env(self):
         targets = re.findall(r'targets: \["postgres-exporter-([a-z0-9-]+):9187"\]\n\s+labels: \{ env: ([a-z0-9-]+) \}', scrape_jobs()["postgres"])

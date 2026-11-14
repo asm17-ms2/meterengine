@@ -467,5 +467,80 @@ printf 'docker %s\n' "$*" >>"$TRACE"
                 self.assertEqual(self.trace.read_text(), "")
 
 
+
+class StorageSutStopTest(unittest.TestCase):
+    INGEST = "meterengine-test-storage-sut"
+    CONSUMER = "meterengine-test-storage-consumer"
+    SCALE_TO_ZERO = "aws autoscaling update-auto-scaling-group --auto-scaling-group-name {} --min-size 0 --desired-capacity 0\n"
+    # CONSUMER_OUTPUT이 없으면 컨슈머 그룹을 더하기 전에 apply한 상태처럼 그 출력을 읽지 못한다.
+    FAKE_TERRAFORM = r"""#!/bin/sh
+case "$4" in
+asg_name) echo meterengine-test-storage-sut ;;
+db_identifier) echo meterengine-test-storage-db ;;
+consumer_asg_name) [ -n "${CONSUMER_OUTPUT:-}" ] || exit 1; echo "$CONSUMER_OUTPUT" ;;
+*) exit 1 ;;
+esac
+"""
+    # MISSING_GROUP과 이름이 같은 그룹은 없다고 답하고, 서버는 늘 다 빠졌다고 답한다.
+    FAKE_AWS = r"""#!/bin/sh
+printf 'aws %s\n' "$*" >>"$TRACE"
+case "$*" in
+*describe-db-instances*) echo available ;;
+*"length(AutoScalingGroups)"*) case "$*" in *"--auto-scaling-group-names ${MISSING_GROUP:-none} "*) echo 0 ;; *) echo 1 ;; esac ;;
+*"length(AutoScalingGroups[0].Instances)"*) echo 0 ;;
+esac
+"""
+
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory(prefix="meterengine-storage-stop-")
+        self.addCleanup(temp.cleanup)
+        self.root = Path(temp.name)
+        # 스크립트가 자기 위치로 common.sh와 Terraform 폴더를 찾으므로 폴더 모양을 그대로 옮긴다.
+        sut = self.root / "test-storage"
+        for relative in ("lib", "sut/scripts"):
+            shutil.copytree(MEASUREMENTS / "test-storage" / relative, sut / relative)
+        (sut / "sut/terraform").mkdir()
+        (sut / "sut/terraform/terraform.tfstate").write_text("{}\n")
+        self.script = sut / "sut/scripts/sut-stop.sh"
+        self.trace = self.root / "trace"
+        self.trace.touch()
+        bin_dir = self.root / "bin"
+        bin_dir.mkdir()
+        for name, body in (("terraform", self.FAKE_TERRAFORM), ("aws", self.FAKE_AWS)):
+            path = bin_dir / name
+            path.write_text(body)
+            path.chmod(path.stat().st_mode | stat.S_IEXEC)
+        self.env = dict(os.environ, PATH=f"{bin_dir}{os.pathsep}{os.environ['PATH']}", TRACE=str(self.trace))
+
+    def stop(self, **extra):
+        return subprocess.run(["bash", str(self.script)], env={**self.env, **extra}, cwd=self.root,
+                              text=True, capture_output=True, timeout=30)
+
+    def test_consumer_servers_stop_after_ingest_servers_and_before_the_db(self):
+        result = self.stop(CONSUMER_OUTPUT=self.CONSUMER)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        trace = self.trace.read_text()
+        steps = [self.SCALE_TO_ZERO.format(self.INGEST), self.SCALE_TO_ZERO.format(self.CONSUMER), "aws rds stop-db-instance"]
+        for step in steps:
+            self.assertIn(step, trace)
+        self.assertEqual(sorted(steps, key=trace.index), steps)
+
+    def test_state_without_the_consumer_output_still_stops_the_rest(self):
+        result = self.stop()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        trace = self.trace.read_text()
+        self.assertIn(self.SCALE_TO_ZERO.format(self.INGEST), trace)
+        self.assertIn("aws rds stop-db-instance", trace)
+        self.assertNotIn(self.CONSUMER, trace)
+        self.assertIn("consumer_asg_name", result.stdout)
+
+    def test_missing_consumer_group_is_skipped(self):
+        result = self.stop(CONSUMER_OUTPUT=self.CONSUMER, MISSING_GROUP=self.CONSUMER)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        trace = self.trace.read_text()
+        self.assertNotIn(self.SCALE_TO_ZERO.format(self.CONSUMER), trace)
+        self.assertIn("aws rds stop-db-instance", trace)
+
+
 if __name__ == "__main__":
     unittest.main()
