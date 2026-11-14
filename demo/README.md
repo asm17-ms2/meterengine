@@ -32,7 +32,7 @@ cd backend && ./gradlew bootRun
 
 - IntelliJ에서 `MeterEngineApplication`을 실행해도 된다.
 - spring-boot-docker-compose가 postgres 컨테이너를 기동하고 Flyway가 시드를 적용한다.
-- 고객과 미터는 부트 시드(`backend/src/main/resources/db/migration/R__seed.sql`)에 들어 있다. 따로 주입할 것이 없다.
+- 고객과 미터는 로컬 시드(`backend/src/main/resources/db/local/R__local_seed.sql`)가 데모 도입사의 테스트 환경에 넣는다. 따로 주입할 것이 없다.
 - `event` 테이블은 append-only 트리거가 걸려 있어 DELETE가 되지 않는다. 잘못 보낸 데이터는 DB를 통째로 지워야 사라진다.
 
 ```bash
@@ -96,7 +96,7 @@ python3 demo/meterdemo.py verify (--log <JSONL> | --csv <CSV>) [옵션]
 
 - 형식이 틀리면 아무것도 보내지 않고 끝난다.
 - 로컬 키는 `backend/src/main/resources/db/local/R__local_credentials.sql`에 있다. 배포 환경 키는 운영자 세션으로 발급한다(스코프 `ingest`, `read`).
-  - 로컬 시드 키는 기존 데이터(legacy) 범위 키다. test나 live 환경 대상에는 콘솔에서 그 업무 환경을 고른 뒤 발급한 키를 쓴다. 시드 키에 환경을 지정하면 403 `environment_mismatch`다.
+  - 로컬 test 키는 데모 도입사의 테스트 환경, live 키는 실제 환경 키다. 로컬 시드의 고객과 미터는 테스트 환경에만 있어 로컬에서는 test 키를 `--api-key`나 `METERENGINE_API_KEY`로 준다. 키와 다른 환경을 지정하면 403 `environment_mismatch`다.
 - 시작할 때 `GET /v1/organization`으로 키의 조직을 확인한다. 이때나 `send` 전송 중에 401이나 403을 받으면 code를 보여 주고 멈춘다. 종료 코드는 2다.
 - 화면과 기록에는 키를 `me_live_****abcd`처럼 가려서 보인다. 실행 기록 머리말에는 키 대신 조직 id(`organization_id`)를 남긴다. 옛 기록의 조직 값은 읽지 않는다.
 
@@ -296,7 +296,7 @@ python3 demo/otel_bridge.py status      # 상태와 누적 건수
 
 ### 단가
 
-- 단가는 `backend/src/main/resources/db/migration/R__seed.sql`이 정한다.
+- 단가는 `backend/src/main/resources/db/local/R__local_seed.sql`이 정한다.
 - `llm_request` 이벤트 하나가 `input-tokens`, `output-tokens`, `cache-creation-tokens`, `cache-read-tokens` 미터에 함께 잡힌다.
 - `input-tokens`, `output-tokens`는 차원 키가 `model`이라 모델마다 단가가 다르다.
   - Claude 공시가(달러, 100만 토큰당)를 1달러 1,590원으로 환산한 토큰당 원 단가다. 1,590원은 Claude 결제 창의 부가세 포함 원화 가격을 1.1로 나눈 환율이다. 인보이스가 세액 10%를 따로 더하기 때문이다.

@@ -34,10 +34,10 @@ cd backend
 ```bash
 curl -s http://localhost:8080/actuator/health
 curl -s http://localhost:8080/v1/customers \
-  -H 'Authorization: Bearer me_live_QouOFuCiJyAbC0VGK1ltUCkG4IZM2LtA'
+  -H 'Authorization: Bearer me_test_wiCp766QYNqhyYm4Z7Xq9wYosNvQCeVC'
 ```
 
-- 예제의 시드 키는 기존 데이터 범위의 로컬 키이며 데모 도입사의 데이터를 본다.
+- 예제 키는 데모 도입사 테스트 환경의 로컬 키라 로컬 시드의 고객이 보인다.
 - DB만 필요하면 레포 루트에서 띄운다.
 
 ```bash
@@ -174,7 +174,7 @@ docker build -t meterengine-backend .
 - 로그인과 가입, 인증 메일 다시 보내기와 이메일 인증, 초대 확인과 수락, 헬스체크, 메트릭과 API 문서는 공개다. 카드 등록은 일회용 토큰, 고객 인보이스 조회는 만료와 폐기가 가능한 조회 토큰으로 인증한다. 토스 웹훅은 PG 상태 재조회로 검증한다. 나머지 도입사 요청은 세션이나 API 키가 필요하다.
 - 사용자와 API 키의 권한은 `read`(조회), `ingest`(고객 등록과 이벤트 수집), `admin`(업무 관리)이며 `admin`은 나머지를 포함한다. 로그인 사용자는 선택한 도입사의 소속 권한을 쓰고, 변경한 권한은 기존 세션의 다음 요청부터 적용된다.
 - 새 사용자와 초대의 기본 권한은 `read`다. 대표관리자는 사용자와 초대, 소속별 권한을 관리하며 관리 권한을 유지한다. 플랫폼 도입사와 사용자 관리는 별도의 `operator` 역할이 필요하다.
-- 대표관리자가 없는 도입사는 사용자와 초대를 관리할 사람이 없다. 가입은 대표관리자를 한 명 만들고 마지막 대표관리자는 낮추거나 뗄 수 없어(409 `last_owner_required`), SQL로 넣은 도입사(`R__seed.sql`의 도입사)에서만 생긴다. 운영자가 계정을 도입사에 붙이는 API는 없으므로 DB에서 고친다. 첫 쿼리로 찾고, 둘째 쿼리로 그 도입사의 구성원 한 명을 대표관리자로 올린다. 구성원이 한 명도 없는 도입사는 올릴 사람이 없다. 그 도입사를 쓰려면 가입으로 새로 만든다.
+- 대표관리자가 없는 도입사는 사용자와 초대를 관리할 사람이 없다. 가입은 대표관리자를 한 명 만들고 마지막 대표관리자는 낮추거나 뗄 수 없어(409 `last_owner_required`), SQL로 넣은 도입사(데모 도입사)에서만 생긴다. 운영자가 계정을 도입사에 붙이는 API는 없으므로 DB에서 고친다. 첫 쿼리로 찾고, 둘째 쿼리로 그 도입사의 구성원 한 명을 대표관리자로 올린다. 구성원이 한 명도 없는 도입사는 올릴 사람이 없다. 그 도입사를 쓰려면 가입으로 새로 만든다.
 
   ```sql
   SELECT o.id, o.name
@@ -226,12 +226,13 @@ docker build -t meterengine-backend .
 
 | 구분 | 값 | 비밀번호 | 내용 |
 | --- | --- | --- | --- |
-| live 키 | `me_live_QouOFuCiJyAbC0VGK1ltUCkG4IZM2LtA` | | 데모 도입사, admin 스코프. 프론트와 데모 CLI의 기본값. 기존 데이터(legacy) 범위 키라 환경 헤더 없이 쓴다 |
-| test 키 | `me_test_wiCp766QYNqhyYm4Z7Xq9wYosNvQCeVC` | | 데모 도입사, admin 스코프. 기존 데이터(legacy) 범위 키라 환경 헤더 없이 쓴다 |
+| live 키 | `me_live_QouOFuCiJyAbC0VGK1ltUCkG4IZM2LtA` | | 데모 도입사 실제 환경, admin 스코프. 데모 CLI의 기본값 |
+| test 키 | `me_test_wiCp766QYNqhyYm4Z7Xq9wYosNvQCeVC` | | 데모 도입사 테스트 환경, admin 스코프. 로컬 시드가 이 환경에 있다 |
 | member | `member@meterengine.local` | `local-member-password` | 데모 도입사와 `로컬 두 번째 도입사`의 대표관리자 |
 | operator | `operator@meterengine.local` | `local-operator-password` | 소속이 없어 로그인하면 도입사가 없다 |
 
 - 정본은 `src/main/resources/db/local/R__local_credentials.sql`이다.
+- 시드가 기존 데이터(legacy)에 있던 로컬 DB는 기동해도 legacy 고객을 옮기지 않아 테스트 환경에 고객이 없다. 레포 루트에서 `docker compose down -v`로 볼륨을 지우고 다시 띄운다.
 
 ### 부트스트랩
 
@@ -385,8 +386,9 @@ unset SESSION
 ### 마이그레이션
 
 - 파일은 `src/main/resources/db/migration/`에 있고 기동 때 자동 적용된다.
-- `R__seed.sql`은 반복 마이그레이션이라 파일 내용이 바뀌면 다시 적용된다. 데모가 쓰는 도입사, 고객, 미터, 가격을 이 파일이 정한다.
-- 로컬 계정과 키는 `src/main/resources/db/local/R__local_credentials.sql`이 넣는다. 이 로케이션은 `local` 프로파일(`application-local.properties`)에서만 읽는다.
+- 로컬 계정과 키는 `src/main/resources/db/local/R__local_credentials.sql`, 데모 도입사의 고객, 미터, 가격은 같은 폴더의 `R__local_seed.sql`이 넣는다. 이 로케이션은 `local` 프로파일(`application-local.properties`)에서만 읽는다. 시드는 데모 도입사의 테스트 환경에 들어간다.
+- 반복 마이그레이션(`R__`)은 파일 내용이 바뀌면 다시 적용된다.
+- `db/migration/R__seed.sql`은 내용이 없다. 예전 시드를 적용한 DB는 이 이름이 없으면 Flyway 검증에서 기동이 멈춘다. 지우려면 그 DB마다 `flyway repair`로 이력을 먼저 정리한다.
 - `create_webhook_tables` 마이그레이션은 `webhook_event`와 `webhook_delivery_attempt`의 UPDATE, DELETE, TRUNCATE를 트리거로 막는다. 통보와 시도 기록은 고치거나 지우지 않는다.
 - `create_event_rejections` 마이그레이션은 `event_rejection`의 UPDATE, DELETE, TRUNCATE를 트리거로 막는다. 수집 거절 기록도 다른 기록 표처럼 보존 기간 없이 지우지 않는다.
 - `create_invoice_finalization_attempt_table` 마이그레이션은 자동 확정의 시도 기록(`invoice_finalization_attempt`)과 다 훑은 달 표시(`invoice_finalization_month`)의 UPDATE, DELETE, TRUNCATE를 트리거로 막는다. 둘 다 인보이스처럼 환경 범위마다 따로 쌓는다.
