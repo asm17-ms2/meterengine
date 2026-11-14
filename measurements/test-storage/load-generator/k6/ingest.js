@@ -34,6 +34,8 @@ const SUBMETRICS_IN_SUMMARY = {
 
 export const options = {
   summaryTrendStats: ['med', 'p(99)'],
+  // 준비 단계가 조직마다 고객 100명을 하나씩 확인한다. 조직이 수십 곳이면 기본 60초를 넘는다.
+  setupTimeout: '300s',
   scenarios: {
     ingest: {
       executor: 'constant-arrival-rate',
