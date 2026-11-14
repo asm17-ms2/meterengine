@@ -45,8 +45,8 @@ resource "aws_autoscaling_group" "sut" {
   min_size         = var.asg_min_size
   max_size         = var.asg_max_size
   desired_capacity = var.asg_min_size
-  # 2026-11-02 여러 대 측정과 같은 조건으로 2a 하나에 둔다. 운영은 가용 영역 두 곳으로 나눈다.
-  vpc_zone_identifier = [data.aws_subnet.public_2a.id]
+  # 운영처럼 가용 영역 두 곳에 고르게 둔다. 2026-11-14 전의 측정은 2a 하나에서 쟀다.
+  vpc_zone_identifier = [data.aws_subnet.public_2a.id, data.aws_subnet.public_2b.id]
   target_group_arns   = [aws_lb_target_group.backend.arn, aws_lb_target_group.frontend.arn]
 
   # ALB 헬스 체크(backend readiness)로 살았는지 본다. 부팅이 같으니 staging, production과 같은 유예를 준다.

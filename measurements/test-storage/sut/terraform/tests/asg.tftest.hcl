@@ -75,6 +75,19 @@ run "minimum_above_the_ceiling_is_rejected" {
   expect_failures = [var.asg_min_size]
 }
 
+# 한 가용 영역이 내려가도 수집과 저장이 이어지는 구성으로 잰다.
+run "servers_spread_over_two_availability_zones" {
+  command = plan
+
+  assert {
+    condition = (
+      length(aws_autoscaling_group.sut.vpc_zone_identifier) == 2
+      && length(aws_autoscaling_group.consumer.vpc_zone_identifier) == 2
+    )
+    error_message = "Ingest and consumer servers must spread over both public subnets."
+  }
+}
+
 run "replacement_keeps_a_healthy_server" {
   command = plan
 
