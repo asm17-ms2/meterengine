@@ -15,6 +15,10 @@ readonly PLACEHOLDER=unset
 readonly MONITORING_GROUP=monitoring
 # 파라미터가 없는 환경을 건너뛰라는 env_lines의 반환 코드다.
 readonly MISSING_PARAMETERS=3
+# Prometheus가 브로커 주소를 읽는 디렉터리와, 브로커가 JMX 지표와 서버 지표를 내는 포트다(terraform/modules/kafka).
+readonly KAFKA_TARGETS_DIR=/etc/meterengine/prometheus-targets
+readonly KAFKA_JMX_PORT=11001
+readonly KAFKA_NODE_PORT=11002
 readonly PROMETHEUS_READY_URL=http://127.0.0.1:9090/-/ready
 readonly PROMETHEUS_READY_ATTEMPTS=60
 readonly PROMETHEUS_READY_INTERVAL_SECONDS=2
@@ -52,6 +56,49 @@ for parameter in response["Parameters"]:
         sys.exit(parameter["Name"] + " 값이 자리 값이거나 여러 줄이다. put-parameter --overwrite로 실제 값을 넣는다")
     print(prefix + parameter["Name"].rsplit("/", 1)[1].upper().replace("-", "_") + "=" + parameter["Value"])
 ' "$1" "$MONITORING_GROUP" "$PLACEHOLDER" "$MISSING_PARAMETERS"
+}
+
+# 환경마다 브로커 주소 파라미터 이름을 한 줄에 찍는다.
+kafka_parameter_names() {
+	python3 -c '
+import json, sys
+spec = json.load(open(sys.argv[1]))
+prefix, name = spec["path_prefix"], spec["kafka_bootstrap_parameter"]
+print(*(f"{prefix}/{env}/{name}" for env in spec["environments"]))
+' "$PARAMETERS_FILE"
+}
+
+# get-parameters 응답으로 환경별 대상 파일을 맞춘다. 주소가 있는 환경은 쓰고 없는 환경은 지운다.
+# Prometheus는 이 디렉터리의 파일이 바뀌면 스스로 다시 읽는다. 반쯤 쓴 파일을 읽지 않게 옆에 쓴 뒤 이름을 바꾼다.
+sync_kafka_targets() {
+	python3 -c '
+import json, os, re, sys
+spec = json.load(open(sys.argv[1]))
+prefix, name = spec["path_prefix"], spec["kafka_bootstrap_parameter"]
+directory, ports = sys.argv[2], {"jmx": sys.argv[3], "node": sys.argv[4]}
+brokers = {parameter["Name"]: parameter["Value"] for parameter in json.load(sys.stdin)["Parameters"]}
+hosts_by_env = {}
+for env in spec["environments"]:
+    value = brokers.get(f"{prefix}/{env}/{name}")
+    hosts_by_env[env] = [address.rsplit(":", 1)[0] for address in value.split(",")] if value else []
+    if not all(re.fullmatch(r"[a-z0-9][a-z0-9.-]*", host) for host in hosts_by_env[env]):
+        sys.exit(f"{env} 의 브로커 주소가 호스트:포트 목록이 아니다")
+# 한 환경의 값이 어긋나면 어느 환경의 파일도 바꾸지 않게, 다 확인한 뒤에 쓴다.
+os.makedirs(directory, mode=0o755, exist_ok=True)
+for env, hosts in hosts_by_env.items():
+    for kind, port in ports.items():
+        path = os.path.join(directory, f"kafka-{kind}-{env}.json")
+        if not hosts:
+            if os.path.exists(path):
+                os.remove(path)
+            continue
+        with open(path + ".new", "w") as file:
+            json.dump([{"targets": [f"{host}:{port}" for host in hosts], "labels": {"env": env}}], file)
+        os.chmod(path + ".new", 0o644)
+        os.replace(path + ".new", path)
+    if hosts:
+        print(f"[monitoring] {env} 브로커 {len(hosts)}대를 긁는다")
+' "$PARAMETERS_FILE" "$KAFKA_TARGETS_DIR" "$KAFKA_JMX_PORT" "$KAFKA_NODE_PORT"
 }
 
 # 막 다시 만든 Prometheus는 신호 처리기를 걸기 전이라 SIGHUP에 죽는다(exit 129). 준비된 뒤에 보낸다.
@@ -93,6 +140,12 @@ main() {
 	done < <(parameter_groups)
 	mv -f "$new_env" "$ENV_FILE"
 
+	# 카프카를 켠 환경만 이 파라미터가 있다. 브로커 주소는 클러스터를 만들 때마다 바뀌어, 켜거나 끈 뒤에 다시 부른다.
+	# shellcheck disable=SC2046
+	response=$(aws ssm get-parameters --region "$REGION" --output json --names $(kafka_parameter_names)) ||
+		die "브로커 주소 파라미터를 읽지 못했다. deploy/terraform/monitoring 을 apply해 읽기 권한을 준 뒤에 부른다"
+	sync_kafka_targets <<<"$response" || die "브로커 대상 파일을 쓰지 못했다"
+
 	local compose=(docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE")
 	"${compose[@]}" up -d "${services[@]}"
 	[ ${#skipped[@]} -eq 0 ] || "${compose[@]}" rm --stop --force "${skipped[@]}"
@@ -101,6 +154,8 @@ main() {
 	"${compose[@]}" kill -s SIGHUP prometheus
 	# 기본 인증을 꺼서 provisioning 다시 읽기 API를 부를 수 없다. 대시보드와 경보는 재시작으로 다시 읽힌다.
 	"${compose[@]}" restart grafana
+	# cloudwatch exporter도 설정 파일만 바뀌면 up -d가 다시 만들지 않는다. 읽는 지표와 대상 그룹이 바뀌어도 옛 설정으로 돈다.
+	"${compose[@]}" restart cloudwatch-exporter
 	log "띄웠다: ${services[*]}"
 }
 

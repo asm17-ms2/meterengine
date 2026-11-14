@@ -22,13 +22,17 @@ run "server_reads_only_listed_parameters" {
 
   assert {
     condition = toset(jsondecode(aws_iam_role_policy.monitoring.policy).Statement[0].Resource) == toset([
-      for name in concat(local.monitoring_parameter_names, local.environment_parameter_names) : "arn:aws:ssm:ap-northeast-2:928618307647:parameter${name}"
-    ]) && length(local.environment_parameter_names) == 20
+      for name in concat(local.monitoring_parameter_names, local.environment_parameter_names, local.kafka_parameter_names) : "arn:aws:ssm:ap-northeast-2:928618307647:parameter${name}"
+    ]) && length(local.environment_parameter_names) == 20 && length(local.kafka_parameter_names) == 5
     error_message = "The server reads exactly the names in parameters.json."
   }
   assert {
     condition     = contains(local.environment_parameter_names, "/meterengine/production/db-exporter-password") && !contains(local.environment_parameter_names, "/meterengine/production/db-password")
     error_message = "The server reads the exporter password, never the master password."
+  }
+  assert {
+    condition     = contains(local.kafka_parameter_names, "/meterengine/staging/kafka-bootstrap-servers")
+    error_message = "The server reads each environment's broker addresses to write the Prometheus target files."
   }
   assert {
     condition = (jsondecode(aws_iam_role_policy.monitoring.policy).Statement[1].Effect == "Deny"
