@@ -56,10 +56,16 @@ variable "ami_id" {
   default     = "ami-02b68e7eb6b798d63"
 }
 
-variable "db_max_allocated_storage" {
-  description = "SUT RDS 스토리지 자동 확장 상한(GB)"
+variable "db_allocated_storage" {
+  description = "SUT RDS 디스크(GB). 초당 10,000건이면 시간당 약 17GB가 쌓이고, 자동 확장은 한 번 늘리면 6시간 동안 다시 못 늘려 실험 중에는 믿지 못한다. 많이 넣는 날에는 켜기 전에 -var로 올린다. 줄일 수는 없어서 되돌리려면 DB를 새로 만든다(-replace)"
   type        = number
-  default     = 200
+  default     = 20
+}
+
+variable "db_max_allocated_storage" {
+  description = "SUT RDS 스토리지 자동 확장 상한(GB). 디스크보다 커야 자동 확장이 켜진다"
+  type        = number
+  default     = 100
 }
 
 variable "db_multi_az" {
