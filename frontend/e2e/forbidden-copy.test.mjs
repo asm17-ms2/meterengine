@@ -21,11 +21,8 @@ test("the scan reads the frontend sources", () => {
   assert.ok(sources.length > 100 && sources.some(({ name }) => name === "lib/environment.ts"));
 });
 
-// 이용약관과 개인정보 처리방침은 계약 당사자를 "도입사"로 정해 쓰는 문서라 본문을 예외로 둔다. 고치려면 판(CONSENT_VERSION)을 올려야 한다.
-const LEGAL_DOCUMENTS = ["app/(public)/terms/page.tsx", "app/(public)/privacy/page.tsx"];
-
 test("frontend sources call the reader's company an organization, never the vendor-side word", () => {
-  assert.deepEqual(hits(/도입사/, LEGAL_DOCUMENTS), []);
+  assert.deepEqual(hits(/도입사/), []);
 });
 
 // 환경 이름표 한 곳만 예외다. 서버 설정을 켠 곳의 환경 목록에서만 보인다.

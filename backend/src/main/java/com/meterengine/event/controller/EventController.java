@@ -212,7 +212,7 @@ public class EventController {
   @Operation(
       summary = "이벤트가 있는 월 조회",
       description =
-          "현재 도입사와 업무 환경에 저장된 이벤트의 occurred_at을 KST 월로 구분한다. 중복 없이 최신 월부터 반환하며 목록의 고객, 유형과 검색 조건에 관계없이 환경 전체의 월을 보여 준다. 모르는 조회 조건은 400 validation_error로 거절한다.")
+          "현재 조직과 업무 환경에 저장된 이벤트의 occurred_at을 KST 월로 구분한다. 중복 없이 최신 월부터 반환하며 목록의 고객, 유형과 검색 조건에 관계없이 환경 전체의 월을 보여 준다. 모르는 조회 조건은 400 validation_error로 거절한다.")
   public Map<String, List<String>> listEventMonths(
       @CurrentOrganizationId UUID organizationId, HttpServletRequest request) {
     UnknownQueryParameterValidator.validate(request.getParameterMap(), Set.of());

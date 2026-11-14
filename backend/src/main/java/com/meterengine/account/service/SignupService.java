@@ -61,7 +61,7 @@ public class SignupService {
     this.emailVerificationService = emailVerificationService;
   }
 
-  // pending 도입사와 그 도입사에 소속된 member, 동의 행을 한 트랜잭션에 만든다. 인증 메일은 커밋 뒤에 나간다.
+  // 실제 환경이 잠긴 active 조직과 그 조직에 소속된 member, 동의 행을 한 트랜잭션에 만든다. 인증 메일은 커밋 뒤에 나간다.
   @Transactional
   public Signup create(
       String organizationName,
@@ -76,7 +76,7 @@ public class SignupService {
     OffsetDateTime now = OffsetDateTime.now().truncatedTo(ChronoUnit.MICROS);
     Organization organization =
         organizationRepository.save(
-            new Organization(UUID.randomUUID(), organizationName, Organization.PENDING));
+            new Organization(UUID.randomUUID(), organizationName, Organization.ACTIVE));
     UserAccount newUserAccount =
         new UserAccount(
             UUID.randomUUID(),

@@ -40,7 +40,7 @@ public class OrganizationInvitationController {
   @PublicAccess
   @Operation(summary = "초대 링크 확인")
   @ApiResponses({
-    @ApiResponse(responseCode = "200", description = "초대한 도입사, 초대 이메일, 만료 시각, 수락하면 받을 권한"),
+    @ApiResponse(responseCode = "200", description = "초대한 조직, 초대 이메일, 만료 시각, 수락하면 받을 권한"),
     @ApiResponse(
         responseCode = "400",
         content =
@@ -63,7 +63,7 @@ public class OrganizationInvitationController {
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
             """
-            code=organization_not_active: 초대한 도입사가 활성 상태가 아니다.
+            code=organization_not_active: 초대한 조직이 활성 상태가 아니다.
             code=consent_required: Authorization 헤더에 실은 세션의 사용자가 필수 안내에 아직 동의하지 않았다.
             """),
     @ApiResponse(
@@ -91,7 +91,7 @@ public class OrganizationInvitationController {
   @ResponseStatus(HttpStatus.CREATED)
   @Operation(summary = "본인의 초대 수락")
   @ApiResponses({
-    @ApiResponse(responseCode = "201", description = "수락한 사용자와 소속된 도입사"),
+    @ApiResponse(responseCode = "201", description = "수락한 사용자와 소속된 조직"),
     @ApiResponse(
         responseCode = "400",
         content =
@@ -121,7 +121,7 @@ public class OrganizationInvitationController {
             """
             code=permission_denied: 초대 이메일로 가입한 계정이 있는데 그 사용자의 로그인 세션으로 부르지 않았다.
             code=consent_required: Authorization 헤더에 실은 세션의 사용자가 필수 안내에 아직 동의하지 않았다.
-            code=organization_not_active: 초대한 도입사가 활성 상태가 아니다.
+            code=organization_not_active: 초대한 조직이 활성 상태가 아니다.
             """),
     @ApiResponse(
         responseCode = "404",
@@ -139,8 +139,9 @@ public class OrganizationInvitationController {
         description =
             """
             code=invitation_unavailable: 만료됐거나 이미 수락 또는 취소된 초대다.
-            code=organization_member_already_exists: 초대 이메일의 사용자가 이미 그 도입사에 소속돼 있다.
+            code=organization_member_already_exists: 초대 이메일의 사용자가 이미 그 조직에 소속돼 있다.
             code=email_already_exists: 수락을 처리하는 사이에 같은 이메일의 계정이 먼저 만들어졌다.
+            code=operator_membership_conflict: 초대 이메일의 사용자가 운영자다. 운영자는 조직에 소속될 수 없다.
             """)
   })
   public OrganizationInvitationAcceptanceResponse acceptOrganizationInvitation(

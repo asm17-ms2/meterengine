@@ -3,55 +3,95 @@ import { chmodSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import type { IngestEventRequest } from "@meterengine/sdk";
+import type { SurfaceId } from "./catalog.ts";
 import type { ServiceAccount } from "./config.ts";
-import type { GenerationView } from "./contracts.ts";
+import type { ConversationSummary, ConversationView, GenerationView, TokenUsage, UsageStats } from "./contracts.ts";
+import type { ChatTurn } from "./provider.ts";
 import { ServiceError } from "./service-error.ts";
 
 type GenerationRow = {
   account_id: string;
   id: string;
   request_hash: string;
+  surface: SurfaceId;
   model_id: string;
   model_name: string;
+  conversation_id: string | null;
+  turn: number | null;
+  batch_id: string | null;
+  batch_index: number | null;
+  system_prompt: string;
   prompt: string;
   output: string;
   input_tokens: number;
   output_tokens: number;
+  cache_read_tokens: number;
+  cache_write_tokens: number;
+  latency_ms: number;
   created_at: string;
   state: GenerationView["state"];
   lease_token: string | null;
   lease_until: number | null;
   metering_status: GenerationView["meteringStatus"];
 };
+type ConversationRow = { id: string; title: string; model_id: string; created_at: string; updated_at: string; turns: number };
 
-export type GenerationClaim = { generation: GenerationView; leaseToken: string | null };
+export type GenerationSpec = {
+  id: string;
+  surface: SurfaceId;
+  modelId: string;
+  modelName: string;
+  prompt: string;
+  system?: string;
+  conversationId?: string;
+  batchId?: string;
+  batchIndex?: number;
+};
+export type GenerationResult = { output: string; usage: TokenUsage; latencyMs: number };
+export type GenerationClaim = { generation: GenerationView; leaseToken: string | null; turn: number | null };
 export type OutboxClaim = { transactionId: string; accountId: string; generationId: string; leaseToken: string; event: IngestEventRequest };
 
 const GENERATION_LEASE_MS = 60000;
 const DELIVERY_LEASE_MS = 30000;
 const SESSION_AGE_MS = 8 * 60 * 60 * 1000;
+const WITH_METERING = `SELECT g.*, CASE o.status WHEN 'delivered' THEN 'delivered' WHEN 'failed' THEN 'failed' ELSE 'pending' END AS metering_status
+  FROM generation g LEFT JOIN metering_outbox o ON o.account_id=g.account_id AND o.generation_id=g.id`;
 
 function tokenHash(value: string): string {
   return createHash("sha256").update(value).digest("hex");
 }
 
 function generationView(row: GenerationRow): GenerationView {
+  const usage = { input: row.input_tokens, output: row.output_tokens, cacheRead: row.cache_read_tokens, cacheWrite: row.cache_write_tokens };
   return {
     id: row.id,
+    surface: row.surface,
     modelId: row.model_id,
     modelName: row.model_name,
+    conversationId: row.conversation_id,
+    batchId: row.batch_id,
+    system: row.system_prompt,
     prompt: row.prompt,
     output: row.output,
-    inputTokens: row.input_tokens,
-    outputTokens: row.output_tokens,
-    totalTokens: row.input_tokens + row.output_tokens,
+    usage,
+    totalTokens: usage.input + usage.output + usage.cacheRead + usage.cacheWrite,
+    latencyMs: row.latency_ms,
     createdAt: row.created_at,
     state: row.state,
     meteringStatus: row.metering_status,
   };
 }
 
-export class LumenStore {
+function conversationSummary(row: ConversationRow): ConversationSummary {
+  return { id: row.id, title: row.title, modelId: row.model_id, createdAt: row.created_at, updatedAt: row.updated_at, turns: row.turns };
+}
+
+export function conversationTitle(prompt: string): string {
+  const line = prompt.replace(/\s+/g, " ").trim();
+  return Array.from(line).length > 40 ? `${Array.from(line).slice(0, 40).join("")}...` : line;
+}
+
+export class OpenAbStore {
   private readonly db: DatabaseSync;
 
   constructor(databasePath: string, accounts: ServiceAccount[] = []) {
@@ -63,14 +103,25 @@ export class LumenStore {
       CREATE TABLE IF NOT EXISTS account_binding (id TEXT PRIMARY KEY, customer_id TEXT NOT NULL UNIQUE) STRICT;
       CREATE TABLE IF NOT EXISTS source_binding (id INTEGER PRIMARY KEY CHECK(id=1), source_hash TEXT NOT NULL) STRICT;
       CREATE TABLE IF NOT EXISTS session (token_hash TEXT PRIMARY KEY, account_id TEXT NOT NULL, expires_at INTEGER NOT NULL) STRICT;
-      CREATE TABLE IF NOT EXISTS generation (
-        account_id TEXT NOT NULL, id TEXT NOT NULL, request_hash TEXT NOT NULL,
-        model_id TEXT NOT NULL, model_name TEXT NOT NULL, prompt TEXT NOT NULL, output TEXT NOT NULL DEFAULT '',
-        input_tokens INTEGER NOT NULL DEFAULT 0, output_tokens INTEGER NOT NULL DEFAULT 0,
-        created_at TEXT NOT NULL, state TEXT NOT NULL CHECK(state IN ('processing','completed','failed')),
-        lease_token TEXT, lease_until INTEGER,
+      CREATE TABLE IF NOT EXISTS conversation (
+        account_id TEXT NOT NULL, id TEXT NOT NULL, title TEXT NOT NULL, model_id TEXT NOT NULL,
+        created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
         PRIMARY KEY(account_id,id)
       ) STRICT;
+      CREATE TABLE IF NOT EXISTS generation (
+        account_id TEXT NOT NULL, id TEXT NOT NULL, request_hash TEXT NOT NULL,
+        surface TEXT NOT NULL CHECK(surface IN ('chat','api','batch')),
+        model_id TEXT NOT NULL, model_name TEXT NOT NULL,
+        conversation_id TEXT, turn INTEGER, batch_id TEXT, batch_index INTEGER,
+        system_prompt TEXT NOT NULL DEFAULT '', prompt TEXT NOT NULL, output TEXT NOT NULL DEFAULT '',
+        input_tokens INTEGER NOT NULL DEFAULT 0, output_tokens INTEGER NOT NULL DEFAULT 0,
+        cache_read_tokens INTEGER NOT NULL DEFAULT 0, cache_write_tokens INTEGER NOT NULL DEFAULT 0, latency_ms INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL, state TEXT NOT NULL CHECK(state IN ('processing','completed','failed')),
+        lease_token TEXT, lease_until INTEGER,
+        PRIMARY KEY(account_id,id),
+        FOREIGN KEY(account_id,conversation_id) REFERENCES conversation(account_id,id)
+      ) STRICT;
+      CREATE TABLE IF NOT EXISTS prompt_cache (account_id TEXT NOT NULL, cache_key TEXT NOT NULL, expires_at INTEGER NOT NULL, PRIMARY KEY(account_id,cache_key)) STRICT;
       CREATE TABLE IF NOT EXISTS metering_outbox (
         transaction_id TEXT PRIMARY KEY, account_id TEXT NOT NULL, generation_id TEXT NOT NULL,
         event_json TEXT NOT NULL, status TEXT NOT NULL CHECK(status IN ('pending','delivering','delivered','failed')),
@@ -80,13 +131,16 @@ export class LumenStore {
         FOREIGN KEY(account_id,generation_id) REFERENCES generation(account_id,id)
       ) STRICT;
       CREATE INDEX IF NOT EXISTS generation_account_created ON generation(account_id,created_at DESC,id);
+      CREATE INDEX IF NOT EXISTS generation_conversation ON generation(account_id,conversation_id,turn);
+      CREATE INDEX IF NOT EXISTS generation_batch ON generation(account_id,batch_id,batch_index);
+      CREATE INDEX IF NOT EXISTS conversation_updated ON conversation(account_id,updated_at DESC);
       CREATE INDEX IF NOT EXISTS metering_due ON metering_outbox(status,next_attempt_at,lease_until);
     `);
     try {
       this.transaction(() => {
         for (const account of accounts) {
           const existing = this.db.prepare("SELECT customer_id FROM account_binding WHERE id=?").get(account.id) as { customer_id: string } | undefined;
-          if (existing && existing.customer_id !== account.customerId) throw new Error("기존 시연 계정의 고객 연결을 바꿀 수 없습니다. 별도 데이터 파일을 사용하세요.");
+          if (existing && existing.customer_id !== account.customerId) throw new Error("기존 체험 계정의 고객 연결을 바꿀 수 없습니다. 별도 데이터 파일을 사용하세요.");
           this.db.prepare("INSERT INTO account_binding(id,customer_id) VALUES (?,?) ON CONFLICT(id) DO NOTHING").run(account.id, account.customerId);
         }
       });
@@ -141,9 +195,7 @@ export class LumenStore {
   }
 
   private generationRow(accountId: string, id: string): GenerationRow | undefined {
-    return this.db.prepare(`SELECT g.*, CASE o.status WHEN 'delivered' THEN 'delivered' WHEN 'failed' THEN 'failed' ELSE 'pending' END AS metering_status
-      FROM generation g LEFT JOIN metering_outbox o ON o.account_id=g.account_id AND o.generation_id=g.id
-      WHERE g.account_id=? AND g.id=?`).get(accountId, id) as GenerationRow | undefined;
+    return this.db.prepare(`${WITH_METERING} WHERE g.account_id=? AND g.id=?`).get(accountId, id) as GenerationRow | undefined;
   }
 
   getGeneration(accountId: string, id: string): GenerationView | null {
@@ -151,30 +203,58 @@ export class LumenStore {
     return row ? generationView(row) : null;
   }
 
-  reserveGeneration(accountId: string, id: string, modelId: string, modelName: string, prompt: string, now: number): GenerationClaim {
-    const requestHash = tokenHash(JSON.stringify({ modelId, prompt }));
+  reserveGeneration(accountId: string, spec: GenerationSpec, now: number): GenerationClaim {
+    const system = spec.system ?? "";
+    const requestHash = tokenHash(JSON.stringify([spec.surface, spec.modelId, spec.conversationId ?? null, spec.batchId ?? null, spec.batchIndex ?? null, system, spec.prompt]));
     return this.transaction(() => {
-      const existing = this.generationRow(accountId, id);
-      if (existing && existing.request_hash !== requestHash) throw new ServiceError(409, "request_conflict", "같은 요청 번호로 다른 내용을 보낼 수 없습니다. 새 요청으로 시작하세요.");
+      const existing = this.generationRow(accountId, spec.id);
+      if (existing && existing.request_hash !== requestHash) throw new ServiceError(409, "request_conflict", "같은 요청 번호로 다른 내용을 보낼 수 없어요. 새 요청으로 보내 주세요.");
       if (existing && (existing.state === "completed" || (existing.state === "processing" && (existing.lease_until ?? 0) > now))) {
-        return { generation: generationView(existing), leaseToken: null };
+        return { generation: generationView(existing), leaseToken: null, turn: existing.turn };
       }
       const leaseToken = randomUUID();
+      const createdAt = new Date(now).toISOString();
       if (existing) {
-        this.db.prepare("UPDATE generation SET state='processing',lease_token=?,lease_until=? WHERE account_id=? AND id=?").run(leaseToken, now + GENERATION_LEASE_MS, accountId, id);
+        this.db.prepare("UPDATE generation SET state='processing',lease_token=?,lease_until=? WHERE account_id=? AND id=?").run(leaseToken, now + GENERATION_LEASE_MS, accountId, spec.id);
       } else {
-        this.db.prepare("INSERT INTO generation(account_id,id,request_hash,model_id,model_name,prompt,created_at,state,lease_token,lease_until) VALUES (?,?,?,?,?,?,?,'processing',?,?)")
-          .run(accountId, id, requestHash, modelId, modelName, prompt, new Date(now).toISOString(), leaseToken, now + GENERATION_LEASE_MS);
+        let turn: number | null = null;
+        if (spec.conversationId) {
+          this.db.prepare("INSERT INTO conversation(account_id,id,title,model_id,created_at,updated_at) VALUES (?,?,?,?,?,?) ON CONFLICT(account_id,id) DO UPDATE SET model_id=excluded.model_id,updated_at=excluded.updated_at")
+            .run(accountId, spec.conversationId, conversationTitle(spec.prompt), spec.modelId, createdAt, createdAt);
+          const last = this.db.prepare("SELECT COALESCE(MAX(turn),0) AS turn FROM generation WHERE account_id=? AND conversation_id=?").get(accountId, spec.conversationId) as { turn: number };
+          turn = last.turn + 1;
+        }
+        this.db.prepare(`INSERT INTO generation(account_id,id,request_hash,surface,model_id,model_name,conversation_id,turn,batch_id,batch_index,system_prompt,prompt,created_at,state,lease_token,lease_until)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'processing',?,?)`)
+          .run(accountId, spec.id, requestHash, spec.surface, spec.modelId, spec.modelName, spec.conversationId ?? null, turn, spec.batchId ?? null, spec.batchIndex ?? null, system, spec.prompt, createdAt, leaseToken, now + GENERATION_LEASE_MS);
       }
-      return { generation: generationView(this.generationRow(accountId, id)!), leaseToken };
+      const row = this.generationRow(accountId, spec.id)!;
+      return { generation: generationView(row), leaseToken, turn: row.turn };
     });
   }
 
-  completeGeneration(accountId: string, id: string, leaseToken: string, output: string, inputTokens: number, outputTokens: number, event: IngestEventRequest): void {
+  chatHistory(accountId: string, conversationId: string, beforeTurn: number): ChatTurn[] {
+    const rows = this.db.prepare("SELECT model_id,prompt,output FROM generation WHERE account_id=? AND conversation_id=? AND turn<? AND state='completed' ORDER BY turn")
+      .all(accountId, conversationId, beforeTurn) as Array<{ model_id: string; prompt: string; output: string }>;
+    return rows.map(row => ({ modelId: row.model_id, prompt: row.prompt, output: row.output }));
+  }
+
+  // 같은 계정과 키로 만료 전에 다시 쓰면 true를 돌려주고 만료 시각을 늘린다.
+  usePromptCache(accountId: string, cacheKey: string, now: number, ttlMs: number): boolean {
+    return this.transaction(() => {
+      const row = this.db.prepare("SELECT expires_at FROM prompt_cache WHERE account_id=? AND cache_key=?").get(accountId, cacheKey) as { expires_at: number } | undefined;
+      this.db.prepare("INSERT INTO prompt_cache(account_id,cache_key,expires_at) VALUES (?,?,?) ON CONFLICT(account_id,cache_key) DO UPDATE SET expires_at=excluded.expires_at").run(accountId, cacheKey, now + ttlMs);
+      return row !== undefined && row.expires_at > now;
+    });
+  }
+
+  completeGeneration(accountId: string, id: string, leaseToken: string, result: GenerationResult, event: IngestEventRequest): void {
     this.transaction(() => {
-      const result = this.db.prepare("UPDATE generation SET state='completed',output=?,input_tokens=?,output_tokens=?,lease_token=NULL,lease_until=NULL WHERE account_id=? AND id=? AND state='processing' AND lease_token=?")
-        .run(output, inputTokens, outputTokens, accountId, id, leaseToken);
-      if (result.changes === 0) return;
+      const { usage } = result;
+      const updated = this.db.prepare(`UPDATE generation SET state='completed',output=?,input_tokens=?,output_tokens=?,cache_read_tokens=?,cache_write_tokens=?,latency_ms=?,lease_token=NULL,lease_until=NULL
+        WHERE account_id=? AND id=? AND state='processing' AND lease_token=?`)
+        .run(result.output, usage.input, usage.output, usage.cacheRead, usage.cacheWrite, result.latencyMs, accountId, id, leaseToken);
+      if (updated.changes === 0) return;
       this.db.prepare("INSERT INTO metering_outbox(transaction_id,account_id,generation_id,event_json,status) VALUES (?,?,?,?,'pending')")
         .run(event.transaction_id, accountId, id, JSON.stringify(event));
     });
@@ -185,19 +265,44 @@ export class LumenStore {
   }
 
   listGenerations(accountId: string, start?: string, end?: string): GenerationView[] {
-    const rows = this.db.prepare(`SELECT g.*, CASE o.status WHEN 'delivered' THEN 'delivered' WHEN 'failed' THEN 'failed' ELSE 'pending' END AS metering_status
-      FROM generation g LEFT JOIN metering_outbox o ON o.account_id=g.account_id AND o.generation_id=g.id
-      WHERE g.account_id=? ${start && end ? "AND g.created_at>=? AND g.created_at<?" : ""} ORDER BY g.created_at DESC,g.id DESC LIMIT 100`).all(...(start && end ? [accountId, start, end] : [accountId])) as GenerationRow[];
+    const range = start && end ? "AND g.created_at>=? AND g.created_at<?" : "";
+    const rows = this.db.prepare(`${WITH_METERING} WHERE g.account_id=? ${range} ORDER BY g.created_at DESC,g.id DESC LIMIT 100`)
+      .all(...(start && end ? [accountId, start, end] : [accountId])) as GenerationRow[];
     return rows.map(generationView);
   }
 
-  stats(accountId: string, start: string, end: string): { totalRequests: number; inputTokens: number; outputTokens: number; pendingMetering: number; failedMetering: number } {
-    const row = this.db.prepare(`SELECT COUNT(*) AS total_requests, COALESCE(SUM(g.input_tokens),0) AS input_tokens,COALESCE(SUM(g.output_tokens),0) AS output_tokens,
+  listBatch(accountId: string, batchId: string): GenerationView[] {
+    const rows = this.db.prepare(`${WITH_METERING} WHERE g.account_id=? AND g.batch_id=? ORDER BY g.batch_index`).all(accountId, batchId) as GenerationRow[];
+    return rows.map(generationView);
+  }
+
+  listConversations(accountId: string): ConversationSummary[] {
+    const rows = this.db.prepare(`SELECT c.id,c.title,c.model_id,c.created_at,c.updated_at,(SELECT COUNT(*) FROM generation g WHERE g.account_id=c.account_id AND g.conversation_id=c.id) AS turns
+      FROM conversation c WHERE c.account_id=? ORDER BY c.updated_at DESC,c.id LIMIT 50`).all(accountId) as ConversationRow[];
+    return rows.map(conversationSummary);
+  }
+
+  getConversation(accountId: string, id: string): ConversationView | null {
+    const row = this.db.prepare(`SELECT c.id,c.title,c.model_id,c.created_at,c.updated_at,(SELECT COUNT(*) FROM generation g WHERE g.account_id=c.account_id AND g.conversation_id=c.id) AS turns
+      FROM conversation c WHERE c.account_id=? AND c.id=?`).get(accountId, id) as ConversationRow | undefined;
+    if (!row) return null;
+    const messages = this.db.prepare(`${WITH_METERING} WHERE g.account_id=? AND g.conversation_id=? ORDER BY g.turn`).all(accountId, id) as GenerationRow[];
+    return { ...conversationSummary(row), messages: messages.map(generationView) };
+  }
+
+  stats(accountId: string, start: string, end: string): UsageStats {
+    const row = this.db.prepare(`SELECT COUNT(*) AS total_requests, COALESCE(SUM(g.input_tokens),0) AS input_tokens, COALESCE(SUM(g.output_tokens),0) AS output_tokens,
+      COALESCE(SUM(g.cache_read_tokens),0) AS cache_read_tokens, COALESCE(SUM(g.cache_write_tokens),0) AS cache_write_tokens,
       COALESCE(SUM(CASE WHEN o.status IN ('pending','delivering') THEN 1 ELSE 0 END),0) AS pending_metering,
       COALESCE(SUM(CASE WHEN o.status='failed' THEN 1 ELSE 0 END),0) AS failed_metering
       FROM generation g LEFT JOIN metering_outbox o ON o.account_id=g.account_id AND o.generation_id=g.id
       WHERE g.account_id=? AND g.created_at>=? AND g.created_at<? AND g.state='completed'`).get(accountId, start, end) as Record<string, number>;
-    return { totalRequests: row.total_requests, inputTokens: row.input_tokens, outputTokens: row.output_tokens, pendingMetering: row.pending_metering, failedMetering: row.failed_metering };
+    return {
+      totalRequests: row.total_requests,
+      usage: { input: row.input_tokens, output: row.output_tokens, cacheRead: row.cache_read_tokens, cacheWrite: row.cache_write_tokens },
+      pendingMetering: row.pending_metering,
+      failedMetering: row.failed_metering,
+    };
   }
 
   claimOutbox(now: number, options: { accountId?: string; generationId?: string; force?: boolean } = {}): OutboxClaim | null {

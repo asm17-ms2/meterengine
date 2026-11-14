@@ -6,9 +6,9 @@ import { DownOutlined } from "@ant-design/icons";
 import { App, Select } from "antd";
 import { usePathname, useRouter } from "next/navigation";
 import { useTenantAccess } from "@/components/auth/TenantAccess";
-import { ENVIRONMENT_LABELS, ENVIRONMENT_SWITCH_TITLES, environmentOptions, environmentQueryValue, environmentSwitchPath, readEnvironment } from "@/lib/environment";
+import { ENVIRONMENT_LABELS, ENVIRONMENT_SWITCH_TITLES, environmentOptions, environmentQueryValue, environmentSwitchPath, isLockedEnvironment, LIVE_ENVIRONMENT_PATH, readEnvironment } from "@/lib/environment";
 
-export function EnvironmentSwitch({ showLegacy }: { showLegacy: boolean }) {
+export function EnvironmentSwitch({ showLegacy, isLiveEnvironmentOpen }: { showLegacy: boolean; isLiveEnvironmentOpen: boolean }) {
   const pathname = usePathname();
   const params = useWorkspaceSearch();
   const router = useRouter();
@@ -18,6 +18,17 @@ export function EnvironmentSwitch({ showLegacy }: { showLegacy: boolean }) {
   function confirmSwitch(value: string) {
     const next = readEnvironment(value);
     if (next === environment) return;
+    // 잠긴 실제 환경을 고르면 전환하지 않고 이용 신청 화면을 연다.
+    if (isLockedEnvironment(next, isLiveEnvironmentOpen)) {
+      modal.confirm({
+        title: "실제 환경 이용 신청 화면으로 갈까요?",
+        content: "실제 환경은 이용 신청이 승인되면 쓸 수 있어요. 이 화면에서 입력하거나 고른 내용은 지워져요.",
+        okText: "이동",
+        cancelText: "취소",
+        onOk: () => router.push(`${LIVE_ENVIRONMENT_PATH}${access?.organizationId ? `?${new URLSearchParams({ organization_id: access.organizationId })}` : ""}`),
+      });
+      return;
+    }
     modal.confirm({
       title: ENVIRONMENT_SWITCH_TITLES[next],
       content: "이 화면에서 입력하거나 고른 내용은 지워져요.",
@@ -41,7 +52,7 @@ export function EnvironmentSwitch({ showLegacy }: { showLegacy: boolean }) {
       value={environment}
       status={environment === "live" ? "warning" : undefined}
       suffixIcon={<DownOutlined aria-hidden aria-label={undefined} />}
-      options={environmentOptions(showLegacy).map(value => ({ value, label: ENVIRONMENT_LABELS[value] }))}
+      options={environmentOptions(showLegacy && isLiveEnvironmentOpen).map(value => ({ value, label: isLockedEnvironment(value, isLiveEnvironmentOpen) ? `${ENVIRONMENT_LABELS[value]} (승인 전)` : ENVIRONMENT_LABELS[value] }))}
       onChange={confirmSwitch}
     />
   </div>;

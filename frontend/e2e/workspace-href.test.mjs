@@ -7,7 +7,7 @@ import { environmentReadyPath, environmentSwitchPath } from "../src/lib/environm
 const source = new URLSearchParams({ organization_id: "rendered-organization", environment: "test", month: "2026-10", customer_id: "rendered-customer" });
 
 test("all business routes support each workspace environment", () => {
-  for (const path of ["/overview", "/customers", "/billable-metrics", "/billable-metric-prices", "/pricing", "/usage", "/events", "/event-issues", "/event-rejections", "/billing", "/invoices", "/payments", "/integrations", "/settings", "/members", "/audit"]) assert.equal(environmentReadyPath(path), true, path);
+  for (const path of ["/overview", "/customers", "/billable-metrics", "/billable-metric-prices", "/pricing", "/usage", "/events", "/event-issues", "/event-rejections", "/billing", "/invoices", "/payments", "/integrations", "/settings", "/live-environment", "/members", "/audit"]) assert.equal(environmentReadyPath(path), true, path);
   for (const path of ["/admin", "/organizations", "/payment-method-registrations/token", "/customers-other"]) assert.equal(environmentReadyPath(path), false, path);
 });
 
@@ -18,7 +18,7 @@ test("switching environment clears every resource identifier and retains its lis
 });
 
 test("tenant navigation remains pinned to the rendered organization and environment", () => {
-  for (const path of ["/overview", "/usage", "/events", "/event-issues", "/event-rejections", "/billing", "/invoices", "/payments/invoice-id", "/pricing", "/customers/customer-id", "/billable-metrics", "/billable-metric-prices", "/integrations/endpoint-id", "/settings", "/members", "/audit"]) {
+  for (const path of ["/overview", "/usage", "/events", "/event-issues", "/event-rejections", "/billing", "/invoices", "/payments/invoice-id", "/pricing", "/customers/customer-id", "/billable-metrics", "/billable-metric-prices", "/integrations/endpoint-id", "/settings", "/live-environment", "/members", "/audit"]) {
     const url = new URL(workspaceHref(path, source), "https://console.example");
     assert.equal(url.searchParams.get("organization_id"), "rendered-organization", path);
     assert.equal(url.searchParams.get("environment"), "test", path);
@@ -61,6 +61,9 @@ test("navigation preserves destination filters and derives the KST month from a 
 test("login can return to both authorized event diagnostic screens", () => {
   for (const path of ["/event-issues?organization_id=original-organization", "/event-rejections?environment=test"]) assert.equal(safeReturnPath(path, false), path);
   assert.equal(safeReturnPath("https://external.example/event-issues", false), "/overview");
+  assert.equal(safeReturnPath("/live-environment?organization_id=original-organization", false), "/live-environment?organization_id=original-organization");
+  assert.equal(safeReturnPath("/admin/live-environment-applications?status=pending", true), "/admin/live-environment-applications?status=pending");
+  assert.equal(safeReturnPath("/admin/live-environment-applications", false), "/overview");
 });
 
 

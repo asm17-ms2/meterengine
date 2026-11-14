@@ -108,7 +108,7 @@ public class CustomerController {
       description =
           """
           고객을 등록하고 서버가 발급한 id와 함께 돌려준다. 사용량 이벤트를 보낼 때 이 id를 customer_id에 싣는다.
-          external_id는 도입사 안에서 유일하다. 같은 external_id를 다시 보내면 기존 고객을 200으로 돌려주고 이름과 이메일은 바꾸지 않는다. external_id를 생략하면 매번 새 고객을 만든다. Idempotency-Key 헤더를 사용하면 같은 조직/환경/작업의 같은 요청을 재전송해도 최초 생성 응답을 돌려준다. 같은 키와 다른 본문은 409다.
+          external_id는 조직 안에서 유일하다. 같은 external_id를 다시 보내면 기존 고객을 200으로 돌려주고 이름과 이메일은 바꾸지 않는다. external_id를 생략하면 매번 새 고객을 만든다. Idempotency-Key 헤더를 사용하면 같은 조직/환경/작업의 같은 요청을 재전송해도 최초 생성 응답을 돌려준다. 같은 키와 다른 본문은 409다.
           billing_email은 선택 입력이다. 확정한 인보이스의 청구 메일을 받을 주소이고, 없으면 빼거나 null로 보낸다.
           """)
   @ApiResponses({
@@ -164,7 +164,7 @@ public class CustomerController {
       @Valid @RequestBody CreateCustomerRequest request,
       @Parameter(
               description =
-                  "1~255자 재시도 키. 같은 도입사와 업무 환경에서 같은 키와 같은 본문을 다시 보내면 최초 응답을 상태 코드까지 그대로 돌려준다. 이름과 billing_email을 담은 최초 응답을 기한 없이 보관하므로 그 뒤에 고치거나 보관해도 재전송 응답은 바뀌지 않는다.")
+                  "1~255자 재시도 키. 같은 조직과 업무 환경에서 같은 키와 같은 본문을 다시 보내면 최초 응답을 상태 코드까지 그대로 돌려준다. 이름과 billing_email을 담은 최초 응답을 기한 없이 보관하므로 그 뒤에 고치거나 보관해도 재전송 응답은 바뀌지 않는다.")
           @RequestHeader(name = "Idempotency-Key", required = false)
           @StorableText
           String idempotencyKey) {

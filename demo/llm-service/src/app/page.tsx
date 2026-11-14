@@ -1,5 +1,5 @@
-import { LumenApplication } from "@/components/LumenApplication";
+import { OpenAbApplication } from "@/components/OpenAbApplication";
 
-export default function PlaygroundPage() {
-  return <LumenApplication section="playground" />;
+export default function ChatPage() {
+  return <OpenAbApplication section="chat" />;
 }

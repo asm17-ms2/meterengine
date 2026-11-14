@@ -28,7 +28,7 @@ const ADMIN_OPERATION_NAMES = [
   "deleteWebhookEndpoint", "updateWebhookEndpoint", "testWebhookEndpoint", "retryWebhookDelivery",
   "createPricePlan", "deletePricePlan", "createPriceRate", "deletePriceRate", "updateSupplier",
   "updatePaymentSetting", "updateTossPaymentsCredential", "createPaymentMethodRegistration",
-  "createPaymentAttempt", "createPaymentCancellation", "finalizeInvoices",
+  "createPaymentAttempt", "createPaymentCancellation", "finalizeInvoices", "createLiveEnvironmentApplication",
 ] as const;
 export const WORKSPACE_OPERATIONS: readonly string[] = [...OWNER_OPERATION_NAMES, ...ADMIN_OPERATION_NAMES, "createCustomer"];
 export type WorkspaceOperation = (typeof OWNER_OPERATION_NAMES)[number] | (typeof ADMIN_OPERATION_NAMES)[number] | "createCustomer";

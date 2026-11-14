@@ -36,7 +36,11 @@ public class AuditLogService {
           "user_account_role_updated",
           "user_account_password_updated",
           "user_account_consents_accepted",
-          "user_account_email_verified");
+          "user_account_email_verified",
+          "live_environment_application_created",
+          "live_environment_application_approved",
+          "live_environment_application_rejected",
+          "live_environment_merchant_id_mismatched");
 
   private final AuditLogRepository auditLogRepository;
   private final JsonMapper jsonMapper;

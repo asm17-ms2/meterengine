@@ -1,7 +1,7 @@
 import "server-only";
 
 import { config } from "@/lib/config";
-import { describeTransportFailure, malformedResponseMessage, unreadableErrorMessage } from "@/lib/api/transport-failure";
+import { describeTransportFailure, malformedResponseMessage, rateLimitMessage, unreadableErrorMessage } from "@/lib/api/transport-failure";
 
 export type FieldError = {
   field: string;
@@ -21,9 +21,7 @@ export type Result<T> =
   | { ok: false; error: ApiError };
 
 export function toDisplayMessage(error: ApiError): string {
-  if (error.status === 429) return error.retryAfterSeconds
-    ? `요청이 너무 많아요. ${error.retryAfterSeconds}초 뒤 다시 시도해 주세요.`
-    : "요청이 너무 많아요. 잠시 뒤 다시 시도해 주세요.";
+  if (error.status === 429) return rateLimitMessage(error.retryAfterSeconds);
   if (error.errors && error.errors.length > 0) {
     return error.errors.map((fieldError) => fieldError.message).join(" / ");
   }

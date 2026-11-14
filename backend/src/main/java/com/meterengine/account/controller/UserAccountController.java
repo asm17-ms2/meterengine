@@ -51,11 +51,11 @@ public class UserAccountController {
       description =
           """
           플랫폼 운영자 세션으로 새 운영자 계정을 만든다. 역할은 서버가 operator로 정한다.
-          도입사 소속과 대리 동의는 만들지 않는다. 새 계정은 본인이 로그인해 필수 안내에 동의해야 운영할 수 있다.
+          조직 소속과 대리 동의는 만들지 않는다. 새 계정은 본인이 로그인해 필수 안내에 동의해야 운영할 수 있다.
           이미 가입한 이메일이면 계정과 비밀번호를 바꾸지 않고 409를 돌려준다. 기존 계정의 승격은 역할 변경 경로를 사용한다.
           """)
   @ApiResponses({
-    @ApiResponse(responseCode = "201", description = "소속 도입사가 없는 새 플랫폼 운영자"),
+    @ApiResponse(responseCode = "201", description = "소속 조직이 없는 새 플랫폼 운영자"),
     @ApiResponse(
         responseCode = "400",
         content =
@@ -91,7 +91,7 @@ public class UserAccountController {
       summary = "사용자 목록 조회",
       description =
           """
-          모든 사용자를 만든 순서로 돌려준다. 사용자마다 소속된 도입사를 소속된 순서로 담는다.
+          모든 사용자를 만든 순서로 돌려준다. 사용자마다 소속된 조직을 소속된 순서로 담는다.
           operator 로그인 세션만 부를 수 있다. 페이지를 나누지 않는다.
           """)
   @ApiResponses({@ApiResponse(responseCode = "200", description = "사용자 목록")})
@@ -106,6 +106,7 @@ public class UserAccountController {
       description =
           """
           사용자의 역할을 바꾸고 바뀐 사용자를 돌려준다. 바뀐 역할은 그 사용자의 다음 요청부터 적용된다.
+          조직에 소속된 사용자는 operator로 바꿀 수 없다. 운영자 역할과 조직 소속은 함께 가질 수 없다.
           operator 로그인 세션만 부를 수 있다.
           """)
   @ApiResponses({
@@ -123,7 +124,18 @@ public class UserAccountController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=user_account_not_found: 그런 사용자가 없다")
+        description = "code=user_account_not_found: 그런 사용자가 없다"),
+    @ApiResponse(
+        responseCode = "409",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description =
+            """
+            code=last_operator_required: 마지막 운영자를 member로 내리려 했다.
+            code=operator_membership_conflict: 조직에 소속된 사용자를 operator로 바꾸려 했다.
+            """)
   })
   public UserAccountResponse updateUserAccountRole(
       @AuthenticationPrincipal AuthenticatedPrincipal principal,

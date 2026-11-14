@@ -10,23 +10,24 @@
 
 | 사실 | 정본 페이지 | 다른 페이지에서 쓰는 한 줄 요약 | 주로 쓰는 페이지 | 확인 필요 |
 | --- | --- | --- | --- | --- |
-| 서비스는 미리 보기 단계다. 테스트 환경 검증 용도로 쓰고 실제 고객 개인정보와 실결제는 쓰지 않는다 | /index | MeterEngine은 지금 미리 보기 단계라 테스트 환경에서 연동을 검증하는 용도로 씁니다. | /quickstart, /account/signup, /api-reference/introduction | 외부 가입을 받는지와 미리 보기 단계 표현 |
+| 가입하면 승인 없이 테스트 환경을 쓰고, 실제 환경은 이용 신청이 승인되면 열린다 | /index | 가입하면 바로 테스트 환경을 쓸 수 있고, 실제 환경은 이용 신청이 승인되면 열립니다. | /quickstart, /account/signup, /api-reference/introduction, /concepts/environments, /payments/test-and-live |  |
 | 콘솔은 https://meterengine.com, API는 같은 도메인의 /v1/ 아래. 테스트와 실제 환경도 주소가 같고 키가 환경을 정한다 | /api-reference/introduction | API는 https://meterengine.com/v1/ 아래에 있고, 어느 환경에 기록될지는 API 키가 정합니다. | /index, /quickstart, /authentication/api-keys, /payments/toss-setup | 공개 API 주소 |
 | SDK를 배포하지 않는다. 예시는 curl과 짧은 코드 조각이다 | /index | MeterEngine은 SDK를 배포하지 않으므로 예시는 HTTP 요청과 코드 조각으로 보여 줍니다. | /quickstart, /integration/events, /integration/retries, /webhooks/verify-signatures |  |
-| MeterEngine은 메일을 보내지 않는다(가입 승인, 초대, 청구, 링크 모두) | /index | MeterEngine은 메일을 보내지 않으니 링크와 안내는 도입사가 직접 전달합니다. | /account/signup, /account/members, /billing/finalize-invoices, /payments/invoice-links, /payments/card-registration | 승인 알림 없음과 처리 시간 |
+| MeterEngine이 보내는 메일은 가입 이메일 인증 메일뿐이다(초대, 청구, 링크, 실제 환경 이용 신청 결과는 보내지 않는다) | /index | MeterEngine은 링크와 안내를 메일로 보내지 않으니 직접 전달합니다. | /account/signup, /account/members, /billing/finalize-invoices, /billing/after-finalization, /payments/overview, /payments/invoice-links, /payments/card-registration, /integration/customers, /concepts/environments |  |
 | 전자세금계산서를 발행하지 않는다. invoice_number는 세금계산서 번호가 아니다 | /account/supplier | MeterEngine은 전자세금계산서를 발행하지 않습니다. | /index, /concepts/amounts | 공급자 정보 사용처 |
-| 문의와 가입 승인 요청 경로(GitHub 이슈, 적으면 안 되는 정보, 제목 형식) | /index | 문의와 승인 요청 방법은 소개 페이지의 문의 절을 보세요. | /account/signup, /quickstart, /api-basics/errors, /troubleshooting/events-not-billed | 문의 경로(GitHub 이슈) |
+| 문의 경로(GitHub 이슈, 적으면 안 되는 정보, 제목 형식) | /index | 문의 방법은 소개 페이지의 문의 절을 보세요. | /troubleshooting/events-not-billed | 문의 경로(GitHub 이슈) |
 
 ## [2] 계정, 인증, 권한
 
 | 사실 | 정본 페이지 | 다른 페이지에서 쓰는 한 줄 요약 | 주로 쓰는 페이지 | 확인 필요 |
 | --- | --- | --- | --- | --- |
-| 가입은 승인제다. 승인 전, 거절, 정지된 도입사는 모두 403 organization_not_active를 받는다. 승인 알림은 없다 | /account/signup | 승인 전이거나 거절, 정지된 도입사는 403 organization_not_active를 받습니다. | /quickstart, /api-basics/errors, /authentication/api-keys | 승인 알림 없음과 처리 시간 |
-| 가입 화면의 필수 동의(이용 안내, 개인정보 처리 안내)와 지금 안내가 정식 약관이 아니라는 점 | /account/signup | 필수 동의 항목인 '이용 안내'와 '개인정보 처리 안내'에 체크합니다. | /quickstart | 검증용 동의 안내 |
+| 가입한 조직은 바로 사용 중(active)이다. 이용 정지(suspended)와 예전에 가입 거절된(rejected) 조직은 403 organization_not_active를 받는다 | /account/signup | 이용이 정지된 조직은 403 organization_not_active를 받습니다. | /quickstart, /api-basics/errors, /authentication/api-keys, /authentication/scopes, /api-reference/introduction, /account/members |  |
+| 이메일 인증을 켠 서버에서는 가입 뒤 인증 메일의 링크로 인증해야 로그인한다. 가입 뒤 나오는 화면('메일함을 확인하세요' 또는 로그인 화면)으로 구분한다 | /account/signup | '메일함을 확인하세요' 화면이 나오면 인증 메일의 링크로 인증한 뒤 로그인합니다. | /quickstart |  |
+| 가입 화면의 약관 동의(이용약관, 개인정보 처리방침) | /account/signup | '이용약관에 동의합니다 (필수)'와 '개인정보 처리방침을 확인했습니다 (필수)'에 체크합니다. | /quickstart, /account/members |  |
 | API 키 발급 화면의 기본 권한은 read 하나다. 이벤트를 보내려면 ingest를 더 체크한다 | /authentication/api-keys | 키 발급 화면의 기본 권한은 read뿐이라 이벤트를 보내려면 ingest도 고릅니다. | /quickstart, /authentication/scopes | 없음 |
 | 초대 링크와 계정 직접 생성의 기본 권한은 조회(read)다 | /account/members | 구성원을 추가할 때 기본 권한은 조회(read)입니다. | /authentication/scopes |  |
 | read, ingest, admin의 뜻과 포함 관계(GET은 read, 고객 등록과 이벤트는 ingest, 나머지 변경은 admin) | /authentication/scopes | 조회는 read, 고객 등록과 이벤트 전송은 ingest, 그 밖의 변경은 admin 권한이 필요합니다. | /authentication/api-keys, /api-reference/introduction, 각 기능 페이지의 "필요 권한" 줄 | 없음 |
-| 콘솔 로그인으로만 되는 기능(API 키 관리, 토스페이먼츠 키 저장, 구성원과 초대, 감사 기록 등). API 키로 부르면 거절된다 | /authentication/scopes | 이 기능은 콘솔에 로그인한 상태에서만 됩니다. API 키로 부르면 거절됩니다. | /authentication/api-keys, /account/members, /payments/toss-setup, /api-reference/introduction | API 참조에서 숨기는 범위 |
+| 콘솔 로그인으로만 되는 기능(API 키 관리, 토스페이먼츠 키 저장, 구성원과 초대, 감사 기록, 실제 환경 이용 신청 등). API 키로 부르면 거절된다 | /authentication/scopes | 이 기능은 콘솔에 로그인한 상태에서만 됩니다. API 키로 부르면 거절됩니다. | /authentication/api-keys, /account/members, /payments/toss-setup, /api-reference/introduction | API 참조에서 숨기는 범위 |
 | 로그인 세션은 12시간 유지된다 | /authentication/scopes | 콘솔 로그인은 12시간 동안 유지됩니다. | /account/signup | 없음 |
 | API 키 원문은 발급 직후 한 번만 보인다 | /authentication/api-keys | 키 원문은 발급 직후 한 번만 보이니 바로 비밀 저장소에 옮깁니다. | /quickstart, /authentication/key-rotation | 없음 |
 | 대표관리자만 사용자와 초대를 관리한다 | /account/members | 사용자와 초대 관리는 대표관리자만 할 수 있습니다. | /authentication/scopes |  |
@@ -35,8 +36,9 @@
 
 | 사실 | 정본 페이지 | 다른 페이지에서 쓰는 한 줄 요약 | 주로 쓰는 페이지 | 확인 필요 |
 | --- | --- | --- | --- | --- |
-| 로그인하면 업무 환경이 '기존 데이터'로 열린다. 먼저 '테스트 환경'으로 전환한다. 다시 로그인하면 기존 데이터로 돌아간다 | /concepts/environments | 로그인 뒤 화면 위 '업무 환경'이 '테스트 환경'인지 확인하세요. | /quickstart, /authentication/api-keys, /payments/test-and-live | 새 도입사 기본 환경이 기존 데이터 |
-| 기존 데이터에서 발급한 키는 me_live_, me_test_ 접두사가 붙어도 어느 환경에도 격리되지 않는다 | /concepts/environments | 기존 데이터에서는 API 키를 발급하지 마세요. | /authentication/api-keys | 새 도입사 기본 환경이 기존 데이터 |
+| 로그인하면 업무 환경이 '테스트 환경'으로 열린다. 주소에 environment가 없으면 테스트 환경이다 | /concepts/environments | 로그인하면 화면 위 '업무 환경'이 '테스트 환경'으로 열립니다. | /quickstart, /account/signup, /authentication/api-keys, /payments/toss-setup, /billing/finalize-invoices, /troubleshooting/events-not-billed |  |
+| 기존 데이터는 새로 가입한 조직의 업무 환경 목록에 나오지 않는다. 그곳에서 발급한 키는 me_live_, me_test_ 접두사가 붙어도 어느 환경에도 격리되지 않는다 | /concepts/environments | 기존 데이터에서는 API 키를 발급하지 마세요. | /authentication/api-keys, /api-reference/introduction, /authentication/key-rotation, /webhooks/overview |  |
+| 실제 환경은 잠긴 채 시작하고 '실제 환경 이용 신청'(사업자등록번호, 상점아이디, 실결제 키)이 승인되면 열린다. 승인되면 신청한 실결제 키가 실제 환경의 토스페이먼츠 키로 저장된다. 잠긴 동안 콘솔의 실제 환경 요청은 403 live_environment_locked | /concepts/environments | 실제 환경은 '실제 환경 이용 신청'이 승인되어야 열립니다. | /index, /account/signup, /authentication/api-keys, /authentication/scopes, /api-basics/errors, /payments/overview, /payments/test-and-live, /payments/toss-setup, /reference/glossary | 배포 서버의 국세청 사업자 상태 조회 사용 여부 |
 | 테스트 환경의 정의: 데이터가 분리되고 실결제가 없지만 이벤트, 확정, 웹훅은 실제로 일어나고 되돌릴 수 없다. "샌드박스"라고 부르지 않는다 | /concepts/environments | 테스트 환경도 보낸 이벤트와 확정한 인보이스는 되돌릴 수 없습니다. | /quickstart, /payments/test-and-live, /api-reference/introduction | 테스트 키 정의와 mode 설명 |
 | 테스트, 실제 환경 키는 발급 환경에 고정되고 X-MeterEngine-Environment 헤더를 생략해도 된다. 다른 환경을 명시하면 403 environment_mismatch | /concepts/environments | 키는 발급한 환경에 고정되어 환경 헤더를 따로 넣지 않아도 됩니다. | /authentication/api-keys, /api-basics/errors, /api-reference/introduction | 시험 화면 proxy와 테스트 키 안내 |
 | 환경마다 따로인 것(고객, 미터, 단가, 키, 토스페이먼츠 키, 웹훅, 확정)과 공통인 것(계정, 구성원 권한). 환경을 옮겨도 데이터는 복사되지 않는다 | /concepts/environments | 고객, 미터, 단가는 업무 환경마다 따로 만들어야 합니다. | /integration/customers, /pricing/meters, /payments/toss-setup, /webhooks/overview, /billing/auto-finalization | 없음 |
@@ -84,7 +86,7 @@
 | 수집 요청은 감사 기록에 남지 않는다. 저장된 이벤트와 수집 거절 기록의 request_id, transaction_id로 찾는다 | /api-basics/errors | 이벤트 수집 요청은 감사 기록에 나오지 않으니 request_id와 transaction_id로 찾습니다. | /integration/verify-usage, /troubleshooting/events-not-billed |  |
 | 이벤트를 다시 보낼 것과 멈출 것(영구 거절 code), 아웃박스 | /integration/retries | 영구 거절 code는 다시 보내지 마세요. | /integration/events, /api-basics/errors | 없음 |
 | 배치는 한 요청에 1건에서 100건, 원소별 결과, HTTP 상태는 200 | /integration/events | 이벤트는 한 요청에 100건까지 묶어 보낼 수 있습니다. | /integration/retries, /api-basics/rate-limits | 없음 |
-| 분당 요청 한도는 키에 정한 경우에만 걸리고 429 rate_limit_exceeded와 Retry-After를 준다 | /api-basics/rate-limits | 한도를 넘으면 429를 받으니 Retry-After만큼 기다렸다가 다시 보냅니다. | /api-basics/errors, /authentication/api-keys, /integration/retries | 없음 |
+| 실제 환경 키의 분당 요청 한도는 키에 정한 경우에만 걸린다. 테스트 환경 키에는 테스트 환경 한도가 늘 걸려 키에 적은 값과 그 한도 가운데 작은 쪽이 적용된다. 넘으면 429 rate_limit_exceeded와 Retry-After | /api-basics/rate-limits | 한도를 넘으면 429를 받으니 Retry-After만큼 기다렸다가 다시 보냅니다. | /api-basics/errors, /authentication/api-keys, /authentication/scopes, /authentication/key-rotation, /quickstart, /integration/retries, /reference/glossary | 배포 서버의 테스트 환경 한도(기본값 300) |
 | 개요 화면 체크리스트 순서와 가이드 순서가 다르다. 체크리스트는 진행 표시다 | /quickstart | 개요 화면의 목록은 진행 표시이며 순서를 따를 필요는 없습니다. | /concepts/how-it-works | 개요 체크리스트 완료 조건 |
 | API 참조 시험 화면에는 테스트 환경 키만 넣는다(Mintlify 서버 경유) | /api-reference/introduction | 시험 화면에는 테스트 환경 키(me_test_)만 넣으세요. | /authentication/api-keys | 시험 화면 proxy와 테스트 키 안내 |
 
@@ -92,13 +94,13 @@
 
 | 사실 | 정본 페이지 | 다른 페이지에서 쓰는 한 줄 요약 | 주로 쓰는 페이지 | 확인 필요 |
 | --- | --- | --- | --- | --- |
-| 자동 확정은 서버 전체 설정이라 도입사가 켜고 끌 수 없고, auto_finalize_enabled로 확인한다 | /billing/auto-finalization | 자동 확정 여부는 청구 예정액 응답의 auto_finalize_enabled로 확인합니다. | /billing/finalize-invoices, /quickstart, /concepts/time-rules | 배포 서버 자동 확정 켜는 시점 |
-| 확정해도 결제는 자동으로 시작되지 않는다. 첫 결제는 도입사가 요청한다 | /payments/charging | 확정한 뒤 인보이스마다 결제를 요청해야 합니다. | /payments/overview, /billing/finalize-invoices, /billing/auto-finalization, /billing/after-finalization | 확정 뒤 자동 첫 결제 없음 |
+| 자동 확정은 서버 전체 설정이라 콘솔이나 API로 켜고 끌 수 없고, auto_finalize_enabled로 확인한다 | /billing/auto-finalization | 자동 확정 여부는 청구 예정액 응답의 auto_finalize_enabled로 확인합니다. | /billing/finalize-invoices, /quickstart, /concepts/time-rules | 배포 서버 자동 확정 켜는 시점 |
+| 확정해도 결제는 자동으로 시작되지 않는다. 첫 결제는 콘솔이나 API로 요청한다 | /payments/charging | 확정한 뒤 인보이스마다 결제를 요청해야 합니다. | /payments/overview, /billing/finalize-invoices, /billing/auto-finalization, /billing/after-finalization | 확정 뒤 자동 첫 결제 없음 |
 | pending은 실패가 아니고 MeterEngine이 결과를 다시 확인한다 | /payments/charging | 결과 확인 중(pending)인 결제는 다시 요청하지 마세요. | /payments/retries, /payments/reconciliation | 없음 |
 | 자동 재시도 조건과 다시 하지 않는 실패 | /payments/retries | 실패한 결제는 조건에 맞으면 자동으로 다시 시도합니다. | /payments/charging, /webhooks/events | 없음 |
 | TossPayments-Test-Code는 테스트 결제에서만 쓰고 실결제에서 보내면 400 toss_payments_test_code_in_live_mode | /payments/test-and-live | 실패를 재현하려면 테스트 결제에서 TossPayments-Test-Code 헤더를 씁니다. | /payments/retries, /payments/charging | 토스 테스트 코드 헤더와 기존 데이터 결제 모드 |
 | 토스페이먼츠 키는 업무 환경마다 따로 저장하고 콘솔 로그인으로만 저장한다 | /payments/toss-setup | 토스페이먼츠 키는 업무 환경마다 콘솔에서 저장합니다. | /payments/overview, /payments/test-and-live | API 참조에서 숨기는 범위 |
-| 인보이스 조회 링크의 token은 발급 응답에만 있고 주소는 도입사가 조합해 전달한다 | /payments/invoice-links | 인보이스 링크는 발급 응답의 token으로 주소를 만들어 직접 전달합니다. | /payments/overview, /billing/after-finalization, /payments/retries | 공개 인보이스 조회 API와 카드 등록 링크 권한 |
+| 인보이스 조회 링크의 token은 발급 응답에만 있고 주소는 직접 조합해 전달한다 | /payments/invoice-links | 인보이스 링크는 발급 응답의 token으로 주소를 만들어 직접 전달합니다. | /payments/overview, /billing/after-finalization, /payments/retries | 공개 인보이스 조회 API와 카드 등록 링크 권한 |
 | 카드 등록 링크의 token, 24시간, 한 번, MeterEngine 화면에서만 카드 입력 | /payments/card-registration | 카드 등록은 MeterEngine이 제공하는 링크 화면에서만 합니다. | /payments/overview, /payments/charging | 공개 인보이스 조회 API와 카드 등록 링크 권한 |
 | 결제 취소해도 확정 금액은 그대로다 | /payments/cancellations | 결제를 취소해도 인보이스 금액은 바뀌지 않습니다. | /billing/after-finalization | 없음 |
 | 수납 상태 값(not_required ~ canceled)과 콘솔 표기 | /payments/reconciliation | 수납 상태는 지금 결제 모드의 가장 늦은 결제 시도로 정합니다. 값 전체는 [수납 상태와 대사 확인](/payments/reconciliation)에 있습니다. | /payments/charging, /payments/cancellations, /reference/glossary | |

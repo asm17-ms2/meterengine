@@ -16,7 +16,7 @@ import { TenantAccessProvider } from "@/components/auth/TenantAccess";
 import { hasScope, ORGANIZATION_ROLE_LABELS, scopeSummary, type OrganizationRole } from "@/lib/auth/permissions";
 
 import { EnvironmentSwitch } from "@/components/workspace/EnvironmentSwitch";
-import { ENVIRONMENT_LABELS, environmentNoticeClass, readEnvironment, type WorkspaceEnvironment } from "@/lib/environment";
+import { ENVIRONMENT_LABELS, environmentNoticeClass, LIVE_ENVIRONMENT_PATH, readEnvironment, type WorkspaceEnvironment } from "@/lib/environment";
 
 const ENVIRONMENT_NOTICES: Record<WorkspaceEnvironment, string> = {
   test: "에서는 고객부터 수납까지 실제 환경과 따로 관리해요. 사용자와 업무 권한은 두 환경에서 같아요.",
@@ -24,9 +24,9 @@ const ENVIRONMENT_NOTICES: Record<WorkspaceEnvironment, string> = {
   legacy: "는 환경을 나누기 전에 저장한 것이라 테스트 환경이나 실제 환경과 따로 보관해요.",
 };
 
-type Props = { organizationId: string; organizationLabel: string; canSwitchOrganization: boolean; userLabel: string; isOperator: boolean; organizationRole?: OrganizationRole | null; scopes: string[]; showLegacyEnvironment: boolean; children: React.ReactNode };
+type Props = { organizationId: string; organizationLabel: string; canSwitchOrganization: boolean; userLabel: string; isOperator: boolean; organizationRole?: OrganizationRole | null; scopes: string[]; showLegacyEnvironment: boolean; isLiveEnvironmentOpen: boolean; children: React.ReactNode };
 
-function ShellContent({ organizationId, organizationLabel, canSwitchOrganization, userLabel, isOperator, organizationRole, scopes, showLegacyEnvironment, children }: Props) {
+function ShellContent({ organizationId, organizationLabel, canSwitchOrganization, userLabel, isOperator, organizationRole, scopes, showLegacyEnvironment, isLiveEnvironmentOpen, children }: Props) {
   const router = useRouter();
   const [isNavOpen, setIsNavOpen] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
@@ -70,16 +70,16 @@ function ShellContent({ organizationId, organizationLabel, canSwitchOrganization
           ? <Link href="/organizations" className="organization-link" title={organizationLabel}><span className="organization-name">{organizationLabel}</span><SwapOutlined aria-hidden="true" /></Link>
           : <span className="organization-link" title={organizationLabel}><span className="organization-name">{organizationLabel}</span></span>}
       </div>
-      <div className="workspace-user"><EnvironmentSwitch showLegacy={showLegacyEnvironment} /><div className="workspace-account">{accountControls}</div></div>
+      <div className="workspace-user"><EnvironmentSwitch showLegacy={showLegacyEnvironment} isLiveEnvironmentOpen={isLiveEnvironmentOpen} /><div className="workspace-account">{accountControls}</div></div>
     </header>
     <aside className="workspace-sidebar"><NavMenu /></aside>
     <main id="main-content" className="workspace-main">
-      <div className="workspace-content" key={`${organizationId}:${environment}`}><p className={environmentNoticeClass(environment)} role="status"><strong>{ENVIRONMENT_LABELS[environment]}</strong>{ENVIRONMENT_NOTICES[environment]}</p>{canRead ? children : <section className="workspace-panel" aria-labelledby="tenant-permission-title"><h1 id="tenant-permission-title">조회 권한이 없어요</h1><p>{hasScope(scopes, "ingest") ? "이 계정은 서버 연동으로 고객을 등록하고 사용량 이벤트를 보낼 수 있어요. 콘솔에서 고객과 청구 내역을 보려면 대표관리자에게 조회 권한을 요청하세요." : "고객과 청구 내역을 볼 권한이 없어요. 대표관리자에게 권한을 요청하거나 다른 조직을 선택하세요."}</p><Link href="/organizations">다른 조직 선택</Link></section>}</div>
+      <div className="workspace-content" key={`${organizationId}:${environment}`}><p className={environmentNoticeClass(environment)} role="status"><strong>{ENVIRONMENT_LABELS[environment]}</strong>{ENVIRONMENT_NOTICES[environment]}{!isLiveEnvironmentOpen && pathname !== LIVE_ENVIRONMENT_PATH && <> 실제 환경은 이용 신청이 승인되면 쓸 수 있어요. <Link href={LIVE_ENVIRONMENT_PATH}>실제 환경 이용 신청</Link></>}</p>{canRead ? children : <section className="workspace-panel" aria-labelledby="tenant-permission-title"><h1 id="tenant-permission-title">조회 권한이 없어요</h1><p>{hasScope(scopes, "ingest") ? "이 계정은 서버 연동으로 고객을 등록하고 사용량 이벤트를 보낼 수 있어요. 콘솔에서 고객과 청구 내역을 보려면 대표관리자에게 조회 권한을 요청하세요." : "고객과 청구 내역을 볼 권한이 없어요. 대표관리자에게 권한을 요청하거나 다른 조직을 선택하세요."}</p><Link href="/organizations">다른 조직 선택</Link></section>}</div>
     </main>
     <Drawer title={organizationLabel} open={isNavOpen} onClose={() => setIsNavOpen(false)} placement="left" size={280}><NavMenu onNavigate={() => setIsNavOpen(false)} /><div className="drawer-account">{accountControls}</div></Drawer>
   </div>;
 }
 
 export function ConsoleShell(props: Props) {
-  return <TenantAccessProvider organizationId={props.organizationId} scopes={props.scopes} organizationRole={props.organizationRole}><Suspense fallback={<div className="workspace-content" role="status">불러오는 중이에요.</div>}><ShellContent {...props} /></Suspense></TenantAccessProvider>;
+  return <TenantAccessProvider organizationId={props.organizationId} scopes={props.scopes} organizationRole={props.organizationRole} isLiveEnvironmentOpen={props.isLiveEnvironmentOpen}><Suspense fallback={<div className="workspace-content" role="status">불러오는 중이에요.</div>}><ShellContent {...props} /></Suspense></TenantAccessProvider>;
 }

@@ -99,7 +99,7 @@ public class EmailVerificationController {
       description =
           """
           인증 메일 링크의 토큰으로 그 계정의 이메일을 인증한다. 토큰은 만료 전에 한 번만 쓸 수 있다.
-          인증한 뒤에도 도입사가 승인되기 전에는 로그인하면 403(organization_not_active)이다.
+          인증한 뒤에도 조직이 승인되기 전에는 로그인하면 403(organization_not_active)이다.
           """)
   @ApiResponses({
     @ApiResponse(responseCode = "204", description = "인증했다"),

@@ -23,7 +23,7 @@ if (typeof settings !== "object" || settings === null || Array.isArray(settings)
   throw new Error("설정 파일은 문자열 환경변수의 JSON 객체여야 합니다");
 }
 const env = { ...process.env, ...settings };
-if (options.origin) env.LUMEN_APP_ORIGIN = options.origin;
+if (options.origin) env.OPENAB_APP_ORIGIN = options.origin;
 env.PORT = options.port ?? settings.PORT ?? process.env.PORT ?? "3200";
 env.HOSTNAME = options.host ?? settings.HOSTNAME ?? "127.0.0.1";
 env.NEXT_TELEMETRY_DISABLED = "1";

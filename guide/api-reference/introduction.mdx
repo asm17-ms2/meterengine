@@ -5,8 +5,7 @@ description: "API 참조의 접속 주소, 인증, 시험 화면 사용법, 참�
 
 이 탭의 엔드포인트 페이지는 MeterEngine 서버 코드에서 만든 API 명세로 생성됩니다. 요청과 응답의 필드 이름, 형식, 필수 여부를 확인할 때 씁니다. 처음 연동한다면 [빠른 시작](/quickstart)을 먼저 따라 해 보세요.
 
-{/* 확인 필요: 외부 가입을 받는지와 미리 보기 단계 표현 */}
-MeterEngine은 지금 미리 보기 단계라 테스트 환경에서 연동을 검증하는 용도로 씁니다([MeterEngine 소개](/index)).
+가입하면 바로 테스트 환경을 쓸 수 있고, 실제 환경은 이용 신청이 승인되면 열립니다([업무 환경](/concepts/environments)).
 
 ## 접속 주소
 
@@ -18,7 +17,6 @@ MeterEngine 콘솔은 https://meterengine.com 이고, API는 같은 도메인의
 {/* 확인 필요: 공개 API 주소 */}
 테스트 환경과 실제 환경은 주소가 같습니다. 어느 환경에 기록될지는 요청에 쓴 API 키가 정합니다. 테스트 환경에서 발급한 키(`me_test_` 로 시작)는 테스트 환경에, 실제 환경에서 발급한 키(`me_live_` 로 시작)는 실제 환경에 기록됩니다.
 
-{/* 확인 필요: 새 도입사 기본 환경이 기존 데이터 */}
 콘솔의 '기존 데이터'에서 발급한 키도 같은 접두사가 붙지만 어느 환경에도 속하지 않으니, 기존 데이터에서는 API 키를 발급하지 마세요([업무 환경](/concepts/environments)).
 
 ## 인증
@@ -30,7 +28,7 @@ Authorization: Bearer me_test_xxxxxxxx
 ```
 
 - 헤더가 없으면 401 `authentication_required`, 키가 틀렸거나 폐기 또는 만료된 키면 401 `invalid_credentials` 를 받습니다. 두 응답 모두 `WWW-Authenticate: Bearer` 헤더가 붙습니다.
-- 참조의 설명에 로그인 세션이 함께 나오는 곳이 있습니다. 로그인 세션은 콘솔 화면이 쓰는 방식이고, 도입사 서버는 API 키로만 요청합니다.
+- 참조의 설명에 로그인 세션이 함께 나오는 곳이 있습니다. 로그인 세션은 콘솔 화면이 쓰는 방식이고, 자사 서버는 API 키로만 요청합니다.
 - `X-MeterEngine-Organization-Id` 헤더는 콘솔 화면이 쓰는 헤더입니다. API 키로 요청할 때는 보내지 않습니다.
 
 키 발급 방법은 [API 키 발급과 첫 호출](/authentication/api-keys)에 있습니다.
@@ -85,7 +83,7 @@ x-request-id: 3f1d2c4b-8a7e-4f60-9b1a-2d5c7e9f0a13
 응답 헤더 `X-MeterEngine-Environment` 에 요청이 처리된 업무 환경이 나옵니다. 테스트 환경 키라면 `test` 입니다.
 </Step>
 <Step title="오류가 오면 code를 본다">
-401이면 키 값과 `Bearer ` 접두사를 다시 확인합니다. 403 `permission_denied` 면 키에 필요한 권한이 없는 것이고, 403 `organization_not_active` 면 도입사가 아직 승인되지 않았거나 정지된 상태입니다([가입과 승인](/account/signup)).
+401이면 키 값과 `Bearer ` 접두사를 다시 확인합니다. 403 `permission_denied` 면 키에 필요한 권한이 없는 것이고, 403 `organization_not_active` 면 조직의 이용이 정지된 상태입니다([가입과 이메일 인증](/account/signup)).
 </Step>
 </Steps>
 
@@ -134,20 +132,21 @@ API 참조의 시험 화면에서 보낸 요청은 Mintlify 서버를 거쳐 Met
 ## 참조에 싣지 않은 경로
 
 {/* 확인 필요: API 참조에서 숨기는 범위 */}
-API 참조에는 API 키로 부를 수 있는 기능을 싣습니다. 로그인, 가입, 초대 수락처럼 콘솔이 내부에서 부르는 경로와 MeterEngine 운영자 전용 경로, 카드 등록 화면과 인보이스 조회 화면이 쓰는 공개 경로, 콘솔 입력란의 자동 완성처럼 화면을 돕는 경로는 싣지 않습니다. 도입사 서버에서는 이 경로들을 직접 부르지 말고 아래 표의 페이지가 안내하는 방법을 쓰세요.
+API 참조에는 API 키로 부를 수 있는 기능을 싣습니다. 로그인, 가입, 초대 수락처럼 콘솔이 내부에서 부르는 경로와 MeterEngine만 쓰는 경로, 카드 등록 화면과 인보이스 조회 화면이 쓰는 공개 경로, 콘솔 입력란의 자동 완성처럼 화면을 돕는 경로는 싣지 않습니다. 자사 서버에서는 이 경로들을 직접 부르지 말고 아래 표의 페이지가 안내하는 방법을 쓰세요.
 
 | 하려는 일 | 볼 곳 |
 | --- | --- |
-| 가입과 로그인 | [가입과 승인](/account/signup) |
+| 가입, 이메일 인증, 로그인 | [가입과 이메일 인증](/account/signup) |
 | 구성원 초대와 수락 | [구성원과 권한](/account/members) |
 | API 키 발급, 권한 변경, 폐기 | [API 키 발급과 첫 호출](/authentication/api-keys), [키 교체, 권한 변경, 폐기](/authentication/key-rotation) |
 | 토스페이먼츠 키 저장과 결제 결과 수신 주소 | [토스페이먼츠 상점 준비와 키 저장](/payments/toss-setup) |
+| 실제 환경 이용 신청 | [업무 환경](/concepts/environments) |
 | 고객의 카드 등록 | [고객 카드 등록 링크](/payments/card-registration) |
 | 고객에게 인보이스 보여 주기 | [고객에게 인보이스 보여 주기](/payments/invoice-links) |
 | 실패한 결제를 고객이 다시 결제하기 | [결제 실패와 재시도](/payments/retries) |
 
 {/* 확인 필요: 공개 인보이스 조회 API와 카드 등록 링크 권한 */}
-자체 서비스 화면에 청구 내용을 보여 주려면 도입사 서버에서 read 권한 API 키로 `GET /v1/invoices/{id}` 를 부릅니다. 자세한 내용은 [고객에게 인보이스 보여 주기](/payments/invoice-links)를 보세요.
+자사 서비스 화면에 청구 내용을 보여 주려면 자사 서버에서 read 권한 API 키로 `GET /v1/invoices/{id}` 를 부릅니다. 자세한 내용은 [고객에게 인보이스 보여 주기](/payments/invoice-links)를 보세요.
 
 ## 가이드와 참조가 다를 때
 

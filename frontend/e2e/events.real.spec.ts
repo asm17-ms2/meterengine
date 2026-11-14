@@ -2,6 +2,7 @@ import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { CONSENT_DOCUMENTS, CONSENT_VERSION } from "../src/lib/auth/consents";
 import { consoleHeaders } from "./console-environment";
+import { openLiveEnvironment } from "./real-organization";
 
 const API_URL = process.env.S1_API_URL ?? "http://127.0.0.1:38147";
 const PASSWORD = "local-events-e2e-password";
@@ -69,7 +70,7 @@ test("자유 기간과 초 단위 경계, 실제 유형과 검색, 페이지와 
       const operatorToken = (await operator.json()).token;
       if (typeof operatorToken !== "string" || !operatorToken) throw new Error("운영자 검증 세션을 받지 못했습니다.");
       secrets.add(operatorToken);
-      expect((await request.put(`${API_URL}/v1/organizations/${organization.id}/status`, { headers: { Authorization: `Bearer ${operatorToken}` }, data: { status: "active" } })).status()).toBe(200);
+      openLiveEnvironment(organization.id);
       const login = await request.post(`${API_URL}/v1/sessions`, { data: { email, password: PASSWORD } });
       expect(login.status()).toBe(201);
       const token = (await login.json()).token;

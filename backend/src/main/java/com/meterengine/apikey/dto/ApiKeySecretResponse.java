@@ -28,7 +28,8 @@ public record ApiKeySecretResponse(
     @Schema(description = "키를 폐기한 시각. 새로 발급한 키는 null") @JsonProperty("revoked_at")
         OffsetDateTime revokedAt,
     @Schema(description = "키 원문. 이 응답에서만 볼 수 있다. Authorization: Bearer 값으로 싣는다") String secret,
-    @Schema(description = "인스턴스별 분당 요청 한도. null이면 무제한이다") @JsonProperty("rate_limit_per_minute")
+    @Schema(description = "인스턴스별 분당 요청 한도. null이면 무제한이다. 테스트 환경 키는 이 값과 플랫폼 상한 가운데 작은 쪽이 적용된다")
+        @JsonProperty("rate_limit_per_minute")
         Integer rateLimitPerMinute,
     @JsonProperty("environment_id")
         @JsonInclude(JsonInclude.Include.NON_NULL)

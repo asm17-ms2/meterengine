@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { runInNewContext } from "node:vm";
 import { isServiceError, ServiceError } from "./service-error.ts";
 
-const BRAND = Symbol.for("meterengine.lumen.service-error.v1");
+const BRAND = Symbol.for("meterengine.openab.service-error.v1");
 
 test("내부 오류는 라우트 번들에서 생성자와 realm이 달라도 식별한다", () => {
   const error = new ServiceError(401, "session_required", "로그인하세요.");
@@ -12,7 +12,7 @@ test("내부 오류는 라우트 번들에서 생성자와 realm이 달라도 �
     class ServiceError extends Error {
       constructor() {
         super("새 요청으로 시작하세요.");
-        this[Symbol.for("meterengine.lumen.service-error.v1")] = true;
+        this[Symbol.for("meterengine.openab.service-error.v1")] = true;
         this.status = 409;
         this.code = "request_conflict";
         this.isRetryable = false;
@@ -36,7 +36,7 @@ test("외부 오류와 원시 JSON은 모양이 같아도 내부 오류로 인�
   assert.equal(isServiceError(external), false);
   assert.equal(isServiceError(Object.assign(new Error(external.message), external)), false);
   assert.equal(isServiceError(JSON.parse(JSON.stringify(new ServiceError(403, "invalid_origin", external.message)))), false);
-  assert.equal(isServiceError({ ...external, [Symbol("meterengine.lumen.service-error.v1")]: true }), false);
+  assert.equal(isServiceError({ ...external, [Symbol("meterengine.openab.service-error.v1")]: true }), false);
 });
 
 test("내부 표식이 있어도 허용되지 않는 오류 값은 거절한다", () => {

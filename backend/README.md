@@ -127,6 +127,28 @@ docker build -t meterengine-backend .
 - Siteverify 응답에 `action`이 있으면 가입은 `signup`, 다시 받기는 `email_verification`이어야 한다. 다르면 400 `captcha_failed`다. 시험 키의 응답에는 `action`이 없어 이 비교를 건너뛴다(Cloudflare Testing 문서). 성공 응답에 `hostname`이 없어도 `captcha_failed`다.
 - Turnstile 시험 키(사이트 키 `1x00000000000000000000AA`, 비밀 키 `1x0000000000000000000000000000000AA`)는 늘 통과하고 hostname을 `example.com`으로 준다. 로컬에서 켤 때는 `TURNSTILE_ALLOWED_HOSTNAMES=example.com`으로 둔다.
 
+### 실제 환경 이용 신청
+
+가입한 도입사는 테스트 환경만 쓴다. 실제 환경은 도입사가 낸 이용 신청을 운영자가 승인하면 열린다.
+
+| 환경변수 | 용도 | 기본값 |
+| --- | --- | --- |
+| `BUSINESS_REGISTRATION_LOOKUP_ENABLED` | true면 신청을 받을 때 국세청 사업자 상태조회(공공데이터포털)로 사업자등록번호를 확인한다. 켰는데 인증키가 비면 기동하지 않는다 | `false` |
+| `NTS_SERVICE_KEY` | 공공데이터포털에서 받은 인증키 | 없음 |
+
+- 신청(`POST /v1/organization/live-environment-applications`, `admin` 권한)은 사업자등록번호, 토스페이먼츠 상점아이디, 실결제 클라이언트 키와 시크릿 키를 받는다. 잠긴 도입사의 요청이므로 `X-MeterEngine-Environment: test`로 보낸다.
+- 검사는 사업자등록번호의 검증 숫자, 국세청 상태조회, 토스페이먼츠 키 확인 순서다. 하나라도 걸리면 신청을 남기지 않고 그 자리에서 거절한다.
+  - 등록되지 않은 번호와 폐업한 사업자는 400 `invalid_business_registration_number`다. 휴업은 받고 `business_status`를 `suspended`로 남긴다.
+  - 국세청이 4초(연결 1초, 읽기 3초) 안에 답하지 않거나 오류를 주면 신청은 받고 `business_status`를 `unchecked`로 남긴다. 조회를 끈 서버의 신청은 모두 `unchecked`다.
+  - 키가 `live_ck_`, `live_sk_`로 시작하지 않거나 토스페이먼츠가 거절하면 400 `invalid_toss_payments_credential`, 토스페이먼츠가 답하지 않으면 503 `toss_payments_unavailable`이다.
+- 검사를 통과한 키는 신청에만 둔다(시크릿 키는 암호화한다). 승인하면 도입사의 실제 환경 토스페이먼츠 키로 옮기고, 거절하면 지운다. 승인 전에는 결제와 대사에 쓰이지 않는다. 승인할 때는 토스페이먼츠에 다시 묻지 않는다.
+- 도입사마다 검토 대기 신청은 하나다. 대기 중에 다시 내면 409 `live_environment_application_in_progress`, 이미 열린 도입사는 409 `live_environment_already_open`이다. 거절된 뒤에는 다시 낼 수 있다.
+- 신청 시도는 도입사마다 30분에 10번까지다. 넘으면 429 `rate_limit_exceeded`와 초 단위 `Retry-After`를 돌려주고 국세청과 토스페이먼츠를 부르지 않는다. 검사에서 거절돼 신청이 남지 않는 시도도 센다. 검증 숫자가 틀린 번호와 위의 409는 밖을 부르지 않아 세지 않는다. 로그인, 가입과 같은 DB 표에 세어 서버끼리 공유하고, `METERENGINE_AUTH_RATE_LIMIT_ENABLED`를 끄면 같이 꺼진다.
+- 가입 승인을 받던 때에 만들어진 가입 대기 도입사는 운영자가 가입을 승인하면 가입한 도입사처럼 실제 환경이 잠긴다.
+- 운영자는 `GET /v1/live-environment-applications`로 신청과 국세청 조회 결과를 보고, `PUT /v1/live-environment-applications/{id}/status`로 승인하거나 사유를 적어 거절한다. 검토를 마친 신청을 다시 바꾸면 409 `live_environment_application_already_reviewed`다.
+- 승인한 뒤 실제 환경의 토스페이먼츠 결제 응답에서 처음 본 상점아이디(`mId`)를 신청에 남긴다. 신청한 값과 다르면 감사 기록 `live_environment_merchant_id_mismatched`를 남기고 운영자 목록에 보인다. 결제는 막지 않는다.
+- 시험과 로컬은 조회를 꺼 둔다. 국세청과 토스페이먼츠의 실제 키로 부르는 시험은 없다.
+
 ### 수집 경로 예열
 
 기동할 때 readiness를 열기 전에 자기 서버(`127.0.0.1`)의 수집 API를 불러 데운다. ALB는 readiness가 200인 서버에만 보내므로 새 서버가 받자마자 느려지지 않는다.
@@ -152,10 +174,27 @@ docker build -t meterengine-backend .
 - 로그인과 가입, 인증 메일 다시 보내기와 이메일 인증, 초대 확인과 수락, 헬스체크, 메트릭과 API 문서는 공개다. 카드 등록은 일회용 토큰, 고객 인보이스 조회는 만료와 폐기가 가능한 조회 토큰으로 인증한다. 토스 웹훅은 PG 상태 재조회로 검증한다. 나머지 도입사 요청은 세션이나 API 키가 필요하다.
 - 사용자와 API 키의 권한은 `read`(조회), `ingest`(고객 등록과 이벤트 수집), `admin`(업무 관리)이며 `admin`은 나머지를 포함한다. 로그인 사용자는 선택한 도입사의 소속 권한을 쓰고, 변경한 권한은 기존 세션의 다음 요청부터 적용된다.
 - 새 사용자와 초대의 기본 권한은 `read`다. 대표관리자는 사용자와 초대, 소속별 권한을 관리하며 관리 권한을 유지한다. 플랫폼 도입사와 사용자 관리는 별도의 `operator` 역할이 필요하다.
+- 대표관리자가 없는 도입사는 사용자와 초대를 관리할 사람이 없다. 가입은 대표관리자를 한 명 만들고 마지막 대표관리자는 낮추거나 뗄 수 없어(409 `last_owner_required`), SQL로 넣은 도입사(`R__seed.sql`의 도입사)에서만 생긴다. 운영자가 계정을 도입사에 붙이는 API는 없으므로 DB에서 고친다. 첫 쿼리로 찾고, 둘째 쿼리로 그 도입사의 구성원 한 명을 대표관리자로 올린다. 구성원이 한 명도 없는 도입사는 올릴 사람이 없다. 그 도입사를 쓰려면 가입으로 새로 만든다.
+
+  ```sql
+  SELECT o.id, o.name
+  FROM organization o
+  WHERE NOT EXISTS (
+    SELECT 1 FROM organization_member m
+    WHERE m.organization_id = o.id AND m.role = 'owner' AND m.revoked_at IS NULL)
+  ORDER BY o.name;
+
+  UPDATE organization_member
+  SET role = 'owner', scopes = ARRAY['admin']::VARCHAR[]
+  WHERE organization_id = '<도입사 id>' AND user_account_id = '<계정 id>' AND revoked_at IS NULL;
+  ```
+
 - API 키는 로그인 관리 권한으로 발급, 폐기와 스코프를 변경한다. 조회 세션은 메타데이터만 읽고 API 키 자체는 키 관리 API를 부를 수 없다. 키의 권한 변경은 같은 원문으로 다음 요청부터 반영하며, 폐기하거나 만료된 키는 변경할 수 없다. 원문, 수명, 모드와 레이트 한도는 유지한다.
 - 원문은 발급 응답에만 나오고 다시 볼 수 없다(서버는 해시만 둔다).
 - 토스페이먼츠 키 저장과 보관, 결제 모드 변경도 로그인 관리 권한으로만 한다. API 키로는 부를 수 없다.
 - 업무 환경은 `X-MeterEngine-Environment: test|live`로 지정한다. 생략하면 기존 데이터 범위다. 새 환경 키는 발급 환경에 고정되며 헤더를 생략해도 그 환경을 쓴다. 다른 환경을 명시하면 거절한다. 기존 키의 test/live 접두사는 격리를 뜻하지 않으며 기존 키로 새 환경에 접근할 수 없다.
+- 가입한 도입사는 바로 active이고 실제 환경이 잠겨 있다(`organization.live_environment_opened_at`이 NULL). 잠긴 동안 로그인 세션의 도입사 범위 요청은 `X-MeterEngine-Environment: test`일 때만 통과하고, 헤더를 생략하거나 `live`를 보내면 403 `live_environment_locked`다. API 키 요청은 이 검사를 다시 보지 않지만, 잠긴 동안에는 테스트 환경 키만 발급할 수 있다.
+- 실제 환경은 이용 신청을 운영자가 승인하면 열리고 다시 잠기지 않는다. 아래 "실제 환경 이용 신청" 참조.
 - 고객, 수집, 미터와 가격, 집계와 청구, 카드와 결제, 공급자 설정, 웹훅과 메일 기록, 업무 감사와 진단을 환경별로 분리한다. 같은 고객 외부 ID, 미터 코드, 거래 ID와 멱등키를 각 환경에서 독립적으로 사용할 수 있다. 계정과 소속, 사용자 권한은 도입사 공통이다. 소속, 초대, 권한, 세션과 계정의 감사 기록은 환경을 붙이지 않고 모든 환경의 감사 조회에 함께 보인다.
 - 테스트 환경은 테스트 PG 키만, 실제 환경은 실제 PG 키만 사용한다. 등록 링크, 결제, 취소, 콜백과 예약 작업은 기록에 저장한 환경과 PG 키 버전을 사용한다. 해당 환경의 키가 없으면 결제를 거절한다.
 - V48은 기존 원장을 독립된 legacy 범위로 보존하고 같은 환경 참조를 FK로 검사한다. 기존 자료를 test/live에 배정하거나 복사하지 않는다. 운영 DB에는 백업 후 적용하고 원장 값과 관계를 대조한다.
@@ -224,20 +263,20 @@ scripts/issue-api-key.sh        # live 키. test 키는 인자로 test를 준다
 
 ### 배포 환경의 운영 키 발급
 
-브리지, 데모 CLI, k6 키는 운영자 세션으로 발급한다. 키는 세션의 도입사에 발급되므로 운영자를 대상 도입사에 소속시키고 세션의 도입사를 바꾼 뒤 발급한다.
+브리지, 데모 CLI, k6 키는 그 키를 쓸 도입사의 계정으로 로그인해 발급한다. 전체 관리(`admin`) 권한이 있는 계정이어야 한다. 운영자 계정은 도입사에 소속될 수 없어 도입사의 키를 발급하지 못한다.
 
 ```bash
 BASE=https://<호스트>
-OPERATOR_EMAIL=<운영자 이메일>
+EMAIL=<도입사 계정 이메일>
 
-# 1. 운영자로 로그인한다. 비밀번호는 화면에 보이지 않게 받고, 응답의 token을 세션 토큰으로 둔다
-read -rsp '운영자 비밀번호: ' OPERATOR_PASSWORD && echo
-SESSION=$(printf '%s' "$OPERATOR_PASSWORD" \
-  | jq -n --arg email "$OPERATOR_EMAIL" --rawfile password /dev/stdin \
+# 1. 로그인한다. 비밀번호는 화면에 보이지 않게 받고, 응답의 token을 세션 토큰으로 둔다
+read -rsp '비밀번호: ' PASSWORD && echo
+SESSION=$(printf '%s' "$PASSWORD" \
+  | jq -n --arg email "$EMAIL" --rawfile password /dev/stdin \
       '{email: $email, password: $password}' \
   | curl -s $BASE/v1/sessions -H 'Content-Type: application/json' --data @- \
   | jq -r .token)
-unset OPERATOR_PASSWORD
+unset PASSWORD
 
 # 세션 토큰을 명령 인자 대신 헤더 파일로 싣는다
 api() {
@@ -245,26 +284,21 @@ api() {
     -H 'Content-Type: application/json' "$@"
 }
 
-# 2. 운영자 id(user_account.id)와 대상 도입사 id를 확인한다
+# 2. 세션의 도입사를 확인한다. 소속이 여럿이면 대상 도입사로 바꾼다
 api $BASE/v1/sessions/current
-api "$BASE/v1/organizations?status=active"
-
-# 3. 운영자를 대상 도입사에 소속시키고 세션의 도입사를 바꾼다
-api $BASE/v1/organizations/<도입사 id>/members -d '{"user_account_id":"<운영자 id>","scopes":["admin"]}'
 api -X PUT $BASE/v1/sessions/current/organization -d '{"organization_id":"<도입사 id>"}'
 
-# 4. 키를 발급한다. 응답의 secret이 원문이다
+# 3. 키를 발급한다. 응답의 secret이 원문이다
 api $BASE/v1/api-keys -d '{"label":"<용도>","mode":"live","scopes":["ingest","read"]}'
 
-# 5. 로그아웃한다
+# 4. 로그아웃한다
 api -X DELETE $BASE/v1/sessions/current
 unset SESSION
 ```
 
-- jq 1.6 이상이 필요하다. zsh에서는 1의 `read`를 `read -rs '?운영자 비밀번호: ' OPERATOR_PASSWORD`로 바꾼다.
+- jq 1.6 이상이 필요하다. zsh에서는 1의 `read`를 `read -rs '?비밀번호: ' PASSWORD`로 바꾼다.
 - `SESSION`이 `null`이면 로그인에 실패한 것이다.
-- 이미 소속된 도입사면 3의 첫 요청이 409 `organization_member_already_exists`다. 전환만 한다.
-- 소속은 남는다. 다음 로그인 때 세션의 도입사는 소속된 활성 도입사 가운데 가장 먼저 소속된 곳이다.
+- 실제 환경이 잠긴 도입사는 3이 403 `live_environment_locked`다. 테스트 환경 키는 3에 `-H 'X-MeterEngine-Environment: test'`를 붙이고 `mode`를 `test`로 보내 발급한다. 테스트 환경 키에는 분당 요청 상한이 걸린다("요금과 결제 연동").
 
 ### operator가 하나도 남지 않았을 때
 
@@ -297,9 +331,9 @@ unset SESSION
 - `errors`는 400에만 실리고 비면 나가지 않는다. `field`는 도입사가 보낸 이름이다.
 - 인증, 권한, 한도 오류도 같은 형식이다.
   - 401 `authentication_required`: Authorization 헤더가 없다. `invalid_credentials`: 키나 토큰의 형식이 틀렸거나, 모르는 값이거나, 폐기 또는 만료됐다. 로그인 실패도 같다. 401에는 `WWW-Authenticate: Bearer`가 붙는다.
-  - 403 `permission_denied`: 키의 스코프나 계정의 역할 밖이거나, 도입사가 없는 세션의 도입사 범위 요청이거나, 소속이 아닌 도입사로 전환하려 했다. `organization_not_active`: 도입사가 pending, rejected, suspended다. `email_not_verified`: 이메일 인증을 켰는데 로그인한 계정이 아직 인증하지 않았다. 비밀번호가 맞을 때만 준다. `consent_required`: 로그인 세션의 사용자가 필수 안내에 동의하지 않았다. 동의 전에는 `GET /v1/sessions/current`, `DELETE /v1/sessions/current`, `POST /v1/sessions/current/consents`만 된다. 관리자나 운영자가 만든 계정은 이 동의 요청에 `new_password`를 실어 처음 받은 비밀번호를 바꾸고, 그때 다른 세션은 끝난다.
+  - 403 `permission_denied`: 키의 스코프나 계정의 역할 밖이거나, 도입사가 없는 세션의 도입사 범위 요청이거나, 소속이 아닌 도입사로 전환하려 했다. `organization_not_active`: 도입사가 pending, rejected, suspended다. `live_environment_locked`: 실제 환경이 잠긴 도입사의 세션 요청이 `X-MeterEngine-Environment: test`가 아니다. `email_not_verified`: 이메일 인증을 켰는데 로그인한 계정이 아직 인증하지 않았다. 비밀번호가 맞을 때만 준다. `consent_required`: 로그인 세션의 사용자가 필수 안내에 동의하지 않았다. 동의 전에는 `GET /v1/sessions/current`, `DELETE /v1/sessions/current`, `POST /v1/sessions/current/consents`만 된다. 관리자나 운영자가 만든 계정은 이 동의 요청에 `new_password`를 실어 처음 받은 비밀번호를 바꾸고, 그때 다른 세션은 끝난다.
   - 429 `rate_limit_exceeded`: API 키의 분당 요청 한도를 넘었다. `Retry-After` 헤더의 초만큼 기다린 뒤 다시 보낸다.
-- 한도는 키마다 인스턴스별로 센다. 발급 시 `rate_limit_per_minute`를 양수로 지정하고, 생략하거나 null이면 무제한이다. 로그인 세션은 세지 않는다.
+- 한도는 키마다 인스턴스별로 센다. 발급 시 `rate_limit_per_minute`를 양수로 지정하고, 생략하거나 null이면 무제한이다. 테스트 환경 키는 이 값과 플랫폼 상한(`API_KEY_TEST_RATE_LIMIT_PER_MINUTE`, 기본 300) 가운데 작은 쪽을 쓴다. 로그인 세션은 세지 않는다.
 - code 값의 정본은 `ErrorCode` enum이고 목록은 `openapi.yaml`이 낸다.
 - 오류를 더하거나 고칠 때 따르는 규칙은 `docs/contributing/error-handling.md`에 있다.
 
@@ -319,9 +353,10 @@ unset SESSION
 | `webhook`, `notification` | 서명된 아웃박스 통보, 발송 이력과 제외 사용량 정기 통보 | `/v1/webhook-endpoints`, `/v1/unbilled-events` |
 | `dashboard` | 도입사 과금과 수납, 전체 월의 미해결 결제, 운영자 상태 조회 | `/v1/dashboard`, `/v1/operations` |
 | `mail` | 보낼 메일 기록과 메일 발송 포트(`EmailSender`, 로그와 SES 구현). 남긴 메일의 본문과 받는 주소는 고치지 않는다 | 없음 |
-| `organization` | 현재 도입사 조회, 도입사 목록과 상태 변경(승인, 거절, 정지, 재개), 소속 추가 | `/v1/organization`, `/v1/organizations` |
+| `organization` | 현재 도입사 조회, 도입사 목록과 상태 변경(정지, 재개), 실제 환경 잠금 | `/v1/organization`, `/v1/organizations` |
+| `liveenvironment` | 실제 환경 이용 신청과 운영자 검토, 국세청 사업자 상태조회 포트(`BusinessRegistrationLookup`, 실제 호출과 조회하지 않는 구현), 승인 뒤 상점아이디 확인 | `/v1/organization/live-environment-applications`, `/v1/live-environment-applications` |
 | `apikey` | API 키 발급, 폐기, 교체와 키 검증 | `/v1/api-keys` |
-| `account` | 로그인 세션과 도입사 전환, 가입 신청과 동의, 가입 이메일 인증과 캡차, 사용자 목록과 역할 변경, 기동 시 부트스트랩 | `/v1/sessions`, `/v1/signups`, `/v1/email-verifications`, `/v1/email-verification-confirmations`, `/v1/user-accounts` |
+| `account` | 로그인 세션과 도입사 전환, 가입과 동의, 가입 이메일 인증과 캡차, 사용자 목록과 역할 변경, 기동 시 부트스트랩 | `/v1/sessions`, `/v1/signups`, `/v1/email-verifications`, `/v1/email-verification-confirmations`, `/v1/user-accounts` |
 | `audit` | 핵심 동작과 `/v1` 요청의 감사 기록, 도입사와 운영자의 감사 기록 조회. 이벤트 수집 요청은 제외하며 남긴 행은 고치지 않는다. 단가 행(`price_rate`)의 target_id는 단가 버전 id이고 미터 code는 detail의 `billable_metric_code`에 있다. 버전 단가 전에 남은 행은 target_id가 미터 code다 | `/v1/audit-logs`, `/v1/operations/audit-logs` |
 | `global.security` | 인증 필터, 접근 어노테이션, `@CurrentOrganizationId`, 레이트리밋, 요청 로그 | 없음 |
 | `scheduling` | 예약 작업 실행 기록과 실행기. 예약 작업은 `@Scheduled(cron = ..., zone = "Asia/Seoul")` 메서드에서 `ScheduledJobRunService.run(작업 이름, 슬롯 시각(지금을 분 단위로 자른 값처럼 인스턴스마다 같은 값), 작업)`을 불러, 인스턴스가 여럿이어도 같은 슬롯을 한 번만 돌린다 | 없음 |
@@ -362,6 +397,23 @@ unset SESSION
 - V53은 확정 라인에 그때의 미터 이름(`billable_metric_name`)을 남긴다. 미터 이름을 바꿔도 확정한 인보이스와 고객용 공개 청구서의 항목명은 그대로다. V53 전에 확정한 라인은 이름이 비어 있어 공개 청구서가 미터 코드로 보인다.
 - V54는 인보이스에 확정이 읽은 이벤트의 받은 시각 상한(`cutoff_at`)을 남긴다. V54 전에 확정한 인보이스는 그때 확정이 읽은 범위로 채운다. 2026-10-30 15:09:28 KST 운영 배포 전 확정은 확정 시각, 그 뒤 확정은 확정 시각과 그 달 마감 중 이른 쪽이다. 그 배포 구간에 지난 달을 확정했고 마감 뒤 받은 이벤트가 있는 행이 있으면 V54가 멈춘다.
 - V56은 `user_account.email_verified_at`을 더하고 이미 있던 계정을 만든 시각에 인증한 것으로 채운다. 이 열의 DB 기본값은 `now()`라 SQL로 넣는 계정은 인증된 것으로 들어간다. 앱은 인증을 켰을 때의 가입만 NULL로 넣는다.
+- V57은 `organization.live_environment_opened_at`을 더한다. 이미 active이거나 suspended인 도입사는 실제 환경이 열린 것으로 채우고, pending이던 도입사는 active로 바꾸되 실제 환경을 잠근다. rejected는 상태를 그대로 둔다. 이 열의 DB 기본값은 `now()`라 SQL로 넣는 도입사는 열린 것으로 들어간다. 앱은 가입만 NULL로 넣는다.
+  - V57을 처음 싣는 배포를 시작할 때 pending 도입사가 있으면, 롤링이 끝나기 전 옛 서버가 그 도입사에 실제 환경 키를 발급할 수 있다. API 키 인증은 잠금을 보지 않아 그 키는 배포 뒤에도 통한다. 배포 직전에 첫 쿼리로 pending 도입사 수를 보고, 0이 아니었으면 배포가 끝난 뒤 둘째 쿼리에 나온 키를 폐기한다.
+
+    ```sql
+    SELECT count(*) AS pending_organizations FROM organization WHERE status = 'pending';
+
+    SELECT k.id AS api_key_id, k.organization_id, k.created_at
+    FROM api_key k
+    JOIN organization o ON o.id = k.organization_id
+    WHERE o.live_environment_opened_at IS NULL
+      AND k.mode = 'live'
+      AND k.revoked_at IS NULL
+    ORDER BY k.created_at;
+    ```
+
+- V58은 실제 환경 이용 신청(`live_environment_application`)을 만든다. 도입사마다 검토 대기(`pending`) 신청은 하나만 둔다.
+- V59는 `auth_request_rate_limit`의 범위에 실제 환경 이용 신청(`live_environment_application`)을 더한다.
 - V45는 도입사마다 test, live 업무 환경을 만들고 기존 키, 고객, 이벤트와 감사 기록은 환경 없는 기존 데이터 범위로 둔다. 고객 `external_id` 고유 인덱스와 이벤트 기본키를 환경 범위로 바꾼다.
 
 ## 요금과 결제 연동
@@ -371,7 +423,7 @@ unset SESSION
 - 확정 라인은 `line_type`, `tier_index`로 구간, 기본료와 최소 과금 조정 근거를 보존한다. 단가 이력 마이그레이션 뒤에는 구형 PK와 시드로 되돌리지 않고 후속 마이그레이션으로 복구한다.
 - 고객과 미터 등록의 `Idempotency-Key`는 1~255자 문자열이다. 같은 키의 같은 본문은 최초 응답을 상태 코드까지 다시 돌려주고 `Idempotency-Replayed: true`를 붙이며, 다른 본문은 409 `idempotency_conflict`다. 최초 응답(고객은 이름과 billing_email 포함)을 `idempotent_request`에 기한 없이 보관하고 지우는 작업은 없다.
 - 고객 `external_id`는 도입사의 업무 환경 범위(기존 데이터, test, live) 안에서 고유하다. 같은 범위에서 같은 ID를 다시 등록하면 기존 고객과 200을 반환한다. 배치는 `POST /v1/event-batches`로 최대 100건을 받고 원소별 저장, 중복, 거절을 응답한다.
-- 키 발급 시 `rate_limit_per_minute`를 양수로 지정하거나 null로 비워 무제한으로 둘 수 있다. 유한 한도는 인스턴스별로 적용하고 초과 시 429와 `Retry-After`를 반환한다.
+- 키 발급 시 `rate_limit_per_minute`를 양수로 지정하거나 null로 비워 무제한으로 둘 수 있다. 유한 한도는 인스턴스별로 적용하고 초과 시 429와 `Retry-After`를 반환한다. 테스트 환경 키는 넣은 값과 플랫폼 상한(`API_KEY_TEST_RATE_LIMIT_PER_MINUTE`, 기본 분당 300) 가운데 작은 쪽을 쓰고, 비워도 상한이 걸린다. 서버마다 따로 세므로 서버가 N대면 키 하나가 분당 N배까지 지나간다. 환경 없는 옛 키는 접두사가 test여도 상한을 받지 않는다.
 - `read` 키로 고객, 요금, 사용량, 인보이스와 결제 상태, 마스킹된 결제 설정, 통보 내역과 대시보드를 조회할 수 있다. 키 발급과 폐기, 키와 사용자 목록, 감사 기록 조회, 전체 운영 조회는 로그인 세션 전용이고 역할을 따른다.
 - 인보이스 조회 링크는 `admin` 권한으로 발급과 폐기하고 `read`로 목록을 조회한다. 기본 30일, 최대 90일이며 원문 토큰은 발급 때만 나온다. 고객에게 `/invoice-links#<token>`을 전달하고 공개 조회 API에는 본문으로 보낸다. 링크를 가진 사람이 조회할 수 있다.
 - `allow_payment_retry=true`로 발급하면 링크를 가진 사람이 등록 카드로 실패 결제를 다시 시도할 수 있다. 자동 재시도의 24시간 간격은 기다리지 않지만 실패 코드, 카드 갱신과 시도 상한은 공유한다. 최초 청구, 진행 중, 승인과 취소된 결제는 대상이 아니다. API 키로 이런 링크를 발급하면 키의 모드가 지금 결제 모드와 같아야 하고, 다르면 409 `payment_mode_mismatch`다.
@@ -406,7 +458,8 @@ unset SESSION
 | 로컬 키로 보낸 요청이 401 `invalid_credentials`다 | `local` 프로파일 없이 띄워 로컬 키가 DB에 없다 | `./gradlew bootRun`으로 띄우거나 IDE 실행 설정에 `local` 프로파일을 지정한다 |
 | 기동이 Flyway 검증에서 `not resolved locally`로 실패한다 | `local` 프로파일로 마이그레이션한 DB를 프로파일 없이 띄웠다 | `local` 프로파일을 지정한다 |
 | 발급한 키나 세션이 401 `invalid_credentials`다 | 키를 폐기했거나, 교체 유예가 지났거나, 세션이 만료됐거나 로그아웃했다 | 새 키를 발급하거나 다시 로그인한다 |
-| 요청이 403 `organization_not_active`다 | 키나 세션의 도입사가 승인 전, 거절, 정지 상태다 | 승인 전이나 정지면 operator가 active로 바꾼다 (`PUT /v1/organizations/{id}/status`). 거절한 도입사는 되돌릴 수 없다 |
+| 요청이 403 `organization_not_active`다 | 키나 세션의 도입사가 정지나 거절 상태이거나, 가입 승인을 받던 때의 승인 전 상태다 | 정지나 승인 전이면 operator가 active로 바꾼다 (`PUT /v1/organizations/{id}/status`). 거절한 도입사는 되돌릴 수 없다 |
+| 세션 요청이 403 `live_environment_locked`다 | 실제 환경이 잠긴 도입사인데 환경 헤더를 생략했거나 `live`를 보냈다 | `X-MeterEngine-Environment: test`를 싣는다. 실제 환경은 이용 신청을 operator가 승인하면 열린다 |
 | 기동이 `OPERATOR_`나 `FRONTEND_`로 시작하는 오류로 실패한다 | 부트스트랩 환경변수가 규칙에 어긋난다 | 위 "부트스트랩"의 규칙대로 값을 고친다 |
 
 ```bash

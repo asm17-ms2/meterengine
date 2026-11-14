@@ -8,8 +8,8 @@ const DELIVERY_ID = "44444444-4444-4444-8444-444444444444";
 const ZERO_CUSTOMER_ID = "12121212-1212-4212-8212-121212121212";
 const VIEW_LINK_ID = "18181818-1818-4818-8818-181818181818";
 const NOW = "2026-10-26T12:00:00+09:00";
-const organization = { id: "55555555-5555-4555-8555-555555555555", name: "워크스페이스 계약 테스트", status: "active" };
-const otherOrganization = { id: "88888888-8888-4888-8888-888888888888", name: "전환된 도입사 B", status: "active" };
+const organization = { id: "55555555-5555-4555-8555-555555555555", name: "워크스페이스 계약 테스트", status: "active", live_environment_opened_at: "2026-01-01T00:00:00Z" };
+const otherOrganization = { id: "88888888-8888-4888-8888-888888888888", name: "전환된 도입사 B", status: "active", live_environment_opened_at: "2026-01-01T00:00:00Z" };
 const session = {
   user_account: { id: "66666666-6666-4666-8666-666666666666", email: "workspace@contract.local", name: "계약 테스트 사용자", role: "member" },
   organization,

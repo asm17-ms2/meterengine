@@ -1,16 +1,16 @@
 ---
 title: "고객 등록과 ID 대응"
-description: "고객을 등록하고 도입사 시스템의 ID와 MeterEngine 고객 id를 대응시키는 방법을 설명합니다."
+description: "고객을 등록하고 자사 시스템의 ID와 MeterEngine 고객 id를 대응시키는 방법을 설명합니다."
 ---
 
-사용량 이벤트는 고객에게 붙습니다. 이벤트를 보내기 전에 청구할 고객을 MeterEngine에 등록하고, 등록 응답으로 받은 고객 id를 도입사 시스템에 저장해 둡니다.
+사용량 이벤트는 고객에게 붙습니다. 이벤트를 보내기 전에 청구할 고객을 MeterEngine에 등록하고, 등록 응답으로 받은 고객 id를 자사 시스템에 저장해 둡니다.
 
 이벤트의 `customer_id`에는 외부 고객 ID가 아니라 MeterEngine이 만든 고객 id(UUID)를 넣습니다. 외부 고객 ID(`external_id`)는 고객을 다시 찾고 같은 고객이 두 번 등록되지 않게 막는 값입니다.
 
 | 값 | 누가 정하나 | 쓰는 곳 |
 | --- | --- | --- |
 | `id` (UUID) | MeterEngine이 등록할 때 만듭니다 | 이벤트의 `customer_id`, 고객 조회와 수정, 결제 |
-| `external_id` | 도입사가 정합니다(도입사 시스템의 회원 번호 등) | 등록 중복 방지, 고객 다시 찾기 |
+| `external_id` | 직접 정합니다(자사 시스템의 회원 번호 등) | 등록 중복 방지, 고객 다시 찾기 |
 
 <Note>콘솔 '고객' 화면에는 '외부 고객 ID로 사용량을 연결'이라고 쓰여 있지만, 외부 고객 ID는 고객을 찾는 값이고 이벤트를 고객에 연결하는 값은 고객 id입니다.</Note>
 
@@ -31,7 +31,7 @@ description: "고객을 등록하고 도입사 시스템의 ID와 MeterEngine �
 연동을 시험할 때는 테스트 환경에서 발급한 키(`me_test_`로 시작)를 씁니다. 고객은 업무 환경마다 따로 등록되므로 테스트 환경에 등록한 고객은 실제 환경에 없습니다. 실제 환경으로 넘어갈 때 고객을 다시 등록합니다. 자세한 내용은 [업무 환경](/concepts/environments)을 보세요.
 </Step>
 <Step title="external_id를 넣어 등록한다">
-도입사 시스템에서 그 고객을 가리키는 고유한 값을 `external_id`에 넣어 보냅니다.
+자사 시스템에서 그 고객을 가리키는 고유한 값을 `external_id`에 넣어 보냅니다.
 
 <CodeGroup>
 ```bash curl
@@ -78,7 +78,7 @@ const customer = await response.json();
 }
 ```
 
-`id`를 도입사 시스템에 `external_id`와 함께 저장합니다. 이 값이 이벤트의 `customer_id`가 됩니다.
+`id`를 자사 시스템에 `external_id`와 함께 저장합니다. 이 값이 이벤트의 `customer_id`가 됩니다.
 </Step>
 <Step title="이벤트에 id를 쓴다">
 저장한 `id`를 `customer_id`에 넣어 이벤트를 보냅니다. 방법은 [사용량 이벤트 보내기](/integration/events)를 보세요.
@@ -95,7 +95,7 @@ const customer = await response.json();
 | `external_id` | 아니오 | 1자에서 255자. 업무 환경 안에서 고유합니다 |
 | `billing_email` | 아니오 | 이메일 형식(`@` 뒤 도메인에 점이 있어야 합니다), 254자까지. 없으면 빼거나 `null`로 보냅니다 |
 
-`billing_email`은 저장만 됩니다. MeterEngine은 메일을 보내지 않으니 청구 안내는 도입사가 직접 전달합니다. [소개](/index)를 보세요.
+`billing_email`은 저장만 됩니다. MeterEngine은 이 주소로 메일을 보내지 않으니 청구 안내는 직접 전달합니다. [소개](/index)를 보세요.
 
 ### 응답
 

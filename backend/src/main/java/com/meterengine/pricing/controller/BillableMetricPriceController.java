@@ -30,7 +30,7 @@ public class BillableMetricPriceController {
   @ReadAccess
   @Operation(
       summary = "미터별 가격 목록 조회",
-      description = "지정 월에 유효한 조합별 최신 단가를 돌려준다. 월은 기본 이번 달이며 customer_id가 없으면 도입사 공통 단가만 조회한다.")
+      description = "지정 월에 유효한 조합별 최신 단가를 돌려준다. 월은 기본 이번 달이며 customer_id가 없으면 조직 공통 단가만 조회한다.")
   @ApiResponses({
     @ApiResponse(
         responseCode = "200",

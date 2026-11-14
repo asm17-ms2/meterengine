@@ -25,7 +25,7 @@ public class OrganizationEnvironmentController {
 
   @GetMapping
   @ReadAccess
-  @Operation(summary = "도입사의 테스트와 실제 환경 조회", description = "기존 미분류 데이터는 두 환경에 복사하거나 귀속시키지 않는다.")
+  @Operation(summary = "조직의 테스트와 실제 환경 조회", description = "기존 미분류 데이터는 두 환경에 복사하거나 귀속시키지 않는다.")
   public ListOrganizationEnvironmentsResponse listOrganizationEnvironments(
       @CurrentOrganizationId UUID organizationId) {
     return new ListOrganizationEnvironmentsResponse(

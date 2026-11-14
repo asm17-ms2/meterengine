@@ -22,7 +22,7 @@ function countsText(counts: unknown): string {
 
 function readinessText(body: Record<string, unknown>): string {
   if (body.organization_error !== undefined && body.organization_error !== null && body.organization_error !== "") {
-    return `전송 중단 (도입사 확인 실패: ${String(body.organization_error)}). API 키와 도입사 상태, 전송 대상 서버 연결을 확인하세요`;
+    return `전송 중단 (조직 확인 실패: ${String(body.organization_error)}). API 키와 조직 상태, 전송 대상 서버 연결을 확인하세요`;
   }
   if (body.status !== "ok" || body.ready === false || body.forwarding === false || body.error) {
     return `전송 준비 안 됨 (상태: ${typeof body.status === "string" ? body.status : "알 수 없음"}). 브리지 상태와 설정을 확인하세요`;
@@ -36,9 +36,9 @@ function readinessText(body: Record<string, unknown>): string {
     typeof body.organization.name !== "string" || body.organization.name.trim() === "" ||
     body.organization_error !== null
   ) {
-    return "전송 준비 미확인 (도입사 확인 전). 브리지에 이벤트가 들어온 뒤 상태를 다시 확인하세요";
+    return "전송 준비 미확인 (조직 확인 전). 브리지에 이벤트가 들어온 뒤 상태를 다시 확인하세요";
   }
-  return `전송 준비됨, 도입사 ${body.organization.name}`;
+  return `전송 준비됨, 조직 ${body.organization.name}`;
 }
 
 export function describeBridgeHealth(result: BridgeResult): string {

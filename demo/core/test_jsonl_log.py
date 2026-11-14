@@ -192,7 +192,7 @@ class RunHeaderSecretTest(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.path = os.path.join(self.tmp.name, "send-test.jsonl")
 
-    def test_머리말에는_도입사_id가_남고_키는_남지_않는다(self):
+    def test_머리말에는_조직_id가_남고_키는_남지_않는다(self):
         with JsonlLogWriter(self.path) as writer:
             writer.write_run_header(
                 started_at_text="2026-08-14T10:00:00+09:00",

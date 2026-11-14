@@ -50,5 +50,5 @@ async function checkLinks(directory) {
   }
 }
 await checkLinks(output);
-await writeFile(path.join(output, "bundle.json"), JSON.stringify({ application: "lumen-llm-service", node: ">=24.22.1", links, prunedUntracedLinks, excludedLocalFiles: excluded.length, configuration: "external JSON environment file", database: "external LUMEN_DATABASE_PATH", entrypoint: "start.mjs" }, null, 2) + "\n");
+await writeFile(path.join(output, "bundle.json"), JSON.stringify({ application: "openab-llm-service", node: ">=24.22.1", links, prunedUntracedLinks, excludedLocalFiles: excluded.length, configuration: "external JSON environment file", database: "external OPENAB_DATABASE_PATH", entrypoint: "start.mjs" }, null, 2) + "\n");
 console.log(JSON.stringify({ output, portableLinksChecked: links, prunedUntracedLinks, excludedLocalFiles: excluded, entrypoint: "start.mjs" }));

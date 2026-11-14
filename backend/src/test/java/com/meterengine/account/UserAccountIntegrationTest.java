@@ -89,14 +89,9 @@ class UserAccountIntegrationTest {
   }
 
   @Test
-  void 역할을_바꾸면_200과_바뀐_사용자를_돌려주고_새_로그인에서_operator_권한을_갖는다() {
-    UUID organizationId = insertOrganization("역할 도입사", "active");
+  void 소속이_없는_사용자의_역할을_바꾸면_200과_바뀐_사용자를_돌려주고_새_로그인에서_operator_권한을_갖는다() {
     UUID userAccountId =
         insertUserAccount("promote@example.com", "승격 사용자", "member", "2100-01-01T00:00:00Z");
-    insertMember(organizationId, userAccountId, "2026-01-01T00:00:00Z");
-    String before = login("promote@example.com");
-    assertThat(mvc.get().uri("/v1/organizations").header(AUTHORIZATION, before).exchange())
-        .hasStatus(403);
 
     MvcTestResult result = updateRole(operator, userAccountId, "operator");
 
@@ -104,9 +99,7 @@ class UserAccountIntegrationTest {
     String body = body(result);
     assertThat((String) JsonPath.read(body, "$.id")).isEqualTo(userAccountId.toString());
     assertThat((String) JsonPath.read(body, "$.role")).isEqualTo("operator");
-    assertThat((List<Map<String, Object>>) JsonPath.read(body, "$.organizations"))
-        .containsExactly(
-            Map.of("id", organizationId.toString(), "name", "역할 도입사", "status", "active"));
+    assertThat((List<Map<String, Object>>) JsonPath.read(body, "$.organizations")).isEmpty();
     entityManager.flush();
     assertThat(
             jdbcTemplate.queryForObject(
@@ -117,6 +110,38 @@ class UserAccountIntegrationTest {
     assertThat(mvc.get().uri("/v1/organizations").header(AUTHORIZATION, after).exchange())
         .hasStatusOk();
     assertThat(mvc.get().uri(USER_ACCOUNTS).header(AUTHORIZATION, after).exchange()).hasStatusOk();
+  }
+
+  @Test
+  void 조직에_소속된_사용자를_operator로_바꾸면_409_operator_membership_conflict이고_역할은_그대로다() {
+    UUID organizationId = insertOrganization("역할 도입사", "active");
+    UUID userAccountId =
+        insertUserAccount("member-promote@example.com", "소속 사용자", "member", "2100-01-01T00:00:00Z");
+    insertMember(organizationId, userAccountId, "2026-01-01T00:00:00Z");
+
+    assertThat(updateRole(operator, userAccountId, "operator"))
+        .hasStatus(409)
+        .bodyJson()
+        .extractingPath("$.code")
+        .isEqualTo(ErrorCode.OPERATOR_MEMBERSHIP_CONFLICT.getCode());
+    entityManager.flush();
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT role FROM user_account WHERE id = ?", String.class, userAccountId))
+        .isEqualTo("member");
+  }
+
+  @Test
+  void 소속을_내보낸_사용자는_operator로_바꿀_수_있다() {
+    UUID organizationId = insertOrganization("내보낸 도입사", "active");
+    UUID userAccountId =
+        insertUserAccount("left-promote@example.com", "나간 사용자", "member", "2100-01-01T00:00:00Z");
+    insertMember(organizationId, userAccountId, "2026-01-01T00:00:00Z");
+    jdbcTemplate.update(
+        "UPDATE organization_member SET revoked_at = now() WHERE user_account_id = ?",
+        userAccountId);
+
+    assertThat(updateRole(operator, userAccountId, "operator")).hasStatusOk();
   }
 
   @Test

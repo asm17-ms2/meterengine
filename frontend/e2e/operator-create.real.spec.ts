@@ -2,6 +2,7 @@ import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { CONSENT_DOCUMENTS, CONSENT_VERSION } from "../src/lib/auth/consents";
 import { consoleHeaders } from "./console-environment";
+import { openLiveEnvironment } from "./real-organization";
 
 const API_URL = process.env.S1_API_URL ?? "http://127.0.0.1:38147";
 const FRONTEND_URL = "http://localhost:33147";
@@ -99,7 +100,7 @@ test("운영자 신규 생성과 첫 동의, 중복 보호와 생성자 감사�
       await dialog.getByLabel(/^이메일/).fill(createdEmail);
       await dialog.getByLabel(/^초기 비밀번호/).fill(DUPLICATE_PASSWORD);
       await dialog.getByRole("button", { name: "운영자 계정 생성", exact: true }).click();
-      await expect(dialog).toContainText("이미 가입한 이메일이에요. 그 계정은 사용자 목록에서 플랫폼 운영자로 바꾸세요.");
+      await expect(dialog).toContainText("이미 가입한 이메일이에요. 소속 조직이 없는 계정이면 사용자 목록에서 플랫폼 운영자로 바꾸세요.");
       await expect(dialog.getByLabel(/^이름/)).toHaveValue("덮어쓰면 안 되는 이름");
       await expect(dialog.getByLabel(/^이메일/)).toHaveValue(createdEmail);
       await expect(dialog.getByLabel(/^이메일/)).toBeFocused();
@@ -150,7 +151,7 @@ test("운영자 신규 생성과 첫 동의, 중복 보호와 생성자 감사�
       } });
       expect(signup.status()).toBe(201);
       const organizationId = (await signup.json()).organization.id;
-      expect((await request.put(`${API_URL}/v1/organizations/${organizationId}/status`, { headers: operatorHeaders, data: { status: "active" } })).status()).toBe(200);
+      openLiveEnvironment(organizationId);
       const tenant = await request.post(`${API_URL}/v1/sessions`, { data: { email: tenantEmail, password: TENANT_PASSWORD } });
       expect(tenant.status()).toBe(201);
       const session = await tenant.json();

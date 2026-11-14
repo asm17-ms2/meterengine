@@ -124,7 +124,7 @@ class ApiKeySourceTest(unittest.TestCase):
         self.assertIsNone(source.organization_id)
         self.assertEqual(len(source.stored), 1)
 
-    def test_새_머리말의_도입사_id를_들고_온다(self):
+    def test_새_머리말의_조직_id를_들고_온다(self):
         with JsonlLogWriter(self.path) as writer:
             _header(writer)
             _send(writer, 1)
@@ -201,19 +201,19 @@ class RunVerifyAuthTest(unittest.TestCase):
             self.run_verify()
         self.assertIn("invalid_credentials", str(caught.exception))
 
-    def test_기록과_키의_도입사가_다르면_알린다(self):
+    def test_기록과_키의_조직이_다르면_알린다(self):
         FakeVerifyClient.organization_reply = _result(
-            {"id": "69cb6c64-14ed-49a0-a397-5f90b468f510", "name": "로컬 두 번째 도입사"}
+            {"id": "69cb6c64-14ed-49a0-a397-5f90b468f510", "name": "로컬 두 번째 조직"}
         )
         code, out, err = self.run_verify()
         self.assertIn("69cb6c64-14ed-49a0-a397-5f90b468f510", out + err)
         self.assertIn(ORGANIZATION_ID, out + err)
         self.assertNotIn(KEY, out + err)
 
-    def test_같은_도입사면_알리지_않는다(self):
-        FakeVerifyClient.organization_reply = _result({"id": ORGANIZATION_ID, "name": "데모 도입사"})
+    def test_같은_조직이면_알리지_않는다(self):
+        FakeVerifyClient.organization_reply = _result({"id": ORGANIZATION_ID, "name": "데모 조직"})
         code, out, err = self.run_verify()
-        self.assertNotIn("다른 도입사", out + err)
+        self.assertNotIn("다른 조직", out + err)
 
 
 

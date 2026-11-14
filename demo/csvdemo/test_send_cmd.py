@@ -15,7 +15,7 @@ from csvdemo import send_cmd
 from csvdemo.render import Console, format_gate
 
 KEY = "me_live_QouOFuCiJyAbC0VGK1ltUCkG4IZM2LtA"
-ORGANIZATION = Organization(id="d7cee55d-8c82-4afc-b996-6749d8b26a4e", name="데모 도입사")
+ORGANIZATION = Organization(id="d7cee55d-8c82-4afc-b996-6749d8b26a4e", name="데모 조직")
 
 
 class LogsDirTest(unittest.TestCase):
@@ -117,7 +117,7 @@ class SendLoopTest(unittest.TestCase):
         self.assertEqual(len(client.posted), 3)
         self.assertEqual(code, 0)
 
-    def test_기록_머리말에_도입사_id가_남고_키는_어디에도_없다(self):
+    def test_기록_머리말에_조직_id가_남고_키는_어디에도_없다(self):
         client = FakeClient([(200, {"duplicate": False})] * 3)
         code, out, err = self.run_send(client)
         text = self.log_text()
@@ -126,21 +126,21 @@ class SendLoopTest(unittest.TestCase):
         self.assertNotIn(KEY, text)
         self.assertNotIn(KEY, out + err)
 
-    def test_확인_게이트에_가린_키와_도입사가_나온다(self):
+    def test_확인_게이트에_가린_키와_조직이_나온다(self):
         client = FakeClient([(200, {"duplicate": False})] * 3)
         code, out, err = self.run_send(client)
         self.assertIn("me_live_****2LtA", out)
-        self.assertIn("데모 도입사", out)
+        self.assertIn("데모 조직", out)
         self.assertIn(ORGANIZATION.id, out)
 
 
 class FormatGateTest(unittest.TestCase):
-    def test_도입사_줄은_가린_키와_이름과_id다(self):
+    def test_조직_줄은_가린_키와_이름과_id다(self):
         lines = format_gate("http://localhost:8080", KEY, ORGANIZATION, 3, {"2026-08": 3}, {"2026-08": 0})
         text = "\n".join(lines)
         self.assertNotIn(KEY, text)
         self.assertIn("me_live_****2LtA", text)
-        self.assertIn("데모 도입사 (%s)" % ORGANIZATION.id, text)
+        self.assertIn("데모 조직 (%s)" % ORGANIZATION.id, text)
 
 
 class BatchSendTest(unittest.TestCase):

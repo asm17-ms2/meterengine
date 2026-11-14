@@ -44,7 +44,7 @@ public class WorkspaceQueryController {
       INVALID_SEARCH + " 조건 전체가 10000행을 넘어도 이 코드이며 errors의 field는 export다. 범위를 좁혀 다시 보낸다.";
   private static final String UNKNOWN_PARAMETER = "code=validation_error: 받지 않는 쿼리 파라미터가 있다.";
   private static final String CUSTOMER_NOT_FOUND =
-      "code=customer_not_found: customer_id의 고객이 현재 도입사와 업무 환경에 없다.";
+      "code=customer_not_found: customer_id의 고객이 현재 조직과 업무 환경에 없다.";
   private static final String SEARCH_PAGE = "조건에 맞는 페이지. total은 조건 전체 건수다.";
   private static final String SEARCH_CSV =
       "같은 검색 조건 전체의 CSV. UTF-8 BOM과 CRLF를 쓰고, 수식으로 읽힐 문자열은 앞에 작은따옴표를 붙인다.";

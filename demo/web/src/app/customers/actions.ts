@@ -23,6 +23,6 @@ export async function createPaymentMethodRegistrationAction(_previous: Registrat
     return { status: "ready", url: url.href, expiresAt: registration.expires_at, mode: registration.mode };
   } catch (error) {
     const detail = toErrorView(error);
-    return { status: "failed", message: detail.status === 403 ? "카드 등록 링크를 만들 권한이 없습니다. 도입사 서버의 API 키에 admin 권한을 설정하세요." : detail.message };
+    return { status: "failed", message: detail.status === 403 ? "카드 등록 링크를 만들 권한이 없습니다. 자사 서버의 API 키에 admin 권한을 설정하세요." : detail.message };
   }
 }

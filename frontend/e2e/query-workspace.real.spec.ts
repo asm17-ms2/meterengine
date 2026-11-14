@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { CONSENT_DOCUMENTS, CONSENT_VERSION } from "../src/lib/auth/consents";
 import { consoleHeaders } from "./console-environment";
+import { openLiveEnvironment } from "./real-organization";
 
 const API_URL = process.env.S1_API_URL ?? "http://127.0.0.1:38147";
 const FRONTEND_URL = process.env.QUERY_FRONTEND_URL ?? "http://localhost:33147";
@@ -17,8 +18,7 @@ async function createTenant(request: APIRequestContext, operatorToken: string, s
   const signup = await request.post(`${API_URL}/v1/signups`, { data: { organization_name: `조회 검증 ${suffix}`, name: "조회 대표관리자", email, password: PASSWORD, consents: CONSENT_DOCUMENTS.map(({ document }) => ({ document, document_version: CONSENT_VERSION })) } });
   expect(signup.status(), "격리 검증 도입사 가입").toBe(201);
   const organizationId = (await signup.json()).organization.id as string;
-  const approval = await request.put(`${API_URL}/v1/organizations/${organizationId}/status`, { headers: { Authorization: `Bearer ${operatorToken}` }, data: { status: "active" } });
-  expect(approval.status(), "격리 검증 도입사 승인").toBe(200);
+  openLiveEnvironment(organizationId);
   const session = await request.post(`${API_URL}/v1/sessions`, { data: { email, password: PASSWORD } });
   expect(session.status(), "격리 검증 도입사 로그인").toBe(201);
   const token = (await session.json()).token as string;

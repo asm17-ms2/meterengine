@@ -181,7 +181,7 @@ def format_gate(
     lines = [
         "전송 전 확인",
         "  대상 서버: " + base_url,
-        "  도입사: %s (%s), API 키 %s" % (organization.name, organization.id, mask_api_key(api_key)),
+        "  조직: %s (%s), API 키 %s" % (organization.name, organization.id, mask_api_key(api_key)),
         "  전송 건수: %d건" % event_count,
     ]
     for month in sorted(month_counts):

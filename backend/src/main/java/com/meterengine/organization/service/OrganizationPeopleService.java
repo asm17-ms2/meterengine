@@ -252,12 +252,15 @@ public class OrganizationPeopleService {
             .findForUpdateByTokenHash(tokenHash)
             .orElseThrow(() -> new NotFoundException(ErrorCode.INVITATION_NOT_FOUND));
     usable(invitation);
-    OrganizationPerson user = organizationAccounts.find(invitation.getEmail()).orElse(null);
+    // 운영자로 바꾸는 요청과 겹쳐도 한쪽이 다른 쪽의 결과를 보게 계정 행을 잠근다.
+    OrganizationPerson user = organizationAccounts.lock(invitation.getEmail()).orElse(null);
     if (user != null) {
       if (principal == null
           || principal.kind() != PrincipalKind.SESSION
           || !user.id().equals(principal.userAccountId()))
         throw new ForbiddenException(ErrorCode.PERMISSION_DENIED);
+      // 운영자가 조직의 자료를 볼 길을 열지 않으려고 운영자 계정의 소속을 막는다.
+      if (user.operator()) throw new ConflictException(ErrorCode.OPERATOR_MEMBERSHIP_CONFLICT);
       if (user.consentRequired()) throw new ForbiddenException(ErrorCode.CONSENT_REQUIRED);
     } else {
       if (request == null

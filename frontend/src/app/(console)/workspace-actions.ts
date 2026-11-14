@@ -93,6 +93,7 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
       case "createPaymentMethodRegistration": path = `/v1/customers/${identifier(data)}/payment-method-registrations`; break;
       case "createPaymentAttempt": path = `/v1/invoices/${identifier(data)}/payment-attempts`; break;
       case "createPaymentCancellation": path = `/v1/payment-attempts/${identifier(data)}/cancellations`; body = { reason: text(data, "reason"), amount: text(data, "amount") ? amount(data, "amount") : undefined }; break;
+      case "createLiveEnvironmentApplication": path = "/v1/organization/live-environment-applications"; body = { business_registration_number: readBusinessRegistrationNumber(text(data, "business_registration_number"), "business_registration_number"), toss_payments_merchant_id: text(data, "toss_payments_merchant_id"), toss_payments_client_key: text(data, "toss_payments_client_key"), toss_payments_secret_key: text(data, "toss_payments_secret_key") }; break;
       case "finalizeInvoices": path = `/v1/invoices?month=${encodeURIComponent(text(data, "month"))}`; break;
       default: return { message: "어떤 작업인지 확인하지 못했어요." };
     }
@@ -101,7 +102,8 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
     return { message: "입력한 값을 처리하지 못했어요. 입력값을 확인한 뒤 다시 시도하세요." };
   }
   if (operation === "updateCustomer" && !/^\d+$/.test(text(data, "version"))) return { message: "고객의 최신 정보를 다시 조회한 뒤 수정하세요." };
-  const isPaymentRequest = ["createPaymentAttempt", "createPaymentCancellation", "updateTossPaymentsCredential"].includes(operation);
+  // 토스페이먼츠에 묻고 답을 기다리는 작업이라 오래 기다리고, 결과를 못 받으면 다시 보내지 않게 안내한다.
+  const isPaymentRequest = ["createPaymentAttempt", "createPaymentCancellation", "updateTossPaymentsCredential", "createLiveEnvironmentApplication"].includes(operation);
   const result = await serverSend<Record<string, unknown> | undefined>(config.apiBaseUrl, path, {
     method, body, environment,
     timeoutMs: isPaymentRequest ? 75_000 : undefined,
@@ -116,7 +118,7 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
     if (staleCancellation) return { isUnconfirmed: true, message: staleCancellation };
     const staleVersion = staleVersionMessage(operation, result.error.code);
     if (staleVersion) return { isStale: true, message: staleVersion };
-    return { message: result.error.errors?.length ? "입력한 내용을 확인하세요." : errorMessageForCode(result.error.code) ?? toDisplayMessage(result.error), fieldErrors: result.error.errors ? Object.fromEntries(result.error.errors.map(error => [error.field, error.message])) : undefined };
+    return { message: result.error.errors?.length ? "입력한 내용을 확인하세요." : errorMessageForCode(result.error.code, operation) ?? toDisplayMessage(result.error), fieldErrors: result.error.errors ? Object.fromEntries(result.error.errors.map(error => [error.field, error.message])) : undefined };
   }
   revalidatePath("/", "layout");
   const archivedListPath = ARCHIVED_LIST_PATHS[operation];
@@ -125,6 +127,8 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
     if (operation === "deleteCustomer") archivedListScope.set("month", readMonth(text(data, "month")));
     return { isSuccess: true, message: successMessage(operation), nextPath: workspaceHref(archivedListPath, archivedListScope) };
   }
+  // 신청 응답의 status는 검토 상태라 아래의 결제 상태 해석에 넘기지 않는다.
+  if (operation === "createLiveEnvironmentApplication") return { isSuccess: true, message: successMessage(operation) };
   const response = result.data;
   if (operation === "createCustomer") {
     const existing = existingCustomerMessage({ externalId: text(data, "external_id"), name: text(data, "name"), billingEmail: text(data, "billing_email") }, response);

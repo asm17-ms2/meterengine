@@ -49,9 +49,9 @@ public class OrganizationPeopleController {
 
   @GetMapping("/members")
   @MemberReadAccess
-  @Operation(summary = "도입사 사용자 목록", description = "소속이 사용 중이거나 보관된 사용자를 조회한다. 기본은 전체다.")
+  @Operation(summary = "조직 사용자 목록", description = "소속이 사용 중이거나 보관된 사용자를 조회한다. 기본은 전체다.")
   @ApiResponses({
-    @ApiResponse(responseCode = "200", description = "도입사 사용자 목록"),
+    @ApiResponse(responseCode = "200", description = "조직 사용자 목록"),
     @ApiResponse(
         responseCode = "400",
         content =
@@ -108,7 +108,7 @@ public class OrganizationPeopleController {
 
   @PutMapping("/members/{id}/role")
   @MemberAdminAccess
-  @Operation(summary = "도입사 사용자 역할 변경")
+  @Operation(summary = "조직 사용자 역할 변경")
   @ApiResponses({
     @ApiResponse(responseCode = "200", description = "바뀐 사용자"),
     @ApiResponse(
@@ -125,7 +125,7 @@ public class OrganizationPeopleController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=user_account_not_found: 세션 도입사에 소속된 그런 사용자가 없다. 소속을 보관한 사용자도 같다"),
+        description = "code=user_account_not_found: 세션 조직에 소속된 그런 사용자가 없다. 소속을 보관한 사용자도 같다"),
     @ApiResponse(
         responseCode = "409",
         content =
@@ -147,8 +147,8 @@ public class OrganizationPeopleController {
   @PutMapping("/members/{id}/scopes")
   @MemberAdminAccess
   @Operation(
-      summary = "도입사 사용자 권한 변경",
-      description = "대표관리자가 도입사별 사용자 권한을 변경한다. 기존 세션도 다음 요청부터 변경한 권한을 사용한다.")
+      summary = "조직 사용자 권한 변경",
+      description = "대표관리자가 조직별 사용자 권한을 변경한다. 기존 세션도 다음 요청부터 변경한 권한을 사용한다.")
   @ApiResponses({
     @ApiResponse(responseCode = "200", description = "바뀐 사용자"),
     @ApiResponse(
@@ -165,7 +165,7 @@ public class OrganizationPeopleController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=user_account_not_found: 세션 도입사에 소속된 그런 사용자가 없다. 소속을 보관한 사용자도 같다"),
+        description = "code=user_account_not_found: 세션 조직에 소속된 그런 사용자가 없다. 소속을 보관한 사용자도 같다"),
     @ApiResponse(
         responseCode = "409",
         content =
@@ -185,7 +185,7 @@ public class OrganizationPeopleController {
   @DeleteMapping("/members/{id}")
   @MemberAdminAccess
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @Operation(summary = "도입사 사용자 소속 제거")
+  @Operation(summary = "조직 사용자 소속 제거")
   @ApiResponses({
     @ApiResponse(responseCode = "204", description = "소속을 보관했다. 본문 없음"),
     @ApiResponse(
@@ -201,7 +201,7 @@ public class OrganizationPeopleController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=user_account_not_found: 세션 도입사에 소속된 그런 사용자가 없다. 소속을 보관한 사용자도 같다"),
+        description = "code=user_account_not_found: 세션 조직에 소속된 그런 사용자가 없다. 소속을 보관한 사용자도 같다"),
     @ApiResponse(
         responseCode = "409",
         content =
@@ -219,8 +219,8 @@ public class OrganizationPeopleController {
 
   @GetMapping("/invitations")
   @MemberAdminAccess
-  @Operation(summary = "도입사 초대 목록")
-  @ApiResponses({@ApiResponse(responseCode = "200", description = "도입사 초대 목록")})
+  @Operation(summary = "조직 초대 목록")
+  @ApiResponses({@ApiResponse(responseCode = "200", description = "조직 초대 목록")})
   public ListOrganizationInvitationsResponse listOrganizationInvitations(
       @AuthenticationPrincipal AuthenticatedPrincipal principal,
       @CurrentOrganizationId UUID organizationId) {
@@ -231,7 +231,7 @@ public class OrganizationPeopleController {
   @PostMapping("/invitations")
   @MemberAdminAccess
   @ResponseStatus(HttpStatus.CREATED)
-  @Operation(summary = "도입사 초대 링크 발급")
+  @Operation(summary = "조직 초대 링크 발급")
   @ApiResponses({
     @ApiResponse(responseCode = "201", description = "발급한 초대와 링크 토큰. 토큰 원문은 이 응답에서만 볼 수 있다"),
     @ApiResponse(
@@ -251,7 +251,7 @@ public class OrganizationPeopleController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=organization_member_already_exists: 그 이메일의 사용자가 이미 세션 도입사에 소속돼 있다")
+        description = "code=organization_member_already_exists: 그 이메일의 사용자가 이미 세션 조직에 소속돼 있다")
   })
   public OrganizationInvitationSecretResponse inviteOrganizationUser(
       @AuthenticationPrincipal AuthenticatedPrincipal principal,
@@ -264,7 +264,7 @@ public class OrganizationPeopleController {
   @DeleteMapping("/invitations/{id}")
   @MemberAdminAccess
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @Operation(summary = "도입사 초대 취소")
+  @Operation(summary = "조직 초대 취소")
   @ApiResponses({
     @ApiResponse(responseCode = "204", description = "취소했다. 본문 없음"),
     @ApiResponse(
@@ -280,7 +280,7 @@ public class OrganizationPeopleController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=invitation_not_found: 세션 도입사에 그런 초대가 없다"),
+        description = "code=invitation_not_found: 세션 조직에 그런 초대가 없다"),
     @ApiResponse(
         responseCode = "409",
         content =

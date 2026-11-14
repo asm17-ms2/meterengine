@@ -9,6 +9,7 @@ import com.meterengine.global.error.NotFoundException;
 import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.invoice.entity.Invoice;
 import com.meterengine.invoice.repository.InvoiceRepository;
+import com.meterengine.payment.api.TossPaymentsMerchantObserved;
 import com.meterengine.payment.client.TossPaymentsApproveBillingRequest;
 import com.meterengine.payment.client.TossPaymentsClient;
 import com.meterengine.payment.client.TossPaymentsError;
@@ -36,6 +37,7 @@ import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,6 +49,7 @@ public class PaymentAttemptService {
   private static final Logger logger = LoggerFactory.getLogger(PaymentAttemptService.class);
   private static final String ORDER_NAME_SUFFIX = " 사용료";
   private static final String TOSS_PAYMENT_DONE = "DONE";
+  private static final String LIVE_MODE = "live";
   private static final String ENDED_WITHOUT_APPROVAL_MESSAGE = "토스페이먼츠 결제가 승인되지 않고 끝났습니다";
 
   private final PaymentAttemptRepository paymentAttemptRepository;
@@ -61,6 +64,7 @@ public class PaymentAttemptService {
   private final AuditLogService auditLogService;
   private final WebhookEventService webhookEventService;
   private final PaymentRetryEligibilityService paymentRetryEligibilityService;
+  private final ApplicationEventPublisher applicationEventPublisher;
 
   PaymentAttemptService(
       PaymentAttemptRepository paymentAttemptRepository,
@@ -74,7 +78,8 @@ public class PaymentAttemptService {
       PlatformTransactionManager platformTransactionManager,
       AuditLogService auditLogService,
       WebhookEventService webhookEventService,
-      PaymentRetryEligibilityService paymentRetryEligibilityService) {
+      PaymentRetryEligibilityService paymentRetryEligibilityService,
+      ApplicationEventPublisher applicationEventPublisher) {
     this.paymentAttemptRepository = paymentAttemptRepository;
     this.invoiceRepository = invoiceRepository;
     this.paymentSettingService = paymentSettingService;
@@ -87,6 +92,7 @@ public class PaymentAttemptService {
     this.auditLogService = auditLogService;
     this.webhookEventService = webhookEventService;
     this.paymentRetryEligibilityService = paymentRetryEligibilityService;
+    this.applicationEventPublisher = applicationEventPublisher;
   }
 
   public PaymentAttemptResponse create(
@@ -205,7 +211,7 @@ public class PaymentAttemptService {
             testCode);
     switch (result) {
       case TossPaymentsResult.Success<TossPaymentsPayment> approved when isDone(approved.value()) ->
-          markApproved(pendingAttempt, approved.value().paymentKey());
+          markApproved(pendingAttempt, approved.value());
       case TossPaymentsResult.Success<TossPaymentsPayment> notDone -> {
         logger.warn(
             "toss payments billing approval returned a payment that is not done: attempt_id={},"
@@ -242,7 +248,7 @@ public class PaymentAttemptService {
   // 토스가 조회해 준 결제로 pending 시도를 끝내고, 이번에 바꿨으면 true다.
   boolean settle(PaymentAttempt attempt, TossPaymentsPayment payment) {
     if (isDone(payment)) {
-      return markApproved(attempt, payment.paymentKey());
+      return markApproved(attempt, payment);
     }
     if (isEndedWithoutApproval(payment)) {
       return markFailed(attempt, payment.status(), ENDED_WITHOUT_APPROVAL_MESSAGE);
@@ -423,8 +429,9 @@ public class PaymentAttemptService {
             attempt.getMode()));
   }
 
-  private boolean markApproved(PaymentAttempt attempt, String paymentKey) {
-    if (markDone(attempt, paymentKey)) {
+  private boolean markApproved(PaymentAttempt attempt, TossPaymentsPayment payment) {
+    observe(attempt, payment);
+    if (markDone(attempt, payment.paymentKey())) {
       return true;
     }
     paymentAttemptRepository
@@ -440,6 +447,27 @@ public class PaymentAttemptService {
                     failed.getMode(),
                     failed.getFailureCode()));
     return false;
+  }
+
+  // 실제 환경 결제의 상점아이디를 알린다. 듣는 쪽이 실패해도 결제 결과는 그대로 남긴다.
+  // 환경 없는 옛 범위의 결제는 신청서의 키로 한 결제가 아닐 수 있어 알리지 않는다.
+  private void observe(PaymentAttempt attempt, TossPaymentsPayment payment) {
+    if (!LIVE_MODE.equals(attempt.getMode())
+        || attempt.getEnvironmentId() == null
+        || payment.merchantId() == null
+        || payment.merchantId().isBlank()) {
+      return;
+    }
+    try {
+      applicationEventPublisher.publishEvent(
+          new TossPaymentsMerchantObserved(attempt.getOrganizationId(), payment.merchantId()));
+    } catch (RuntimeException exception) {
+      logger.warn(
+          "toss payments merchant id observation failed: attempt_id={}, organization_id={}",
+          attempt.getId(),
+          attempt.getOrganizationId(),
+          exception);
+    }
   }
 
   // 더 새 시도가 있는 실패는 그 시도를 만들 때 미청구로 확인했으므로 7일 창을 걸지 않고, 그 시도의 키로 물을 수 없으면 다시 묻지 않는다.

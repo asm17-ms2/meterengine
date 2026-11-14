@@ -88,7 +88,7 @@ class ServeCommandTest(BridgeCommandTestCase):
         FakeClient.created = []
         FakeClient.reply = ApiResult(
             status=200,
-            body={"id": ORGANIZATION_ID, "name": "데모 도입사", "status": "active"},
+            body={"id": ORGANIZATION_ID, "name": "데모 조직", "status": "active"},
             body_text="",
             elapsed_ms=1,
         )

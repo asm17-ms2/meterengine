@@ -22,15 +22,15 @@ export default function Home() {
   return <div className={styles.page}>
     <header className={styles.header}>
       <Link href="/" className={styles.brand} aria-label="MeterEngine 소개"><BrandMark scale={HOME_MARK_SCALE} />MeterEngine</Link>
-      <nav className={styles.navigation} aria-label="서비스 소개"><a href="#flow">첫 청구까지</a><a href="#integration">고객 화면과 연동</a><Link href="/login">로그인</Link><Link className={styles.navAction} href="/signup">가입 신청</Link></nav>
+      <nav className={styles.navigation} aria-label="서비스 소개"><a href="#flow">첫 청구까지</a><a href="#integration">고객 화면과 연동</a><Link href="/login">로그인</Link><Link className={styles.navAction} href="/signup">가입</Link></nav>
     </header>
     <main id="main-content">
       <section className={styles.hero} aria-labelledby="home-title">
         <div className={styles.heroCopy}>
           <h1 id="home-title">고객이 쓴 만큼 청구하고, <span>카드 결제까지 받으세요.</span></h1>
           <p>고객과 사용 기록을 API로 보내면 고객마다 이번 달 요금을 계산해요. 금액을 확인해 청구서를 발행하고, 고객이 등록한 카드로 토스페이먼츠 결제를 받으세요.</p>
-          <div className={styles.actions}><Link href="/signup" className={styles.primaryAction}>가입 신청하기</Link><Link href="/login" className={styles.secondaryAction}>로그인</Link></div>
-          <p className={styles.applicationNote}>가입이 승인되면 신청한 이메일과 비밀번호로 로그인할 수 있어요.</p>
+          <div className={styles.actions}><Link href="/signup" className={styles.primaryAction}>가입하기</Link><Link href="/login" className={styles.secondaryAction}>로그인</Link></div>
+          <p className={styles.applicationNote}>가입하고 이메일을 인증하면 바로 테스트 환경을 쓸 수 있어요.</p>
         </div>
         <div className={styles.trace} role="group" aria-labelledby="home-trace-title">
           <div className={styles.traceHeader}><strong id="home-trace-title">고객이 받는 청구서</strong><span>링크로 전달</span></div>
@@ -44,7 +44,7 @@ export default function Home() {
         </div>
       </section>
       <section id="flow" className={styles.flowSection} aria-labelledby="flow-title">
-        <div className={styles.sectionHeading}><h2 id="flow-title">연동부터 첫 청구까지 네 단계예요.</h2><p>테스트 환경에서 끝까지 해 본 뒤 실제 환경에서 시작하세요. 요금표, API 키, 토스페이먼츠 키는 실제 환경에 새로 등록해요.</p></div>
+        <div className={styles.sectionHeading}><h2 id="flow-title">연동부터 첫 청구까지 네 단계예요.</h2><p>테스트 환경에서 끝까지 해 본 뒤 실제 환경 이용을 신청하세요. 요금표와 API 키는 실제 환경에 새로 등록해요.</p></div>
         <ol className={styles.flow}>{FLOW.map((step, index) => <li key={step.title}><span className={styles.stepNumber} aria-hidden="true">{index + 1}</span><h3>{step.title}</h3><p>{step.body}</p></li>)}</ol>
       </section>
       <section className={styles.evidenceSection} aria-labelledby="evidence-title">
@@ -64,8 +64,8 @@ export default function Home() {
           <div><dt>테스트 환경</dt><dd>고객, 사용량, 요금, 청구, 결제 기록을 실제 환경과 따로 써요. 실제 고객 데이터와 섞지 않고 연동과 결제를 먼저 시험해 보세요. 토스페이먼츠 테스트 키로 결제하면 실제로 출금되지 않아요.</dd></div>
         </dl>
       </section>
-      <section className={styles.startSection} aria-labelledby="start-title"><div><h2 id="start-title">테스트 환경에서 첫 청구서를 발행해 보세요.</h2><p>요금표를 만들고 테스트 사용량을 보내 보세요. 고객이 받을 청구서를 미리 확인할 수 있어요.</p></div><Link className={styles.primaryAction} href="/signup">가입 신청하기</Link></section>
+      <section className={styles.startSection} aria-labelledby="start-title"><div><h2 id="start-title">테스트 환경에서 첫 청구서를 발행해 보세요.</h2><p>요금표를 만들고 테스트 사용량을 보내 보세요. 고객이 받을 청구서를 미리 확인할 수 있어요.</p></div><Link className={styles.primaryAction} href="/signup">가입하기</Link></section>
     </main>
-    <footer className={styles.footer}><Link href="/" className={styles.footerBrand}>MeterEngine</Link><span>사용량 기반 과금 서비스</span><div><Link href="/terms">이용약관</Link><Link href="/privacy" className={styles.footerPolicy}>개인정보 처리방침</Link><Link href="/login">로그인</Link><Link href="/signup">가입 신청</Link></div></footer>
+    <footer className={styles.footer}><Link href="/" className={styles.footerBrand}>MeterEngine</Link><span>사용량 기반 과금 서비스</span><div><Link href="/terms">이용약관</Link><Link href="/privacy" className={styles.footerPolicy}>개인정보 처리방침</Link><Link href="/login">로그인</Link><Link href="/signup">가입</Link></div></footer>
   </div>;
 }

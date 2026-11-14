@@ -79,6 +79,14 @@ public class UserAccountService {
         && operators.size() <= 1) {
       throw new ConflictException(ErrorCode.LAST_OPERATOR_REQUIRED);
     }
+    // 운영자가 조직의 자료를 볼 길을 열지 않으려고 조직에 소속된 계정은 운영자로 올리지 않는다.
+    if (UserAccount.OPERATOR.equals(role)
+        && !UserAccount.OPERATOR.equals(previousRole)
+        && !organizationMemberRepository
+            .findByUserAccountIdOrderByCreatedAtAscOrganizationIdAsc(userAccountId)
+            .isEmpty()) {
+      throw new ConflictException(ErrorCode.OPERATOR_MEMBERSHIP_CONFLICT);
+    }
     userAccount.changeRole(role);
     auditLogService.record(
         AuditActor.from(principal).withOrganizationId(null),

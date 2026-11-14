@@ -6,8 +6,9 @@ import { createServer, type Server } from "node:http";
 import { createServer as createPortProbe, type AddressInfo } from "node:net";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
+import { transactionId } from "../src/lib/catalog";
 import type { GenerationView, SessionResponse, WorkspaceSnapshot } from "../src/lib/contracts";
-import { ARTIFACT_DIR, assertNoSecrets, jsonResponse, noHorizontalOverflow, runtimeAccounts, runtimeEnvironment, safeFailure, screenshot, secretValues } from "./helpers";
+import { ARTIFACT_DIR, assertNoSecrets, jsonResponse, meterEvent, noHorizontalOverflow, runtimeAccounts, runtimeEnvironment, safeFailure, screenshot, secretValues } from "./helpers";
 
 type IngestBody = { transaction_id: string; customer_id: string; timestamp: string; properties: Record<string, unknown> };
 
@@ -37,14 +38,14 @@ async function closeProxy(server: Server | undefined): Promise<void> {
 }
 
 test("수집 장애와 응답 유실을 자체 DB에 보존하고 재기동 뒤 한 번만 과금한다", async ({ browser, playwright, request }) => {
-  const entry = process.env.LUMEN_E2E_SERVER_ENTRY;
-  if (!entry || !path.isAbsolute(entry)) throw new Error("복구 검증용 standalone server.js 절대경로를 LUMEN_E2E_SERVER_ENTRY로 지정하세요.");
+  const entry = process.env.OPENAB_E2E_SERVER_ENTRY;
+  if (!entry || !path.isAbsolute(entry)) throw new Error("복구 검증용 standalone server.js 절대경로를 OPENAB_E2E_SERVER_ENTRY로 지정하세요.");
   const environment = runtimeEnvironment();
   const account = runtimeAccounts(environment)[0];
   const secrets = secretValues(environment);
   mkdirSync(ARTIFACT_DIR, { recursive: true });
   const directory = mkdtempSync(path.join(ARTIFACT_DIR, "recovery-"));
-  const database = path.join(directory, "lumen.sqlite");
+  const database = path.join(directory, "openab.sqlite");
   const appPort = await unusedPort();
   const origin = `http://127.0.0.1:${appPort}`;
   let mode: "offline" | "healthy" | "drop-after-accept" = "offline";
@@ -60,7 +61,7 @@ test("수집 장애와 응답 유실을 자체 DB에 보존하고 재기동 뒤 
     childFailed = false;
     child = spawn(process.execPath, [entry], {
       cwd: path.dirname(entry),
-      env: { ...process.env, ...environment, LUMEN_APP_ORIGIN: origin, LUMEN_DATABASE_PATH: database, LUMEN_AUTO_FLUSH_INTERVAL_MS: "0", METERENGINE_API_BASE_URL: `http://127.0.0.1:${proxyPort}`, PORT: String(appPort), HOSTNAME: "127.0.0.1", NEXT_TELEMETRY_DISABLED: "1" },
+      env: { ...process.env, ...environment, OPENAB_APP_ORIGIN: origin, OPENAB_DATABASE_PATH: database, OPENAB_AUTO_FLUSH_INTERVAL_MS: "0", METERENGINE_API_BASE_URL: `http://127.0.0.1:${proxyPort}`, PORT: String(appPort), HOSTNAME: "127.0.0.1", NEXT_TELEMETRY_DISABLED: "1" },
       stdio: ["ignore", "ignore", "ignore"],
     });
     child.once("error", () => { childFailed = true; });
@@ -117,7 +118,7 @@ test("수집 장애와 응답 유실을 자체 DB에 보존하고 재기동 뒤 
     for (const cookie of (await client.storageState()).cookies) secrets.add(cookie.value);
     const firstId = randomUUID();
     const privatePrompt = `서버 재기동 뒤에도 보존할 원문 ${randomUUID()}`;
-    const first = await jsonResponse<GenerationView>(await client.post("/api/generations", { headers: { Origin: origin }, data: { requestId: firstId, modelId: "lumen-fast", prompt: privatePrompt } }));
+    const first = await jsonResponse<GenerationView>(await client.post("/api/generations", { headers: { Origin: origin }, data: { requestId: firstId, surface: "api", modelId: "ab-5-mini", prompt: privatePrompt } }));
     expect(first.state).toBe("completed");
     expect(["failed", "pending"].includes(first.meteringStatus)).toBe(true);
     expect(first.output).not.toBe("");
@@ -126,36 +127,35 @@ test("수집 장애와 응답 유실을 자체 DB에 보존하고 재기동 뒤 
     assertNoSecrets(attempts, secrets);
     context = await browser.newContext({ baseURL: origin, storageState: await client.storageState(), viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();
+    await page.goto("/history");
+    const record = page.locator(".history-record").filter({ hasText: privatePrompt }).first();
+    await record.locator("summary").click();
+    await expect(record.locator(".history-content")).toContainText(first.output);
     await page.goto("/");
     await expect(page.getByRole("textbox", { name: "메시지", exact: true })).toBeVisible();
-    await page.getByRole("button", { name: `요청 보기: ${privatePrompt.slice(0, 48)}`, exact: true }).click();
-    await expect(page.getByRole("region", { name: "모델 응답", exact: true })).toContainText(first.output);
-    await expect(page.getByText("사용량 1건의 반영을 기다리고 있습니다.", { exact: true })).toBeVisible();
-    await page.getByText("사용량 1건의 반영을 기다리고 있습니다.", { exact: true }).scrollIntoViewIfNeeded();
+    await expect(page.getByText("사용량 1건을 아직 기록하지 못했어요.", { exact: true })).toBeVisible();
+    await page.getByText("사용량 1건을 아직 기록하지 못했어요.", { exact: true }).scrollIntoViewIfNeeded();
     await noHorizontalOverflow(page);
-    await screenshot(page, "12-metering-pending-desktop.png", secrets);
+    await screenshot(page, "15-metering-pending-desktop.png", secrets);
     failWorkspaceReads = true;
     await page.reload();
-    const warning = page.getByRole("alert").filter({ hasText: "일부 사용 정보를 확인하지 못했습니다" });
+    const warning = page.getByRole("alert").filter({ hasText: "사용량과 청구 정보 일부를 불러오지 못했어요" });
     await expect(warning).toBeVisible();
-    await expect(warning).toContainText("대화와 요청 기록은 유지됩니다");
-    await expect(page.locator(".account-summary").getByText("조회할 수 없음", { exact: true })).toBeVisible();
+    await expect(warning).toContainText("대화와 요청 기록은 그대로 있어요");
+    await expect(page.locator(".header-bill")).toHaveCount(0);
     const partial = await jsonResponse<WorkspaceSnapshot>(await client.get("/api/workspace"));
     expect(partial.usage.state).toBe("unavailable");
     expect(partial.billing.state).toBe("unavailable");
     expect(partial.billing.draft).toBeNull();
     expect(partial.requests.some(generation => generation.id === firstId)).toBe(true);
-    await page.getByRole("heading", { name: "플레이그라운드", exact: true }).scrollIntoViewIfNeeded();
-    await screenshot(page, "14-partial-workspace-desktop.png", secrets);
+    await screenshot(page, "16-partial-workspace-desktop.png", secrets);
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.getByRole("heading", { name: "플레이그라운드", exact: true }).scrollIntoViewIfNeeded();
     await noHorizontalOverflow(page);
-    await screenshot(page, "15-partial-workspace-mobile.png", secrets);
+    await screenshot(page, "17-partial-workspace-mobile.png", secrets);
     await page.setViewportSize({ width: 1280, height: 900 });
     failWorkspaceReads = false;
     await warning.getByRole("button", { name: "다시 불러오기", exact: true }).click();
     await expect(warning).toBeHidden();
-    await expect(page.locator(".account-summary").getByText("조회할 수 없음", { exact: true })).toHaveCount(0);
     await stop(child);
     child = undefined;
     await start(proxyPort);
@@ -168,30 +168,29 @@ test("수집 장애와 응답 유실을 자체 DB에 보존하고 재기동 뒤 
     await jsonResponse(await client.post("/api/metering/retry", { headers: { Origin: origin }, data: { requestId: firstId.toUpperCase() } }));
     const delivered = await jsonResponse<GenerationView>(await client.get(`/api/requests/${firstId}`));
     expect(delivered.meteringStatus).toBe("delivered");
-    await page.reload();
-    await expect(page.getByText("완료된 요청의 사용량이 모두 반영됐습니다.", { exact: true })).toBeVisible();
-    await page.getByText("완료된 요청의 사용량이 모두 반영됐습니다.", { exact: true }).scrollIntoViewIfNeeded();
-    await screenshot(page, "13-metering-recovered-desktop.png", secrets);
-    const firstAttempts = attempts.filter(event => event.transaction_id.endsWith(`:${firstId}`));
+    await page.goto("/usage");
+    await expect(page.getByText("이번 달 요청의 사용량을 모두 기록했어요.", { exact: true })).toBeVisible();
+    await page.getByText("이번 달 요청의 사용량을 모두 기록했어요.", { exact: true }).scrollIntoViewIfNeeded();
+    await screenshot(page, "18-metering-recovered-desktop.png", secrets);
+    const firstAttempts = attempts.filter(event => event.transaction_id === transactionId(firstId));
     expect(firstAttempts).toHaveLength(2);
     expect(firstAttempts[1]).toEqual(firstAttempts[0]);
     mode = "drop-after-accept";
     const secondId = randomUUID();
-    const second = await jsonResponse<GenerationView>(await client.post("/api/generations", { headers: { Origin: origin }, data: { requestId: secondId, modelId: "lumen-standard", prompt: `수신 뒤 응답 유실 ${randomUUID()}` } }));
+    const second = await jsonResponse<GenerationView>(await client.post("/api/generations", { headers: { Origin: origin }, data: { requestId: secondId, surface: "api", modelId: "ab-5", prompt: `수신 뒤 응답 유실 ${randomUUID()}` } }));
     expect(["failed", "pending"].includes(second.meteringStatus)).toBe(true);
     mode = "healthy";
     await jsonResponse(await client.post("/api/metering/retry", { headers: { Origin: origin }, data: { requestId: secondId } }));
     expect((await jsonResponse<GenerationView>(await client.get(`/api/requests/${secondId}`))).meteringStatus).toBe("delivered");
-    const secondAttempts = attempts.filter(event => event.transaction_id.endsWith(`:${secondId}`));
+    const secondAttempts = attempts.filter(event => event.transaction_id === transactionId(secondId));
     expect(secondAttempts).toHaveLength(2);
     expect(secondAttempts[1]).toEqual(secondAttempts[0]);
     const beforeRepeat = attempts.length;
     await jsonResponse(await client.post("/api/metering/retry", { headers: { Origin: origin }, data: { requestId: secondId } }));
     expect(attempts).toHaveLength(beforeRepeat);
     for (const id of [firstId, secondId]) {
-      const query = new URLSearchParams({ customer_id: account.customerId, type: "llm_generation", size: "100" });
-      const events = await jsonResponse<{ events: IngestBody[] }>(await request.get(`${environment.METERENGINE_API_BASE_URL}/v1/events?${query}`, { headers: { Authorization: `Bearer ${environment.METERENGINE_API_KEY}` } }));
-      expect(events.events.filter(event => event.transaction_id.endsWith(`:${id}`))).toHaveLength(1);
+      const stored = await meterEvent(request, environment, id);
+      expect(stored?.customer_id).toBe(account.customerId);
     }
     writeFileSync(path.join(ARTIFACT_DIR, "recovery-evidence.json"), JSON.stringify({ localDbPersists: true, sessionPersists: true, originalTimestampPreserved: true, partialReadsReportedUnavailable: true, retryRestoredReads: true, offlineAttempts: firstAttempts.length, responseLossAttempts: secondAttempts.length, requestIds: [firstId, secondId], storedEventsForRequests: 2, requestCount: 2 }, null, 2) + "\n");
   } catch (error) {

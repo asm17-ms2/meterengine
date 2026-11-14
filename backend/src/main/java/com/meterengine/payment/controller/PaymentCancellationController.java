@@ -50,7 +50,7 @@ public class PaymentCancellationController {
           취소되면 status=done, 거절되면 status=failed와 failure_code, failure_message가 남고 둘 다 201이다.
           토스페이먼츠 응답으로 결과를 확인하지 못하면 status=pending인 취소를 201로 돌려준다.
           시도 하나에 pending인 취소는 하나뿐이다. 있으면 409다. API 키의 모드가 취소 대상과 다르면 409다.
-          Idempotency-Key를 주면 같은 도입사와 환경의 같은 요청을 다시 보내도 그 취소를 지금 상태로 201로 돌려준다. 같은 키로 다른 시도, 금액, 사유를 보내면 409다.
+          Idempotency-Key를 주면 같은 조직과 환경의 같은 요청을 다시 보내도 그 취소를 지금 상태로 201로 돌려준다. 같은 키로 다른 시도, 금액, 사유를 보내면 409다.
           이 키는 고객과 미터 등록의 Idempotency-Key와 계약이 다르다. UUID만 받고, 충돌 code는 payment_cancellation_idempotency_conflict이며, 다시 돌려준 응답에 Idempotency-Replayed 헤더를 붙이지 않는다.
           requested_at과 completed_at은 KST(+09:00)로 나온다.
           """)

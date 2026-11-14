@@ -4,6 +4,7 @@ import { execFileSync } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { CONSENT_DOCUMENTS, CONSENT_VERSION } from "../src/lib/auth/consents";
 import { consoleHeaders } from "./console-environment";
+import { openLiveEnvironment } from "./real-organization";
 
 const API_URL = process.env.S1_API_URL ?? "http://127.0.0.1:38147";
 const FRONTEND_URL = process.env.PERMISSIONS_FRONTEND_URL ?? "http://localhost:33147";
@@ -93,7 +94,7 @@ async function fixture(request: APIRequestContext, secrets: Set<string>): Promis
   const organizationId = uuid((await signup.json()).organization.id);
   const operator = await login(request, OPERATOR_EMAIL, secrets, OPERATOR_PASSWORD);
   const operatorHeaders = authorization(operator.token);
-  expect((await request.put(`${API_URL}/v1/organizations/${organizationId}/status`, { headers: operatorHeaders, data: { status: "active" } })).status()).toBe(200);
+  openLiveEnvironment(organizationId);
   const owner = await login(request, email, secrets);
   expect(owner.organization_role).toBe("owner"); expect(owner.scopes).toContain("admin");
   const headers = authorization(owner.token);
@@ -195,7 +196,12 @@ test("초대 권한과 소속별 권한을 보존하고 보관 복원과 플랫�
     const first = await fixture(request, secrets); const second = await fixture(request, secrets);
     const reader = await member(request, first, secrets, "multi");
     expect((await request.put(`${API_URL}/v1/organization/members/${reader.user_account_id}/scopes`, { headers: second.headers, data: { scopes: ["admin"] } })).status()).toBe(404);
-    expect((await request.post(`${API_URL}/v1/organizations/${second.organizationId}/members`, { headers: first.operatorHeaders, data: { user_account_id: reader.user_account_id, scopes: ["admin"] } })).status()).toBe(201);
+    // 운영자는 계정을 조직에 붙이지 못한다. 두 번째 조직의 대표관리자가 초대하고 본인이 수락한다.
+    expect((await request.post(`${API_URL}/v1/organizations/${second.organizationId}/members`, { headers: first.operatorHeaders, data: { user_account_id: reader.user_account_id, scopes: ["admin"] } })).status()).toBe(404);
+    const secondInvitation = await request.post(`${API_URL}/v1/organization/invitations`, { headers: second.headers, data: { email: reader.email, scopes: ["admin"] } });
+    expect(secondInvitation.status()).toBe(201);
+    const secondInvitationToken = String((await secondInvitation.json()).token); secrets.add(secondInvitationToken);
+    expect((await request.post(`${API_URL}/v1/organization-invitations/${secondInvitationToken}/accept`, { headers: reader.headers })).status()).toBe(201);
     expect((await request.put(`${API_URL}/v1/sessions/current/organization`, { headers: reader.headers, data: { organization_id: second.organizationId } })).status()).toBe(200);
     expect((await current(request, reader.headers)).scopes).toContain("admin");
     expect((await request.post(`${API_URL}/v1/customers`, { headers: reader.headers, data: { name: "다른 도입사 관리", external_id: randomUUID() } })).status()).toBe(201);
@@ -378,23 +384,18 @@ test("수집 전용과 플랫폼 운영자의 조회 소속이 화면과 실제 
     const operator = await login(request, operatorEmail, secrets);
     const platform = await browserPage(browser, operator); contexts.push(platform.context);
     await platform.page.goto("/admin/users");
+    // 운영자 계정은 조직에 소속되지 않는다. 화면에 소속을 붙이는 버튼이 없고 API도 없다.
     const card = platform.page.locator("article.organization-card").filter({ hasText: operatorEmail });
-    await card.getByRole("button", { name: "조직 소속 연결", exact: true }).click();
-    const dialog = platform.page.getByRole("dialog");
-    await expect(dialog.getByRole("checkbox", { name: READ })).toBeChecked();
-    await dialog.getByRole("combobox").selectOption(data.organizationId);
-    await capture(platform.page, "platform-attach-read-default-desktop");
-    await dialog.getByRole("button", { name: "소속 연결", exact: true }).click();
-    await expect.poll(async () => (await (await request.get(`${API_URL}/v1/organization/members`, { headers: data.headers })).json()).members.some((item: Member) => item.user_account_id === operatorId)).toBe(true);
-    const switched = await request.put(`${API_URL}/v1/sessions/current/organization`, { headers: authorization(operator.token), data: { organization_id: data.organizationId } });
-    expect(switched.status()).toBe(200); expect((await switched.json()).scopes).toEqual(["read"]);
-    await platform.page.goto("/customers"); await expect(platform.page.getByRole("button", { name: "고객 등록", exact: true })).toHaveCount(0);
-    await expect(platform.page.locator(".workspace-scope")).toHaveText("조회 전용");
-    await expect(platform.page.getByRole("button", { name: "권한 새로 조회", exact: true })).toBeVisible();
+    await expect(card).toBeVisible();
+    await expect(platform.page.getByRole("button", { name: "조직 소속 연결", exact: true })).toHaveCount(0);
+    await capture(platform.page, "platform-users-without-attach-desktop");
+    expect((await request.post(`${API_URL}/v1/organizations/${data.organizationId}/members`, { headers: authorization(operator.token), data: { user_account_id: operatorId, scopes: ["read"] } })).status()).toBe(404);
+    expect((await (await request.get(`${API_URL}/v1/organization/members`, { headers: data.headers })).json()).members.some((item: Member) => item.user_account_id === operatorId)).toBe(false);
+    expect((await request.put(`${API_URL}/v1/sessions/current/organization`, { headers: authorization(operator.token), data: { organization_id: data.organizationId } })).status()).toBe(403);
     await platform.page.goto("/admin/users"); await expect(platform.page.getByRole("heading", { name: "사용자와 권한", exact: true })).toBeVisible();
     expect((await request.get(`${API_URL}/v1/organizations`, { headers: authorization(operator.token) })).status()).toBe(200);
     expect((await request.post(`${API_URL}/v1/customers`, { headers: authorization(operator.token), data: { name: "플랫폼 역할 우회 시도" } })).status()).toBe(403);
-    result("ingest-operator-result", { passed: true, ingest_session_and_logout_available: true, ingest_no_login_redirect_loop: true, platform_attach_defaults_read: true, operator_platform_read_allowed: true, operator_tenant_write_denied: true, mobile_width: 390 });
+    result("ingest-operator-result", { passed: true, ingest_session_and_logout_available: true, ingest_no_login_redirect_loop: true, platform_attach_removed: true, operator_platform_read_allowed: true, operator_tenant_write_denied: true, mobile_width: 390 });
   } catch (error) { throw safeFailure(error, secrets); }
   finally { await Promise.all(contexts.map(context => context.close())); }
 });

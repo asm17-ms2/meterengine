@@ -32,8 +32,8 @@ public class CurrentOrganizationController {
 
   @GetMapping
   @ReadAccess
-  @Operation(summary = "현재 도입사 조회", description = "요청에 실은 키나 로그인 세션의 도입사를 돌려준다.")
-  @ApiResponses({@ApiResponse(responseCode = "200", description = "현재 도입사")})
+  @Operation(summary = "현재 조직 조회", description = "요청에 실은 키나 로그인 세션의 조직을 돌려준다.")
+  @ApiResponses({@ApiResponse(responseCode = "200", description = "현재 조직")})
   public OrganizationResponse getOrganization(@CurrentOrganizationId UUID organizationId) {
     return OrganizationResponse.from(organizationService.get(organizationId));
   }

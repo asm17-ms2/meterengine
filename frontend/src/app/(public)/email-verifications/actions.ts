@@ -15,7 +15,7 @@ export type ConfirmEmailVerificationState = ActionState & { isLinkUnusable?: boo
 
 export async function resendEmailVerificationAction(_prev: ActionState, data: FormData): Promise<ActionState> {
   const email = data.get("email");
-  if (typeof email !== "string" || !isValidEmail(email.trim())) return { message: "가입한 이메일 주소를 입력해 주세요." };
+  if (typeof email !== "string" || !isValidEmail(email.trim())) return { message: "가입한 이메일 주소를 입력하세요." };
   const result = await requestApi<void>("/v1/email-verifications", {
     method: "POST",
     clientIp: (await headers()).get("x-meterengine-client-ip") ?? undefined,

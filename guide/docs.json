@@ -2,7 +2,7 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
   "name": "MeterEngine",
-  "description": "MeterEngine 도입사를 위한 연동 가이드와 API 참조",
+  "description": "MeterEngine 연동 가이드와 API 참조",
   "colors": {
     "primary": "#5746ad"
   },

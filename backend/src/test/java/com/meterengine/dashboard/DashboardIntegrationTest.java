@@ -3,8 +3,10 @@ package com.meterengine.dashboard;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
+import com.jayway.jsonpath.JsonPath;
 import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
+import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -311,6 +313,54 @@ class DashboardIntegrationTest {
         .extractingPath("$.jobs")
         .asArray()
         .hasSize(6);
+  }
+
+  @Test
+  void 전체_운영_현황은_검토_대기_중인_실제_환경_이용_신청만_센다() {
+    String operator = TestCredentials.issueOperatorSession(jdbcTemplate);
+    long before = pendingLiveEnvironmentApplicationCount(operator);
+    insertLiveEnvironmentApplication("pending");
+    insertLiveEnvironmentApplication("approved");
+
+    assertThat(pendingLiveEnvironmentApplicationCount(operator)).isEqualTo(before + 1);
+  }
+
+  private long pendingLiveEnvironmentApplicationCount(String authorization) {
+    String body =
+        new String(
+            mvc.get()
+                .uri("/v1/operations")
+                .header("Authorization", authorization)
+                .exchange()
+                .getResponse()
+                .getContentAsByteArray(),
+            StandardCharsets.UTF_8);
+    return JsonPath.<Number>read(body, "$.pending_live_environment_application_count").longValue();
+  }
+
+  private void insertLiveEnvironmentApplication(String status) {
+    UUID organizationId = UUID.randomUUID();
+    TestCredentials.issueMemberSession(jdbcTemplate, organizationId);
+    UUID applicantId =
+        jdbcTemplate.queryForObject(
+            "select user_account_id from organization_member where organization_id = ?",
+            UUID.class,
+            organizationId);
+    boolean pending = "pending".equals(status);
+    jdbcTemplate.update(
+        "insert into live_environment_application (id, organization_id,"
+            + " business_registration_number, toss_payments_merchant_id, toss_payments_client_key,"
+            + " toss_payments_secret_key, status, business_status, applicant_user_account_id,"
+            + " created_at, reviewer_user_account_id, reviewed_at) values (?, ?, '1234567890',"
+            + " 'merchant', ?, ?, ?, 'operating', ?, now(), ?, ?)",
+        UUID.randomUUID(),
+        organizationId,
+        pending ? "live_ck_test" : null,
+        pending ? "live_sk_test" : null,
+        status,
+        applicantId,
+        pending ? null : applicantId,
+        pending ? null : OffsetDateTime.now());
   }
 
   private UUID insertInvoice(UUID organizationId, String month, long supplyAmount) {
