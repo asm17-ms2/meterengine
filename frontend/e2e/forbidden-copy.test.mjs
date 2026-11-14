@@ -30,10 +30,9 @@ test("in frontend sources the pre-environment data label lives only in the envir
   assert.deepEqual(hits(/기존 데이터/, ["lib/environment.ts"]), []);
 });
 
-// 약관의 "데모 릴리스"는 서비스 단계의 이름이라 남긴다.
 test("frontend sources carry no demo-only wording", () => {
   assert.deepEqual(hits(/시연/), []);
-  assert.deepEqual(hits(/데모/, ["app/(public)/terms/page.tsx"]), []);
+  assert.deepEqual(hits(/데모/), []);
 });
 
 // 텍스트 모양이 기본인 이모지(U+26A0 등)와 가운뎃점 대용 글자(U+318D, U+30FB, U+2027)도 잡는다. 저작권, 등록상표, 상표 기호는 이모지가 아니라 뺀다.
