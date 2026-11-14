@@ -94,7 +94,7 @@ test("signup sends displayed consent versions without stale Bearer or a password
   expect(await page.evaluate(() => localStorage.length + sessionStorage.length)).toBe(0);
   expect(await page.content()).not.toContain(LOGIN_PASSWORD);
   const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
-  expect(calls).toEqual([{ path: "/v1/signups", method: "POST", hasAuthorization: false, hasOrganizationHeader: false, clientIp: "127.0.0.1", consents: [{ document: "terms_of_service", document_version: "2026-11-11" }, { document: "privacy_policy", document_version: "2026-11-11" }] }]);
+  expect(calls).toEqual([{ path: "/v1/signups", method: "POST", hasAuthorization: false, hasOrganizationHeader: false, clientIp: "127.0.0.1", consents: [{ document: "terms_of_service", document_version: "2026-11-14" }, { document: "privacy_policy", document_version: "2026-11-14" }] }]);
 });
 
 test("signup shows the captcha outage message when the backend answers after the default 5 second limit", async ({ page, request }) => {
