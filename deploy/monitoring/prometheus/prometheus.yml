@@ -25,6 +25,10 @@ scrape_configs:
       - &instance_from_id
         source_labels: [__meta_ec2_instance_id]
         target_label: instance
+      # 카프카를 켠 환경만 서버 그룹에 ServerRole 태그(api, ingest, consumer)가 있다. 태그가 없으면 라벨도 붙지 않는다.
+      - &role_from_tag
+        source_labels: [__meta_ec2_tag_ServerRole]
+        target_label: server_role
 
   - job_name: node
     ec2_sd_configs:
@@ -35,6 +39,7 @@ scrape_configs:
     relabel_configs: &app_labels
       - *env_from_tag
       - *instance_from_id
+      - *role_from_tag
 
   - job_name: cadvisor
     # cAdvisor는 표본에 시각을 붙인다. 이게 없으면 다시 만든 컨테이너의 옛 시계열이 5분 남아 겹쳐 그려진다.
@@ -68,6 +73,16 @@ scrape_configs:
     scrape_timeout: 30s
     file_sd_configs:
       - files: [/etc/prometheus-targets/kafka-jmx-*.json]
+    # 브로커 3대가 시계열 약 2만 5천 개를 낸다. 늘 켜 두는 환경은 경보와 대시보드가 쓰는 것만 남긴다.
+    # 측정 환경(test-)은 켜 있는 동안만 받고 실험마다 보는 지표가 달라 다 남긴다.
+    metric_relabel_configs:
+      - source_labels: [env, __name__, name]
+        regex: "test-[^;]*;.*\
+          |[^;]*;kafka_server_BrokerTopicMetrics_Count;(MessagesInPerSec|BytesInPerSec|BytesOutPerSec)\
+          |[^;]*;kafka_server_ReplicaManager_Value;(UnderReplicatedPartitions|UnderMinIsrPartitionCount|OfflineReplicaCount)\
+          |[^;]*;kafka_controller_KafkaController_Value;(OfflinePartitionsCount)\
+          |[^;]*;kafka_consumer_group_ConsumerLagMetrics_Value;(SumOffsetLag)"
+        action: keep
 
   # 브로커 서버의 CPU, 디스크, 네트워크. 가벼워서 앱 서버와 같은 간격으로 긁는다.
   - job_name: kafka-node
@@ -100,6 +115,11 @@ scrape_configs:
         regex: targetgroup/front-.+
         target_label: service
         replacement: frontend
+      # 카프카를 켠 환경에서 이벤트 수집 요청만 받는 대상 그룹이다.
+      - source_labels: [target_group]
+        regex: targetgroup/ingst-.+
+        target_label: service
+        replacement: ingest
 
   # 대시보드가 쓰는 경보 지표만 남기고 나머지는 저장 크기 한도를 먹지 않게 버린다.
   - job_name: grafana
