@@ -57,6 +57,6 @@ export type {
 export { signWebhookPayload, verifyWebhookSignature } from "./webhook-signature.ts";
 export type { SignWebhookPayloadInput, VerifyWebhookSignatureInput, WebhookEvent } from "./webhook-signature.ts";
 
-export type { WorkspaceEnvironment, SearchParams, SearchPage, UsageSearchSummary, SearchResource, CsvResource, BillableMetricResponse, CustomerSearchItem, CustomerUsageSearchItem, InvoiceSearchItem, EventIssueReason, EventIssue, EventIssueSearchResponse } from "./types.ts";
+export type { WorkspaceEnvironment, SearchParams, SearchPage, UsageSearchSummary, SearchResource, CsvResource, BillableMetricResponse, ListBillableMetricsResponse, CustomerSearchItem, CustomerUsageSearchItem, InvoiceSearchItem, EventIssueReason, EventIssue, EventIssueSearchResponse } from "./types.ts";
 
 export type { EventRejection, EventRejectionSearchResponse } from "./types.ts";
