@@ -1,6 +1,6 @@
 export const METRIC_AGGREGATIONS = [
   { value: "sum", label: "합계 (SUM)", description: "숫자 속성의 값을 모두 더해요." },
-  { value: "count", label: "이벤트 수 (COUNT)", description: "속성 값과 관계없이 이 이벤트 타입의 이벤트 수를 집계해요." },
+  { value: "count", label: "이벤트 수 (COUNT)", description: "속성 값과 관계없이 이 이벤트 유형의 이벤트 수를 집계해요." },
   { value: "count_distinct", label: "고유 값 수 (COUNT DISTINCT)", description: "문자열, 숫자, 불리언 속성에서 중복을 뺀 값의 수예요. 없는 값과 null, 객체, 배열은 세지 않아요." },
   { value: "min", label: "최솟값 (MIN)", description: "숫자 속성 중 가장 작은 값이에요." },
   { value: "max", label: "최댓값 (MAX)", description: "숫자 속성 중 가장 큰 값이에요." },

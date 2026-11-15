@@ -9,7 +9,7 @@ import { StatusTag } from "@/components/screen/StatusTag";
 import { type AuditLogsResponse, listOrganizationMembers } from "@/lib/api/management";
 import { operatorRequest, listOrganizations, listUserAccounts } from "@/lib/api/operator";
 import { workspaceFetch } from "@/lib/api/workspace";
-import { AUDIT_ACTION_OPTIONS, AUDIT_ACTIONS, AUDIT_ACTOR_TYPES, auditActorLabel } from "@/lib/audit";
+import { AUDIT_ACTION_OPTIONS, AUDIT_ACTIONS, AUDIT_ACTOR_TYPES, OPERATOR_ACTOR_LABEL, auditActorLabel, isOperatorAuditAction } from "@/lib/audit";
 import { formatKstDateTime } from "@/lib/format";
 
 
@@ -70,8 +70,9 @@ export async function AuditScreen({ query, isOperator = false }: { query: Query;
         const status = Number(log.detail.status);
         const isRequest = log.action === "api_request_completed" && Number.isFinite(status);
         const outcome = isRequest ? status >= 400 ? <StatusTag color="error">요청 거절/오류 ({status})</StatusTag> : `성공 (${status})` : "변경 기록";
-        return <details className="audit-entry" key={log.id}><summary className="audit-summary"><time dateTime={log.occurred_at}>{formatKstDateTime(log.occurred_at)}</time><strong>{AUDIT_ACTIONS[log.action] ?? log.action}</strong><span>{auditActorLabel(log.actor_type, log.actor_id, names)}</span><span>{outcome}</span>{log.action === "api_request_completed" && <span className="audit-request">{String(log.detail.method ?? "")} {String(log.detail.route ?? "")}</span>}</summary><div className="audit-detail"><dl className="audit-meta">
-          <div><dt>실행 주체</dt><dd>{log.actor_id ? names.get(log.actor_id) ?? `${AUDIT_ACTOR_TYPES[log.actor_type]} ${log.actor_id}` : AUDIT_ACTOR_TYPES[log.actor_type]}</dd></div>
+        const isHiddenOperator = !isOperator && isOperatorAuditAction(log.action, log.actor_type);
+        return <details className="audit-entry" key={log.id}><summary className="audit-summary"><time dateTime={log.occurred_at}>{formatKstDateTime(log.occurred_at)}</time><strong>{AUDIT_ACTIONS[log.action] ?? log.action}</strong><span>{isHiddenOperator ? OPERATOR_ACTOR_LABEL : auditActorLabel(log.actor_type, log.actor_id, names)}</span><span>{outcome}</span>{log.action === "api_request_completed" && <span className="audit-request">{String(log.detail.method ?? "")} {String(log.detail.route ?? "")}</span>}</summary><div className="audit-detail"><dl className="audit-meta">
+          <div><dt>실행 주체</dt><dd>{isHiddenOperator ? OPERATOR_ACTOR_LABEL : log.actor_id ? names.get(log.actor_id) ?? `${AUDIT_ACTOR_TYPES[log.actor_type]} ${log.actor_id}` : AUDIT_ACTOR_TYPES[log.actor_type]}</dd></div>
           {isOperator && <div><dt>조직</dt><dd>{log.organization_id ? orgNames.get(log.organization_id) ?? log.organization_id : "조직 미지정"}</dd></div>}
           <div><dt>대상</dt><dd>{log.target_type}: {log.target_id}</dd></div><div><dt>활동 코드</dt><dd><code>{log.action}</code></dd></div>
         </dl><pre className="workspace-json">{JSON.stringify(log.detail, null, 2)}</pre></div></details>;

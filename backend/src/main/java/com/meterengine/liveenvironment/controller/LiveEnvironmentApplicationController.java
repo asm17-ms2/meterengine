@@ -50,15 +50,15 @@ public class LiveEnvironmentApplicationController {
   @ResponseStatus(HttpStatus.CREATED)
   @MemberAdminAccess
   @Operation(
-      summary = "실제 환경 이용 신청",
+      summary = "라이브 환경 이용 신청",
       description =
           """
-          조직의 실제 환경을 열어 달라고 신청한다. 운영자가 승인하면 실제 환경이 열린다.
-          실제 환경이 잠긴 조직이 부르므로 X-MeterEngine-Environment를 test로 보낸다. 로그인 세션만 부를 수 있다.
-          신청할 때 바로 확인하는 것: 사업자등록번호의 검증 숫자, 국세청 사업자 상태, 토스페이먼츠 실제 결제 키.
+          조직의 라이브 환경을 열어 달라고 신청한다. 운영자가 승인하면 라이브 환경이 열린다.
+          라이브 환경이 잠긴 조직이 부르므로 X-MeterEngine-Environment를 test로 보낸다. 로그인 세션만 부를 수 있다.
+          신청할 때 바로 확인하는 것: 사업자등록번호의 검증 숫자, 국세청 사업자 상태, 토스페이먼츠 라이브 키.
           등록되지 않은 번호와 폐업 사업자는 거절한다. 휴업 사업자는 받고 business_status를 suspended로 남긴다.
           국세청 조회 결과를 받지 못하면 신청은 받고 business_status를 unchecked로 남긴다.
-          토스페이먼츠 키는 확인을 마치면 실제 환경의 live 키로 저장한다. 실제 환경이 열리기 전에는 쓰이지 않는다.
+          토스페이먼츠 키는 확인을 마치면 라이브 환경의 live 키로 저장한다. 라이브 환경이 열리기 전에는 쓰이지 않는다.
           created_at은 KST(+09:00)로 나온다.
           """)
   @ApiResponses({
@@ -90,7 +90,7 @@ public class LiveEnvironmentApplicationController {
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
             """
-            code=live_environment_already_open: 이미 실제 환경이 열린 조직이다.
+            code=live_environment_already_open: 이미 라이브 환경이 열린 조직이다.
             code=live_environment_application_in_progress: 검토 중인 신청이 있다.
             """),
     @ApiResponse(
@@ -128,7 +128,7 @@ public class LiveEnvironmentApplicationController {
   @GetMapping("/v1/organization/live-environment-applications")
   @MemberReadAccess
   @Operation(
-      summary = "조직의 실제 환경 이용 신청 목록 조회",
+      summary = "조직의 라이브 환경 이용 신청 목록 조회",
       description =
           """
           조직이 낸 신청을 최근 것부터 돌려준다. 거절된 신청의 사유는 rejection_reason에 있다.
@@ -147,7 +147,7 @@ public class LiveEnvironmentApplicationController {
   @GetMapping("/v1/live-environment-applications")
   @OperatorAccess
   @Operation(
-      summary = "실제 환경 이용 신청 목록 조회",
+      summary = "라이브 환경 이용 신청 목록 조회",
       description =
           """
           모든 조직의 신청을 최근 것부터 돌려준다. status를 주면 그 상태의 신청만 돌려준다.
@@ -185,11 +185,11 @@ public class LiveEnvironmentApplicationController {
   @PutMapping("/v1/live-environment-applications/{id}/status")
   @OperatorAccess
   @Operation(
-      summary = "실제 환경 이용 신청 검토",
+      summary = "라이브 환경 이용 신청 검토",
       description =
           """
           검토 중인 신청을 승인하거나 거절하고 바뀐 신청을 돌려준다.
-          승인하면 신청한 조직의 실제 환경이 열려 그 조직이 실제 환경과 실제 키를 쓸 수 있다.
+          승인하면 신청한 조직의 라이브 환경이 열려 그 조직이 라이브 환경과 라이브 키를 쓸 수 있다.
           거절은 rejection_reason이 있어야 하고, 신청한 조직이 그 사유를 읽는다. 거절된 조직은 다시 신청할 수 있다.
           operator 로그인 세션만 부를 수 있다.
           """)

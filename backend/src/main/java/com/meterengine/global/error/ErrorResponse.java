@@ -10,7 +10,7 @@ public record ErrorResponse(
         ErrorCode code,
     @Schema(
             description = "code마다 하나인 한국어 문구. 예고 없이 바뀔 수 있으니 분기에 쓰지 않는다.",
-            example = "서버 내부 오류입니다",
+            example = "일시적인 오류로 요청을 처리하지 못했습니다. 잠시 뒤 다시 시도해 주세요.",
             requiredMode = Schema.RequiredMode.REQUIRED)
         String message,
     @Schema(description = "틀린 필드 목록. 400 응답에만 실린다.") @JsonInclude(JsonInclude.Include.NON_EMPTY)

@@ -46,7 +46,7 @@ export async function requireTenantSession(): Promise<SessionResponse> {
 export async function saveSession(token: string, expiresAt: string) {
   const expires = new Date(expiresAt);
   if (!token || !Number.isFinite(expires.getTime()) || expires.getTime() <= Date.now()) {
-    throw new Error("로그인 응답을 확인하지 못했습니다.");
+    throw new Error("로그인 응답을 확인하지 못했어요.");
   }
   (await cookies()).set(SESSION_COOKIE, token, {
     httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", expires,

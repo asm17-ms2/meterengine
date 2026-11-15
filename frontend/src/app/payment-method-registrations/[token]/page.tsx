@@ -1,14 +1,16 @@
-import { requestApi } from "@/lib/api/transport";
+import type { Metadata } from "next";
 import { CardRegistration } from "@/components/payment-registration/CardRegistration";
 import { RegistrationFrame } from "@/components/payment-registration/RegistrationFrame";
-import { isValidRegistrationToken } from "../flow";
-import type { PaymentMethodRegistrationResponse } from "../types";
+import { loadRegistration, registrationMetadata } from "../registration";
+
+export async function generateMetadata({ params }: { params: Promise<{ token: string }> }): Promise<Metadata> {
+  const registration = await loadRegistration((await params).token);
+  return registrationMetadata(registration?.ok ? registration.data.organization_name : undefined);
+}
 
 export default async function PaymentMethodRegistrationPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const registration = isValidRegistrationToken(token)
-    ? await requestApi<PaymentMethodRegistrationResponse>(`/v1/payment-method-registrations/${encodeURIComponent(token)}`)
-    : null;
+  const registration = await loadRegistration(token);
   if (!registration?.ok) {
     const isUnavailable = registration !== null && registration.error.status !== 404;
     return <RegistrationFrame title={isUnavailable ? "등록 정보를 불러오지 못했습니다" : "사용할 수 없는 등록 링크입니다"}>

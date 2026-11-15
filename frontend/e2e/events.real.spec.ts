@@ -123,7 +123,7 @@ test("자유 기간과 초 단위 경계, 실제 유형과 검색, 페이지와 
       await page.getByLabel("이메일", { exact: true }).fill(email);
       await page.getByLabel("비밀번호", { exact: true }).fill(PASSWORD);
       await page.getByRole("button", { name: "로그인", exact: true }).click();
-      await expect(page.getByRole("heading", { name: "수집 로그", exact: true })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "수집 이벤트", exact: true })).toBeVisible();
       await expect(filters.locator(`datalist option[value="${eventType}"]`)).toHaveCount(1);
       await expect(filters.getByRole("radio", { name: "월별", exact: true })).toBeChecked();
       await expect(filters.getByLabel("조회 월", { exact: true })).toHaveValue(previousMonth);
@@ -138,7 +138,7 @@ test("자유 기간과 초 단위 경계, 실제 유형과 검색, 페이지와 
       await expect(filters.getByLabel(/^정렬 기준/)).toBeHidden();
       await filters.getByRole("radio", { name: "직접 지정", exact: true }).press("Space");
       await expect(filters.getByRole("radio", { name: "직접 지정", exact: true })).toBeChecked();
-      await expect(filters.getByLabel(/^지정 단위/)).toHaveValue("date");
+      await expect(filters.getByLabel(/^기간 단위/)).toHaveValue("date");
       await expect(filters.getByLabel("시작 날짜 (포함)", { exact: true })).toHaveValue(`${previousMonth}-01`);
       await expect(filters.getByLabel("종료 날짜 (해당 일 포함)", { exact: true })).toHaveValue(previousDate);
       const beforeInvalidRange = page.url();
@@ -156,10 +156,10 @@ test("자유 기간과 초 단위 경계, 실제 유형과 검색, 페이지와 
       expect(page.url()).toBe(beforeInvalidRange);
       await filters.getByLabel("시작 날짜 (포함)", { exact: true }).fill(previousDate);
       await filters.getByLabel("종료 날짜 (해당 일 포함)", { exact: true }).fill(firstDate);
-      await filters.getByLabel(/^지정 단위/).selectOption("datetime");
+      await filters.getByLabel(/^기간 단위/).selectOption("datetime");
       await expect(filters.getByLabel("시작 시각 (포함)", { exact: true })).toHaveValue(new RegExp(`^${previousDate}T00:00(:00)?$`));
       await expect(filters.getByLabel("종료 시각 (미포함)", { exact: true })).toHaveValue(new RegExp(`^${followingDate}T00:00(:00)?$`));
-      await filters.getByLabel(/^지정 단위/).selectOption("date");
+      await filters.getByLabel(/^기간 단위/).selectOption("date");
       await expect(filters.getByLabel("시작 날짜 (포함)", { exact: true })).toHaveValue(previousDate);
       await expect(filters.getByLabel("종료 날짜 (해당 일 포함)", { exact: true })).toHaveValue(firstDate);
       await expect(periodSummary).toHaveText(monthlySummary);
@@ -175,7 +175,7 @@ test("자유 기간과 초 단위 경계, 실제 유형과 검색, 페이지와 
       await filters.getByLabel("이벤트 또는 고객 찾기", { exact: true }).fill(queryText);
       await advanced.locator("summary").press("Enter");
       await filters.getByLabel(/^정렬 기준/).selectOption("transaction_id");
-      await filters.getByLabel(/^정렬 순서/).selectOption("asc");
+      await filters.getByLabel(/^정렬 방향/).selectOption("asc");
       await filters.getByLabel(/^표시 건수/).selectOption("50");
       const propertiesInput = filters.getByLabel("속성과 값 (JSON 객체)", { exact: true });
       await propertiesInput.fill("{invalid");
@@ -223,7 +223,7 @@ test("자유 기간과 초 단위 경계, 실제 유형과 검색, 페이지와 
     });
 
     await test.step("초 단위 시작 포함과 종료 제외", async () => {
-      await filters.getByLabel(/^지정 단위/).selectOption("datetime");
+      await filters.getByLabel(/^기간 단위/).selectOption("datetime");
       await filters.getByLabel("시작 시각 (포함)", { exact: true }).fill(secondsFrom);
       await filters.getByLabel("종료 시각 (미포함)", { exact: true }).fill(secondsTo);
       await page.getByRole("button", { name: "조건 적용", exact: true }).click();
@@ -231,8 +231,8 @@ test("자유 기간과 초 단위 경계, 실제 유형과 검색, 페이지와 
       await expect(eventLinks(page)).toHaveText(ids.slice(20, 23));
       await expect(filters.getByLabel("시작 시각 (포함)", { exact: true })).toHaveValue(secondsFrom);
       await expect(filters.getByLabel("종료 시각 (미포함)", { exact: true })).toHaveValue(secondsTo);
-      await filters.getByLabel(/^지정 단위/).selectOption("date");
-      await filters.getByLabel(/^지정 단위/).selectOption("datetime");
+      await filters.getByLabel(/^기간 단위/).selectOption("date");
+      await filters.getByLabel(/^기간 단위/).selectOption("datetime");
       await expect(filters.getByLabel("시작 시각 (포함)", { exact: true })).toHaveValue(secondsFrom);
       await expect(filters.getByLabel("종료 시각 (미포함)", { exact: true })).toHaveValue(secondsTo);
     });
@@ -249,7 +249,7 @@ test("자유 기간과 초 단위 경계, 실제 유형과 검색, 페이지와 
       await expectQuery(page, { ...preserved, month: previousMonth, from: null, to: null, range_mode: null, page: "1" });
       await expect(eventLinks(page)).toHaveText([...ids.slice(50), beforeId]);
       await filters.getByRole("radio", { name: "직접 지정", exact: true }).check();
-      await filters.getByLabel(/^지정 단위/).selectOption("date");
+      await filters.getByLabel(/^기간 단위/).selectOption("date");
       await filters.getByLabel("시작 날짜 (포함)", { exact: true }).fill(previousDate);
       await filters.getByLabel("종료 날짜 (해당 일 포함)", { exact: true }).fill(firstDate);
       await page.getByRole("button", { name: "조건 적용", exact: true }).click();
@@ -269,7 +269,7 @@ test("자유 기간과 초 단위 경계, 실제 유형과 검색, 페이지와 
         await filters.getByRole("button", { name: label, exact: true }).click();
         await expectQuery(page, { ...preserved, q: draftQuery, month: null, range_mode: null, page: null });
         await expect(filters.getByRole("radio", { name: "직접 지정", exact: true })).toBeChecked();
-        await expect(filters.getByLabel(/^지정 단위/)).toHaveValue("datetime");
+        await expect(filters.getByLabel(/^기간 단위/)).toHaveValue("datetime");
         const selected = new URL(page.url()).searchParams;
         const from = selected.get("from");
         const to = selected.get("to");
@@ -289,10 +289,10 @@ test("자유 기간과 초 단위 경계, 실제 유형과 검색, 페이지와 
       await page.goto(listUrl);
       await expectQuery(page, { ...dateQuery, page: "1" });
       await filters.getByRole("button", { name: "최근 24시간", exact: true }).click();
-      await expect(filters.getByLabel(/^지정 단위/)).toHaveValue("datetime");
+      await expect(filters.getByLabel(/^기간 단위/)).toHaveValue("datetime");
       await page.goBack();
       await expectQuery(page, { ...dateQuery, page: "1" });
-      await expect(filters.getByLabel(/^지정 단위/)).toHaveValue("date");
+      await expect(filters.getByLabel(/^기간 단위/)).toHaveValue("date");
       await expect(filters.getByLabel("시작 날짜 (포함)", { exact: true })).toHaveValue(previousDate);
       await expect(filters.getByLabel("종료 날짜 (해당 일 포함)", { exact: true })).toHaveValue(firstDate);
       await expect(eventLinks(page)).toHaveText([...ids.slice(50), inclusiveEndId]);

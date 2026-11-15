@@ -23,7 +23,7 @@ test("an unreadable response tells a read to load again and a write to check whe
     assert.match(describe("GET"), /다시 조회해 주세요/);
     for (const method of ["POST", "PUT", "PATCH", "DELETE"]) {
       assert.notEqual(describe(method), describe("GET"));
-      assert.match(describe(method), /화면을 새로 조회해/);
+      assert.match(describe(method), /화면을 새로고침한 뒤/);
     }
   }
 });

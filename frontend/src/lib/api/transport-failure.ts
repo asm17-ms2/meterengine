@@ -12,11 +12,11 @@ export function rateLimitMessage(retryAfterSeconds: number | undefined): string 
 }
 
 export function unreadableErrorMessage(method: string): string {
-  return method === "GET" ? UNREADABLE_READ_MESSAGE : "요청 결과를 확인하지 못했어요. 화면을 새로 조회해 반영됐는지 확인하세요.";
+  return method === "GET" ? UNREADABLE_READ_MESSAGE : "요청 결과를 확인하지 못했어요. 화면을 새로고침한 뒤 반영됐는지 확인하세요.";
 }
 
 export function malformedResponseMessage(method: string): string {
-  return method === "GET" ? UNREADABLE_READ_MESSAGE : "응답 내용을 읽지 못했어요. 화면을 새로 조회해 결과를 확인하세요.";
+  return method === "GET" ? UNREADABLE_READ_MESSAGE : "응답 내용을 읽지 못했어요. 화면을 새로고침한 뒤 결과를 확인하세요.";
 }
 
 export function describeTransportFailure(cause: unknown, method: string, path: string, elapsedMs: number): { status: number; code: string; message: string } {
@@ -26,6 +26,6 @@ export function describeTransportFailure(cause: unknown, method: string, path: s
   return {
     status: 0,
     code: "timeout",
-    message: method === "GET" ? "응답이 늦어 정보를 불러오지 못했어요. 잠시 뒤 다시 조회해 주세요." : "응답이 늦어 결과를 확인하지 못했어요. 요청이 처리됐을 수 있으니 화면을 새로 조회해 결과를 확인하세요.",
+    message: method === "GET" ? "응답이 늦어 정보를 불러오지 못했어요. 잠시 뒤 다시 조회해 주세요." : "응답이 늦어 결과를 확인하지 못했어요. 요청이 처리됐을 수 있으니 화면을 새로고침한 뒤 결과를 확인하세요.",
   };
 }

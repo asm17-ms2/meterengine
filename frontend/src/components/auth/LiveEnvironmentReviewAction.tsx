@@ -40,12 +40,12 @@ function ReviewDialog({ id, target, value, onClose }: Props & { onClose: () => v
 
   return <Modal className="workspace-dialog" width="min(560px, calc(100vw - 32px))" style={{ top: 24 }} styles={{ body: { maxHeight: "calc(100dvh - 200px)", overflowY: "auto", padding: 8, marginInline: -8 } }} title={`${label} 확인`} open onCancel={onClose} footer={null} closable={!isPending} mask={{ closable: !isPending }} keyboard={!isPending}>
     <p><strong>{target}</strong></p>
-    <p>{isRejection ? "거절 사유는 신청한 조직의 화면에 그대로 보여요. 조직은 내용을 고쳐 다시 신청할 수 있어요." : "승인하면 이 조직이 실제 고객에게 청구하고 결제를 받을 수 있어요. 승인한 뒤에는 실제 환경을 다시 잠글 수 없어요."}</p>
+    <p>{isRejection ? "거절 사유는 신청한 조직의 화면에 그대로 보여요. 조직은 내용을 고쳐 다시 신청할 수 있어요." : "승인하면 이 조직이 실제 고객에게 청구하고 결제를 받을 수 있어요. 승인한 뒤에는 라이브 환경을 다시 잠글 수 없어요."}</p>
     <form noValidate onSubmit={submit} className="workspace-form" aria-busy={isPending}>
       <input type="hidden" name="id" value={id} /><input type="hidden" name="status" value={value} />
       {isRejection && <div className="workspace-field"><label htmlFor={reasonId}>거절 사유<span className="required-label"> (필수)</span></label><textarea ref={reasonRef} id={reasonId} name="rejection_reason" rows={4} maxLength={500} required value={reason} onChange={event => { setReason(event.target.value); setReasonError(undefined); }} aria-invalid={Boolean(reasonError)} aria-describedby={[`${reasonId}-hint`, reasonError ? `${reasonId}-error` : undefined].filter(Boolean).join(" ")} /><small id={`${reasonId}-hint`} className="field-hint">무엇을 고쳐 다시 신청하면 되는지 적으세요. 500자까지 쓸 수 있어요.</small>{reasonError && <small id={`${reasonId}-error`} className="field-error">{reasonError}</small>}</div>}
       {hasFailed && <Alert type="error" showIcon title={<span role="alert">{state.message}</span>} />}
-      <div className="confirmation-actions"><Button onClick={onClose} disabled={isPending}>닫기</Button><Button type="primary" danger={isRejection} htmlType="submit" loading={isPending} disabled={state.done || state.isStale}>{label} 확정</Button></div>
+      <div className="confirmation-actions"><Button onClick={onClose} disabled={isPending}>닫기</Button><Button type="primary" danger={isRejection} htmlType="submit" loading={isPending} disabled={state.done || state.isStale}>{isRejection ? "거절" : "승인"}</Button></div>
     </form>
   </Modal>;
 }

@@ -125,7 +125,7 @@ test("집계 10종과 단위 변환을 수집부터 사용량, 청구 예정액,
         const dialog = page.getByRole("dialog", { name: "미터 등록", exact: true });
         await dialog.getByLabel("코드", { exact: true }).fill(metricCode(metric));
         await dialog.getByLabel("이름", { exact: true }).fill(metricName(metric));
-        await dialog.getByLabel("이벤트 타입", { exact: true }).fill(eventType);
+        await dialog.getByLabel("이벤트 유형", { exact: true }).fill(eventType);
         await choose(page, dialog, "집계 함수", metric.label);
         const target = dialog.getByLabel("집계 대상 속성", { exact: true });
         if (metric.aggregation === "count") await expect(target).toHaveCount(0);
@@ -136,7 +136,7 @@ test("집계 10종과 단위 변환을 수집부터 사용량, 청구 예정액,
         await expect(dialog.getByLabel("과금 단위 크기", { exact: true })).toHaveValue("1");
         if (metric.unit) await dialog.getByLabel("과금 단위 크기", { exact: true }).fill(String(metric.unit));
         if (metric.roundingLabel) {
-          await choose(page, dialog, "반올림 방식", metric.roundingLabel);
+          await choose(page, dialog, "끝수 처리", metric.roundingLabel);
           await expect(dialog.getByLabel("소수 자릿수", { exact: true })).toHaveValue("0");
         }
         await dialog.getByRole("button", { name: "저장", exact: true }).click();
@@ -228,7 +228,7 @@ test("집계 10종과 단위 변환을 수집부터 사용량, 청구 예정액,
       await page.getByRole("button", { name: "미터 등록", exact: true }).first().click();
       const dialog = page.getByRole("dialog", { name: "미터 등록", exact: true });
       await choose(page, dialog, "집계 함수", "백분위수 (PERCENTILE)");
-      await choose(page, dialog, "반올림 방식", "반올림 (ROUND)");
+      await choose(page, dialog, "끝수 처리", "반올림 (ROUND)");
       for (const label of ["백분위 (0-100)", "과금 단위 크기", "소수 자릿수"]) {
         const bounds = await dialog.getByLabel(label, { exact: true }).boundingBox();
         expect(bounds).not.toBeNull();
@@ -254,7 +254,7 @@ test("집계 10종과 단위 변환을 수집부터 사용량, 청구 예정액,
       console.info("집계 모바일 레이아웃", JSON.stringify(layout));
       expect(layout.documentWidth, "390px 문서의 가로 너비").toBeLessThanOrEqual(layout.viewport);
       expect(layout.dialogScrollWidth, "390px 미터 폼의 내부 가로 너비").toBeLessThanOrEqual(layout.dialogWidth);
-      const combobox = dialog.getByLabel("반올림 방식", { exact: true });
+      const combobox = dialog.getByLabel("끝수 처리", { exact: true });
       await combobox.press("ArrowDown");
       await expect(combobox).toHaveAttribute("aria-expanded", "true");
       const listId = await combobox.getAttribute("aria-controls");

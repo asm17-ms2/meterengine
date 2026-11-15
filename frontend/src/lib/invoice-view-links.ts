@@ -53,7 +53,7 @@ type PublicInvoiceLine = PublicInvoiceResponse["lines"][number];
 export function publicInvoiceLineName(line: Pick<PublicInvoiceLine, "line_type" | "billable_metric_code" | "billable_metric_name">): string {
   if (line.line_type === "base_fee") return "기본료";
   if (line.line_type === "minimum_adjustment") return "최소 사용료 조정";
-  return line.billable_metric_name ?? line.billable_metric_code ?? "사용량";
+  return line.billable_metric_name ?? line.billable_metric_code ?? "사용료";
 }
 
 export function publicInvoiceLineTier(line: Pick<PublicInvoiceLine, "line_type" | "tier_index">): string | null {

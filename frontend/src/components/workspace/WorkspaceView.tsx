@@ -14,13 +14,13 @@ export function WorkspaceError({ message, status }: { message: string; status?: 
   return <ErrorAlert title="데이터를 불러오지 못했어요" message={status && status > 0 ? `${message} (${status})` : message} />;
 }
 
-export type WorkspaceColumn = { key: string; label: string; isMoney?: boolean; isNumber?: boolean; isDate?: boolean; isStatus?: boolean; statusLabels?: Record<string, string>; modeKind?: "api" | "payment"; hrefPrefix?: string; hrefKey?: string; hrefSuffix?: string; emptyLabel?: string; isId?: boolean };
+export type WorkspaceColumn = { key: string; label: string; isMoney?: boolean; isNumber?: boolean; isDate?: boolean; isStatus?: boolean; statusLabels?: Record<string, string>; modeKind?: "api" | "payment"; hrefPrefix?: string; hrefKey?: string; hrefSuffix?: string; emptyLabel?: string; valueNote?: string; isId?: boolean };
 export type WorkspaceRowActions = Record<string, ActionPanelProps[]>;
 
 const STATUS_LABELS: Record<string, string> = {
-  paid: "수납 완료", partially_canceled: "부분 취소", canceled: "전액 취소", unpaid: "결제 전", pending: "결과 확인 중", failed: "실패", done: "완료", active: "사용 중", archived: "보관됨", accepted: "수락 완료", expired: "만료", invited: "초대 중", revoked: "폐기", retry: "재시도 대기", waiting: "발송 대기", succeeded: "정상", running: "실행 중", not_required: "결제 불필요", suspended: "이용 정지", rejected: "거절", success: "성공", member: "일반 사용자", operator: "플랫폼 운영자", owner: "대표관리자", admin: "관리자",
+  paid: "결제 완료", partially_canceled: "부분 취소", canceled: "전액 취소", unpaid: "결제 전", pending: "결과 확인 중", failed: "실패", done: "완료", active: "사용 중", archived: "보관됨", accepted: "수락 완료", expired: "만료됨", invited: "초대 중", revoked: "폐기됨", retry: "재시도 대기", waiting: "발송 대기", succeeded: "성공", running: "실행 중", not_required: "결제 불필요", suspended: "이용 정지", rejected: "거절", success: "성공", member: "일반 사용자", operator: "플랫폼 운영자", owner: "대표관리자", admin: "관리자",
 };
-const JOB_LABELS: Record<string, string> = { payment_attempt_confirmation: "결제 결과 확인", payment_reconciliation: "결제 내역 대조", payment_retry: "실패 결제 재시도", webhook_delivery: "결과 통보 발송", unbilled_usage_report: "과금 제외 사용량 통보", invoice_auto_finalize: "인보이스 자동 확정", invoice_email: "청구 안내 메일" };
+const JOB_LABELS: Record<string, string> = { payment_attempt_confirmation: "결제 결과 확인", payment_reconciliation: "결제 내역 대조", payment_retry: "실패 결제 재시도", webhook_delivery: "결과 웹훅 발송", unbilled_usage_report: "과금 제외 사용량 웹훅", invoice_auto_finalize: "청구서 자동 확정", invoice_email: "청구 안내 메일" };
 const NUMBER = new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 12 });
 
 function statusLabel(value: unknown, column: WorkspaceColumn) {
@@ -28,7 +28,7 @@ function statusLabel(value: unknown, column: WorkspaceColumn) {
 }
 
 function modeLabel(value: unknown, column: WorkspaceColumn) {
-  return value === "live" ? column.modeKind === "api" ? "운영 키" : "실결제" : value === "test" ? column.modeKind === "api" ? "테스트 키" : "테스트 결제" : String(value);
+  return value === "live" ? column.modeKind === "api" ? "라이브 키" : "라이브 환경" : value === "test" ? column.modeKind === "api" ? "테스트 키" : "테스트 환경" : String(value);
 }
 
 // 행 작업 버튼 이름에 쓸 첫 칸의 보이는 글자. 코드 값이나 객체를 그대로 이름에 넣지 않는다.
@@ -49,7 +49,7 @@ function CellValue({ value, column, row }: { value: unknown; column: WorkspaceCo
   if (column.isId) return <code className="workspace-cell-id">{String(value)}</code>;
   if (column.isMoney || column.isNumber || typeof value === "number") {
     const number = Number(value);
-    return <span className="numeric">{Number.isFinite(number) ? NUMBER.format(number) + (column.isMoney ? "원" : "") : "확인 필요"}</span>;
+    return <span className="numeric">{Number.isFinite(number) ? NUMBER.format(number) + (column.isMoney ? "원" : "") : "확인 필요"}{column.valueNote && <span className="muted"> {column.valueNote}</span>}</span>;
   }
   if (column.isStatus) return <Tag color={["paid", "done", "active", "succeeded", "success"].includes(String(value)) ? "success" : ["failed", "rejected"].includes(String(value)) ? "error" : ["pending", "running", "retry"].includes(String(value)) ? "warning" : "default"}>{statusLabel(value, column)}</Tag>;
   if (column.key === "mode") return <Tag color={value === "live" ? "warning" : "default"}>{modeLabel(value, column)}</Tag>;

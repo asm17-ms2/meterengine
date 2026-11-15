@@ -1,7 +1,7 @@
 import type { OrganizationRole } from "@/lib/auth/permissions";
 
 export type OrganizationStatus = "pending" | "active" | "rejected" | "suspended";
-// live_environment_opened_at이 null이면 실제 환경이 잠긴 조직이다.
+// live_environment_opened_at이 null이면 라이브 환경이 잠긴 조직이다.
 export type SessionOrganization = { id: string; name: string; status: OrganizationStatus; live_environment_opened_at?: string | null };
 // 필드가 없는 응답은 잠금을 모르는 서버의 것이라 열린 것으로 본다. 잠금은 서버가 다시 막는다.
 export function isLiveEnvironmentOpen(organization: Pick<SessionOrganization, "live_environment_opened_at">): boolean {

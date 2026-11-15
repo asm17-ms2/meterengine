@@ -43,7 +43,7 @@ export function BillableMetricDeleteDialog({
 
   useEffect(() => {
     if (state.status === "done") {
-      message.success("보관했어요");
+      message.success("보관했어요.");
       onClose();
     }
   }, [state, message, onClose]);
@@ -68,7 +68,7 @@ export function BillableMetricDeleteDialog({
     return (
       <Notice
         title="미터를 찾을 수 없어요"
-        body={`${state.name} 미터를 찾지 못했어요. 목록을 새로 조회하세요.`}
+        body={`${state.name} 미터를 찾지 못했어요. 목록을 새로고침한 뒤 확인하세요.`}
         onClose={onClose}
       />
     );
@@ -98,7 +98,7 @@ export function BillableMetricDeleteDialog({
             )
           }
         >
-          {isPending ? "보관 중..." : "보관"}
+          {isPending ? "보관 중" : "보관"}
         </Button>,
       ]}
     >

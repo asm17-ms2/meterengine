@@ -19,7 +19,7 @@ import { linesOf, type MeterItem } from "@/lib/meter-items";
 
 function toDimensionText(values: Record<string, unknown>): string {
   const entries = Object.entries(values);
-  return entries.length ? entries.map(([key, value]) => `${key}: ${String(value)}`).join(", ") : "차원 값 없음";
+  return entries.length ? entries.map(([key, value]) => `${key}: ${String(value)}`).join(", ") : "구분 값 없음";
 }
 
 export type UsageGroupView = {
@@ -55,10 +55,6 @@ function byCustomerName(left: UsageRow, right: UsageRow): number {
   return left.kind === "customer" && right.kind === "customer"
     ? koreanCompare(left.customerName, right.customerName)
     : 0;
-}
-
-function byLineCount(left: UsageRow, right: UsageRow): number {
-  return left.kind === "customer" && right.kind === "customer" ? left.lineCount - right.lineCount : 0;
 }
 
 function toExpandLabel(row: UsageRow): string {
@@ -134,14 +130,14 @@ export function UsageTable({
     },
     {
       key: "combination",
-      title: "조합",
+      title: "구분 값",
       onCell: (row) => ({ colSpan: row.kind === "customer" ? 0 : 1 }),
       render: (_, row) => {
         if (row.kind === "line") {
           return <DimensionValues dimensionValues={row.line.dimensionValues} slotCount={slotCount} />;
         }
         if (row.kind === "meter") {
-          return <Typography.Text type="secondary">전체 집계값 / 조합 {row.combinationCount}개</Typography.Text>;
+          return <Typography.Text type="secondary">전체 집계값 / 구분 값 {row.combinationCount}개</Typography.Text>;
         }
         return null;
       },
@@ -151,12 +147,9 @@ export function UsageTable({
       title: "집계 수량",
       align: "right",
       width: 200,
-      clientSorter: byLineCount,
-      sortKey: "line_count",
-      showSorterTooltip: { title: "집계 라인 수로 정렬" },
       render: (_, row) => {
         if (row.kind === "customer") {
-          return <Typography.Text type="secondary">집계 라인 {row.lineCount}줄</Typography.Text>;
+          return <Typography.Text type="secondary">집계 항목 {row.lineCount}개</Typography.Text>;
         }
         const rawQuantity = row.kind === "meter" ? row.children[0]?.line.overallRawQuantity : row.line.rawQuantity;
         return <div><NumberText strong>{row.kind === "meter" ? row.quantity : row.line.quantity}</NumberText>{rawQuantity != null ? <p className="field-hint">단위 변환과 반올림 전 {rawQuantity}</p> : null}</div>;
@@ -168,7 +161,7 @@ export function UsageTable({
 
   return (
     <>
-    <div className="data-mobile-records">{groups.map(group => <article key={group.customerId} className="data-mobile-record"><h3>{group.customerName}</h3>{group.items.map((item, index) => <div key={index}>{item.kind === "meter" && <><div className="data-mobile-line"><span>{item.label} / 전체 집계값</span><strong className="numeric">{item.quantity}</strong></div>{item.lines[0]?.overallRawQuantity != null && <p className="field-hint">단위 변환과 반올림 전 {item.lines[0].overallRawQuantity}</p>}</>}{item.kind === "meter" ? <div style={{ paddingLeft: 12, borderLeft: "2px solid var(--line)" }}><p className="field-hint">차원별 집계값</p>{linesOf([item]).map((line, lineIndex) => <div key={lineIndex}><div className="data-mobile-line"><span>{toDimensionText(line.dimensionValues)}</span><strong className="numeric">{line.quantity}</strong></div>{line.rawQuantity != null && <p className="field-hint">단위 변환과 반올림 전 {line.rawQuantity}</p>}</div>)}</div> : linesOf([item]).map((line, lineIndex) => <div key={lineIndex}><div className="data-mobile-line"><span>{line.label}</span><strong className="numeric">{line.quantity}</strong></div>{Object.keys(line.dimensionValues).length > 0 && <p className="field-hint">{toDimensionText(line.dimensionValues)}</p>}{line.rawQuantity != null && <p className="field-hint">단위 변환과 반올림 전 {line.rawQuantity}</p>}</div>)}</div>)}</article>)}</div>
+    <div className="data-mobile-records">{groups.map(group => <article key={group.customerId} className="data-mobile-record"><h3>{group.customerName}</h3>{group.items.map((item, index) => <div key={index}>{item.kind === "meter" && <><div className="data-mobile-line"><span>{item.label} / 전체 집계값</span><strong className="numeric">{item.quantity}</strong></div>{item.lines[0]?.overallRawQuantity != null && <p className="field-hint">단위 변환과 반올림 전 {item.lines[0].overallRawQuantity}</p>}</>}{item.kind === "meter" ? <div style={{ paddingLeft: 12, borderLeft: "2px solid var(--line)" }}><p className="field-hint">구분 값별 집계값</p>{linesOf([item]).map((line, lineIndex) => <div key={lineIndex}><div className="data-mobile-line"><span>{toDimensionText(line.dimensionValues)}</span><strong className="numeric">{line.quantity}</strong></div>{line.rawQuantity != null && <p className="field-hint">단위 변환과 반올림 전 {line.rawQuantity}</p>}</div>)}</div> : linesOf([item]).map((line, lineIndex) => <div key={lineIndex}><div className="data-mobile-line"><span>{line.label}</span><strong className="numeric">{line.quantity}</strong></div>{Object.keys(line.dimensionValues).length > 0 && <p className="field-hint">{toDimensionText(line.dimensionValues)}</p>}{line.rawQuantity != null && <p className="field-hint">단위 변환과 반올림 전 {line.rawQuantity}</p>}</div>)}</div>)}</article>)}</div>
     <div className="data-desktop-table"><Table<UsageRow>
       rowKey="key"
       columns={columns}

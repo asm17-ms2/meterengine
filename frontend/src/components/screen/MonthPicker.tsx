@@ -22,7 +22,7 @@ export function MonthPicker({
   allowAll = false,
   onChange,
   id,
-  label = "조회 기간",
+  label = "조회 월",
 }: {
   query: ListQuery;
   capabilities: ListCapabilities;

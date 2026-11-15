@@ -84,7 +84,7 @@ public class EventQueryService implements EventPresence {
       boolean includeProperties) {
     validate(organizationId, customerId, search);
     if (eventRepository.count(organizationId, customerId, type, search) > MAX_EXPORT_ROWS) {
-      throw EventSearch.invalid("export", "10000행 이하가 되도록 검색 범위를 좁혀 주세요");
+      throw EventSearch.invalid("export", "10,000행 이하가 되도록 조건을 좁히세요.");
     }
     if (includeProperties
         && eventRepository.sumPropertiesBytes(organizationId, customerId, type, search)

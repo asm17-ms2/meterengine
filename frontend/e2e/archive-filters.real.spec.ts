@@ -29,7 +29,7 @@ function section(page: Page, heading: string) {
 async function selectedFilter(page: Page, label: string, value: string) {
   const select = page.getByRole("combobox", { name: label, exact: true });
   const pathname = new URL(page.url()).pathname;
-  const isSubmitted = label === "관리 상태" && ["/customers", "/billable-metrics"].includes(pathname) || pathname === "/pricing" && ["미터 관리 상태", "요금제 관리 상태", "단가 관리 상태"].includes(label);
+  const isSubmitted = label === "상태" && ["/customers", "/billable-metrics"].includes(pathname) || pathname === "/pricing" && ["미터 상태", "요금제 상태", "단가 상태"].includes(label);
   if (isSubmitted) {
     await expect(select).toBeVisible();
     await expect.poll(() => new URL(page.url()).searchParams.get("organization_id")).toMatch(/^[0-9a-f-]{36}$/);
@@ -181,16 +181,16 @@ test("보관을 지원하는 모든 도입사 목록에서 상태별 조회와 �
       }
     });
 
-    await test.step("고객 검색어와 월을 유지하며 세 관리 상태 조회", async () => {
+    await test.step("고객 검색어와 월을 유지하며 세 상태 조회", async () => {
       await page.goto(`/customers?month=${currentMonth}&q=${encodeURIComponent(suffix)}&page=7`);
       const customers = page.locator("section.workspace-panel");
       await expectRecords(customers, [], [activeName, archivedName]);
-      await selectedFilter(page, "관리 상태", "보관됨");
+      await selectedFilter(page, "상태", "보관됨");
       await expectRecords(customers, [archivedName], [activeName]);
       expect(new URL(page.url()).searchParams.get("q")).toBe(suffix);
       expect(new URL(page.url()).searchParams.get("month")).toBe(currentMonth);
       expect(new URL(page.url()).searchParams.has("page")).toBe(false);
-      await selectedFilter(page, "관리 상태", "전체");
+      await selectedFilter(page, "상태", "전체");
       await expectRecords(customers, [activeName, archivedName]);
       await page.reload();
       await expectRecords(customers, [activeName, archivedName]);
@@ -200,10 +200,10 @@ test("보관을 지원하는 모든 도입사 목록에서 상태별 조회와 �
       await page.goto("/billable-metrics");
       await expect(page.getByRole("row").filter({ hasText: activeMetricName })).toHaveCount(1);
       await expect(page.getByRole("row").filter({ hasText: archivedMetricName })).toHaveCount(0);
-      await selectedFilter(page, "관리 상태", "보관됨");
+      await selectedFilter(page, "상태", "보관됨");
       await expect(page.getByRole("row").filter({ hasText: archivedMetricName })).toHaveCount(1);
       await expect(page.getByRole("row").filter({ hasText: activeMetricName })).toHaveCount(0);
-      await selectedFilter(page, "관리 상태", "전체");
+      await selectedFilter(page, "상태", "전체");
       await expect(page.getByRole("row").filter({ hasText: activeMetricName })).toHaveCount(1);
       await expect(page.getByRole("row").filter({ hasText: archivedMetricName })).toHaveCount(1);
     });
@@ -239,21 +239,21 @@ test("보관을 지원하는 모든 도입사 목록에서 상태별 조회와 �
       await expect(plans.getByRole("row").filter({ hasText: "5,678원" })).toHaveCount(1);
       await expect(plans.getByRole("row").filter({ hasText: "1,234원" })).toHaveCount(0);
       await expect(rates.getByRole("row").filter({ hasText: "456원" })).toHaveCount(1);
-      await selectedFilter(page, "요금제 관리 상태", "보관됨");
+      await selectedFilter(page, "요금제 상태", "보관됨");
       await expect(plans.getByRole("row").filter({ hasText: "1,234원" })).toHaveCount(1);
       await expect(plans.getByRole("row").filter({ hasText: "5,678원" })).toHaveCount(0);
       await expect(rates.getByRole("row").filter({ hasText: "456원" })).toHaveCount(1);
-      await selectedFilter(page, "단가 관리 상태", "보관됨");
+      await selectedFilter(page, "단가 상태", "보관됨");
       await expect(rates.getByRole("row").filter({ hasText: "123원" })).toHaveCount(1);
       await expect(rates.getByRole("row").filter({ hasText: "456원" })).toHaveCount(0);
       expect(new URL(page.url()).searchParams.get("plan_status")).toBe("archived");
-      await selectedFilter(page, "미터 관리 상태", "보관됨");
+      await selectedFilter(page, "미터 상태", "보관됨");
       await expect(page.getByRole("button", { name: new RegExp(archivedMetricName) })).toBeVisible();
       await expect(page.getByRole("button", { name: new RegExp(activeMetricName) })).toHaveCount(0);
-      await selectedFilter(page, "미터 관리 상태", "전체");
+      await selectedFilter(page, "미터 상태", "전체");
       await page.getByRole("button", { name: new RegExp(activeMetricName) }).click();
-      await selectedFilter(page, "요금제 관리 상태", "전체");
-      await selectedFilter(page, "단가 관리 상태", "전체");
+      await selectedFilter(page, "요금제 상태", "전체");
+      await selectedFilter(page, "단가 상태", "전체");
       await expect(plans.getByRole("row").filter({ hasText: /1,234원|5,678원/ })).toHaveCount(2);
       await expect(rates.getByRole("row").filter({ hasText: /123원|456원/ })).toHaveCount(2);
       await page.getByRole("button", { name: "조건 적용", exact: true }).click();
@@ -261,30 +261,30 @@ test("보관을 지원하는 모든 도입사 목록에서 상태별 조회와 �
       expect(new URL(page.url()).searchParams.get("month")).toBe(currentMonth);
     });
 
-    await test.step("사용자와 서버 키, 통보의 상태별 목록 분리", async () => {
+    await test.step("사용자와 서버 키, 웹훅 URL의 상태별 목록 분리", async () => {
       await page.goto("/members");
       const members = section(page, "사용자 목록");
       await expectRecords(members, [email], [archivedMemberEmail]);
-      await selectedFilter(page, "사용자 관리 상태", "보관됨");
+      await selectedFilter(page, "사용자 상태", "보관됨");
       await expectRecords(members, [archivedMemberEmail], [email]);
-      await selectedFilter(page, "사용자 관리 상태", "전체");
+      await selectedFilter(page, "사용자 상태", "전체");
       await expectRecords(members, [email, archivedMemberEmail]);
       await page.goto("/integrations");
       const keys = section(page, "API 키");
-      const hooks = section(page, "통보 수신 주소");
+      const hooks = section(page, "웹훅 URL");
       await expectRecords(keys, [activeKeyLabel], [revokedKeyLabel]);
       await expect(hooks.getByText(activeWebhookUrl, { exact: true })).toBeVisible();
       await expect(hooks.getByText(archivedWebhookUrl, { exact: true })).toHaveCount(0);
       await selectedFilter(page, "API 키 상태", "폐기됨");
       await expectRecords(keys, [revokedKeyLabel], [activeKeyLabel]);
-      await selectedFilter(page, "통보 관리 상태", "보관됨");
+      await selectedFilter(page, "웹훅 URL 상태", "보관됨");
       await expect(hooks.getByText(archivedWebhookUrl, { exact: true })).toBeVisible();
       await expect(hooks.getByText(activeWebhookUrl, { exact: true })).toHaveCount(0);
       expect(new URL(page.url()).searchParams.get("key_status")).toBe("revoked");
       await selectedFilter(page, "API 키 상태", "만료됨");
       await expectRecords(keys, [], [activeKeyLabel, revokedKeyLabel]);
       await selectedFilter(page, "API 키 상태", "전체");
-      await selectedFilter(page, "통보 관리 상태", "전체");
+      await selectedFilter(page, "웹훅 URL 상태", "전체");
       await expectRecords(keys, [activeKeyLabel, revokedKeyLabel]);
       await expect(hooks.getByText(activeWebhookUrl, { exact: true })).toBeVisible();
       await expect(hooks.getByText(archivedWebhookUrl, { exact: true })).toBeVisible();
@@ -296,24 +296,24 @@ test("보관을 지원하는 모든 도입사 목록에서 상태별 조회와 �
       await page.goto("/settings");
       const credentials = section(page, "토스페이먼츠 연동");
       await expectRecords(credentials, ["new2"], ["old1"]);
-      await selectedFilter(page, "토스페이먼츠 키 관리 상태", "보관됨");
+      await selectedFilter(page, "토스페이먼츠 키 상태", "보관됨");
       await expectRecords(credentials, ["old1"], ["new2"]);
-      await selectedFilter(page, "토스페이먼츠 키 관리 상태", "전체");
+      await selectedFilter(page, "토스페이먼츠 키 상태", "전체");
       await expectRecords(credentials, ["new2", "old1"]);
       await page.goto(`/customers/${activeCustomerId}?month=${currentMonth}`);
-      const cards = section(page, "현재 결제 모드의 카드 관리");
+      const cards = section(page, "이 환경의 카드 관리");
       const rows = cards.locator(".workspace-desktop-table").getByRole("row").filter({ hasText: "43301234****123*" });
       await expect(rows).toHaveCount(1);
       await expect(cards.getByRole("button", { name: /카드 보관$/ })).toBeVisible();
-      await selectedFilter(page, "카드 관리 상태", "보관됨");
+      await selectedFilter(page, "카드 상태", "보관됨");
       await expect(rows).toHaveCount(1);
       await expect(cards.getByRole("button", { name: /카드 보관$/ })).toHaveCount(0);
-      await selectedFilter(page, "카드 관리 상태", "전체");
+      await selectedFilter(page, "카드 상태", "전체");
       await expect(rows).toHaveCount(2);
       await page.reload();
       await expect(rows).toHaveCount(2);
       expect(new URL(page.url()).searchParams.get("month")).toBe(currentMonth);
-      await page.getByRole("button", { name: "조회", exact: true }).click();
+      await page.getByRole("button", { name: "조건 적용", exact: true }).click();
       expect(new URL(page.url()).searchParams.get("card_status")).toBe("all");
       await expect(rows).toHaveCount(2);
     });
@@ -321,13 +321,13 @@ test("보관을 지원하는 모든 도입사 목록에서 상태별 조회와 �
     await test.step("390px에서 필터와 보관 목록이 화면 안에 표시", async () => {
       await page.setViewportSize({ width: 390, height: 844 });
       const routes = [
-        { path: "/customers?status=all", filters: ["관리 상태"] },
-        { path: "/billable-metrics?status=all", filters: ["관리 상태"] },
-        { path: `/pricing?month=${currentMonth}&metric=${activeMetricCode}&metric_status=all&plan_status=all&rate_status=all`, filters: ["미터 관리 상태", "요금제 관리 상태", "단가 관리 상태"] },
-        { path: "/members?status=all", filters: ["사용자 관리 상태"] },
-        { path: "/integrations?status=all&key_status=all", filters: ["API 키 상태", "통보 관리 상태"] },
-        { path: "/settings?status=all", filters: ["토스페이먼츠 키 관리 상태"] },
-        { path: `/customers/${activeCustomerId}?month=${currentMonth}&card_status=all`, filters: ["카드 관리 상태"] },
+        { path: "/customers?status=all", filters: ["상태"] },
+        { path: "/billable-metrics?status=all", filters: ["상태"] },
+        { path: `/pricing?month=${currentMonth}&metric=${activeMetricCode}&metric_status=all&plan_status=all&rate_status=all`, filters: ["미터 상태", "요금제 상태", "단가 상태"] },
+        { path: "/members?status=all", filters: ["사용자 상태"] },
+        { path: "/integrations?status=all&key_status=all", filters: ["API 키 상태", "웹훅 URL 상태"] },
+        { path: "/settings?status=all", filters: ["토스페이먼츠 키 상태"] },
+        { path: `/customers/${activeCustomerId}?month=${currentMonth}&card_status=all`, filters: ["카드 상태"] },
       ];
       for (const route of routes) {
         await page.goto(route.path);
@@ -344,7 +344,7 @@ test("보관을 지원하는 모든 도입사 목록에서 상태별 조회와 �
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
         if (route.path.startsWith("/pricing?") && process.env.ARCHIVE_FILTER_PRICING_SCREENSHOT_PATH) await page.screenshot({ path: process.env.ARCHIVE_FILTER_PRICING_SCREENSHOT_PATH, fullPage: true });
       }
-      if (process.env.ARCHIVE_FILTER_SCREENSHOT_PATH) await section(page, "현재 결제 모드의 카드 관리").screenshot({ path: process.env.ARCHIVE_FILTER_SCREENSHOT_PATH });
+      if (process.env.ARCHIVE_FILTER_SCREENSHOT_PATH) await section(page, "이 환경의 카드 관리").screenshot({ path: process.env.ARCHIVE_FILTER_SCREENSHOT_PATH });
     });
   } catch (error) {
     failure = safeFailure(error, secrets);

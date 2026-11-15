@@ -5,7 +5,7 @@ const organizations = [
   { id: "22222222-2222-4222-8222-222222222222", name: "다른 도입사", status: "active", live_environment_opened_at: "2026-01-01T00:00:00Z" },
   { id: "33333333-3333-4333-8333-333333333333", name: "정지된 도입사", status: "suspended", live_environment_opened_at: "2026-01-01T00:00:00Z" },
 ];
-// 가입만 하고 실제 환경 이용을 신청하지 않은 조직. locked@contract.local로 로그인한다.
+// 가입만 하고 라이브 환경 이용을 신청하지 않은 조직. locked@contract.local로 로그인한다.
 const newLockedOrganization = () => ({ id: "aaaaaaaa-0000-4000-8000-000000000001", name: "새로 가입한 조직", status: "active", live_environment_opened_at: null });
 let lockedOrganization = newLockedOrganization();
 let liveEnvironmentApplications = [];
@@ -65,7 +65,7 @@ const server = createServer(async (req, res) => {
     else if (path === "/v1/signups" && req.method === "POST") result = { status: 201, body: { organization: { ...organizations[0], live_environment_opened_at: null }, user_account: { id: "member", email: body.email, name: body.name, role: "member", email_verified: body.email.startsWith("verified") } } };
     else if (path === "/v1/email-verification-confirmations" && req.method === "POST") result = failure(404, "email_verification_not_found", "인증 링크가 없거나 만료되었거나 이미 사용되었습니다");
     else if (path === "/v1/sessions" && req.method === "POST") {
-      if (body.email === "pending@contract.local") result = failure(403, "organization_not_active", "활성 상태가 아닌 조직입니다");
+      if (body.email === "pending@contract.local") result = failure(403, "organization_not_active", "지금은 이용할 수 없는 조직입니다.");
       else if (!(body.email === "invited@contract.local" && body.password === "invited-password") && (!["member@contract.local", "operator@contract.local", "locked@contract.local"].includes(body.email) || body.password !== "contract-password")) result = failure(401, "invalid_credentials", "인증 정보가 올바르지 않습니다.");
       else {
         const role = body.email.startsWith("operator") ? "operator" : "member";
@@ -90,7 +90,7 @@ const server = createServer(async (req, res) => {
       else if (path === "/v1/live-environment-applications") result = { status: 200, body: { live_environment_applications: liveEnvironmentApplications.filter(application => !url.searchParams.get("status") || application.status === url.searchParams.get("status")) } };
       else if (/^\/v1\/live-environment-applications\/[^/]+\/status$/.test(path) && req.method === "PUT") {
         const application = liveEnvironmentApplications.find(candidate => path === `/v1/live-environment-applications/${candidate.id}/status`);
-        if (!application) result = failure(404, "live_environment_application_not_found", "실제 환경 이용 신청을 찾을 수 없습니다");
+        if (!application) result = failure(404, "live_environment_application_not_found", "라이브 환경 이용 신청을 찾을 수 없습니다");
         else if (application.status !== "pending") result = failure(409, "live_environment_application_already_reviewed", "이미 검토를 마친 신청입니다");
         else {
           Object.assign(application, { status: body.status, rejection_reason: body.rejection_reason ?? null, reviewed_at: new Date().toISOString() });
@@ -101,12 +101,12 @@ const server = createServer(async (req, res) => {
       else if (path === "/v1/organizations") result = { status: 200, body: { organizations: bulk ? Array.from({ length: 30 }, (_, index) => ({ id: bulkId("66666666-6666-4666-8666-", index), name: `대량 도입사 ${index}`, status: "active", live_environment_opened_at: index % 2 ? new Date().toISOString() : null, created_at: new Date().toISOString() })) : [] } };
       else if (path === "/v1/user-accounts") result = { status: 200, body: { user_accounts: [{ ...session.user_account, organizations: [], created_at: new Date().toISOString() }, { id: "55555555-5555-4555-8555-555555555555", email: "other@contract.local", name: "다른 사용자", role: "member", organizations: [], created_at: new Date().toISOString() }, { id: "55555555-5555-4555-8555-555555555556", email: "joined@contract.local", name: "소속 사용자", role: "member", organizations: [organizations[0]], created_at: new Date().toISOString() }].concat(bulk ? Array.from({ length: 30 }, (_, index) => ({ id: bulkId("77777777-7777-4777-8777-", index), email: `bulk-${index}@contract.local`, name: `대량 사용자 ${index}`, role: "member", organizations: [], created_at: new Date().toISOString() })) : []) } };
       else result = { status: 200, body: {} };
-    } else if (!session.organization || session.organization.status !== "active") result = failure(403, "organization_not_active", "활성 상태가 아닌 조직입니다");
-    else if (!session.organization.live_environment_opened_at && req.headers["x-meterengine-environment"] !== "test") result = failure(403, "live_environment_locked", "실제 환경 이용 승인 전에는 테스트 환경만 쓸 수 있습니다. X-MeterEngine-Environment를 test로 보내세요");
+    } else if (!session.organization || session.organization.status !== "active") result = failure(403, "organization_not_active", "지금은 이용할 수 없는 조직입니다.");
+    else if (!session.organization.live_environment_opened_at && req.headers["x-meterengine-environment"] !== "test") result = failure(403, "live_environment_locked", "라이브 환경 이용 승인 전에는 테스트 환경만 쓸 수 있습니다. X-MeterEngine-Environment를 test로 보내세요");
     else if (path === "/v1/organization/live-environment-applications" && req.method === "GET") result = { status: 200, body: { live_environment_applications: liveEnvironmentApplications.filter(application => application.organization_id === session.organization.id) } };
     else if (path === "/v1/organization/live-environment-applications" && req.method === "POST") {
       // 0000000000은 국세청에 등록되지 않은 번호로 본다.
-      if (body.business_registration_number === "0000000000") result = { status: 400, body: { code: "invalid_business_registration_number", message: "실제 환경을 신청할 수 없는 사업자등록번호입니다", errors: [{ field: "business_registration_number", message: "국세청에 등록되지 않은 사업자등록번호입니다" }] } };
+      if (body.business_registration_number === "0000000000") result = { status: 400, body: { code: "invalid_business_registration_number", message: "라이브 환경을 신청할 수 없는 사업자등록번호입니다", errors: [{ field: "business_registration_number", message: "국세청에 등록되지 않은 사업자등록번호입니다" }] } };
       else {
         const application = { id: crypto.randomUUID(), organization_id: session.organization.id, organization_name: session.organization.name, business_registration_number: body.business_registration_number, toss_payments_merchant_id: body.toss_payments_merchant_id, status: "pending", business_status: "operating", tax_type: "부가가치세 일반과세자", rejection_reason: null, created_at: new Date().toISOString(), reviewed_at: null, observed_toss_payments_merchant_id: null, merchant_id_checked_at: null };
         liveEnvironmentApplications.unshift(application);

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { LogoutButton, OrganizationPicker } from "@/components/auth/SessionControls";
 import { requireSession } from "@/lib/auth/session";
 import { ORGANIZATION_STATUS_LABELS } from "@/lib/auth/types";
+import { SUPPORT_EMAIL } from "@/lib/support";
 
 export const metadata: Metadata = { title: "조직 선택" };
 
@@ -12,7 +13,7 @@ export default async function OrganizationsPage() {
   // 운영자 계정은 조직에 소속되지 않으므로 고를 조직이 없으면 운영 화면으로 보낸다.
   if (session.user_account.role === "operator" && !session.organizations.length) redirect("/admin");
   return <main id="main-content" className="access-page"><Link className="wordmark" href="/">MeterEngine</Link><header><p className="eyebrow">{session.user_account.name}</p><h1>조직 선택</h1><p>이동할 조직을 고르세요. 사용 중인 조직에서만 콘솔을 쓸 수 있어요.</p></header>
-    {session.organization && session.organization.status !== "active" && <p role="status">현재 조직: {session.organization.name}, {ORGANIZATION_STATUS_LABELS[session.organization.status]}. 지금은 이 조직의 콘솔을 이용할 수 없어요.</p>}
+    {session.organization && session.organization.status !== "active" && <p role="status">현재 조직: {session.organization.name}, {ORGANIZATION_STATUS_LABELS[session.organization.status]}. 지금은 이 조직의 콘솔을 이용할 수 없어요. <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>으로 문의하세요.</p>}
     {session.organizations.length ? <OrganizationPicker session={session} /> : <p>소속된 조직이 없어요. 가입할 조직의 대표관리자에게 초대 링크를 요청하세요.</p>}
     <div className="access-actions"><LogoutButton /></div>
   </main>;

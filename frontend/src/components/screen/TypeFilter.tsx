@@ -52,12 +52,12 @@ export function TypeFilter({
 
   return (
     <AutoComplete
-      aria-label="type"
+      aria-label="이벤트 유형"
       allowClear={{
         clearIcon: <CloseCircleFilled aria-hidden aria-label={undefined} />,
         label: "지우기",
       }}
-      placeholder="type: 전체"
+      placeholder="유형: 전체"
       options={eventTypes.map((eventType) => ({ value: eventType }))}
       showSearch={{
         filterOption: (input, option) =>

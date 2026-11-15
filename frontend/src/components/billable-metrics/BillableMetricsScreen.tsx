@@ -29,7 +29,7 @@ function filterByName(rows: BillableMetricRowView[], searchText: string): Billab
 }
 
 
-const METRIC_SORT_LABELS: Record<string, string> = { code: "코드", name: "이름", event_type: "이벤트 타입", aggregation: "집계 방식", archived_at: "보관 시각" };
+const METRIC_SORT_LABELS: Record<string, string> = { code: "코드", name: "이름", event_type: "이벤트 유형", aggregation: "집계 함수", archived_at: "보관 시각" };
 export function BillableMetricsScreen({
   rows,
   total,
@@ -81,7 +81,7 @@ export function BillableMetricsScreen({
         {hasNoBillableMetrics ? (
           <EmptyState
             title={query.status === "archived" ? "보관된 미터가 없어요" : query.status === "all" ? "등록된 미터가 없어요" : "사용 중인 미터가 없어요"}
-            body={query.status === "archived" ? undefined : query.status === "all" ? "미터를 새로 등록하세요." : "미터를 새로 등록하거나 관리 상태를 바꿔 보관한 미터를 확인하세요."}
+            body={query.status === "archived" ? undefined : query.status === "all" ? "미터를 새로 등록하세요." : "미터를 새로 등록하거나 상태 조건을 바꿔 보관한 미터를 확인하세요."}
             action={canManage ? <Button onClick={openCreate}>미터 등록</Button> : undefined}
           />
         ) : visibleRows.length === 0 ? (

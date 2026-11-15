@@ -46,3 +46,16 @@ test("the banned character pattern catches text-style emoji and middle-dot looka
 test("frontend sources have no banned characters", () => {
   assert.deepEqual(hits(BANNED_CHARACTERS), []);
 });
+
+// 환경은 테스트와 라이브로, 웹훅은 웹훅으로, 요금 메뉴는 요금 설정으로 부른다(결정 9, 번역투 A, B).
+test("frontend sources use the console names for environments, webhooks and pricing", () => {
+  assert.deepEqual(hits(/실제 환경/), []);
+  assert.deepEqual(hits(/운영 키/), []);
+  assert.deepEqual(hits(/통보/), []);
+  assert.deepEqual(hits(/요금 설계/), []);
+});
+
+// 화면은 청구서라 부르고, 법적 문서인 약관과 개인정보 처리방침만 예외다(결정 10).
+test("frontend sources call an invoice a 청구서 outside the terms and the privacy policy", () => {
+  assert.deepEqual(hits(/인보이스/, ["app/(public)/terms/page.tsx", "app/(public)/privacy/page.tsx"]), []);
+});

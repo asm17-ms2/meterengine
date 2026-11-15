@@ -33,16 +33,16 @@ test("an unconfirmed Toss key save points at the saved time, not at payment hist
   assert.match(message, /토스/);
   assert.match(message, /저장 시각/);
   assert.doesNotMatch(message, /결제와 취소 내역/);
-  assert.equal(operationResultCopy("updateTossPaymentsCredential").refreshLabel, "토스페이먼츠 키 상태 새로 조회");
+  assert.equal(operationResultCopy("updateTossPaymentsCredential").refreshLabel, "토스페이먼츠 키 상태 다시 확인");
   for (const operation of ["createPaymentAttempt", "createPaymentCancellation"]) {
-    assert.equal(unconfirmedMessage(operation), "처리 결과를 확인하지 못했어요. 중복 요청을 피하려면 결제와 취소 내역을 먼저 새로 조회하세요.");
-    assert.equal(operationResultCopy(operation).refreshLabel, "결제와 취소 내역 새로 조회");
+    assert.equal(unconfirmedMessage(operation), "처리 결과를 확인하지 못했어요. 중복 요청을 피하려면 화면을 새로고침한 뒤 결제와 취소 내역을 먼저 확인하세요.");
+    assert.equal(operationResultCopy(operation).refreshLabel, "결제와 취소 내역 다시 확인");
   }
 });
 
 test("a cancellation rejected because another cancellation came first asks to refresh instead of retrying", () => {
   for (const code of ["payment_attempt_fully_canceled", "payment_cancellation_amount_exceeded"]) {
-    assert.match(staleCancellationMessage("createPaymentCancellation", code), /화면의 잔액이 최신이 아니에요/);
+    assert.match(staleCancellationMessage("createPaymentCancellation", code), /화면의 취소할 수 있는 금액이 최신이 아니에요/);
   }
   assert.equal(staleCancellationMessage("createPaymentCancellation", "payment_cancellation_idempotency_conflict"), unconfirmedMessage("createPaymentCancellation"));
   assert.equal(staleCancellationMessage("createPaymentAttempt", "payment_attempt_fully_canceled"), undefined);
@@ -67,6 +67,6 @@ test("re-registering an existing external customer id is reported as not created
 test("archiving a customer, a member or a receiver confirms what happened", () => {
   assert.equal(successMessage("deleteCustomer"), "고객을 보관했어요. 보관 목록에서 확인하세요.");
   assert.equal(successMessage("archiveMember"), "사용자 소속을 보관했어요. 보관 목록에서 확인하세요.");
-  assert.equal(successMessage("deleteWebhookEndpoint"), "수신 주소를 보관했어요. 보관 목록에서 확인하세요.");
+  assert.equal(successMessage("deleteWebhookEndpoint"), "웹훅 URL을 보관했어요. 보관 목록에서 확인하세요.");
 });
 

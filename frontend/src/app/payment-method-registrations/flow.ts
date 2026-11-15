@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 import { config } from "@/lib/config";
 import type { PaymentMethodResponse, RegistrationFlow, RegistrationOutcome } from "./types";
 
-export const CONSENT_DOCUMENT_VERSION = "2026-10-28";
+export const CONSENT_DOCUMENT_VERSION = "2026-11-15";
 const COOKIE_PATH = "/payment-method-registrations";
 const FLOW_LIFETIME_SECONDS = 15 * 60;
 

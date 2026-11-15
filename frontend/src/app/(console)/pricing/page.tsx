@@ -16,7 +16,7 @@ import type { CustomerResponse } from "@/lib/api/customers";
 import { normalizeResourceQuery } from "@/lib/resource-query";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "요금 설계" };
+export const metadata: Metadata = { title: "요금 설정" };
 
 const PRICING_DESCRIPTION = "적용 월과 고객을 고른 뒤 사용량 단가와 기본료를 정하세요. 같은 사용량도 적용 월과 고객에 따라 가격이 달라져요.";
 
@@ -33,7 +33,7 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
     searchBillableMetricPrices(query), searchOptions("customers"), listPricePlans(undefined, "all"), listPricePlans(customerId, "all"),
   ]);
   const failed = [prices, customerOptions, commonPlans, scopedPlans].find(result => !result.ok);
-  if (failed && !failed.ok) return <><WorkspaceHeader title="요금 설계" description={PRICING_DESCRIPTION} /><WorkspaceError message={toDisplayMessage(failed.error)} /></>;
+  if (failed && !failed.ok) return <><WorkspaceHeader title="요금 설정" description={PRICING_DESCRIPTION} /><WorkspaceError message={toDisplayMessage(failed.error)} /></>;
   if (!prices.ok || !customerOptions.ok || !commonPlans.ok || !scopedPlans.ok) return null;
   const requestedCode = typeof params.metric === "string" ? params.metric : "";
   const selectedCode = prices.data.items.some(metric => metric.billable_metric_code === requestedCode) ? requestedCode : prices.data.items[0]?.billable_metric_code;
@@ -50,7 +50,7 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
   }
   const detailFailure = [selectedMetric, commonPrices, history].find(result => result && !result.ok);
   return <>
-    <WorkspaceHeader title="요금 설계" description={PRICING_DESCRIPTION}><Link href="/billable-metrics">미터 관리</Link></WorkspaceHeader>
+    <WorkspaceHeader title="요금 설정" description={PRICING_DESCRIPTION}><Link href="/billable-metrics">미터 관리</Link></WorkspaceHeader>
     {detailFailure && !detailFailure.ok && <WorkspaceError message={toDisplayMessage(detailFailure.error)} />}
     <PricingWorkspace dataMonths={<Suspense fallback={null}><DataMonths filterForm="resource-search-billable-metric-prices" resource="billable-metric-prices" pathname="/pricing" query={query} /></Suspense>} query={query} total={prices.data.total} summary={prices.data.summary}
       planHistoryStatus={readArchiveStatus(typeof params.plan_status === "string" ? params.plan_status : typeof params.status === "string" ? params.status : undefined)}

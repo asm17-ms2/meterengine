@@ -1,12 +1,17 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { environmentNoticeClass, environmentOptions, environmentQueryValue, isAllowedEnvironment, isClosedLegacyEnvironment, isLockedEnvironment, readEnvironment, showsLegacyEnvironment, withoutClosedLegacyEnvironment } from "../src/lib/environment.ts";
+import { environmentBandClass, environmentOptions, environmentQueryValue, isAllowedEnvironment, isClosedLegacyEnvironment, isLockedEnvironment, nextEnvironment, readEnvironment, showsLegacyEnvironment, withoutClosedLegacyEnvironment } from "../src/lib/environment.ts";
 
-test("only the live environment notice uses the warning style", () => {
-  assert.match(environmentNoticeClass("live"), /\benvironment-notice-live\b/);
-  for (const environment of ["legacy", "test"]) {
-    assert.equal(environmentNoticeClass(environment), "environment-notice");
+test("each environment band has its own color class", () => {
+  for (const environment of ["legacy", "test", "live"]) {
+    assert.equal(environmentBandClass(environment), `environment-band environment-band-${environment}`);
   }
+});
+
+test("the band switch moves between the test and live environments", () => {
+  assert.equal(nextEnvironment("test"), "live");
+  assert.equal(nextEnvironment("live"), "test");
+  assert.equal(nextEnvironment("legacy"), "test");
 });
 
 test("a missing or unknown environment is the test environment", () => {
