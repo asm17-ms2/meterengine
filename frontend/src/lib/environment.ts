@@ -53,7 +53,7 @@ export const ENVIRONMENT_SWITCH_TITLES: Record<WorkspaceEnvironment, string> = {
   test: "테스트 환경으로 전환할까요?", live: "라이브 환경으로 전환할까요?", legacy: "기존 데이터로 전환할까요?",
 };
 
-// 콘솔 맨 위에 고정하는 환경 띠 문구. 테스트는 주황, 라이브는 빨강으로 보인다.
+// 콘솔 맨 위에 고정하는 환경 띠 문구. 테스트는 노랑, 라이브는 빨강으로 보인다.
 export const ENVIRONMENT_BAND_MESSAGES: Record<WorkspaceEnvironment, string> = {
   test: "테스트 환경이에요. 실제 결제와 청구가 일어나지 않아요.",
   live: "라이브 환경이에요. 고객에게 실제로 청구하고 결제해요.",

@@ -18,9 +18,13 @@ import { hasScope, ORGANIZATION_ROLE_LABELS, scopeSummary, type OrganizationRole
 import { EnvironmentSwitch, useEnvironmentSwitch } from "@/components/workspace/EnvironmentSwitch";
 import { ENVIRONMENT_BAND_MESSAGES, environmentBandClass, nextEnvironment, readEnvironment } from "@/lib/environment";
 
+// 넓은 화면도 빈틈없이 채우게 문구를 두 묶음으로 되풀이하고, 한 묶음 너비만큼 흘린다.
+const BAND_REPEAT = 6;
+
 function EnvironmentBand({ isLiveEnvironmentOpen }: { isLiveEnvironmentOpen: boolean }) {
   const { environment, confirmSwitch } = useEnvironmentSwitch(isLiveEnvironmentOpen);
-  return <div className={environmentBandClass(environment)} role="region" aria-label="현재 업무 환경"><p>{ENVIRONMENT_BAND_MESSAGES[environment]}</p><Button size="small" onClick={() => confirmSwitch(nextEnvironment(environment))}>환경 바꾸기</Button></div>;
+  const message = ENVIRONMENT_BAND_MESSAGES[environment];
+  return <div className={environmentBandClass(environment)} role="region" aria-label="현재 업무 환경"><div className="environment-band-track"><p className="environment-band-message" style={{ "--environment-band-duration": `${Math.round(message.length * 1.25)}s` } as React.CSSProperties}>{Array.from({ length: BAND_REPEAT * 2 }, (_, index) => <span key={index} aria-hidden={index > 0 || undefined}>{message}</span>)}</p></div><Button size="small" onClick={() => confirmSwitch(nextEnvironment(environment))}>환경 바꾸기</Button></div>;
 }
 
 type Props = { organizationId: string; organizationLabel: string; canSwitchOrganization: boolean; userLabel: string; isOperator: boolean; organizationRole?: OrganizationRole | null; scopes: string[]; showLegacyEnvironment: boolean; isLiveEnvironmentOpen: boolean; children: React.ReactNode };
