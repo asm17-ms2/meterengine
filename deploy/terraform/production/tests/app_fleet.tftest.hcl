@@ -25,6 +25,14 @@ override_resource {
   target = aws_route53_record.public
   values = {}
 }
+# 손으로 만든 SES 발신 자원도 import로 가져온다.
+override_resource { target = aws_sesv2_configuration_set.default }
+override_resource { target = aws_sesv2_email_identity.site }
+override_resource { target = aws_sesv2_email_identity_mail_from_attributes.site }
+override_resource { target = aws_route53_record.email_dkim }
+override_resource { target = aws_route53_record.email_dmarc }
+override_resource { target = aws_route53_record.email_mail_from_mx }
+override_resource { target = aws_route53_record.email_mail_from_spf }
 override_resource {
   target = aws_ssm_parameter.coded
   values = {}
@@ -198,12 +206,19 @@ run "production_sends_signup_mail_from_one_address" {
   }
 
   assert {
-    condition     = local.email_identity_arn == "arn:aws:ses:ap-northeast-2:928618307647:identity/meterengine.com"
-    error_message = "The app may send only through the hand-made meterengine.com SES identity."
+    condition     = aws_sesv2_email_identity.site.email_identity == "meterengine.com" && aws_sesv2_email_identity.site.configuration_set_name == "my-first-configuration-set"
+    error_message = "The imported meterengine.com identity keeps its default configuration set. SES checks it too, so the app role names both."
   }
   assert {
-    condition     = local.email_configuration_set_arn == "arn:aws:ses:ap-northeast-2:928618307647:configuration-set/my-first-configuration-set"
-    error_message = "SES also checks the identity's default configuration set, so the app role must name it."
+    condition = length(aws_route53_record.email_dkim) == 3 && alltrue([
+      for token, record in aws_route53_record.email_dkim :
+      record.name == "${token}._domainkey.meterengine.com" && record.type == "CNAME" && record.records == toset(["${token}.dkim.amazonses.com"])
+    ])
+    error_message = "Easy DKIM needs one CNAME per token."
+  }
+  assert {
+    condition     = aws_sesv2_email_identity_mail_from_attributes.site.mail_from_domain == "mail.meterengine.com" && aws_route53_record.email_mail_from_mx.records == toset(["10 feedback-smtp.ap-northeast-2.amazonses.com"])
+    error_message = "The MAIL FROM domain needs the regional SES feedback MX."
   }
   assert {
     condition     = aws_ssm_parameter.signup["mail-from"].value == "MeterEngine <no-reply@meterengine.com>" && aws_ssm_parameter.signup["mail-sender"].value == "ses"
