@@ -17,10 +17,10 @@ import { CAPABILITIES } from "@/lib/api/capabilities";
 import { reasonHints } from "@/lib/event-issue-hints";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "이벤트 매핑 진단" };
+export const metadata: Metadata = { title: "과금에서 빠진 이벤트" };
 
 type IssueReason = "unknown_event_type" | "invalid_target_property" | "unpriced_usage";
-const REASONS: Record<IssueReason, string> = { unknown_event_type: "연결할 미터 없음", invalid_target_property: "집계할 수량 확인 필요", unpriced_usage: "적용 단가 없음" };
+const REASONS: Record<IssueReason, string> = { unknown_event_type: "연결할 미터 없음", invalid_target_property: "수량을 읽을 수 없음", unpriced_usage: "적용 단가 없음" };
 type Issue = { transaction_id: string; customer_id: string; customer_name: string; type: string; occurred_at: string; received_at: string; reason: IssueReason; billable_metric_code: string | null; target_property: string | null; action_hint: string };
 type IssueResult = { month: string; cutoff_at: string; page: number; size: number; total: number; issues: Issue[]; summary: Record<IssueReason, number>; warnings: { scope: string; future_event_count: number; negative_event_metric_count: number } };
 
@@ -38,14 +38,14 @@ export default async function EventIssuesPage({ searchParams }: { searchParams: 
   const hints: Partial<Record<IssueReason, string>> = Object.fromEntries(result.ok ? reasonHints(result.data.issues).map(({ reason: hintReason, hint }) => [hintReason, hint]) : []);
   const rows = result.ok ? result.data.issues.map((issue, index) => ({ ...issue, id: `${issue.transaction_id}-${issue.reason}-${issue.billable_metric_code ?? ""}-${index}`, reason_label: REASONS[issue.reason] })) : [];
   return <>
-    <WorkspaceHeader title="이벤트 매핑 진단" description="받은 이벤트 가운데 미터, 집계할 수량, 단가가 연결되지 않은 것을 확인하세요. 한 이벤트에 여러 미터의 문제가 있으면 미터마다 한 줄씩 보여요." />
+    <WorkspaceHeader title="과금에서 빠진 이벤트" description="받은 이벤트 가운데 미터, 집계할 수량, 단가가 연결되지 않은 것을 확인하세요. 한 이벤트에 여러 미터의 문제가 있으면 미터마다 한 줄씩 보여요." />
     <section className="workspace-panel">
       <form method="get" className="workspace-actions query-row">
         <Suspense><EnvironmentInput /></Suspense>
         <MonthField key={month} month={month} label="조회 월" />
         <label className="workspace-field"><span>문제 종류</span><select name="reason" defaultValue={reason ?? ""}><option value="">전체</option>{Object.entries(REASONS).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
         <CustomerFilterField key={params.customer_id ?? "all"} query={readListQuery(params, CAPABILITIES.listEvents, { hasMonth: true })} customers={customers.ok ? customers.data.map(customer => ({ value: customer.value, label: customer.label + (customer.archived ? " (보관됨)" : "") })) : []} />
-        <label className="workspace-field"><span>전송 ID, 고객과 유형 검색</span><input name="q" defaultValue={params.q ?? ""} maxLength={255} /></label>
+        <label className="workspace-field"><span>전송 ID, 고객, 유형으로 찾기</span><input name="q" defaultValue={params.q ?? ""} maxLength={255} /></label>
         <label className="workspace-field"><span>표시 건수</span><select name="size" defaultValue={size}>{[20, 50, 100].map(value => <option value={value} key={value}>{value}건</option>)}</select></label>
         <Button type="primary" htmlType="submit">조건 적용</Button>
       </form>
@@ -64,7 +64,7 @@ export default async function EventIssuesPage({ searchParams }: { searchParams: 
         ]} empty="이 조건에서는 미터, 수량, 단가 연결 문제가 없어요." />
         <PageLinks label="진단 결과 페이지" pathname="/event-issues" params={Object.fromEntries(source)} page={page} size={size} total={result.data.total} />
       </> : <WorkspaceError message={result.error.message} />}
-      <p className="field-hint">받을 때 거절된 이벤트는 저장하지 않아서 이 목록에 없어요. 수집 API 응답이나 <Link href={workspaceHref("/event-rejections", source)}>수집 거절</Link>, <Link href={workspaceHref("/audit", source)}>감사 기록</Link>에서 확인하세요. 미터나 단가를 고쳐도 이미 확정한 인보이스는 바뀌지 않아요.</p>
+      <p className="field-hint">받을 때 거절된 이벤트는 저장하지 않아서 이 목록에 없어요. 수집 API 응답이나 <Link href={workspaceHref("/event-rejections", source)}>수집 거절</Link>, <Link href={workspaceHref("/audit", source)}>감사 기록</Link>에서 확인하세요. 미터나 단가를 고쳐도 이미 확정한 청구서는 바뀌지 않아요.</p>
     </section>
   </>;
 }

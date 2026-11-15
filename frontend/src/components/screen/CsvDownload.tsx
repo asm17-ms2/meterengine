@@ -34,7 +34,7 @@ export function CsvDownload({ resource }: { resource: SearchResource | "events" 
         const result: unknown = await response.json().catch(() => null);
         throw new Error(result && typeof result === "object" && "message" in result && typeof result.message === "string" ? result.message : "내보내지 못했어요. 조건을 좁히거나 다시 시도해 주세요.");
       }
-      if (!response.headers.get("Content-Type")?.includes("text/csv")) throw new Error("로그인 상태와 업무 환경을 확인한 뒤 다시 내보내 주세요.");
+      if (!response.headers.get("Content-Type")?.includes("text/csv")) throw new Error("로그인이 만료됐거나 끝났어요. 다시 로그인한 뒤 내보내세요.");
       const file = await response.blob();
       if (controller.signal.aborted) return;
       const url = URL.createObjectURL(file);

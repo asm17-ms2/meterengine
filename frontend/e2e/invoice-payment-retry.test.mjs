@@ -45,6 +45,6 @@ test("재시도 기준은 서버가 발급한 64자리 소문자 hex 형식만 �
 test("재시도 중지 이유를 고객이 할 수 있는 행동으로 안내하고 서버 원문은 노출하지 않는다", () => {
   assert.match(invoicePaymentRetryUnavailableMessage("card_update_required"), /카드 등록 방법/);
   assert.match(invoicePaymentRetryUnavailableMessage("retry_limit_reached"), /횟수/);
-  assert.match(invoicePaymentRetryUnavailableMessage("payment_result_unconfirmed"), /결제 상태를 새로 조회/);
+  assert.match(invoicePaymentRetryUnavailableMessage("payment_result_unconfirmed"), /결제 상태를 새로고침/);
   assert.equal(invoicePaymentRetryUnavailableMessage("unrecognized-secret-code").includes("unrecognized-secret-code"), false);
 });

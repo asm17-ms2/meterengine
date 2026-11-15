@@ -33,7 +33,7 @@ export async function createOperatorAction(_previous: CreateOperatorState, data:
     };
     if (result.error.status === 0 || result.error.code === "malformed_response") {
       revalidatePath("/admin/users");
-      return { isUnconfirmed: true, message: "생성 결과를 확인하지 못했어요. 목록을 새로 조회해 같은 이메일의 계정이 생겼는지 확인하세요." };
+      return { isUnconfirmed: true, message: "생성 결과를 확인하지 못했어요. 사용자 목록을 다시 조회해 같은 이메일의 계정이 생겼는지 확인하세요." };
     }
     const errors = result.error.errors?.filter(error => ["name", "email", "password"].includes(error.field));
     return {
@@ -49,7 +49,7 @@ export async function reviewSignupAction(_prev: ActionState, data: FormData): Pr
   await requireOperator();
   const id = data.get("id");
   const status = data.get("status");
-  if (typeof id !== "string" || !UUID_PATTERN.test(id) || (status !== "active" && status !== "rejected")) return { message: "조직 정보를 읽지 못했어요. 목록을 다시 조회해 주세요." };
+  if (typeof id !== "string" || !UUID_PATTERN.test(id) || (status !== "active" && status !== "rejected")) return { message: "조직 정보를 읽지 못했어요. 목록을 다시 조회하세요." };
   const current = await listOrganizations("pending");
   if (!current.ok) return { message: toDisplayMessage(current.error) };
   if (!current.data.organizations.some(org => org.id === id && org.status === "pending")) return { message: "가입 대기 중인 조직이 아니에요. 목록을 다시 조회하세요." };
@@ -63,7 +63,7 @@ export async function updateRoleAction(_prev: ActionState, data: FormData): Prom
   await requireOperator();
   const id = data.get("id");
   const role = data.get("role");
-  if (typeof id !== "string" || !UUID_PATTERN.test(id) || (role !== "member" && role !== "operator")) return { message: "사용자 정보를 읽지 못했어요. 목록을 다시 조회한 뒤 다시 시도해 주세요." };
+  if (typeof id !== "string" || !UUID_PATTERN.test(id) || (role !== "member" && role !== "operator")) return { message: "사용자 정보를 읽지 못했어요. 목록을 다시 조회한 뒤 다시 시도하세요." };
   const result = await operatorRequest<UserAccountResponse>(`/v1/user-accounts/${id}/role`, { method: "PUT", body: { role } });
   if (!result.ok) return { message: result.error.code === "operator_membership_conflict" ? "조직에 소속된 계정은 플랫폼 운영자로 바꿀 수 없어요." : toDisplayMessage(result.error) };
   revalidatePath("/", "layout");
@@ -78,7 +78,7 @@ export async function reviewLiveEnvironmentApplicationAction(_prev: LiveEnvironm
   const id = data.get("id");
   const status = data.get("status");
   const reason = typeof data.get("rejection_reason") === "string" ? String(data.get("rejection_reason")).trim() : "";
-  if (typeof id !== "string" || !UUID_PATTERN.test(id) || (status !== "approved" && status !== "rejected")) return { message: "신청 정보를 읽지 못했어요. 목록을 다시 조회해 주세요." };
+  if (typeof id !== "string" || !UUID_PATTERN.test(id) || (status !== "approved" && status !== "rejected")) return { message: "신청 정보를 읽지 못했어요. 목록을 다시 조회하세요." };
   if (status === "rejected" && !reason) return { message: "거절 사유를 입력하세요." };
   if (reason.length > REJECTION_REASON_MAX_LENGTH) return { message: `거절 사유는 ${REJECTION_REASON_MAX_LENGTH}자 이내로 입력하세요.` };
   const result = await operatorRequest<LiveEnvironmentApplicationResponse>(`/v1/live-environment-applications/${id}/status`, { method: "PUT", body: status === "rejected" ? { status, rejection_reason: reason } : { status } });
@@ -90,5 +90,5 @@ export async function reviewLiveEnvironmentApplicationAction(_prev: LiveEnvironm
     return { message: toDisplayMessage(result.error) };
   }
   revalidatePath("/admin", "layout");
-  return { done: true, message: status === "approved" ? "실제 환경 이용을 승인했어요." : "신청을 거절했어요." };
+  return { done: true, message: status === "approved" ? "라이브 환경 이용을 승인했어요." : "신청을 거절했어요." };
 }

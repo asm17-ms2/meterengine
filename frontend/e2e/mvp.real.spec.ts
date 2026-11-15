@@ -48,7 +48,7 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     await expect(page).toHaveURL(/\/login\?reason=signed_up$/);
     await login(page, email, PASSWORD, "/customers");
     await expect(page).toHaveURL(/\/customers(?:\?.*)?$/);
-    // 이 시나리오는 환경 헤더 없는 준비 요청과 실제 환경을 함께 쓰므로 실제 환경을 열고 시작한다.
+    // 이 시나리오는 환경 헤더 없는 준비 요청과 라이브 환경을 함께 쓰므로 라이브 환경을 열고 시작한다.
     const session = await (await page.request.get(`${API_URL}/v1/sessions/current`, { headers: { Authorization: `Bearer ${await tokenOf(page)}` } })).json();
     openLiveEnvironment(session.organization.id);
   });
@@ -61,7 +61,7 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     await customerDialog.getByLabel(/^고객명/).fill(customerName);
     await customerDialog.getByLabel(/외부 고객 ID/).fill(`external-${suffix}`);
     await customerDialog.getByLabel(/청구 이메일/).fill(`customer-${suffix}@fe-e2e.local`);
-    await customerDialog.getByRole("button", { name: "고객 저장", exact: true }).click();
+    await customerDialog.getByRole("button", { name: "등록", exact: true }).click();
     await expect(customerDialog).toHaveCount(0);
     await page.getByRole("link", { name: customerName, exact: true }).click();
     await expect(page).toHaveURL(/\/customers\/[0-9a-f-]{36}(?:\?.*)?$/);
@@ -72,7 +72,7 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     const metricDialog = page.getByRole("dialog");
     await metricDialog.getByLabel("코드", { exact: true }).fill(metricCode);
     await metricDialog.getByLabel("이름", { exact: true }).fill("MVP 사용 단위");
-    await metricDialog.getByLabel("이벤트 타입", { exact: true }).fill(metricCode);
+    await metricDialog.getByLabel("이벤트 유형", { exact: true }).fill(metricCode);
     await metricDialog.getByLabel("집계 대상 속성", { exact: true }).fill("units");
     await metricDialog.getByRole("button", { name: "저장", exact: true }).click();
     await expect(metricDialog).toHaveCount(0);
@@ -108,7 +108,7 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     await expect(page.getByLabel(/^사업장 주소/)).toHaveValue("서울 테스트 주소");
   });
   let apiKey = "";
-  await test.step("연동 키 발급과 서명된 통보 수신 주소 등록", async () => {
+  await test.step("연동 키 발급과 서명된 웹훅 URL 등록", async () => {
     await page.goto("/integrations");
     await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
     const keyDialog = page.getByRole("dialog");
@@ -122,17 +122,17 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     apiKey = (await keyDialog.locator(".secret-result code").textContent())!;
     expect(apiKey.startsWith("me_test_")).toBe(true);
     await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
-    await keyDialog.getByRole("button", { name: "비밀값 복사", exact: true }).click();
+    await keyDialog.getByRole("button", { name: "API 키 복사", exact: true }).click();
     await expect(keyDialog.getByText("복사했어요.", { exact: true })).toBeVisible();
     await page.keyboard.press("Escape");
-    await page.getByRole("button", { name: "수신 주소 등록", exact: true }).click();
+    await page.getByRole("button", { name: "웹훅 URL 등록", exact: true }).click();
     const webhookDialog = page.getByRole("dialog");
-    await webhookDialog.getByLabel(/^수신 URL/).fill(`${PG_URL}/meterengine-webhooks/${suffix}`);
-    await webhookDialog.getByRole("button", { name: "수신 주소 등록", exact: true }).click();
+    await webhookDialog.getByLabel(/^웹훅 URL/).fill(`${PG_URL}/meterengine-webhooks/${suffix}`);
+    await webhookDialog.getByRole("button", { name: "웹훅 URL 등록", exact: true }).click();
     await expect(webhookDialog.locator(".secret-result code")).toBeVisible();
     const webhookSecret = await webhookDialog.locator(".secret-result code").textContent();
     await request.post(`${PG_URL}/__control`, { data: { webhookSecret, channel: suffix } });
-    await webhookDialog.getByRole("button", { name: "비밀값 복사", exact: true }).click();
+    await webhookDialog.getByRole("button", { name: "서명 비밀값 복사", exact: true }).click();
     await expect(webhookDialog.getByText("복사했어요.", { exact: true })).toBeVisible();
     await page.keyboard.press("Escape");
   });
@@ -161,7 +161,7 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     expect(customer.lines.map((line: { amount: number }) => line.amount).sort((left: number, right: number) => left - right)).toEqual([500, 700, 1800]);
   });
   let invoiceId = "";
-  await test.step("브라우저 청구 검토와 인보이스 확정", async () => {
+  await test.step("브라우저 청구 검토와 청구서 확정", async () => {
     await page.goto(`/billing?month=${month}`);
     await expect(page.getByRole("button", { name: "월 전체 확정", exact: true })).toBeEnabled();
     await page.screenshot({ path: "/tmp/meterengine-mvp-billing.png", fullPage: true });
@@ -220,7 +220,7 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     await request.post(`${PG_URL}/__control`, { data: { nextCancellationDelayMs: 6000 } });
     const attempts = await request.get(`${API_URL}/v1/invoices/${invoiceId}/payment-attempts`, { headers: apiHeaders });
     const attemptId = (await attempts.json()).payment_attempts[0].id;
-    await page.getByRole("button", { name: "일부 금액 취소", exact: true }).click();
+    await page.getByRole("button", { name: "부분 취소", exact: true }).click();
     let dialog = page.getByRole("dialog");
     const partialRequestId = await dialog.locator('input[name="request_id"]').inputValue();
     await dialog.getByLabel(/취소 금액/).fill("1000");
@@ -239,7 +239,7 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     const pendingObserver = await page.context().newPage();
     await pendingObserver.goto(`http://localhost:33147/payments/${invoiceId}`);
     await expect(pendingObserver.getByText("취소 결과 확인 중", { exact: true })).toBeVisible();
-    await expect(pendingObserver.getByRole("button", { name: "일부 금액 취소", exact: true })).toHaveCount(0);
+    await expect(pendingObserver.getByRole("button", { name: "부분 취소", exact: true })).toHaveCount(0);
     await expect(pendingObserver.getByRole("button", { name: "등록 카드로 결제", exact: true })).toHaveCount(0);
     await pendingObserver.close();
     await expect(dialog).toHaveCount(0);
@@ -251,7 +251,7 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     expect((await repeatedDone.json()).status).toBe("done");
     const cancellations = await request.get(`${API_URL}/v1/payment-attempts/${attemptId}/cancellations`, { headers: apiHeaders });
     expect((await cancellations.json()).payment_cancellations).toHaveLength(1);
-    await page.getByRole("button", { name: "잔액 전액 취소", exact: true }).click();
+    await page.getByRole("button", { name: "남은 금액 전액 취소", exact: true }).click();
     dialog = page.getByRole("dialog");
     expect(await dialog.locator('input[name="request_id"]').inputValue()).not.toBe(partialRequestId);
     await dialog.getByLabel(/^취소 사유/).fill("로컬 E2E 잔액 전부 취소");
@@ -278,7 +278,7 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     await page.screenshot({ path: "/tmp/meterengine-mvp-overview-desktop.png", fullPage: true });
     await page.goto(`/payments/${invoiceId}`);
     await expect(page.getByRole("button", { name: "등록 카드로 결제", exact: true })).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "일부 금액 취소", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "부분 취소", exact: true })).toHaveCount(0);
     await expect(page.getByText("전액 취소 완료", { exact: true })).toBeVisible();
     await page.screenshot({ path: "/tmp/meterengine-mvp-payments-desktop.png", fullPage: true });
   });

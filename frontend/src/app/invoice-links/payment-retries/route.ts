@@ -7,8 +7,8 @@ const RESPONSE_HEADERS = { "Cache-Control": "no-store, private", "Referrer-Polic
 
 function failure(status: number) {
   const message = status === 404 ? "사용할 수 없는 조회 링크입니다."
-    : status === 409 ? "결제 상태가 변경되었거나 지금은 다시 시도할 수 없습니다. 결제 상태를 새로 조회해 주세요."
-      : "결제 요청 결과를 확인하지 못했습니다. 다시 결제하지 말고 결제 상태를 새로 조회해 주세요.";
+    : status === 409 ? "결제 상태가 변경되었거나 지금은 다시 시도할 수 없습니다. 결제 상태를 새로고침해 주세요."
+      : "결제 요청 결과를 확인하지 못했습니다. 다시 결제하지 말고 결제 상태를 새로고침해 주세요.";
   return Response.json({ message }, { status, headers: RESPONSE_HEADERS });
 }
 

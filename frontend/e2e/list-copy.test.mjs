@@ -9,7 +9,7 @@ test("paged tables name their totals as totals of the whole filtered set", () =>
   const billing = source("billing/BillingTable.tsx");
   const invoices = source("invoices/InvoicesTable.tsx");
   assert.ok(billing.split('"조건 전체 공급가액"').length === 3 && billing.split('"선택 고객 공급가액"').length === 3 && !billing.includes("조건 전체 합계"));
-  assert.ok(invoices.split(">조건 전체 세금 포함 합계<").length === 3 && !invoices.includes("조건 전체 합계"));
+  assert.ok(invoices.split(">조건 전체 합계(세금 포함)<").length === 3 && !invoices.includes("조건 전체 세금 포함 합계"));
   for (const table of [billing, invoices]) assert.ok(!/[">]합계[<"]/.test(table) && !table.includes("공급가액 합계") && !table.includes(">세금 포함 합계<"));
 });
 
@@ -24,7 +24,7 @@ test("mobile invoice cards show the invoice number and the same payment link as 
   const mobile = invoices.slice(invoices.indexOf('className="data-mobile-records"'));
   assert.ok(mobile.includes("group.invoiceNumber"));
   assert.ok(mobile.includes("<InvoicePaymentLink"));
-  assert.equal(invoices.match(/수납과 고객 조회 링크/g)?.length, 1);
+  assert.equal(invoices.match(/수납과 청구서 조회 링크/g)?.length, 1);
 });
 
 test("a truncated customer label offers the full name and id", () => {
@@ -32,11 +32,14 @@ test("a truncated customer label offers the full name and id", () => {
   assert.ok(label.includes("ellipsis={{ tooltip: `${name} (${id})` }}"));
 });
 
-test("the usage quantity header and sort option say they sort by aggregated line count", () => {
+// 집계 수량 열 머리는 정렬하지 않고, 고객별 줄 수 정렬은 정렬 선택지에만 둔다(결정 15).
+test("the usage quantity header does not sort and the line count sort stays in the sort options", () => {
   const usage = source("usage/UsageTable.tsx");
   const filters = source("screen/ResourceSearchControls.tsx");
-  assert.ok(usage.includes('showSorterTooltip: { title: "집계 라인 수로 정렬" }'));
-  assert.ok(filters.includes('{ value: "line_count", label: "집계 라인 수" }'));
+  const quantityColumn = usage.slice(usage.indexOf('title: "집계 수량"'), usage.indexOf("render:", usage.indexOf('title: "집계 수량"')));
+  assert.ok(quantityColumn.length > 0);
+  for (const sorter of ["clientSorter", "sortKey", "showSorterTooltip"]) assert.ok(!quantityColumn.includes(sorter), sorter);
+  assert.ok(filters.includes('{ value: "line_count", label: "집계 항목 수" }'));
 });
 
 test("the meter search empty state counts all meters and the sort note follows the applied sort", () => {
@@ -82,14 +85,14 @@ test("usage and event screens drop the mismatched sub-tab rows and keep their cr
   const events = readFileSync(new URL("../src/app/(console)/events/page.tsx", import.meta.url), "utf8");
   for (const page of [usage, events]) assert.ok(!page.includes('className="workspace-tabs"'));
   assert.ok(usage.includes('<Link inheritFilters href="/billing">청구 검토</Link>'));
-  assert.ok(events.includes('<ScopedLink href="/integrations">API 키와 통보</ScopedLink>'));
+  assert.ok(events.includes('<ScopedLink href="/integrations">API 키와 웹훅</ScopedLink>'));
 });
 
 test("mobile usage cards label each dimension row with its dimension values under one group heading", () => {
   const usage = source("usage/UsageTable.tsx");
-  assert.ok(!usage.includes('item.kind === "meter" ? "차원별 집계값" : line.label'));
+  assert.ok(!usage.includes('item.kind === "meter" ? "구분 값별 집계값" : line.label'));
   assert.ok(usage.includes("{toDimensionText(line.dimensionValues)}"));
-  assert.ok(usage.includes('<p className="field-hint">차원별 집계값</p>'));
+  assert.ok(usage.includes('<p className="field-hint">구분 값별 집계값</p>'));
 });
 
 test("the event issue summary uses the same reason names as the filter and the problem column", () => {

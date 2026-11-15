@@ -8,7 +8,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useTenantAccess } from "@/components/auth/TenantAccess";
 import { ENVIRONMENT_LABELS, ENVIRONMENT_SWITCH_TITLES, environmentOptions, environmentQueryValue, environmentSwitchPath, isLockedEnvironment, LIVE_ENVIRONMENT_PATH, readEnvironment } from "@/lib/environment";
 
-export function EnvironmentSwitch({ showLegacy, isLiveEnvironmentOpen }: { showLegacy: boolean; isLiveEnvironmentOpen: boolean }) {
+// 머리의 환경 선택과 환경 띠의 "환경 바꾸기"가 같은 확인 창을 쓴다.
+export function useEnvironmentSwitch(isLiveEnvironmentOpen: boolean) {
   const pathname = usePathname();
   const params = useWorkspaceSearch();
   const router = useRouter();
@@ -18,11 +19,11 @@ export function EnvironmentSwitch({ showLegacy, isLiveEnvironmentOpen }: { showL
   function confirmSwitch(value: string) {
     const next = readEnvironment(value);
     if (next === environment) return;
-    // 잠긴 실제 환경을 고르면 전환하지 않고 이용 신청 화면을 연다.
+    // 잠긴 라이브 환경을 고르면 전환하지 않고 이용 신청 화면을 연다.
     if (isLockedEnvironment(next, isLiveEnvironmentOpen)) {
       modal.confirm({
-        title: "실제 환경 이용 신청 화면으로 갈까요?",
-        content: "실제 환경은 이용 신청이 승인되면 쓸 수 있어요. 이 화면에서 입력하거나 고른 내용은 지워져요.",
+        title: "라이브 환경 이용 신청 화면으로 갈까요?",
+        content: "라이브 환경은 이용 신청이 승인되면 쓸 수 있어요. 이 화면에서 입력하거나 고른 내용은 지워져요.",
         okText: "이동",
         cancelText: "취소",
         onOk: () => router.push(`${LIVE_ENVIRONMENT_PATH}${access?.organizationId ? `?${new URLSearchParams({ organization_id: access.organizationId })}` : ""}`),
@@ -45,6 +46,11 @@ export function EnvironmentSwitch({ showLegacy, isLiveEnvironmentOpen }: { showL
       },
     });
   }
+  return { environment, confirmSwitch };
+}
+
+export function EnvironmentSwitch({ showLegacy, isLiveEnvironmentOpen }: { showLegacy: boolean; isLiveEnvironmentOpen: boolean }) {
+  const { environment, confirmSwitch } = useEnvironmentSwitch(isLiveEnvironmentOpen);
   return <div className={`workspace-environment workspace-environment-${environment}`}>
     <span aria-hidden="true">업무 환경</span>
     <Select<string>

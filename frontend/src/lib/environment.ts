@@ -32,10 +32,10 @@ export function withoutClosedLegacyEnvironment(path: string, showLegacy: boolean
   return url.pathname + url.search + url.hash;
 }
 
-/** 실제 환경 이용 신청 화면. 실제 환경이 잠긴 조직은 다른 환경 대신 여기로 간다. */
+/** 라이브 환경 이용 신청 화면. 라이브 환경이 잠긴 조직은 다른 환경 대신 여기로 간다. */
 export const LIVE_ENVIRONMENT_PATH = "/live-environment";
 
-/** 실제 환경을 열기 전에는 테스트 환경만 쓸 수 있다. */
+/** 라이브 환경을 열기 전에는 테스트 환경만 쓸 수 있다. */
 export function isLockedEnvironment(environment: WorkspaceEnvironment, isLiveEnvironmentOpen: boolean): boolean {
   return environment !== "test" && !isLiveEnvironmentOpen;
 }
@@ -46,15 +46,27 @@ export function environmentQueryValue(environment: WorkspaceEnvironment): Worksp
 }
 
 export const ENVIRONMENT_LABELS: Record<WorkspaceEnvironment, string> = {
-  test: "테스트 환경", live: "실제 환경", legacy: "기존 데이터",
+  test: "테스트 환경", live: "라이브 환경", legacy: "기존 데이터",
 };
 
 export const ENVIRONMENT_SWITCH_TITLES: Record<WorkspaceEnvironment, string> = {
-  test: "테스트 환경으로 전환할까요?", live: "실제 환경으로 전환할까요?", legacy: "기존 데이터로 전환할까요?",
+  test: "테스트 환경으로 전환할까요?", live: "라이브 환경으로 전환할까요?", legacy: "기존 데이터로 전환할까요?",
 };
 
-export function environmentNoticeClass(environment: WorkspaceEnvironment): string {
-  return environment === "live" ? "environment-notice environment-notice-live" : "environment-notice";
+// 콘솔 맨 위에 고정하는 환경 띠 문구. 테스트는 주황, 라이브는 빨강으로 보인다.
+export const ENVIRONMENT_BAND_MESSAGES: Record<WorkspaceEnvironment, string> = {
+  test: "테스트 환경이에요. 실제 결제와 청구가 일어나지 않아요.",
+  live: "라이브 환경이에요. 고객에게 실제로 청구하고 결제해요.",
+  legacy: "기존 데이터예요. 환경을 나누기 전에 저장한 것이라 테스트 환경이나 라이브 환경과 따로 보관해요.",
+};
+
+export function environmentBandClass(environment: WorkspaceEnvironment): string {
+  return `environment-band environment-band-${environment}`;
+}
+
+/** 환경 띠의 "환경 바꾸기"가 고르는 환경. 테스트와 라이브를 오가고 기존 데이터에서는 테스트로 간다. */
+export function nextEnvironment(environment: WorkspaceEnvironment): WorkspaceEnvironment {
+  return environment === "test" ? "live" : "test";
 }
 
 export function environmentReadyPath(path: string): boolean {

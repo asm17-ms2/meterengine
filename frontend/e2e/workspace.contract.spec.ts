@@ -35,7 +35,7 @@ async function control(request: APIRequestContext, scenario: string) {
 }
 
 async function openCancellation(page: Page) {
-  await page.getByRole("button", { name: "일부 금액 취소", exact: true }).click();
+  await page.getByRole("button", { name: "부분 취소", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel(/^취소 금액 \(원\)/).fill("1000");
   await dialog.getByLabel(/^취소 사유/).fill("계약 테스트 취소");
@@ -78,7 +78,7 @@ test("격리 계약: 취소 응답 유실은 재제출을 잠그고 다시 연 �
   await dialog.getByRole("button", { name: "입력한 금액 취소 요청", exact: true }).click();
   await expect(dialog.getByRole("alert")).toContainText("처리 결과를 확인하지 못했어요");
   await expect(dialog.getByRole("button", { name: /입력한 금액 취소 요청$/ })).toBeDisabled();
-  await expect(dialog.getByRole("link", { name: "결제와 취소 내역 새로 조회" })).toBeVisible();
+  await expect(dialog.getByRole("link", { name: "결제와 취소 내역 다시 확인" })).toBeVisible();
   expect((await readState(request)).cancellationCalls).toHaveLength(1);
   page.once("dialog", confirmation => confirmation.accept());
   await closeDialog(dialog);
@@ -94,7 +94,7 @@ test("격리 계약: 취소 응답 유실은 재제출을 잠그고 다시 연 �
   await expect(page.getByRole("cell", { name: "계약 테스트 취소", exact: true })).toBeVisible();
 });
 
-test("격리 계약: 수납 상세의 내역 새로 조회는 페이지를 다시 읽어 결과를 확인하지 못한 취소의 요청 ID를 남기지 않는다", async ({ page, request }) => {
+test("격리 계약: 수납 상세의 새로고침은 페이지를 다시 읽어 결과를 확인하지 못한 취소의 요청 ID를 남기지 않는다", async ({ page, request }) => {
   await control(request, "lost-cancellation-response");
   await page.goto(`/payments/${INVOICE_ID}`);
   let dialog = await openCancellation(page);
@@ -103,12 +103,12 @@ test("격리 계약: 수납 상세의 내역 새로 조회는 페이지를 다�
   await expect(dialog.getByRole("button", { name: /입력한 금액 취소 요청$/ })).toBeDisabled();
   page.once("dialog", confirmation => confirmation.accept());
   await closeDialog(dialog);
-  await Promise.all([page.waitForEvent("load"), page.getByRole("link", { name: "내역 새로 조회", exact: true }).click()]);
+  await Promise.all([page.waitForEvent("load"), page.locator(".workspace-heading").filter({ has: page.getByRole("heading", { level: 1 }) }).getByRole("link", { name: "새로고침", exact: true }).click()]);
   dialog = await openCancellation(page);
   expect(await dialog.locator('input[name="request_id"]').inputValue()).not.toBe(originalRequestId);
 });
 
-test("격리 계약: 고객 조회 링크 목록을 불러오지 못한 뒤 다시 조회하면 빈 목록 대신 발급한 링크를 보인다", async ({ page, request }) => {
+test("격리 계약: 청구서 조회 링크 목록을 불러오지 못한 뒤 다시 조회하면 빈 목록 대신 발급한 링크를 보인다", async ({ page, request }) => {
   await control(request, "view-links-failure");
   await page.goto(`/payments/${INVOICE_ID}`);
   const panel = page.locator("#invoice-view-links");
@@ -122,7 +122,7 @@ test("격리 계약: 고객 조회 링크 목록을 불러오지 못한 뒤 다�
   await expect(panel.locator(".ant-empty")).toHaveCount(0);
 });
 
-test("격리 계약: 확정 실패 뒤 새 취소 요청을 선택해야 새 요청 ID로 복구한다", async ({ page, request }) => {
+test("격리 계약: 확정 실패 뒤 다시 취소 요청을 선택해야 새 요청 ID로 복구한다", async ({ page, request }) => {
   await control(request, "rejected-cancellation-first");
   await page.goto(`/payments/${INVOICE_ID}`);
   const dialog = await openCancellation(page);
@@ -132,7 +132,7 @@ test("격리 계약: 확정 실패 뒤 새 취소 요청을 선택해야 새 요
   await expect(dialog.getByRole("button", { name: /입력한 금액 취소 요청$/ })).toBeDisabled();
   expect((await readState(request)).cancellationCalls).toHaveLength(1);
   expect((await readState(request)).cancellationEffects).toBe(0);
-  await dialog.getByRole("button", { name: "새 취소 요청", exact: true }).click();
+  await dialog.getByRole("button", { name: "다시 취소 요청", exact: true }).click();
   const newRequestId = await dialog.locator('input[name="request_id"]').inputValue();
   expect(newRequestId).not.toBe(originalRequestId);
   await dialog.getByLabel(/^취소 금액 \(원\)/).fill("1000");
@@ -212,13 +212,13 @@ test("격리 계약: 업무 환경 전환은 목적지를 밝힌 확인 창을 �
   await page.keyboard.press("Escape");
   expect(new URL(page.url()).searchParams.get("environment")).toBeNull();
   await environment.click();
-  await page.locator(".ant-select-item-option", { hasText: "실제 환경" }).click();
+  await page.locator(".ant-select-item-option", { hasText: "라이브 환경" }).click();
   const confirm = page.getByRole("dialog");
-  await expect(confirm).toContainText("실제 환경으로 전환할까요?");
+  await expect(confirm).toContainText("라이브 환경으로 전환할까요?");
   await confirm.getByRole("button", { name: "취소", exact: true }).click();
   expect(new URL(page.url()).searchParams.get("environment")).toBeNull();
   await environment.click();
-  await page.locator(".ant-select-item-option", { hasText: "실제 환경" }).click();
+  await page.locator(".ant-select-item-option", { hasText: "라이브 환경" }).click();
   await page.getByRole("dialog").getByRole("button", { name: "전환", exact: true }).click();
   await expect.poll(() => new URL(page.url()).searchParams.get("environment")).toBe("live");
   expect(nativeDialogs).toBe(0);
@@ -227,7 +227,7 @@ test("격리 계약: 업무 환경 전환은 목적지를 밝힌 확인 창을 �
 test("격리 계약: 기존 데이터를 켜지 않은 서버는 환경 목록에 기존 데이터를 두지 않고 그 주소로 들어오면 같은 화면의 테스트 환경으로 보낸다", async ({ page, request }) => {
   await page.goto("/customers");
   await page.getByRole("combobox", { name: "업무 환경", exact: true }).click();
-  await expect(page.locator(".ant-select-item-option")).toHaveText(["테스트 환경", "실제 환경"]);
+  await expect(page.locator(".ant-select-item-option")).toHaveText(["테스트 환경", "라이브 환경"]);
   await page.keyboard.press("Escape");
   const response = await page.goto("/payments?environment=legacy&month=2026-10&payment_status=failed");
   expect(response!.status()).toBe(200);
@@ -239,7 +239,7 @@ test("격리 계약: 기존 데이터를 켜지 않은 서버는 환경 목록�
   expect((await request.get("/customers?environment=unknown", { maxRedirects: 0 })).status()).toBe(400);
 });
 
-test("격리 계약: 실제 환경은 조회 조건 적용과 페이지 넘김 뒤에도 주소에 남고 기본 환경은 조건 적용 뒤에도 주소에 적지 않는다", async ({ page, request }) => {
+test("격리 계약: 라이브 환경은 조회 조건 적용과 페이지 넘김 뒤에도 주소에 남고 기본 환경은 조건 적용 뒤에도 주소에 적지 않는다", async ({ page, request }) => {
   await control(request, "customer-pages");
   const form = page.locator('form[aria-label="조회 조건"]');
   const search = () => new URL(page.url()).searchParams;
@@ -289,16 +289,16 @@ test("격리 계약: 키 한도는 양수 정수로 보내고 비우면 null로 
 });
 
 
-test("격리 계약: 전액 취소는 잔액을 명시하고 부분 취소의 빈 금액은 전송하지 않는다", async ({ page, request }) => {
+test("격리 계약: 전액 취소는 남은 금액을 명시하고 부분 취소의 빈 금액은 전송하지 않는다", async ({ page, request }) => {
   await page.goto(`/payments/${INVOICE_ID}`);
-  await page.getByRole("button", { name: "일부 금액 취소", exact: true }).click();
+  await page.getByRole("button", { name: "부분 취소", exact: true }).click();
   let dialog = page.getByRole("dialog");
   await dialog.getByLabel(/^취소 사유/).fill("빈 금액 방지");
   await dialog.getByRole("button", { name: "입력한 금액 취소 요청", exact: true }).click();
   expect((await readState(request)).cancellationCalls).toHaveLength(0);
   page.once("dialog", confirmation => confirmation.accept());
   await closeDialog(dialog);
-  await page.getByRole("button", { name: "잔액 전액 취소", exact: true }).click();
+  await page.getByRole("button", { name: "남은 금액 전액 취소", exact: true }).click();
   dialog = page.getByRole("dialog");
   await expect(dialog.getByRole("button", { name: /11,000원 전액 취소 요청/ })).toBeVisible();
   expect(await dialog.locator('input[name="amount"]').inputValue()).toBe("11000");
@@ -363,10 +363,10 @@ test("격리 계약: 확정된 월의 0원 고객을 구분하고 검색 페이�
   await control(request, "finalized-month-zero-customer");
   await page.goto(`/billing?month=2026-10&customer_id=${customerId}&sort=amount&order=desc`);
   await expect(page.getByText("확정됨", { exact: true })).toBeVisible();
-  await expect(page.getByText("청구 예정액이 0원인 고객 1곳은 인보이스가 만들어지지 않았어요.", { exact: true })).toBeVisible();
+  await expect(page.getByText("청구 예정액이 0원인 고객 1명은 청구서가 만들어지지 않았어요.", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "모두 펼치기", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "모두 접기", exact: true })).toHaveCount(0);
-  const monthLink = page.getByRole("link", { name: "이 달에 확정된 인보이스 101건 보기", exact: true });
+  const monthLink = page.getByRole("link", { name: "이 달에 확정된 청구서 101건 보기", exact: true });
   await expect(monthLink).toBeVisible();
   const monthHref = await monthLink.getAttribute("href");
   expect(monthHref).not.toBeNull();
@@ -375,7 +375,7 @@ test("격리 계약: 확정된 월의 0원 고객을 구분하고 검색 페이�
   expect(monthDestination.searchParams.get("organization_id")).toBe("55555555-5555-4555-8555-555555555555");
   expect(monthDestination.searchParams.get("environment")).toBeNull();
   await expect(page.getByText(/^다른 고객의 확정 청구/)).toHaveCount(0);
-  const destinationHref = await page.getByRole("link", { name: "인보이스 보기", exact: true }).getAttribute("href");
+  const destinationHref = await page.getByRole("link", { name: "청구서 보기", exact: true }).getAttribute("href");
   expect(destinationHref).not.toBeNull();
   const destination = new URL(destinationHref!, FRONTEND_ORIGIN);
   expect(destination.pathname).toBe("/invoices");
@@ -383,8 +383,8 @@ test("격리 계약: 확정된 월의 0원 고객을 구분하고 검색 페이�
   expect(destination.searchParams.get("month")).toBe("2026-10");
   expect(destination.searchParams.has("sort")).toBe(false);
   expect(destination.searchParams.has("order")).toBe(false);
-  await page.getByRole("button", { name: "0원 고객 1곳 보기", exact: true }).click();
-  await expect(page.getByRole("row").filter({ hasText: "인보이스 없는 0원 고객" })).toHaveCount(1);
+  await page.getByRole("button", { name: "0원 고객 1명 보기", exact: true }).click();
+  await expect(page.getByRole("row").filter({ hasText: "청구서 없는 0원 고객" })).toHaveCount(1);
   await expect(page.getByText(/^다른 고객의 확정 청구/)).toHaveCount(0);
   const state = await readState(request);
   expect(state.invoiceSearchCalls, "월 전체 조회는 검색 페이지를 반복하지 않음").toBe(0);
@@ -400,7 +400,7 @@ test("격리 계약: 확정된 월의 0원 고객을 구분하고 검색 페이�
 test("격리 계약: CSV 내보내기가 거절되면 서버가 준 필드 사유를 보여 준다", async ({ page }) => {
   await page.goto("/customers");
   await page.getByRole("button", { name: "조건 전체 CSV 내보내기", exact: true }).click();
-  await expect(page.getByRole("alert").filter({ hasText: "10000행 이하가 되도록 검색 범위를 좁혀 주세요" })).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: "10,000행 이하가 되도록 조건을 좁히세요." })).toBeVisible();
   await expect(page.getByRole("alert").filter({ hasText: "요청 값이 올바르지 않습니다" })).toHaveCount(0);
 });
 
@@ -420,7 +420,7 @@ test("changing the month on the payments list keeps the customer carried in from
   await control(request, "failed-payments");
   await page.goto("/payments?month=2026-10&customer_id=77777777-7777-4777-8777-777777777777");
   await page.getByLabel("청구 월", { exact: true }).fill("2026-09");
-  await page.getByRole("button", { name: "조회", exact: true }).click();
+  await page.getByRole("button", { name: "조건 적용", exact: true }).click();
   await expect(page).toHaveURL(url => url.searchParams.get("month") === "2026-09" && url.searchParams.get("customer_id") === "77777777-7777-4777-8777-777777777777");
 });
 
@@ -485,14 +485,14 @@ test("격리 계약: 화면을 그릴 때 고객 선택지를 받지 못했으�
   await expect(page.locator(".ant-select-item-option").filter({ hasText: "다시 받은 고객" })).toBeVisible();
 });
 
-test("격리 계약: 월 확정 결과 창은 다섯 건까지만 펼치고 나머지는 인보이스 화면으로 안내한다", async ({ page, request }) => {
+test("격리 계약: 월 확정 결과 창은 다섯 건까지만 펼치고 나머지는 청구서 화면으로 안내한다", async ({ page, request }) => {
   await control(request, "finalize-month");
   await page.goto("/billing?month=2026-09");
   await page.getByRole("button", { name: "월 전체 확정", exact: true }).click();
   await page.getByRole("dialog").getByRole("button", { name: "확정", exact: true }).click();
-  const result = page.getByRole("dialog", { name: /인보이스 7건을 확정했어요/ });
+  const result = page.getByRole("dialog", { name: /청구서 7건을 확정했어요/ });
   await expect(result.getByRole("listitem")).toHaveCount(5);
-  await expect(result.getByText("나머지 2건은 '인보이스 보기'에서 확인하세요.", { exact: true })).toBeVisible();
+  await expect(result.getByText("나머지 2건은 '청구서 보기'에서 확인하세요.", { exact: true })).toBeVisible();
 });
 
 test("격리 계약: 다른 확정이 먼저 처리해 일부만 확정되면 결과 창이 그 원인도 안내한다", async ({ page, request }) => {
@@ -500,8 +500,8 @@ test("격리 계약: 다른 확정이 먼저 처리해 일부만 확정되면 �
   await page.goto("/billing?month=2026-09");
   await page.getByRole("button", { name: "월 전체 확정", exact: true }).click();
   await page.getByRole("dialog").getByRole("button", { name: "확정", exact: true }).click();
-  const result = page.getByRole("dialog", { name: /인보이스 3건을 확정했어요/ });
-  await expect(result.getByText("확정한 고객 수가 처음 안내한 7곳과 달라요. 창을 연 뒤 사용량이 바뀌었거나 그사이 먼저 확정된 고객이 있어요. 금액은 인보이스에서 확인하세요.", { exact: true })).toBeVisible();
+  const result = page.getByRole("dialog", { name: /청구서 3건을 확정했어요/ });
+  await expect(result.getByText("확정한 고객 수가 처음 안내한 7명과 달라요. 창을 연 뒤 사용량이 바뀌었거나 그사이 먼저 확정된 고객이 있어요. 금액은 청구서에서 확인하세요.", { exact: true })).toBeVisible();
 });
 
 test("격리 계약: 청구할 고객이 없어 월 전체 확정이 비활성이면 그 이유를 버튼 설명으로 보인다", async ({ page, request }) => {

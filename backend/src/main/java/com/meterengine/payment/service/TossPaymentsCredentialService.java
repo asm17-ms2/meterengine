@@ -39,7 +39,7 @@ public class TossPaymentsCredentialService {
   private static final String CREDENTIAL_CHECK_ORDER_ID_PREFIX = "credential-check-";
   private static final String CLIENT_KEY_INFIX = "_ck_";
   private static final String SECRET_KEY_INFIX = "_sk_";
-  private static final String KEY_PREFIX_MESSAGE = "%s 환경 키는 %s 뒤에 값이 이어져야 합니다";
+  private static final String KEY_PREFIX_MESSAGE = "%s 키는 %s 뒤에 값이 이어져야 합니다";
   private static final String SECRET_KEY_CHARACTER_MESSAGE = "시크릿 키에는 콜론, 공백, ASCII 밖 문자를 쓸 수 없습니다";
   private static final String SECRET_KEY_REJECTED_MESSAGE = "토스페이먼츠가 받지 않는 시크릿 키입니다";
 
@@ -215,7 +215,7 @@ public class TossPaymentsCredentialService {
 
   // 화면은 모드를 환경 이름으로 부르므로 오류 문구도 그 이름을 쓴다.
   private static String environmentName(String mode) {
-    return PaymentSetting.LIVE.equals(mode) ? "실제" : "테스트";
+    return PaymentSetting.LIVE.equals(mode) ? "라이브" : "테스트";
   }
 
   private static boolean hasValueAfterPrefix(String key, String prefix) {

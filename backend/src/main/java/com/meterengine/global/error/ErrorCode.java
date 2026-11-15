@@ -8,16 +8,16 @@ public enum ErrorCode {
   // 400 Bad Request
   VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "요청 값이 올바르지 않습니다"),
   MALFORMED_REQUEST_BODY(HttpStatus.BAD_REQUEST, "요청 본문을 JSON으로 읽을 수 없습니다"),
-  INVALID_BILLABLE_METRIC(HttpStatus.BAD_REQUEST, "집계 미터로 성립하지 않습니다"),
-  INVALID_PRICE_RATE(HttpStatus.BAD_REQUEST, "단가로 성립하지 않습니다"),
+  INVALID_BILLABLE_METRIC(HttpStatus.BAD_REQUEST, "미터 설정이 올바르지 않습니다."),
+  INVALID_PRICE_RATE(HttpStatus.BAD_REQUEST, "단가 설정이 올바르지 않습니다."),
   EVENT_TOO_OLD(HttpStatus.BAD_REQUEST, "받는 기간이 지난 이벤트입니다"),
-  INVALID_TOSS_PAYMENTS_CREDENTIAL(HttpStatus.BAD_REQUEST, "토스페이먼츠 키로 성립하지 않습니다"),
+  INVALID_TOSS_PAYMENTS_CREDENTIAL(HttpStatus.BAD_REQUEST, "올바르지 않은 토스페이먼츠 키입니다."),
   PAYMENT_METHOD_REJECTED(HttpStatus.BAD_REQUEST, "카드 인증이 거절되었습니다"),
-  TOSS_PAYMENTS_TEST_CODE_IN_LIVE_MODE(HttpStatus.BAD_REQUEST, "실제 모드에서는 토스페이먼츠 테스트 코드를 쓸 수 없습니다"),
+  TOSS_PAYMENTS_TEST_CODE_IN_LIVE_MODE(HttpStatus.BAD_REQUEST, "라이브 환경에서는 토스페이먼츠 테스트 코드를 쓸 수 없습니다"),
   INVALID_WEBHOOK_URL(HttpStatus.BAD_REQUEST, "올바른 웹훅 URL을 입력하세요"),
   INVALID_WEBHOOK_EVENT_TYPE(HttpStatus.BAD_REQUEST, "지원하지 않는 웹훅 이벤트 종류입니다"),
   CAPTCHA_FAILED(HttpStatus.BAD_REQUEST, "자동 가입 방지 확인을 통과하지 못했습니다. 확인을 다시 마친 뒤 보내세요"),
-  INVALID_BUSINESS_REGISTRATION_NUMBER(HttpStatus.BAD_REQUEST, "실제 환경을 신청할 수 없는 사업자등록번호입니다"),
+  INVALID_BUSINESS_REGISTRATION_NUMBER(HttpStatus.BAD_REQUEST, "라이브 환경을 신청할 수 없는 사업자등록번호입니다"),
 
   // 401 Unauthorized
   AUTHENTICATION_REQUIRED(HttpStatus.UNAUTHORIZED, "인증 정보가 없습니다"),
@@ -25,13 +25,13 @@ public enum ErrorCode {
 
   // 403 Forbidden
   PERMISSION_DENIED(HttpStatus.FORBIDDEN, "이 요청을 할 권한이 없습니다"),
-  ORGANIZATION_NOT_ACTIVE(HttpStatus.FORBIDDEN, "활성 상태가 아닌 조직입니다"),
+  ORGANIZATION_NOT_ACTIVE(HttpStatus.FORBIDDEN, "지금은 이용할 수 없는 조직입니다."),
   ENVIRONMENT_MISMATCH(HttpStatus.FORBIDDEN, "API 키의 환경과 요청 환경이 다릅니다"),
-  CONSENT_REQUIRED(HttpStatus.FORBIDDEN, "서비스 이용 안내와 개인정보 처리 안내에 본인이 동의해야 합니다"),
+  CONSENT_REQUIRED(HttpStatus.FORBIDDEN, "이용약관에 동의하고 개인정보 처리방침을 확인해야 합니다."),
   EMAIL_NOT_VERIFIED(HttpStatus.FORBIDDEN, "이메일 인증을 마치지 않은 계정입니다"),
   LIVE_ENVIRONMENT_LOCKED(
       HttpStatus.FORBIDDEN,
-      "실제 환경 이용 승인 전에는 테스트 환경만 쓸 수 있습니다. X-MeterEngine-Environment를 test로 보내세요"),
+      "라이브 환경 이용 승인 전에는 테스트 환경만 쓸 수 있습니다. X-MeterEngine-Environment를 test로 보내세요"),
 
   // 404 Not Found
   CUSTOMER_NOT_FOUND(HttpStatus.NOT_FOUND, "고객을 찾을 수 없습니다"),
@@ -53,7 +53,7 @@ public enum ErrorCode {
   WEBHOOK_DELIVERY_NOT_FOUND(HttpStatus.NOT_FOUND, "웹훅 전송 기록을 찾을 수 없습니다"),
   INVITATION_NOT_FOUND(HttpStatus.NOT_FOUND, "초대 링크를 찾을 수 없습니다"),
   EMAIL_VERIFICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "인증 링크가 없거나 만료되었거나 이미 사용되었습니다"),
-  LIVE_ENVIRONMENT_APPLICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "실제 환경 이용 신청을 찾을 수 없습니다"),
+  LIVE_ENVIRONMENT_APPLICATION_NOT_FOUND(HttpStatus.NOT_FOUND, "라이브 환경 이용 신청을 찾을 수 없습니다"),
 
   // 405 Method Not Allowed
   METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "이 경로에서 허용하지 않는 메서드입니다"),
@@ -66,13 +66,13 @@ public enum ErrorCode {
   IDEMPOTENCY_CONFLICT(HttpStatus.CONFLICT, "같은 재시도 키로 다른 요청을 보낼 수 없습니다"),
   CUSTOMER_ARCHIVED(HttpStatus.CONFLICT, "보관한 고객입니다. 복원한 뒤 사용하세요"),
   RESOURCE_ARCHIVED(HttpStatus.CONFLICT, "보관한 항목입니다"),
-  ENVIRONMENT_NOT_READY(HttpStatus.CONFLICT, "테스트 환경과 실제 환경에서는 아직 쓸 수 없는 기능입니다"),
+  ENVIRONMENT_NOT_READY(HttpStatus.CONFLICT, "테스트 환경과 라이브 환경에서는 아직 쓸 수 없는 기능입니다"),
   ARCHIVE_RESTORATION_CONFLICT(
       HttpStatus.CONFLICT, "현재 버전과 충돌하거나 보관 기간이 시작되어 복원할 수 없습니다. 새 버전을 등록하세요"),
-  CUSTOMER_HAS_EVENTS(HttpStatus.CONFLICT, "수집된 이벤트가 있어 고객을 삭제할 수 없습니다"),
-  CUSTOMER_HAS_PAYMENT_ATTEMPTS(HttpStatus.CONFLICT, "결제 기록이 있어 고객을 삭제할 수 없습니다"),
-  BILLABLE_METRIC_HAS_EVENTS(HttpStatus.CONFLICT, "집계된 이벤트가 있어 name 밖의 미터 정의를 바꿀 수 없습니다"),
-  BILLABLE_METRIC_HAS_PRICE_RATE(HttpStatus.CONFLICT, "단가가 붙어 있어 미터를 삭제할 수 없습니다"),
+  CUSTOMER_HAS_EVENTS(HttpStatus.CONFLICT, "수집된 이벤트가 있어 고객을 보관할 수 없습니다"),
+  CUSTOMER_HAS_PAYMENT_ATTEMPTS(HttpStatus.CONFLICT, "결제 기록이 있어 고객을 보관할 수 없습니다"),
+  BILLABLE_METRIC_HAS_EVENTS(HttpStatus.CONFLICT, "이벤트가 수집된 미터는 name만 바꿀 수 있습니다."),
+  BILLABLE_METRIC_HAS_PRICE_RATE(HttpStatus.CONFLICT, "단가가 붙어 있어 미터를 보관할 수 없습니다"),
   BILLABLE_METRIC_ALREADY_EXISTS(HttpStatus.CONFLICT, "같은 code의 미터가 이미 있습니다"),
   BILLABLE_METRIC_EVENT_TYPE_TARGET_PROPERTY_ALREADY_EXISTS(
       HttpStatus.CONFLICT, "event_type과 target_property가 같은 미터가 이미 있습니다"),
@@ -84,27 +84,27 @@ public enum ErrorCode {
   EMAIL_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 가입한 이메일입니다"),
   ORGANIZATION_STATUS_TRANSITION_INVALID(HttpStatus.CONFLICT, "조직을 이 상태로 바꿀 수 없습니다"),
   ORGANIZATION_MEMBER_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 조직에 소속된 사용자입니다"),
-  TOSS_PAYMENTS_CREDENTIAL_MISSING(HttpStatus.CONFLICT, "결제 모드에 맞는 토스페이먼츠 키가 없습니다"),
-  PAYMENT_METHOD_MISSING(HttpStatus.CONFLICT, "결제 모드에 맞는 등록 카드가 없습니다"),
-  PAYMENT_MODE_MISMATCH(HttpStatus.CONFLICT, "API 키의 모드와 결제 모드가 다릅니다"),
+  TOSS_PAYMENTS_CREDENTIAL_MISSING(HttpStatus.CONFLICT, "이 환경의 토스페이먼츠 키가 없습니다"),
+  PAYMENT_METHOD_MISSING(HttpStatus.CONFLICT, "이 환경에 등록된 카드가 없습니다"),
+  PAYMENT_MODE_MISMATCH(HttpStatus.CONFLICT, "API 키의 환경과 결제할 환경이 다릅니다"),
   PAYMENT_ATTEMPT_NOT_CANCELABLE(HttpStatus.CONFLICT, "완료된 결제만 취소할 수 있습니다"),
   PAYMENT_ATTEMPT_FULLY_CANCELED(HttpStatus.CONFLICT, "이미 전액 취소한 결제입니다"),
   PAYMENT_CANCELLATION_AMOUNT_EXCEEDED(HttpStatus.CONFLICT, "취소 금액이 남은 결제 금액보다 큽니다"),
   PAYMENT_CANCELLATION_IN_PROGRESS(HttpStatus.CONFLICT, "진행 중인 취소가 있습니다"),
-  PAYMENT_CANCELLATION_IDEMPOTENCY_CONFLICT(HttpStatus.CONFLICT, "같은 멱등 키로 다른 취소 요청을 보낼 수 없습니다"),
+  PAYMENT_CANCELLATION_IDEMPOTENCY_CONFLICT(HttpStatus.CONFLICT, "같은 재시도 키로 다른 취소 요청을 보낼 수 없습니다"),
   WEBHOOK_DELIVERY_NOT_RETRYABLE(HttpStatus.CONFLICT, "다시 전송할 수 없는 웹훅입니다"),
-  PRICE_RATE_HISTORY_IMMUTABLE(HttpStatus.CONFLICT, "지난달 이전 단가 버전은 바꿀 수 없습니다"),
-  PRICE_PLAN_HISTORY_IMMUTABLE(HttpStatus.CONFLICT, "지난달 이전 요금제 버전은 바꿀 수 없습니다"),
+  PRICE_RATE_HISTORY_IMMUTABLE(HttpStatus.CONFLICT, "이번 달보다 앞선 달에 시작하는 단가 버전은 등록할 수 없습니다"),
+  PRICE_PLAN_HISTORY_IMMUTABLE(HttpStatus.CONFLICT, "이번 달보다 앞선 달에 시작하는 요금제 버전은 등록할 수 없습니다"),
   WEBHOOK_ENDPOINT_DISABLED(HttpStatus.CONFLICT, "비활성 상태인 웹훅 엔드포인트입니다"),
   WEBHOOK_ENDPOINT_LIMIT_EXCEEDED(HttpStatus.CONFLICT, "웹훅 엔드포인트 등록 한도를 넘었습니다"),
   INVITATION_UNAVAILABLE(HttpStatus.CONFLICT, "만료되었거나 이미 사용 또는 취소된 초대입니다"),
-  LAST_OWNER_REQUIRED(HttpStatus.CONFLICT, "마지막 대표 관리자는 제거하거나 권한을 낮출 수 없습니다"),
+  LAST_OWNER_REQUIRED(HttpStatus.CONFLICT, "마지막 대표관리자는 제거하거나 권한을 낮출 수 없습니다"),
   OWNER_SCOPES_REQUIRED(HttpStatus.CONFLICT, "대표관리자는 관리 권한이 필요합니다"),
   LAST_OPERATOR_REQUIRED(HttpStatus.CONFLICT, "마지막 운영자는 권한을 낮출 수 없습니다"),
   OPERATOR_MEMBERSHIP_CONFLICT(HttpStatus.CONFLICT, "운영자 역할과 조직 소속은 함께 가질 수 없습니다"),
   API_KEY_UNAVAILABLE(HttpStatus.CONFLICT, "폐기되거나 만료된 API 키의 권한은 변경할 수 없습니다"),
-  LIVE_ENVIRONMENT_ALREADY_OPEN(HttpStatus.CONFLICT, "이미 실제 환경을 쓰고 있습니다"),
-  LIVE_ENVIRONMENT_APPLICATION_IN_PROGRESS(HttpStatus.CONFLICT, "검토 중인 실제 환경 이용 신청이 있습니다"),
+  LIVE_ENVIRONMENT_ALREADY_OPEN(HttpStatus.CONFLICT, "이미 라이브 환경을 쓰고 있습니다"),
+  LIVE_ENVIRONMENT_APPLICATION_IN_PROGRESS(HttpStatus.CONFLICT, "검토 중인 라이브 환경 이용 신청이 있습니다"),
   LIVE_ENVIRONMENT_APPLICATION_ALREADY_REVIEWED(HttpStatus.CONFLICT, "이미 검토를 마친 신청입니다"),
 
   // 413 Content Too Large
@@ -118,7 +118,8 @@ public enum ErrorCode {
   RATE_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "요청 한도를 넘었습니다"),
 
   // 500 Internal Server Error
-  INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류입니다"),
+  INTERNAL_SERVER_ERROR(
+      HttpStatus.INTERNAL_SERVER_ERROR, "일시적인 오류로 요청을 처리하지 못했습니다. 잠시 뒤 다시 시도해 주세요."),
 
   // 503 Service Unavailable
   REQUEST_TIMED_OUT(HttpStatus.SERVICE_UNAVAILABLE, "요청 처리 시간이 초과되었습니다"),

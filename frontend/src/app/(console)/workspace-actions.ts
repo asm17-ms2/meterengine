@@ -24,7 +24,7 @@ function text(data: FormData, key: string) {
 
 function optional(data: FormData, key: string) { return text(data, key) || undefined; }
 function identifier(data: FormData, key = "id") { return encodeURIComponent(text(data, key)); }
-function amount(data: FormData, key: string, { min = 0, max = Number.MAX_SAFE_INTEGER, message = "0 이상 9,007,199,254,740,991 이하의 정수로 입력하세요." } = {}) {
+function amount(data: FormData, key: string, { min = 0, max = Number.MAX_SAFE_INTEGER, message = "0 이상의 정수로 입력하세요." } = {}) {
   return readWholeNumber(text(data, key), key, { min, max, message });
 }
 
@@ -134,10 +134,10 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
     const existing = existingCustomerMessage({ externalId: text(data, "external_id"), name: text(data, "name"), billingEmail: text(data, "billing_email") }, response);
     if (existing) return { isConfirmedFailure: true, message: existing };
   }
-  if (response?.status === "failed") return { isConfirmedFailure: true, message: String(response.failure_message ?? "요청이 거절됐어요. 실패 사유를 확인하세요.") };
-  if (response?.status === "pending") return { isUnconfirmed: true, message: "요청을 접수했어요. 결과를 확인하는 중이니 같은 요청을 다시 보내지 말고 상태를 새로 조회하세요." };
+  if (response?.status === "failed") return { isConfirmedFailure: true, message: String(response.failure_message ?? "요청이 거절됐지만 토스페이먼츠가 사유를 알려 주지 않았어요. 잠시 뒤 다시 시도하세요.") };
+  if (response?.status === "pending") return { isUnconfirmed: true, message: "요청을 접수했어요. 결과를 확인하는 중이니 같은 요청을 다시 보내지 말고 화면을 새로고침한 뒤 상태를 확인하세요." };
   return {
-    isSuccess: true, message: operation === "testWebhookEndpoint" ? "시험 통보를 발송 대기에 넣었어요. 발송 내역에서 결과를 확인하세요." : successMessage(operation),
+    isSuccess: true, message: operation === "testWebhookEndpoint" ? "테스트 웹훅을 곧 보내요. 발송 내역에서 결과를 확인하세요." : successMessage(operation),
     secret: typeof response?.secret === "string" ? response.secret : undefined,
     registrationPath: typeof response?.token === "string" ? `${operation === "createOrganizationInvitation" ? "/organization-invitations/" : "/payment-method-registrations/"}${encodeURIComponent(response.token)}` : undefined,
     registrationLabel: operation === "createOrganizationInvitation" ? "초대 링크" : undefined,

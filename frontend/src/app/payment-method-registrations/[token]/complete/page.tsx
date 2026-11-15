@@ -1,20 +1,27 @@
 import Link from "next/link";
-import { requestApi } from "@/lib/api/transport";
+import type { Metadata } from "next";
 import { RegistrationFrame } from "@/components/payment-registration/RegistrationFrame";
 import styles from "@/components/payment-registration/registration.module.css";
 import { isValidRegistrationToken, readRegistrationOutcome } from "../../flow";
-import type { PaymentMethodRegistrationResponse } from "../../types";
+import { loadRegistration, registrationMetadata } from "../../registration";
+
+async function readCompletion(token: string) {
+  const outcome = isValidRegistrationToken(token) ? await readRegistrationOutcome(token) : null;
+  const registration = outcome?.status !== "success" ? await loadRegistration(token) : null;
+  return { outcome, registration, organizationName: outcome?.organizationName ?? (registration?.ok ? registration.data.organization_name : undefined) };
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ token: string }> }): Promise<Metadata> {
+  return registrationMetadata((await readCompletion((await params).token)).organizationName);
+}
 
 export default async function RegistrationCompletePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const outcome = isValidRegistrationToken(token) ? await readRegistrationOutcome(token) : null;
+  const { outcome, registration, organizationName } = await readCompletion(token);
   const isSuccess = outcome?.status === "success";
-  const registration = !isSuccess && isValidRegistrationToken(token)
-    ? await requestApi<PaymentMethodRegistrationResponse>(`/v1/payment-method-registrations/${encodeURIComponent(token)}`)
-    : null;
   const isUnknown = !outcome || outcome.status === "unavailable";
   const title = isSuccess ? "카드를 등록했습니다" : outcome?.status === "canceled" ? "카드 등록을 취소했습니다" : isUnknown ? "카드 등록 결과를 확인하지 못했습니다" : "카드 등록을 완료하지 못했습니다";
-  return <RegistrationFrame title={title} organizationName={outcome?.organizationName} currentStep={3}>
+  return <RegistrationFrame title={title} organizationName={organizationName} currentStep={3}>
     <div className={styles.outcome} role="status">
       {isSuccess ? <>
         <p><strong>{outcome.customerName}</strong>의 결제 카드가 등록되었습니다.</p>
@@ -22,7 +29,7 @@ export default async function RegistrationCompletePage({ params }: { params: Pro
           <div><dt>등록 카드</dt><dd>{outcome.cardNumber}</dd></div>
           <div><dt>결제 구분</dt><dd>{outcome.mode === "test" ? "테스트 결제" : "실제 결제"}</dd></div>
         </dl>
-        <p>지금은 카드 등록만 완료되었으며 결제 금액은 청구 시 별도로 안내됩니다. 이 창을 닫아도 됩니다.</p>
+        <p>지금은 카드 등록만 완료되었습니다. 결제 금액은 {outcome.organizationName ? `${outcome.organizationName}에서` : "링크를 보낸 담당자가"} 청구할 때 알려 드립니다. 이 창을 닫아도 됩니다.</p>
       </> : <>
         <p>{outcome?.status === "canceled"
           ? "카드가 등록되지 않았습니다. 등록을 계속하려면 아래 버튼을 눌러 주세요."

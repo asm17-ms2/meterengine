@@ -13,7 +13,7 @@ description: "구간 단가, 최소 사용료, 기본료가 있는 예시 하나
 
 | 항목 | 값 |
 | --- | --- |
-| 미터 | `aggregation`은 `sum`, `unit_size`는 1, `rounding_mode`는 `none`(기본값), 차원 없음 |
+| 미터 | `aggregation`은 `sum`, `unit_size`는 1, `rounding_mode`는 `none`(기본값), 구분 키 없음 |
 | 단가 | 누진 구간(`graduated`): 100까지 10원, 1,000까지 8원, 그 위는 5원 |
 | 요금제 | 월 기본료 500원, 월 최소 사용료 12,000원 |
 | 그 달 사용량 | 한 고객이 이벤트 한 건으로 1500.5를 보냄 |
@@ -45,7 +45,7 @@ description: "구간 단가, 최소 사용료, 기본료가 있는 예시 하나
 1,000 + 7,200 + 2,500 + 1,300 + 500 = **12,500원**입니다. 라인은 다섯 줄입니다. 청구 예정액은 이 공급가액이고 세금을 포함하지 않습니다.
 </Step>
 <Step title="확정하면 세액과 합계가 붙는다">
-인보이스를 확정하면 세액은 공급가액의 10%인 1,250원, 합계는 13,750원입니다.
+청구서를 확정하면 세액은 공급가액의 10%인 1,250원, 합계는 13,750원입니다.
 </Step>
 </Steps>
 
@@ -207,14 +207,14 @@ const draft = await response.json();
 금액과 구간 판정에 쓴 정확한 수량의 분자입니다. `quantity`는 표시용이므로 금액을 다시 계산할 때는 `quantity_numerator / quantity_denominator x unit_price`를 계산한 뒤 10원 미만을 버립니다.
 </ResponseField>
 <ResponseField name="unpriced_usages" type="array">
-단가가 없어 라인과 금액에서 빠진 조합의 사용량입니다. 자사 계산에서 이 조합에도 요금을 매겼다면 이 차이만큼 금액이 어긋납니다.
+단가가 없어 라인과 금액에서 빠진 구분 값의 사용량입니다. 자사 계산에서 이 구분 값에도 요금을 매겼다면 이 차이만큼 금액이 어긋납니다.
 </ResponseField>
 
-확정한 인보이스는 `GET /v1/invoices/{id}`로 봅니다. 위 예시를 확정하면 `supply_amount`는 12500, `tax_amount`는 1250, `total_amount`는 13750이고 `lines`는 다섯 줄입니다. 확정 방법은 [인보이스 수동 확정](/billing/finalize-invoices)을 보세요.
+확정한 청구서는 `GET /v1/invoices/{id}`로 봅니다. 위 예시를 확정하면 `supply_amount`는 12500, `tax_amount`는 1250, `total_amount`는 13750이고 `lines`는 다섯 줄입니다. 확정 방법은 [청구서 수동 확정](/billing/finalize-invoices)을 보세요.
 
 ## 테스트 환경에서 직접 재현하기
 
-위 예시를 테스트 환경에서 그대로 만들어 볼 수 있습니다. 아래 요청은 모두 admin 권한의 테스트 환경 키를 씁니다. 날짜는 오늘이 속한 달로 바꿔 넣으세요.
+위 예시를 테스트 환경에서 그대로 만들어 볼 수 있습니다. 아래 요청은 모두 admin 권한의 테스트 키를 씁니다. 날짜는 오늘이 속한 달로 바꿔 넣으세요.
 
 {/* 확인 필요: 테스트 키 정의와 mode 설명 */}
 <Warning>
@@ -240,7 +240,7 @@ curl -X POST https://meterengine.com/v1/billable-metrics \
 ```
 </Step>
 <Step title="누진 구간 단가를 등록한다">
-차원이 없는 미터는 `dimension_values`에 빈 객체를 넣습니다. 마지막 구간의 `up_to`는 `null`입니다. `effective_from`을 생략하면 이번 달부터 적용됩니다.
+구분 키가 없는 미터는 `dimension_values`에 빈 객체를 넣습니다. 마지막 구간의 `up_to`는 `null`입니다. `effective_from`을 생략하면 이번 달부터 적용됩니다.
 
 ```bash curl
 curl -X POST https://meterengine.com/v1/billable-metrics/example-hours/price-rates \
@@ -316,10 +316,10 @@ curl -X POST https://meterengine.com/v1/events \
 <Accordion title="합계에서 한 번만 10원 미만을 버렸다">
 버림은 라인마다 합니다. 소수 수량이 여러 라인에 나뉘면 합계에서 한 번 버린 값보다 작아질 수 있습니다.
 </Accordion>
-<Accordion title="단가 없는 조합만 있는 고객에게 최소 사용료가 붙었다">
-단가가 없는 조합의 사용량도 요금제를 붙이는 기준이 되는 사용량으로 셉니다. 사용료는 0원이라 최소 사용료 전액이 조정 라인으로 붙습니다. `unpriced_usages`를 보고 단가를 등록하세요. 자세한 내용은 [기본료와 최소 사용료](/pricing/price-plans)를 보세요.
+<Accordion title="단가 없는 구분 값만 있는 고객에게 최소 사용료가 붙었다">
+단가가 없는 구분 값의 사용량도 요금제를 붙이는 기준이 되는 사용량으로 셉니다. 사용료는 0원이라 최소 사용료 전액이 조정 라인으로 붙습니다. `unpriced_usages`를 보고 단가를 등록하세요. 자세한 내용은 [기본료와 최소 사용료](/pricing/price-plans)를 보세요.
 </Accordion>
 <Accordion title="이벤트를 보냈는데 금액이 0원이다">
-미터의 이벤트 `type`, 단가의 조합, 이벤트의 `timestamp`가 맞는지 봅니다. 원인별 확인 순서는 [이벤트가 청구에 안 보일 때](/troubleshooting/events-not-billed)를 보세요.
+미터의 이벤트 `type`, 단가의 구분 값, 이벤트의 `timestamp`가 맞는지 봅니다. 원인별 확인 순서는 [이벤트가 청구에 안 보일 때](/troubleshooting/events-not-billed)를 보세요.
 </Accordion>
 </AccordionGroup>

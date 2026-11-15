@@ -14,7 +14,7 @@ export async function BillingFinalizedLink({
 
   return (
     <LinkButton type="link" href={`/invoices?month=${month}`}>
-      이 달에 확정된 인보이스 {result.data.invoices.length}건 보기
+      이 달에 확정된 청구서 {result.data.invoices.length}건 보기
     </LinkButton>
   );
 }

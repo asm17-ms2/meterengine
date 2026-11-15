@@ -14,7 +14,7 @@ public record OrganizationResponse(
             allowableValues = {"pending", "active", "rejected", "suspended"})
         String status,
     @JsonProperty("created_at") OffsetDateTime createdAt,
-    @Schema(description = "실제 환경을 연 시각. null이면 실제 환경이 잠겨 있어 테스트 환경만 쓴다", nullable = true)
+    @Schema(description = "라이브 환경을 연 시각. null이면 라이브 환경이 잠겨 있어 테스트 환경만 쓴다", nullable = true)
         @JsonProperty("live_environment_opened_at")
         OffsetDateTime liveEnvironmentOpenedAt) {
 

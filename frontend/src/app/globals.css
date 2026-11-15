@@ -94,7 +94,8 @@ p { line-height: 1.7; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
 
 .workspace-shell { display: grid; grid-template-columns: 228px minmax(0, 1fr); grid-template-rows: var(--workspace-header-height) 1fr; min-height: 100dvh; }
-.workspace-header { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 0 28px; background: var(--paper); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 30; }
+.workspace-top { grid-column: 1 / -1; position: sticky; top: 0; z-index: 30; }
+.workspace-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 68px; box-sizing: border-box; padding: 0 28px; background: var(--paper); border-bottom: 1px solid var(--line); }
 .workspace-brand, .workspace-user { display: flex; align-items: center; gap: 24px; min-width: 0; }
 .workspace-brand .wordmark { display: flex; gap: 10px; align-items: center; font-size: 21px; letter-spacing: -.055em; }
 .meter-mark { --mark-scale: 1; display: block; flex: none; width: calc(23px * var(--mark-scale)); height: auto; }
@@ -290,10 +291,13 @@ details[open] > .disclosure-summary + * { margin-top: 12px; }
 
 .workspace-environment { display: flex; align-items: center; gap: 8px; font-size: 12px; white-space: nowrap; }
 .workspace-environment .ant-select { width: 132px; max-width: 180px; min-height: 38px; }
-.environment-notice { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.6; }
-.environment-notice strong { color: var(--ink); }
-.environment-notice-live { padding: 12px 16px; border: 1px solid #9a620c; border-radius: 6px; background: #fff8e9; color: #874d00; }
-.environment-notice-live strong { color: inherit; }
+.environment-band { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 28px; color: #fff; font-size: 13px; font-weight: 600; line-height: 1.5; }
+.environment-band p { margin: 0; }
+.environment-band .ant-btn { flex: none; }
+.environment-band-test { background: #b45309; }
+.environment-band-live { background: #b91c1c; }
+.environment-band-legacy { background: #475569; }
+@media (max-width: 767px) { .environment-band { padding: 6px 12px; font-size: 12px; } }
 @media (max-width: 767px) { .workspace-environment { margin-right: auto; gap: 6px; }.workspace-environment .ant-select { min-height: 44px; max-width: 170px; } }
 
 
