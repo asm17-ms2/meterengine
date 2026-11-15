@@ -279,7 +279,9 @@ export class OpenAbService {
       if (!claim) break;
       try {
         const result = await this.client.ingestEvent(claim.event);
-        if (result.transaction_id !== claim.transactionId || typeof result.duplicate !== "boolean") throw new Error("Invalid ingestion acknowledgement");
+        // 받아 두고 뒤에서 저장하는 서버는 duplicate를 주지 않으므로, 값이 있을 때만 형식을 본다.
+        const isDuplicateValid = result.duplicate === undefined || typeof result.duplicate === "boolean";
+        if (result.transaction_id !== claim.transactionId || !isDuplicateValid) throw new Error("Invalid ingestion acknowledgement");
         this.store.finishOutbox(claim, this.now(), true);
       } catch (error) {
         const isRejected = error instanceof MeterEngineApiError && PERMANENT_INGEST_REJECTIONS.has(error.code);

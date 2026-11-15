@@ -76,7 +76,7 @@ export async function listInvoices(
         status: 503,
         code: "dev_forced",
         message:
-          "개발 모드에서 강제한 에러 상태입니다. 주소의 state 파라미터를 지우면 사라집니다.",
+          "개발 모드에서 강제한 에러 상태예요. 주소의 state 파라미터를 지우면 사라져요.",
       },
     };
   }

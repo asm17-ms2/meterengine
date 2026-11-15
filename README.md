@@ -21,8 +21,8 @@
 # backend + PostgreSQL (DB는 자동 기동)
 cd backend && ./gradlew bootRun
 
-# 백엔드 확인 (로컬 live 키)
-curl -s http://localhost:8080/v1/customers -H 'Authorization: Bearer me_live_QouOFuCiJyAbC0VGK1ltUCkG4IZM2LtA'
+# 백엔드 확인 (로컬 test 키)
+curl -s http://localhost:8080/v1/customers -H 'Authorization: Bearer me_test_wiCp766QYNqhyYm4Z7Xq9wYosNvQCeVC'
 
 # frontend
 cd frontend && corepack enable pnpm && pnpm install && pnpm dev

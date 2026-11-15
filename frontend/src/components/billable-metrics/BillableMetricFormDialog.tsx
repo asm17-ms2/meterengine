@@ -124,7 +124,7 @@ export function BillableMetricFormDialog({
 
   useEffect(() => {
     if (state.status === "done") {
-      message.success("저장했어요");
+      message.success("저장했어요.");
       onClose();
     }
     if (state.status === "failed") failureRef.current?.focus();
@@ -170,7 +170,7 @@ export function BillableMetricFormDialog({
           취소
         </Button>,
         <Button key="submit" type="primary" loading={isPending} onClick={submitForm}>
-          {isPending ? "저장 중..." : "저장"}
+          {isPending ? "저장 중" : "저장"}
         </Button>,
       ]}
     >
@@ -238,9 +238,9 @@ export function BillableMetricFormDialog({
         </Form.Item>
         <Form.Item
           name="eventType"
-          label="이벤트 타입"
+          label="이벤트 유형"
           extra="사용량 이벤트의 type이 이 값과 같으면 이 미터로 집계해요."
-          rules={[{ required: true, transform: trimText, message: "이벤트 타입을 입력하세요" }]}
+          rules={[{ required: true, transform: trimText, message: "이벤트 유형을 입력하세요" }]}
         >
           <Input
             placeholder="llm_request"
@@ -290,7 +290,7 @@ export function BillableMetricFormDialog({
         ) : null}
         <Form.Item
           name="dimensionProperties"
-          label="차원 키"
+          label="구분 키"
           extra="단가를 나누는 기준이 되는 이벤트 속성 키예요. 예: model. 여럿이면 쉼표로 구분하세요."
           rules={[PASSING_RULE]}
         >
@@ -304,7 +304,7 @@ export function BillableMetricFormDialog({
         <Divider />
         <Typography.Title level={5}>결과 변환</Typography.Title>
         <Typography.Paragraph type="secondary">
-          집계 결과를 과금 단위 크기로 나눠요. 올림, 내림, 반올림을 고르면 조합마다 수량에 적용한 뒤 요금을 계산해요.
+          집계 결과를 과금 단위 크기로 나눠요. 올림, 내림, 반올림을 고르면 구분 값마다 수량에 적용한 뒤 요금을 계산해요.
         </Typography.Paragraph>
         <Form.Item name="unitSize" label="과금 단위 크기" extra="1이면 그대로 써요. 예: 바이트를 1,024로 나누면 KiB 단위 수량이 돼요." rules={[
           { required: true, message: "과금 단위 크기를 입력하세요" },
@@ -313,7 +313,7 @@ export function BillableMetricFormDialog({
           <InputNumber controls={false} min={0} style={{ width: "100%" }} />
         </Form.Item>
         <Flex gap={16} wrap>
-          <Form.Item name="roundingMode" label="반올림 방식" style={{ flex: "1 1 240px" }}>
+          <Form.Item name="roundingMode" label="끝수 처리" style={{ flex: "1 1 240px" }}>
             <Select options={METRIC_ROUNDING_OPTIONS} onChange={(value) => { if (value === "none") form.setFieldValue("roundingPrecision", 0); }} />
           </Form.Item>
           {roundingMode !== "none" ? <Form.Item name="roundingPrecision" label="소수 자릿수" extra="0이면 정수로 만들어요." style={{ flex: "1 1 180px" }} rules={[{ required: true, type: "integer", min: 0, max: 12, message: "소수 자릿수는 0부터 12 사이의 정수로 입력하세요" }]}>

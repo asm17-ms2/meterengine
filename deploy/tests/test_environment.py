@@ -18,6 +18,26 @@ import environment  # noqa: E402
 ENVIRONMENTS = DEPLOY / "environments"
 LAUNCH_TEMPLATE = DEPLOY / "terraform/modules/app_fleet/asg.tf"
 BASE_PARAMETERS = ["DB_HOST", "DB_PORT", "DB_NAME", "DB_USERNAME", "DB_PASSWORD", "CRYPTO_ENCRYPTION_KEY", "OPERATOR_EMAIL", "OPERATOR_PASSWORD"]
+# 실제 curl처럼 -f면 400 이상에서 22로 끝나고, -w가 있으면 본문 뒤에 상태 코드를 붙인다. 상태 000은 시간 초과다.
+# 값이 빈 태그는 없는 태그라 404다.
+FAKE_CURL = r"""status=200
+case "$*" in
+*api/token*) body=token ;;
+*aws:autoscaling:groupName*) body=${FAKE_GROUP:-} status=${FAKE_GROUP_STATUS:-200} ;;
+*tags/instance/ServerRole*) body=${FAKE_ROLE:-} status=${FAKE_ROLE_STATUS:-200} ;;
+*) body= ;;
+esac
+[ -n "$body" ] || [ "$status" != 200 ] || status=404
+case " $* " in *" -w "*) write_out=1 ;; *) write_out= ;; esac
+if [ "$status" = 000 ]; then
+	[ -z "$write_out" ] || printf '\n000'
+	echo 'curl: (28) Operation timed out' >&2
+	exit 28
+fi
+case " $* " in *" -f"*) [ "$status" -lt 400 ] || exit 22 ;; esac
+if [ "$status" = 200 ]; then printf '%s' "$body"; else printf '<html>%s</html>' "$status"; fi
+[ -z "$write_out" ] || printf '\n%s' "$status"
+"""
 
 
 def staging():
@@ -25,9 +45,11 @@ def staging():
 
 
 def write_target(directory, name, **changes):
-    target = {**staging(), "autoscaling_group_name": f"meterengine-{name}-app", **changes}
+    target = {**staging(), "autoscaling_group_name": f"meterengine-{name}-app",
+              "kafka_autoscaling_group_names": [f"meterengine-{name}-consumer", f"meterengine-{name}-ingest"], **changes}
     if name not in environment.GROUP_ENVIRONMENTS:
         del target["autoscaling_group_name"]
+        del target["kafka_autoscaling_group_names"]
     (directory / f"{name}.json").write_text(json.dumps(target))
     return target
 
@@ -47,6 +69,11 @@ class LoadTargetTest(unittest.TestCase):
         del target["autoscaling_group_name"]
         (self.directory / "staging.json").write_text(json.dumps(target))
         with self.assertRaisesRegex(ValueError, "필드"):
+            environment.load_target("staging", self.directory)
+
+    def test_load_rejects_kafka_groups_of_another_environment(self):
+        write_target(self.directory, "staging", kafka_autoscaling_group_names=["meterengine-production-consumer"])
+        with self.assertRaisesRegex(ValueError, "kafka_autoscaling_group_names"):
             environment.load_target("staging", self.directory)
 
     def test_load_rejects_group_for_sut(self):
@@ -125,7 +152,7 @@ class LoadTargetTest(unittest.TestCase):
     def test_each_environment_uses_its_image_repositories(self):
         prefixes = {name: environment.load_target(name, ENVIRONMENTS)["image_repository_prefix"]
                     for name in ("staging", "production", "test-storage", "test-sjpark-m7g", "test-sjpark-t4g")}
-        self.assertEqual(prefixes, {"staging": "meterengine-staging", "production": "meterengine", "test-storage": "meterengine-staging",
+        self.assertEqual(prefixes, {"staging": "meterengine-staging", "production": "meterengine", "test-storage": "meterengine-test-storage",
                                     "test-sjpark-m7g": "meterengine-test-sjpark", "test-sjpark-t4g": "meterengine-test-sjpark"})
 
     def test_production_memory_fits_the_current_server(self):
@@ -146,6 +173,10 @@ class ValidateTargetTest(unittest.TestCase):
 
     def test_validate_accepts_matching_server(self):
         environment.validate_target(self.target, self.observed)
+
+    def test_validate_accepts_servers_of_the_kafka_groups(self):
+        for group in ("meterengine-staging-consumer", "meterengine-staging-ingest"):
+            environment.validate_target(self.target, {**self.observed, "autoscaling_group_name": group})
 
     def test_validate_rejects_other_group(self):
         production = environment.load_target("production", ENVIRONMENTS)
@@ -186,7 +217,7 @@ class PreflightTest(unittest.TestCase):
         self.target = write_target(self.root / "environments", "staging", site_aliases=["www.one.example", "www.two.example"])
         bin_dir = self.root / "bin"
         bin_dir.mkdir()
-        self.fake(bin_dir / "curl", 'case "$*" in *api/token*) echo token ;; *aws:autoscaling:groupName*) [ -n "$FAKE_GROUP" ] || exit 22; echo "$FAKE_GROUP" ;; *) exit 22 ;; esac\n')
+        self.fake(bin_dir / "curl", FAKE_CURL)
         self.fake(bin_dir / "aws", 'echo "$FAKE_DB_HOST"\n')
         self.env = dict(os.environ, PATH=f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
                         FAKE_GROUP=self.target["autoscaling_group_name"], FAKE_DB_HOST=f"{self.target['database_identifier']}.example.invalid")
@@ -209,6 +240,38 @@ class PreflightTest(unittest.TestCase):
         result = self.preflight('printf "%s" "$IMAGE_REPOSITORY_PREFIX"')
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout, "meterengine-staging")
+
+    def test_preflight_prints_all_role_without_the_tag(self):
+        result = self.preflight('printf "%s" "$METERENGINE_ROLE"')
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "all")
+
+    def test_preflight_prints_the_tagged_role(self):
+        result = self.preflight('printf "%s" "$METERENGINE_ROLE"', FAKE_ROLE="consumer")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "consumer")
+
+    def test_unknown_role_tag_stops_before_printing(self):
+        result = self.preflight(FAKE_ROLE="consumr")
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(result.stdout, "")
+        self.assertIn("ServerRole", result.stderr)
+
+    def test_role_tag_that_cannot_be_read_stops_before_printing(self):
+        for name, status in (("server error", "500"), ("throttled", "429"), ("timeout", "000")):
+            with self.subTest(case=name):
+                result = self.preflight(FAKE_ROLE="consumer", FAKE_ROLE_STATUS=status)
+                self.assertEqual(result.returncode, 2)
+                self.assertEqual(result.stdout, "")
+                self.assertIn("ServerRole 태그를 읽지 못했다", result.stderr)
+
+    def test_group_tag_that_cannot_be_read_stops_before_printing(self):
+        for name, status in (("server error", "500"), ("timeout", "000")):
+            with self.subTest(case=name):
+                result = self.preflight(FAKE_GROUP_STATUS=status)
+                self.assertEqual(result.returncode, 2)
+                self.assertEqual(result.stdout, "")
+                self.assertIn("aws:autoscaling:groupName 태그를 읽지 못했다", result.stderr)
 
     def test_preflight_prints_required_parameters(self):
         result = self.preflight('printf "%s" "$REQUIRED_PARAMETERS"')

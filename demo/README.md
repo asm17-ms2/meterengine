@@ -32,7 +32,7 @@ cd backend && ./gradlew bootRun
 
 - IntelliJ에서 `MeterEngineApplication`을 실행해도 된다.
 - spring-boot-docker-compose가 postgres 컨테이너를 기동하고 Flyway가 시드를 적용한다.
-- 고객과 미터는 부트 시드(`backend/src/main/resources/db/migration/R__seed.sql`)에 들어 있다. 따로 주입할 것이 없다.
+- 고객과 미터는 로컬 시드(`backend/src/main/resources/db/local/R__local_seed.sql`)가 데모 도입사의 테스트 환경에 넣는다. 따로 주입할 것이 없다.
 - `event` 테이블은 append-only 트리거가 걸려 있어 DELETE가 되지 않는다. 잘못 보낸 데이터는 DB를 통째로 지워야 사라진다.
 
 ```bash
@@ -87,7 +87,7 @@ python3 demo/meterdemo.py verify (--log <JSONL> | --csv <CSV>) [옵션]
 | 옵션 | 기본값 | 내용 |
 |---|---|---|
 | `--base-url` | `http://localhost:8080` | 백엔드 주소. `verify`는 로그 헤더 값을 우선한다 |
-| `--api-key` | 환경변수 `METERENGINE_API_KEY`, 없으면 로컬 live 키 | `Authorization: Bearer`로 보내는 API 키 |
+| `--api-key` | 환경변수 `METERENGINE_API_KEY`, 없으면 로컬 test 키 | `Authorization: Bearer`로 보내는 API 키 |
 | `--environment` | 환경변수 `METERENGINE_ENVIRONMENT`, 없으면 키의 환경 | `test` 또는 `live`. 키와 다른 환경 요청은 거절된다. |
 | `--timeout` | `10` | HTTP 타임아웃 초 |
 | `--no-color` | 끔 | ANSI 색 비활성화 |
@@ -96,7 +96,7 @@ python3 demo/meterdemo.py verify (--log <JSONL> | --csv <CSV>) [옵션]
 
 - 형식이 틀리면 아무것도 보내지 않고 끝난다.
 - 로컬 키는 `backend/src/main/resources/db/local/R__local_credentials.sql`에 있다. 배포 환경 키는 운영자 세션으로 발급한다(스코프 `ingest`, `read`).
-  - 로컬 시드 키는 기존 데이터(legacy) 범위 키다. test나 live 환경 대상에는 콘솔에서 그 업무 환경을 고른 뒤 발급한 키를 쓴다. 시드 키에 환경을 지정하면 403 `environment_mismatch`다.
+  - 로컬 test 키는 데모 도입사의 테스트 환경, live 키는 실제 환경 키다. 로컬 시드의 고객과 미터는 테스트 환경에만 있어 키를 주지 않으면 test 키를 쓴다. 키와 다른 환경을 지정하면 403 `environment_mismatch`다.
 - 시작할 때 `GET /v1/organization`으로 키의 조직을 확인한다. 이때나 `send` 전송 중에 401이나 403을 받으면 code를 보여 주고 멈춘다. 종료 코드는 2다.
 - 화면과 기록에는 키를 `me_live_****abcd`처럼 가려서 보인다. 실행 기록 머리말에는 키 대신 조직 id(`organization_id`)를 남긴다. 옛 기록의 조직 값은 읽지 않는다.
 
@@ -105,6 +105,7 @@ python3 demo/meterdemo.py verify (--log <JSONL> | --csv <CSV>) [옵션]
 - 기본값은 `POST /v1/events` 단건 전송이다. `--batch-size 2`부터 `100`까지는 `POST /v1/event-batches`로 묶어 보내고 행별 판정을 기록한다. properties가 JSON 객체로 읽히지 않는 행은 묶음을 깨뜨리지 않게 단건으로 보낸다. 묶음 전체가 거절되면 각 행의 저장 여부를 알 수 없어 error로 세고 종료 코드 2로 끝난다.
 - 전송 중 끊긴 묶음은 `UNKNOWN`, 아직 보내지 않은 행은 `NOT_SENT`로 구분해 원래 순서대로 모두 기록한다. 두 상태의 로그 `outcome`은 `error`이고 `error`에 구분값이 남는다.
 - 전송마다 요청 요약과 서버 응답을 `[NEW]` `[DUP]` `[REJ]` 태그로 출력한다.
+  - 서버가 이벤트를 받아 두고 뒤에서 저장하는 설정이면 202와 `accepted`로 답한다. 이것도 `[NEW]`로 세고, 중복 여부는 이때 알 수 없어 재전송도 `[NEW]`로 남는다.
 - 모든 요청과 응답 쌍을 `demo/logs/send-YYYYMMDD-HHMMSS.jsonl`에 항상 기록한다. 끄는 옵션은 없다.
 - 전송 전 확인 게이트에서 대상 서버, 조직 이름과 id, 가린 API 키, 건수, KST 월별 분포, 서버에 이미 있는 건수, 예상 결과(신규/중복/거절)를 보여주고 `y` 입력을 기다린다.
   - 문제로 예측된 행은 미리보기 범위 밖이어도 사유와 함께 표시된다.
@@ -295,7 +296,7 @@ python3 demo/otel_bridge.py status      # 상태와 누적 건수
 
 ### 단가
 
-- 단가는 `backend/src/main/resources/db/migration/R__seed.sql`이 정한다.
+- 단가는 `backend/src/main/resources/db/local/R__local_seed.sql`이 정한다.
 - `llm_request` 이벤트 하나가 `input-tokens`, `output-tokens`, `cache-creation-tokens`, `cache-read-tokens` 미터에 함께 잡힌다.
 - `input-tokens`, `output-tokens`는 차원 키가 `model`이라 모델마다 단가가 다르다.
   - Claude 공시가(달러, 100만 토큰당)를 1달러 1,590원으로 환산한 토큰당 원 단가다. 1,590원은 Claude 결제 창의 부가세 포함 원화 가격을 1.1로 나눈 환율이다. 인보이스가 세액 10%를 따로 더하기 때문이다.

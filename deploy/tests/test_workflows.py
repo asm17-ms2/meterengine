@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 import re
@@ -54,6 +55,20 @@ class WorkflowTest(unittest.TestCase):
         self.assertIn('echo "VERSION_PARAMETER=$(jq -er .parameter_path <<<"$target")/app-version"', source)
         self.assertIn('./deploy/rollout.sh "$AUTOSCALING_GROUP" "$VERSION_PARAMETER" "$SHA" | tee -a "$GITHUB_OUTPUT"', source)
 
+    def test_deploy_rolls_kafka_groups_first_and_skips_missing_ones(self):
+        source = DEPLOY.read_text()
+        self.assertIn("jq -r '(.kafka_autoscaling_group_names // []) | join(\" \")' <<<\"$target\"", source)
+        kafka_step = source.index("- name: 카프카 서버 그룹 배포")
+        self.assertLess(kafka_step, source.index("- name: 배포\n"))
+        section = source[kafka_step:source.index("- name: 배포\n")]
+        self.assertIn('if [ "$found" != "$group" ]; then', section)
+        self.assertIn('echo "ROLLOUT_PREVIOUS=$previous" >> "$GITHUB_ENV"', section)
+        self.assertIn('./deploy/rollout.sh "$group" "$VERSION_PARAMETER" "$SHA" >/dev/null', section)
+        for environment in ("staging", "production"):
+            target = json.loads((DEPLOY.parents[2] / "deploy" / "environments" / f"{environment}.json").read_text())
+            self.assertEqual(target["kafka_autoscaling_group_names"],
+                             [f"meterengine-{environment}-consumer", f"meterengine-{environment}-ingest"])
+
     def test_deploy_no_longer_sends_commands_to_servers(self):
         source = DEPLOY.read_text()
         for word in ("send-command", "get-command-invocation", "deploy/deploy.sh"):
@@ -107,7 +122,9 @@ class WorkflowTest(unittest.TestCase):
                         "measurements/*/sut/terraform/iam.tf", "measurements/*/sut/terraform/locals.tf",
                         "measurements/*/sut/terraform/variables.tf",
                         "measurements/*/sut/scripts/remote/upsert-exporter-user.sh", "measurements/*/sut/scripts/sut-deploy.sh",
+                        "measurements/*/sut/scripts/push-images.sh", "measurements/*/sut/scripts/sut-stop.sh",
                         "measurements/*/README.md", "measurements/test-sjpark/sut/**",
+                        "measurements/test-storage/sut/terraform/**",
                         "measurements/test-sjpark/k6/lib/config.js"):
             self.assertIn(f"- '{pattern}'", source)
 

@@ -42,8 +42,8 @@ class ApiKeyFormatTest(unittest.TestCase):
         ):
             self.assertFalse(is_api_key(value), value)
 
-    def test_기본_키는_로컬_live_키다(self):
-        self.assertEqual(DEFAULT_API_KEY, LIVE_KEY)
+    def test_기본_키는_로컬_test_키다(self):
+        self.assertEqual(DEFAULT_API_KEY, TEST_KEY)
         self.assertTrue(is_api_key(DEFAULT_API_KEY))
 
     def test_환경변수_이름(self):
@@ -77,11 +77,11 @@ class ResolveApiKeyTest(unittest.TestCase):
         self.assertEqual(resolve_api_key(None, {API_KEY_ENV: OTHER_KEY}), OTHER_KEY)
 
     def test_둘_다_없으면_로컬_키다(self):
-        self.assertEqual(resolve_api_key(None, {}), LIVE_KEY)
-        self.assertEqual(resolve_api_key("", {API_KEY_ENV: ""}), LIVE_KEY)
+        self.assertEqual(resolve_api_key(None, {}), TEST_KEY)
+        self.assertEqual(resolve_api_key("", {API_KEY_ENV: ""}), TEST_KEY)
 
     def test_대체값을_바꿀_수_있다(self):
-        self.assertEqual(resolve_api_key(None, {}, fallback=TEST_KEY), TEST_KEY)
+        self.assertEqual(resolve_api_key(None, {}, fallback=LIVE_KEY), LIVE_KEY)
         self.assertIsNone(resolve_api_key(None, {}, fallback=None))
 
     def test_앞뒤_공백은_버린다(self):

@@ -56,7 +56,7 @@ function ActionBody({ title, operation, description, fields = [], label, isDange
       result = await workspaceAction(previous, data);
     } catch (error) {
       unstable_rethrow(error);
-      return { message: "요청 결과를 확인하지 못했어요. 목록을 새로 조회해 반영됐는지 확인한 뒤 다시 시도해 주세요." };
+      return { message: "요청 결과를 확인하지 못했어요. 새로고침해 반영됐는지 확인한 뒤 다시 시도해 주세요." };
     }
     if (result.isSuccess) {
       setIsDirty(false);
@@ -117,7 +117,7 @@ function ActionBody({ title, operation, description, fields = [], label, isDange
     {requestId && <input type="hidden" name="request_id" value={requestId} />}
     {description && <p className="muted">{description}</p>}
     {(visibleMessage || Object.keys(clientErrors).length > 0) && <div ref={summaryRef} tabIndex={-1} className="form-feedback"><Alert type={state.isUnconfirmed ? "warning" : state.isSuccess ? "success" : "error"} showIcon title={visibleMessage ?? "입력한 내용을 확인하세요."} description={Object.keys(errors).length > 0 ? <ul>{Object.entries(errors).map(([name, error]) => <li key={name}><a href={`#${formId}-${name}`} onClick={event => { event.preventDefault(); document.getElementById(`${formId}-${name}`)?.focus(); }}>{fields.find(field => field.name === name)?.label ?? name}: {error}</a></li>)}</ul> : undefined} /></div>}
-    {state.secret && <div ref={resultRef} tabIndex={-1} className="secret-result"><strong>이 창에서만 확인할 수 있어요</strong><p>안전한 곳에 보관한 뒤 창을 닫으세요.</p><code>{state.secret}</code><Button onClick={() => copy(state.secret!)}>비밀값 복사</Button></div>}
+    {state.secret && <div ref={resultRef} tabIndex={-1} className="secret-result"><strong>이 창에서만 확인할 수 있어요</strong><p>안전한 곳에 보관한 뒤 창을 닫으세요.</p><code>{state.secret}</code><Button onClick={() => copy(state.secret!)}>{operation === "createApiKey" ? "API 키 복사" : operation === "createWebhookEndpoint" ? "서명 비밀값 복사" : "비밀값 복사"}</Button></div>}
     {state.registrationPath && <div ref={resultRef} tabIndex={-1} className="secret-result"><p>{resultCopy.linkNote}</p><Link href={state.registrationPath} target="_blank" rel="noreferrer" aria-describedby={`${formId}-new-tab`}>{state.registrationLabel ?? resultCopy.linkLabel} 열기</Link><small id={`${formId}-new-tab`} className="field-hint">새 탭에서 열려요.</small><Button onClick={() => copy(new URL(state.registrationPath!, window.location.origin).href)}>{state.registrationLabel ?? resultCopy.linkLabel} 복사</Button></div>}
     <div role="status">{copyResult && <p className="field-hint">{copyResult}</p>}</div>
     <fieldset disabled={isPending || isLocked}>

@@ -33,7 +33,7 @@ public record CreateApiKeyRequest(
         UUID replacedApiKeyId,
     @Schema(
             description =
-                "이 키의 인스턴스별 분당 요청 한도. 양수이며 생략하거나 null이면 무제한이다. 테스트 환경 키는 이 값과 플랫폼 상한 가운데 작은 쪽이"
+                "이 키의 인스턴스별 분당 요청 한도. 양수이며 생략하거나 null이면 무제한이다. 테스트 키는 이 값과 플랫폼 상한 가운데 작은 쪽이"
                     + " 적용된다")
         @Positive @JsonProperty("rate_limit_per_minute")
         Integer rateLimitPerMinute) {

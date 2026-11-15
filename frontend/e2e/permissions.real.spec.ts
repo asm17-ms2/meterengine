@@ -297,8 +297,7 @@ test("대표관리자가 화면에서 사용자와 키 권한을 정하고 조�
     for (const path of ["/overview", "/customers", `/customers/${data.customerId}?month=${data.month}`, "/billable-metrics", "/pricing", "/events", "/usage", "/billing", "/invoices", "/payments", `/payments/${data.invoiceId}`, "/integrations", "/settings", "/members", "/audit"]) {
       await reader.page.goto(path);
       await expect(reader.page.locator(".workspace-scope")).toHaveText("조회 전용");
-      await expect(reader.page.getByRole("button", { name: "권한 새로 조회", exact: true })).toBeVisible();
-      for (const name of ["고객 등록", "고객 정보 수정", "고객 보관", "API 키 발급", "키 권한 변경", "고객 조회 링크 발급", "등록 카드로 결제", "결제 다시 시도", "계정 직접 생성", "초대 링크 만들기"]) await expect(reader.page.getByRole("button", { name, exact: true })).toHaveCount(0);
+      for (const name of ["고객 등록", "고객 정보 수정", "고객 보관", "API 키 발급", "키 권한 변경", "청구서 조회 링크 발급", "등록 카드로 결제", "결제 다시 시도", "계정 직접 생성", "초대 링크 만들기"]) await expect(reader.page.getByRole("button", { name, exact: true })).toHaveCount(0);
       await expect(reader.page).not.toHaveURL(/\/login/);
     }
     await reader.page.goto("/customers?status=all");
@@ -315,7 +314,7 @@ test("대표관리자가 화면에서 사용자와 키 권한을 정하고 조�
     await reader.page.setViewportSize({ width: 1280, height: 900 }); await reader.page.goto("/customers");
     await reader.page.getByRole("button", { name: "고객 등록", exact: true }).click();
     await reader.page.getByRole("dialog").getByLabel(/^고객명/).fill("조회 수집 조합 화면 고객");
-    await reader.page.getByRole("dialog").getByRole("button", { name: "고객 저장", exact: true }).click(); await expect(reader.page.getByRole("dialog")).toHaveCount(0);
+    await reader.page.getByRole("dialog").getByRole("button", { name: "등록", exact: true }).click(); await expect(reader.page.getByRole("dialog")).toHaveCount(0);
     await reader.page.getByRole("link", { name: "조회 수집 조합 화면 고객", exact: true }).click();
     await expect(reader.page.getByRole("button", { name: "고객 정보 수정", exact: true })).toHaveCount(0);
     const issued = await key(request, data, secrets, ["admin"], "화면 권한 변경 키");
@@ -350,7 +349,7 @@ test("열린 관리 폼도 같은 세션의 권한 축소와 조작된 Server Ac
       const target = document.createElement("input"); target.type = "hidden"; target.name = "id"; target.value = id; form.append(target);
     }, data.customerId);
     await updateScopes(request, data, admin.user_account_id, ["read"]);
-    await dialog.getByRole("button", { name: "고객 저장", exact: true }).click();
+    await dialog.getByRole("button", { name: "등록", exact: true }).click();
     await expect(dialog.getByText("이 작업을 할 권한이 없어요. 대표관리자에게 권한을 요청하세요.", { exact: true })).toBeVisible();
     const customer = await request.get(`${API_URL}/v1/customers/${data.customerId}`, { headers: data.headers });
     expect(customer.status()).toBe(200); expect((await customer.json()).name).toBe(data.customerName);

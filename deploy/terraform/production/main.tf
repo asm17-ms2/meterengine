@@ -39,9 +39,10 @@ module "app_fleet" {
   alb_deletion_protection      = true
   app_egress_ports             = [443]
   monitoring_security_group_id = data.aws_security_group.monitoring.id
+  kafka                        = local.app_fleet_kafka
   email_sender = {
-    identity_arn          = local.email_identity_arn
-    configuration_set_arn = local.email_configuration_set_arn
+    identity_arn          = aws_sesv2_email_identity.site.arn
+    configuration_set_arn = aws_sesv2_configuration_set.default.arn
     from_address          = local.email_from_address
   }
 }

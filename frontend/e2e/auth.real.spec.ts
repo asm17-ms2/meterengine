@@ -43,15 +43,15 @@ test("real Spring: signup, immediate login, locked live environment, tenant acti
   expect(await page.content()).not.toContain(cookie.value);
   await page.reload();
   await expect(page.locator(".organization-link")).toContainText(orgName);
-  // 실제 환경은 잠겨 있어 고르면 이용 신청 화면으로 간다.
-  await expect(page.locator(".environment-notice")).toContainText("실제 환경은 이용 신청이 승인되면 쓸 수 있어요.");
+  // 라이브 환경은 잠겨 있어 고르면 이용 신청 화면으로 간다.
+  await expect(page.getByRole("region", { name: "현재 업무 환경" })).toContainText("테스트 환경이에요.");
   await page.goto("/customers?environment=live");
   await expect(page).toHaveURL(url => url.pathname === "/live-environment");
-  await expect(page.getByRole("heading", { level: 2, name: "실제 환경은 이용 신청이 승인되면 쓸 수 있어요", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "라이브 환경은 이용 신청이 승인되면 쓸 수 있어요", exact: true })).toBeVisible();
   await page.goto("/customers");
   await page.getByRole("button", { name: "고객 등록", exact: true }).first().click();
   await page.getByRole("dialog").getByLabel(/^고객명/).fill("E2E 고객");
-  await page.getByRole("dialog").getByRole("button", { name: "고객 저장", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "등록", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByRole("cell", { name: "E2E 고객", exact: true })).toBeVisible();
   for (const route of ["/events", "/usage", "/billing", "/invoices", "/billable-metrics", "/billable-metric-prices", "/customers"]) {
@@ -125,12 +125,12 @@ test("real Spring: role promotion needs an account without an organization, and 
   const users = await (await request.get(`${API_URL}/v1/user-accounts`, { headers: operatorHeaders })).json();
   const applicant = users.user_accounts.find((user: { email: string }) => user.email === email);
   expect((await request.put(`${API_URL}/v1/user-accounts/${applicant.id}/role`, { headers: operatorHeaders, data: { role: "operator" } })).status()).toBe(409);
-  // 가입한 조직은 승인 없이 사용 중이고 실제 환경만 잠겨 있다.
+  // 가입한 조직은 승인 없이 사용 중이고 라이브 환경만 잠겨 있다.
   await page.goto("/admin/organizations");
   const organization = page.getByRole("article").filter({ has: page.getByRole("heading", { name: orgName, exact: true }) });
   await expect(organization).toContainText("사용 중");
-  await expect(organization).toContainText("실제 환경 승인 전");
+  await expect(organization).toContainText("라이브 환경 승인 전");
   await expect(organization.getByRole("button")).toHaveCount(0);
   await page.goto("/admin/live-environment-applications");
-  await expect(page.getByRole("heading", { level: 1, name: "실제 환경 이용 신청", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "라이브 환경 이용 신청", exact: true })).toBeVisible();
 });

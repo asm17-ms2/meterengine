@@ -3,11 +3,9 @@ package com.meterengine.event.controller;
 import com.meterengine.event.dto.IngestEventRequest;
 import com.meterengine.event.dto.IngestEventResponse;
 import com.meterengine.event.dto.ListEventsResponse;
-import com.meterengine.event.service.EventIngestionService;
+import com.meterengine.event.service.EventIngestor;
 import com.meterengine.event.service.EventQueryService;
-import com.meterengine.event.service.EventRejectionService;
 import com.meterengine.event.service.EventSearch;
-import com.meterengine.global.error.BusinessException;
 import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.global.security.CurrentOrganizationId;
 import com.meterengine.global.security.EnvironmentReady;
@@ -33,6 +31,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -45,17 +45,12 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/v1/events")
 public class EventController {
 
-  private final EventIngestionService eventIngestionService;
+  private final EventIngestor eventIngestor;
   private final EventQueryService eventQueryService;
-  private final EventRejectionService eventRejectionService;
 
-  EventController(
-      EventIngestionService eventIngestionService,
-      EventQueryService eventQueryService,
-      EventRejectionService eventRejectionService) {
-    this.eventIngestionService = eventIngestionService;
+  EventController(EventIngestor eventIngestor, EventQueryService eventQueryService) {
+    this.eventIngestor = eventIngestor;
     this.eventQueryService = eventQueryService;
-    this.eventRejectionService = eventRejectionService;
   }
 
   @PostMapping
@@ -73,11 +68,14 @@ public class EventController {
           received_at은 서버가 받은 시각이며 요청에 실어도 무시된다.
           timestamp가 서버의 수집 판정 시각보다 35일 넘게 과거이면 받지 않는다. 1일은 24시간이며, 정확히 35일 전인 이벤트는 받는다.
           이미 저장된 transaction_id면 timestamp가 받는 기간 밖이어도 거절하지 않고 duplicate=true로 답한다.
+          서버가 이벤트를 받아 두고 뒤에서 저장하도록 설정된 환경에서는 200 대신 202로 답하고 duplicate가 없다.
+          이때는 고객 확인과 중복 판정을 저장할 때 하므로 404와 409를 내지 않고, 받는 기간 밖의 timestamp는 이미 저장된 transaction_id여도 거절한다.
           """)
   @ApiResponses({
     @ApiResponse(
         responseCode = "200",
         description = "저장했다(duplicate=false). 이미 저장된 transaction_id면 duplicate=true다"),
+    @ApiResponse(responseCode = "202", description = "받았다. 저장은 뒤에서 한다. duplicate는 없다"),
     @ApiResponse(
         responseCode = "400",
         content =
@@ -103,16 +101,27 @@ public class EventController {
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
-            "code=customer_archived: customer_id가 가리키는 고객을 보관했다. 이미 저장된 transaction_id면 거절하지 않고 200 duplicate=true로 답한다")
+            "code=customer_archived: customer_id가 가리키는 고객을 보관했다. 이미 저장된 transaction_id면 거절하지 않고 200 duplicate=true로 답한다"),
+    @ApiResponse(
+        responseCode = "413",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description = "code=request_body_too_large: 요청 본문이 64KB를 넘는다"),
+    @ApiResponse(
+        responseCode = "503",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description = "code=event_ingest_unavailable: 이벤트를 받지 못했다. 같은 transaction_id로 다시 보내면 된다")
   })
-  public IngestEventResponse ingestEvent(
+  public ResponseEntity<IngestEventResponse> ingestEvent(
       @CurrentOrganizationId UUID organizationId, @Valid @RequestBody IngestEventRequest request) {
-    try {
-      return eventIngestionService.ingest(organizationId, request);
-    } catch (BusinessException exception) {
-      eventRejectionService.record(organizationId, request, exception);
-      throw exception;
-    }
+    IngestEventResponse response = eventIngestor.ingest(organizationId, request);
+    HttpStatus status = response.storedInRequest() ? HttpStatus.OK : HttpStatus.ACCEPTED;
+    return ResponseEntity.status(status).body(response);
   }
 
   @GetMapping

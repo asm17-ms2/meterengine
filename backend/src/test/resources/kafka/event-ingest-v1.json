@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "organization_id": "3f1c2a9e-5b7d-4e0a-9c11-2d6f8b4a7e10",
+  "environment_id": "c7d9e1f3-2a4b-4c6d-8e0f-1a2b3c4d5e6f",
+  "transaction_id": "tx-20261109-000187",
+  "customer_id": "8a2b6c4d-1e3f-4a5b-9c7d-0e1f2a3b4c5d",
+  "type": "api_call",
+  "properties": {
+    "tokens": 1520,
+    "region": "ap-northeast-2",
+    "unit_cost": 0.25
+  },
+  "occurred_at": "2026-11-09T05:59:58.123456Z",
+  "accepted_at": "2026-11-09T05:59:58.401237Z",
+  "request_id": "9e8d7c6b-5a4f-4e3d-8c2b-1a0f9e8d7c6b",
+  "actor_type": "api_key",
+  "actor_id": "4b3a2c1d-0e9f-4a8b-9c7d-6e5f4a3b2c1d"
+}

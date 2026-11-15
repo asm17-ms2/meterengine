@@ -53,8 +53,8 @@ export function InvoicePaymentRetry({ invoice, getToken, isCurrentRequest, onSta
         setMessage(response.status === 404
           ? `이 링크는 사용할 수 없습니다. ${publicInvoiceContact(invoice.organization_name)}에게 새 링크를 요청해 주세요.`
           : response.status === 409
-            ? "결제 상태가 변경되었거나 지금은 다시 시도할 수 없습니다. 결제 상태를 새로 조회해 주세요."
-            : "결제 요청 결과를 확인하지 못했습니다. 다시 결제하지 말고 결제 상태를 새로 조회해 주세요.");
+            ? "결제 상태가 변경되었거나 지금은 다시 시도할 수 없습니다. 결제 상태를 새로고침해 주세요."
+            : "결제 요청 결과를 확인하지 못했습니다. 다시 결제하지 말고 결제 상태를 새로고침해 주세요.");
         onStateChange("unknown", token);
         return;
       }
@@ -65,7 +65,7 @@ export function InvoicePaymentRetry({ invoice, getToken, isCurrentRequest, onSta
     } catch {
       if (controller.signal.aborted || !isCurrentRequest(token)) return;
       setHasUnconfirmedResult(true); setIsConfirming(false);
-      setMessage("결제 요청 결과를 확인하지 못했습니다. 다시 결제하지 말고 결제 상태를 새로 조회해 주세요.");
+      setMessage("결제 요청 결과를 확인하지 못했습니다. 다시 결제하지 말고 결제 상태를 새로고침해 주세요.");
       onStateChange("unknown", token);
     } finally {
       if (!controller.signal.aborted && isCurrentRequest(token)) setIsSubmitting(false);
@@ -82,7 +82,7 @@ export function InvoicePaymentRetry({ invoice, getToken, isCurrentRequest, onSta
     {!isSubmitting && !hasUnconfirmedResult && <p>{organizationName ? `${organizationName}에서 이 링크로 실패한 결제를 다시 시도하도록 허용했습니다. ` : ""}등록된 카드로 {formatKrw(invoice.total_amount)}을 다시 결제할 수 있습니다.</p>}
     {message && <p role="alert" className={styles.error}>{message}</p>}
     {isSubmitting ? <p>결제 요청을 처리하고 있습니다. 결과가 나올 때까지 다시 결제를 요청하지 마세요.</p>
-      : hasUnconfirmedResult ? <button type="button" onClick={onRefresh}>결제 상태 새로 조회</button>
+      : hasUnconfirmedResult ? <button type="button" onClick={onRefresh}>결제 상태 새로고침</button>
         : !isConfirming ? <button ref={startButtonRef} type="button" onClick={() => setIsConfirming(true)}>결제 다시 시도</button>
           : <div className={styles.confirmation}>
             <h4 ref={confirmationRef} tabIndex={-1}>등록 카드로 다시 결제할까요?</h4>

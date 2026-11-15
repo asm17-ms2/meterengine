@@ -11,9 +11,10 @@ json() {
 	jq -r "$2" "$1"
 }
 
+# 조직 여러 곳을 섞어 보낼 때는 API_KEYS에 조직마다 키 하나씩 쉼표로 이어 넣는다.
 require_api_key() {
-	[ -n "${API_KEY:-}" ] || die "API_KEY 환경변수가 없다. ingest, read 스코프 키를 export API_KEY 로 넣는다"
-	export API_KEY
+	[ -n "${API_KEY:-}${API_KEYS:-}" ] || die "API_KEY 환경변수가 없다. ingest, read 스코프 키를 export API_KEY 로 넣는다"
+	export API_KEY="${API_KEY:-}" API_KEYS="${API_KEYS:-}"
 }
 
 use_sut_db() {

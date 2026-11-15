@@ -16,8 +16,8 @@ export async function UsageMeta({
   const groups = toCustomerGroups(result.data);
   return (
     <>
-      고객 <b>{result.data.summary?.customer_count ?? groups.length}</b>곳, 집계 라인{" "}
-      <b>{result.data.summary?.line_count ?? countBillableMetricLines(groups)}</b>줄
+      고객 <b>{result.data.summary?.customer_count ?? groups.length}</b>명, 집계 항목{" "}
+      <b>{result.data.summary?.line_count ?? countBillableMetricLines(groups)}</b>개
     </>
   );
 }

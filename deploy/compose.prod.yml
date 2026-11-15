@@ -59,6 +59,26 @@ services:
       INGEST_WARMUP_CUSTOMER_ID: ${INGEST_WARMUP_CUSTOMER_ID:-}
       INGEST_WARMUP_REQUESTS: ${INGEST_WARMUP_REQUESTS:-1000}
       INGEST_WARMUP_TIME_LIMIT: ${INGEST_WARMUP_TIME_LIMIT:-20s}
+      # 서버의 ServerRole 태그에서 온다. ingest는 수집 API, consumer는 카프카를 읽어 저장, all은 전부다.
+      METERENGINE_ROLE: ${METERENGINE_ROLE:-all}
+      # SSM에 event-write-path가 없으면 수집 API가 요청 안에서 DB에 저장한다(direct). kafka면 아래 브로커에 발행한다.
+      EVENT_WRITE_PATH: ${EVENT_WRITE_PATH:-direct}
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS:-localhost:9092}
+      # MSK는 TLS(SSL)로만 받는다. 인증은 하지 않고 보안 그룹이 붙을 서버를 가른다.
+      KAFKA_SECURITY_PROTOCOL: ${KAFKA_SECURITY_PROTOCOL:-PLAINTEXT}
+      # 켜면 backend가 뜰 때 없는 토픽을 만든다.
+      KAFKA_CREATE_TOPICS: ${KAFKA_CREATE_TOPICS:-false}
+      # 측정에서 바꿔 가며 재는 값이다. 넘기지 않으면 지금 동작 그대로다.
+      # 컨슈머 스레드는 모든 컨슈머 서버를 합쳐 파티션 수까지만 일한다.
+      KAFKA_CONSUMER_THREADS: ${KAFKA_CONSUMER_THREADS:-1}
+      KAFKA_CONSUMER_MAX_POLL_RECORDS: ${KAFKA_CONSUMER_MAX_POLL_RECORDS:-500}
+      KAFKA_CONSUMER_SESSION_TIMEOUT_MS: ${KAFKA_CONSUMER_SESSION_TIMEOUT_MS:-15000}
+      KAFKA_PRODUCER_LINGER_MS: ${KAFKA_PRODUCER_LINGER_MS:-25}
+      KAFKA_PRODUCER_BATCH_SIZE: ${KAFKA_PRODUCER_BATCH_SIZE:-16384}
+      KAFKA_PRODUCER_COMPRESSION_TYPE: ${KAFKA_PRODUCER_COMPRESSION_TYPE:-lz4}
+      # 발행 대기(KAFKA_PUBLISH_TIMEOUT)는 프로듀서의 전체 시간보다 길어야 프로듀서가 먼저 결론을 낸다.
+      KAFKA_PRODUCER_DELIVERY_TIMEOUT_MS: ${KAFKA_PRODUCER_DELIVERY_TIMEOUT_MS:-15000}
+      KAFKA_PUBLISH_TIMEOUT: ${KAFKA_PUBLISH_TIMEOUT:-20s}
       # 메모리 한도가 1792MB보다 작으면 JVM이 SerialGC를 고르므로, 한도가 없던 때와 같은 G1을 지정한다.
       JAVA_TOOL_OPTIONS: -XX:+UseG1GC -XX:MaxRAMPercentage=${BACKEND_MAX_RAM_PERCENTAGE:?BACKEND_MAX_RAM_PERCENTAGE가 없다}
       # ALB idle(130초)보다 길어야 ALB가 재사용하려던 연결을 서버가 먼저 닫아 생기는 502가 없다.

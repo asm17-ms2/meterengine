@@ -64,7 +64,7 @@ export function CardRegistration({ token, registration }: { token: string; regis
     </dl>
     <fieldset className={styles.consent}>
       <legend>자동결제 등록 동의</legend>
-      <ul className={styles.terms}><li>{registration.organization_name}의 서비스 이용료를 결제할 카드를 등록합니다. 지금은 카드 등록만 진행하며 결제는 일어나지 않습니다.</li><li>이후 청구가 확정되면 사용량에 따라 정해진 이용료를 {registration.organization_name}가 이 카드로 결제합니다. 결제할 때마다 따로 승인하지 않으며, 금액은 청구마다 달라질 수 있습니다.</li><li>자동결제 중단, 카드 변경과 결제 조건은 {registration.organization_name} 담당자에게 요청해 주세요.</li></ul>
+      <ul className={styles.terms}><li>{registration.organization_name}의 서비스 이용료를 결제할 카드를 등록합니다. 지금은 카드만 등록하며 결제는 일어나지 않습니다.</li><li>이후 청구할 때마다 사용량에 따라 정해진 이용료를 {registration.organization_name}에서 이 카드로 결제합니다. 결제마다 따로 승인을 요청하지 않으며, 금액은 청구마다 달라질 수 있습니다.</li><li>자동결제를 멈추거나 카드를 바꾸려면, 또는 결제 조건이 궁금하면 {registration.organization_name} 담당자에게 문의해 주세요.</li></ul>
       <Checkbox checked={hasConsent} onChange={(event) => setHasConsent(event.target.checked)} disabled={isSubmitting}>
         [필수] 위 자동결제 안내를 확인하고 카드 등록에 동의합니다.
       </Checkbox>
@@ -73,6 +73,6 @@ export function CardRegistration({ token, registration }: { token: string; regis
     <Button type="primary" size="large" block disabled={!hasConsent || !isSdkReady} loading={isSubmitting} onClick={registerCard}>
       토스페이먼츠에서 카드 등록하기
     </Button>
-    <p className={styles.note}>{!isSdkReady && !errorMessage ? "카드 인증창을 준비하고 있습니다." : "다음 화면에서 카드 정보를 입력하고 본인인증을 진행합니다."}</p>
+    <p className={styles.note}>{!isSdkReady && !errorMessage ? "카드 인증창을 준비하고 있습니다." : "다음 화면에서 카드 정보를 입력하고 본인인증을 합니다."}</p>
   </div>;
 }

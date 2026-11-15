@@ -25,5 +25,27 @@ services:
       timeout: 3s
       retries: 10
 
+  # 수집 경로를 kafka로 켤 때만 쓴다. 기본 실행에는 뜨지 않는다.
+  # - 기동: docker compose --profile kafka up -d
+  # - backend: EVENT_WRITE_PATH=kafka METERENGINE_EVENT_KAFKA_CREATE_TOPICS=true METERENGINE_EVENT_KAFKA_REPLICAS=1
+  kafka:
+    image: apache/kafka:4.3.1
+    container_name: meterengine-kafka
+    profiles: ["kafka"]
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      # 브로커가 한 대라 내부 토픽도 복제 1로 둔다
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+    ports:
+      - "9092:9092"
+
 volumes:
   postgres-data:

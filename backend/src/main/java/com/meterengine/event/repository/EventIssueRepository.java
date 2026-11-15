@@ -154,7 +154,7 @@ public class EventIssueRepository {
     String reason = rs.getString("reason");
     String hint =
         switch (reason) {
-          case "unknown_event_type" -> "이벤트 유형에 맞는 미터를 정의하거나 전송 유형을 확인하세요";
+          case "unknown_event_type" -> "이벤트 유형에 맞는 미터를 등록하거나 전송 유형을 확인하세요.";
           case "invalid_target_property" -> "미터의 수량 속성과 전송 값의 형식을 확인하세요";
           default ->
               rs.getBoolean("finalized")

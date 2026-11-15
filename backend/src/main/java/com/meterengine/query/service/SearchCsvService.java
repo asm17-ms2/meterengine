@@ -25,8 +25,7 @@ public class SearchCsvService {
 
   public <T extends Record> ResponseEntity<byte[]> export(
       String filename, SearchPageResponse<T> page, Class<T> itemType) {
-    if (page.total() > 10000)
-      throw SearchParameters.invalid("export", "10000행 이하가 되도록 검색 범위를 좁혀 주세요");
+    if (page.total() > 10000) throw SearchParameters.invalid("export", "10,000행 이하가 되도록 조건을 좁히세요.");
     List<Map<String, Object>> rows = new ArrayList<>();
     LinkedHashSet<String> columns = new LinkedHashSet<>();
     for (Object value : page.items()) {

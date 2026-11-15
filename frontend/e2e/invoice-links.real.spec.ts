@@ -24,7 +24,7 @@ test.beforeAll(() => {
   for (const url of [API_URL, FRONTEND_URL]) {
     const parsed = new URL(url);
     if (parsed.protocol !== "http:" || !["127.0.0.1", "localhost", "[::1]"].includes(parsed.hostname)) {
-      throw new Error("인보이스 링크 검증은 로컬 HTTP 서버에서만 실행합니다.");
+      throw new Error("청구서 링크 검증은 로컬 HTTP 서버에서만 실행합니다.");
     }
   }
 });
@@ -48,7 +48,7 @@ type Fixture = {
 };
 
 function safeFailure(error: unknown, secrets: Set<string>) {
-  let message = error instanceof Error ? error.message : "인보이스 링크 검증을 마치지 못했습니다.";
+  let message = error instanceof Error ? error.message : "청구서 링크 검증을 마치지 못했습니다.";
   for (const secret of secrets) if (secret) message = message.split(secret).join("[redacted]");
   return new Error(message.replace(/me_(?:test|live|invoice|view|session)_[A-Za-z0-9_-]+/g, "[redacted token]"));
 }
@@ -223,8 +223,8 @@ test("콘솔에서 전달한 링크를 고객이 로그인 없이 열고 새로�
     await owner.grantPermissions(["clipboard-read", "clipboard-write"], { origin: FRONTEND_URL });
     const consolePage = await owner.newPage();
     await consolePage.goto(`/payments/${data.invoiceId}`);
-    const section = consolePage.locator("section").filter({ has: consolePage.getByRole("heading", { name: "고객 조회 링크", exact: true }) });
-    await expect(section.getByRole("button", { name: "고객 조회 링크 발급", exact: true })).toBeVisible();
+    const section = consolePage.locator("section").filter({ has: consolePage.getByRole("heading", { name: "청구서 조회 링크", exact: true }) });
+    await expect(section.getByRole("button", { name: "청구서 조회 링크 발급", exact: true })).toBeVisible();
     const period = section.getByRole("combobox", { name: /유효 기간/ });
     await expect(period).toHaveValue("30");
     writeFileSync(`${OUTPUT}/console-label-observation.json`, JSON.stringify({
@@ -233,9 +233,9 @@ test("콘솔에서 전달한 링크를 고객이 로그인 없이 열고 새로�
       aria_snapshot: await period.ariaSnapshot(),
       label_dom: await period.evaluate(element => (element as HTMLSelectElement).labels?.[0]?.outerHTML ?? ""),
     }, null, 2));
-    await section.getByRole("button", { name: "고객 조회 링크 발급", exact: true }).click();
-    await expect(section.getByRole("button", { name: "고객 조회 링크 복사", exact: true })).toBeVisible();
-    await section.getByRole("button", { name: "고객 조회 링크 복사", exact: true }).click();
+    await section.getByRole("button", { name: "청구서 조회 링크 발급", exact: true }).click();
+    await expect(section.getByRole("button", { name: "청구서 조회 링크 복사", exact: true })).toBeVisible();
+    await section.getByRole("button", { name: "청구서 조회 링크 복사", exact: true }).click();
     const copied = await consolePage.evaluate(() => navigator.clipboard.readText());
     const shared = new URL(copied);
     const token = shared.hash.slice(1);
@@ -257,7 +257,7 @@ test("콘솔에서 전달한 링크를 고객이 로그인 없이 열고 새로�
     await expect(page.getByRole("heading", { name: "청구 항목", exact: true })).toBeVisible();
     await expect(page.getByText("항목별 공급가액은 수량에 단가를 곱한 금액에서 10원 미만을 버린 값입니다.", { exact: false })).toBeVisible();
     await expect(page.getByRole("heading", { name: "결제 내역", exact: true })).toBeVisible();
-    await expect(page.getByRole("button")).toHaveText(["결제 상태 새로 조회", "조회 링크 복사"]);
+    await expect(page.getByRole("button")).toHaveText(["결제 상태 새로고침", "조회 링크 복사"]);
     for (const value of [token, data.token, data.organizationId, data.customerId, data.invoiceId, "공개되면 안 되는 다른 고객"]) expect((await page.content()).includes(value)).toBe(false);
     await assertLayout(page, "public-invoice-desktop.png");
     await page.reload();
@@ -271,7 +271,7 @@ test("콘솔에서 전달한 링크를 고객이 로그인 없이 열고 새로�
     expect((await customer.cookies()).find(cookie => cookie.name === "me_session")).toBeUndefined();
     const paymentId = randomUUID();
     sql(`INSERT INTO payment_attempt (id, organization_id, environment_id, customer_id, invoice_id, mode, amount, order_name, status, payment_key, requested_at, completed_at) VALUES ('${paymentId}', '${data.organizationId}', ${invoiceEnvironment(data.invoiceId)}, '${data.customerId}', '${data.invoiceId}', 'test', 1100, 'local browser link fixture', 'done', 'local-browser-link-payment-${paymentId}', clock_timestamp(), clock_timestamp()); INSERT INTO payment_cancellation (id, organization_id, environment_id, payment_attempt_id, mode, amount, reason, status, transaction_key, requested_at, completed_at) VALUES ('${randomUUID()}', '${data.organizationId}', ${invoiceEnvironment(data.invoiceId)}, '${paymentId}', 'test', 400, 'local browser link fixture', 'done', 'local-browser-link-cancel-${randomUUID()}', clock_timestamp(), clock_timestamp());`);
-    const refresh = page.getByRole("button", { name: "결제 상태 새로 조회", exact: true });
+    const refresh = page.getByRole("button", { name: "결제 상태 새로고침", exact: true });
     await refresh.focus();
     await refresh.press("Enter");
     await expect(page.getByText("부분 취소", { exact: true })).toBeVisible();
@@ -311,11 +311,11 @@ test("콘솔에서 전달한 링크를 고객이 로그인 없이 열고 새로�
     const metadata = await request.get(`${API_URL}/v1/invoices/${data.invoiceId}/view-links`, { headers: data.headers });
     const linkId = (await metadata.json()).invoice_view_links[0].id as string;
     await consolePage.reload();
-    await expect(consolePage.getByRole("button", { name: "고객 조회 링크 복사", exact: true })).toHaveCount(0);
+    await expect(consolePage.getByRole("button", { name: "청구서 조회 링크 복사", exact: true })).toHaveCount(0);
     await consolePage.getByRole("button", { name: "링크 폐기", exact: true }).click();
     await consolePage.getByRole("dialog").getByRole("button", { name: "링크 폐기", exact: true }).click();
     await expect.poll(async () => (await lookup(request, token)).status()).toBe(404);
-    await expect(section.getByText("폐기됨 / 테스트 결제", { exact: true })).toBeVisible();
+    await expect(section.getByText("폐기됨 / 테스트 환경", { exact: true })).toBeVisible();
     await section.screenshot({ path: `${OUTPUT}/console-links-revoked.png` });
     await page.reload();
     await expect(page.getByRole("heading", { name: "사용할 수 없는 조회 링크입니다", exact: true })).toBeVisible();
@@ -327,12 +327,12 @@ test("콘솔에서 전달한 링크를 고객이 로그인 없이 열고 새로�
   finally { for (const context of contexts) await context.close(); }
 });
 
-test("조회 링크 누락과 일시 조회 실패를 안내하고 원래 링크로 다시 조회한다", async ({ page, request }) => {
+test("조회 링크 누락과 일시 조회 실패를 안내하고 원래 링크로 다시 시도한다", async ({ page, request }) => {
   await page.goto(`${FRONTEND_URL}/invoice-links`);
-  await expect(page.getByRole("heading", { name: "청구서 조회 정보가 없습니다", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "청구서를 열 수 없습니다", exact: true })).toBeVisible();
   await expect(page.getByText("받은 메일이나 메시지의 원래 조회 링크를 다시 열어 주세요.", { exact: false })).toBeVisible();
-  await expect(page.getByText(/만료되었거나 폐기/)).toHaveCount(0);
-  await expect(page.getByRole("textbox", { name: /고객|인보이스/ })).toHaveCount(0);
+  await expect(page.getByText(/만료되었거나 더 이상 사용할 수 없게/)).toHaveCount(0);
+  await expect(page.getByRole("textbox", { name: /고객|청구서/ })).toHaveCount(0);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
   const cross = await request.post(`${FRONTEND_URL}/invoice-links/lookup`, { headers: { Origin: "http://evil.example" }, data: { token: randomBytes(32).toString("base64url") } });
   expect(cross.status()).toBe(403);
@@ -354,16 +354,16 @@ test("조회 링크 누락과 일시 조회 실패를 안내하고 원래 링크
     let releaseOutage = () => {};
     const outage = new Promise<void>(resolve => { releaseOutage = resolve; });
     await page.route("**/invoice-links/lookup", async route => { await outage; await route.fulfill({ status: 503, contentType: "application/json", body: '{"message":"local outage fixture"}' }); });
-    await page.getByRole("button", { name: "다시 조회", exact: true }).press("Enter");
+    await page.getByRole("button", { name: "다시 시도", exact: true }).press("Enter");
     await expect(page.getByRole("button", { name: "조회 중", exact: true })).toBeDisabled();
     releaseOutage();
-    await expect(page.locator("main").getByRole("status")).toHaveText("다시 조회했지만 청구서를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
+    await expect(page.locator("main").getByRole("status")).toHaveText("다시 시도했지만 청구서를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
     await page.unroute("**/invoice-links/lookup");
-    await page.getByRole("button", { name: "다시 조회", exact: true }).press("Enter");
+    await page.getByRole("button", { name: "다시 시도", exact: true }).press("Enter");
     await expect(page.getByText(data.customerName, { exact: true })).toBeVisible();
     expect(page.url()).toBe(`${FRONTEND_URL}/invoice-links`);
     sql(`INSERT INTO payment_attempt (id, organization_id, environment_id, customer_id, invoice_id, mode, amount, order_name, status, failure_code, failure_message, requested_at, completed_at) VALUES ('${randomUUID()}', '${data.organizationId}', ${invoiceEnvironment(data.invoiceId)}, '${data.customerId}', '${data.invoiceId}', 'test', 1100, 'local failed lookup fixture', 'failed', 'LOCAL_DECLINED', 'local fixture failure', clock_timestamp(), clock_timestamp());`);
-    await page.getByRole("button", { name: "결제 상태 새로 조회", exact: true }).click();
+    await page.getByRole("button", { name: "결제 상태 새로고침", exact: true }).click();
     await expect(page.getByText("결제 실패", { exact: true })).toBeVisible();
     await expect(page.getByText("결제 실패", { exact: true })).toHaveCSS("color", "rgb(169, 35, 52)");
     await expect(page.getByText("최근 결제 처리 시각 (KST)", { exact: true })).toBeVisible();

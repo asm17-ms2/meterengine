@@ -369,7 +369,7 @@ class OpenApiDocumentTest {
   }
 
   @Test
-  void 배치_수집_요청은_한_건_이상이고_결과는_서버가_내는_세_값만_적는다() {
+  void 배치_수집_요청은_한_건_이상이고_결과는_서버가_내는_값만_적는다() {
     JsonNode schemas = root().path("components").path("schemas");
     JsonNode events = schemas.path("IngestEventBatchRequest").path("properties").path("events");
     assertThat(events.path("minItems").asInt()).isOne();
@@ -381,7 +381,9 @@ class OpenApiDocumentTest {
         .path("result")
         .path("enum")
         .forEach(value -> results.add(value.asText()));
-    assertThat(results).containsExactlyInAnyOrder("stored", "duplicate", "rejected");
+    // stored와 duplicate는 바로 저장할 때, accepted와 failed는 받아 두고 뒤에서 저장할 때 낸다.
+    assertThat(results)
+        .containsExactlyInAnyOrder("stored", "duplicate", "rejected", "accepted", "failed");
   }
 
   @Test

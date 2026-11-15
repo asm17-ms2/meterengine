@@ -92,7 +92,7 @@ metrics:
     aws_metric_name: CheckpointLag
     aws_dimensions: [DBInstanceIdentifier]
     aws_statistics: [Average]
-  # 앱 서버 대상 그룹(back-, front-)만 읽는다. Grafana 대상 그룹(graf-)은 대시보드가 쓰지 않아 조회 요금만 는다.
+  # 앱 서버 대상 그룹(back-, front-, ingst-)만 읽는다. Grafana 대상 그룹(graf-)은 대시보드가 쓰지 않아 조회 요금만 는다.
   # 대상 그룹 목록은 10분마다 다시 찾는다. 대상 그룹을 교체하면 새 그룹 지표가 그만큼 늦게 보인다.
   - aws_namespace: AWS/ApplicationELB
     aws_metric_name: HealthyHostCount
@@ -100,7 +100,7 @@ metrics:
     aws_statistics: [Minimum]
     aws_dimension_select_regex: &app_target_groups
       LoadBalancer: ["app/meterengine-.+-alb/.+"]
-      TargetGroup: ["targetgroup/(back|front)-.+"]
+      TargetGroup: ["targetgroup/(back|front|ingst)-.+"]
     list_metrics_cache_ttl: 600
   - aws_namespace: AWS/ApplicationELB
     aws_metric_name: UnHealthyHostCount

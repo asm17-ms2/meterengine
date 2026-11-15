@@ -12,6 +12,7 @@ import { CONSENT_DOCUMENTS, CONSENT_VERSION } from "@/lib/auth/consents";
 import { isValidEmail, isValidPassword, NAME_MAX_LENGTH, PASSWORD_RULE_MESSAGE } from "@/lib/auth/credentials";
 import type { ActionState, SessionResponse, SessionTokenResponse, SignupResponse } from "@/lib/auth/types";
 import { CAPTCHA_REQUEST_TIMEOUT_MS, captchaMessage, turnstileField } from "@/lib/auth/captcha";
+import { SUPPORT_EMAIL } from "@/lib/support";
 
 function textField(data: FormData, name: string) {
   const value = data.get(name);
@@ -26,7 +27,7 @@ export async function loginAction(_prev: ActionState, data: FormData): Promise<A
   const result = await requestApi<SessionTokenResponse>("/v1/sessions", { method: "POST", body: { email, password }, clientIp });
   if (!result.ok) {
     if (result.error.code === "email_not_verified") redirect("/email-verifications?reason=unverified");
-    if (result.error.code === "organization_not_active") return { message: "지금은 콘솔을 이용할 수 없어요. 조직 이용이 정지됐거나 소속이 보관됐을 수 있어요. 조직의 대표관리자에게 확인하세요." };
+    if (result.error.code === "organization_not_active") return { message: `지금은 콘솔을 이용할 수 없어요. 소속이 보관됐다면 조직의 대표관리자에게, 조직 이용이 정지됐다면 ${SUPPORT_EMAIL}으로 문의하세요.` };
     if (result.error.status === 401) return { message: "이메일 또는 비밀번호가 맞지 않아요." };
     return { message: toDisplayMessage(result.error) };
   }

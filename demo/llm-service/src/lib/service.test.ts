@@ -396,6 +396,15 @@ test("응답이 유실된 수집도 같은 거래 ID로 다시 보내 중복 판
   assert.equal(observed[0], observed[1]);
 });
 
+test("수집 서버가 받아 두기만 해 중복 여부가 없는 응답도 전달로 마친다", async t => {
+  const store = new OpenAbStore(":memory:", [ACCOUNT_A]);
+  t.after(() => store.close());
+  const fake = clientFixture({ async ingestEvent(event) { return { transaction_id: event.transaction_id! }; } });
+  const service = new OpenAbService({ config: config(), store, client: fake.client, now: () => NOW });
+  const generated = await service.generate(ACCOUNT_A, apiBody("접수만 된 요청"));
+  assert.equal(generated.meteringStatus, "delivered");
+});
+
 test("만료 세션과 로그아웃, 위조 토큰을 거절하고 세션 원문은 DB에 저장하지 않는다", t => {
   const directory = mkdtempSync(path.join(os.tmpdir(), "openab-session-"));
   t.after(() => rmSync(directory, { recursive: true, force: true }));

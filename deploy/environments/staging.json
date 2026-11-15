@@ -1,5 +1,6 @@
 {
   "autoscaling_group_name": "meterengine-staging-app",
+  "kafka_autoscaling_group_names": ["meterengine-staging-consumer", "meterengine-staging-ingest"],
   "database_identifier": "meterengine-staging-db",
   "parameter_path": "/meterengine/staging",
   "site_domain": "staging.meterengine.com",

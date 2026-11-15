@@ -7,6 +7,7 @@ import { requestApi, toDisplayMessage } from "@/lib/api/transport";
 import { readSessionToken, saveSession } from "@/lib/auth/session";
 import { CONSENT_DOCUMENTS, CONSENT_VERSION } from "@/lib/auth/consents";
 import { isValidPassword, NAME_MAX_LENGTH, PASSWORD_RULE_MESSAGE } from "@/lib/auth/credentials";
+import { invitationProblem, invitationProblemMessage, knownInvitationProblem } from "@/lib/auth/invitation-errors";
 import type { SessionTokenResponse } from "@/lib/auth/types";
 import { workspaceHref } from "@/lib/workspace-href";
 
@@ -32,7 +33,7 @@ export async function acceptInvitationAction(_previous: InvitationState, data: F
   if (!/^me_invite_[A-Za-z0-9]{32}$/.test(token)) return { message: "초대 링크가 올바르지 않아요. 받은 링크를 다시 확인하세요." };
   const path = `/v1/organization-invitations/${encodeURIComponent(token)}`;
   const preview = await requestApi<Preview>(path);
-  if (!preview.ok) return { message: toDisplayMessage(preview.error) };
+  if (!preview.ok) return { message: invitationProblemMessage(invitationProblem(preview.error)) };
   const sessionToken = await readSessionToken();
   let password = "";
   let body: unknown;
@@ -48,7 +49,10 @@ export async function acceptInvitationAction(_previous: InvitationState, data: F
     body = { name, password, consents: CONSENT_DOCUMENTS.map(({ document }) => ({ document, document_version: CONSENT_VERSION })) };
   }
   const accepted = await requestApi<{ user_account_id: string; organization_id: string }>(`${path}/accept`, { method: "POST", token: preview.data.account_exists ? sessionToken : undefined, body });
-  if (!accepted.ok) return { message: toDisplayMessage(accepted.error) };
+  if (!accepted.ok) {
+    const problem = knownInvitationProblem(accepted.error);
+    return { message: problem ? invitationProblemMessage(problem) : toDisplayMessage(accepted.error) };
+  }
   (await cookies()).set("me_invitation_flow", "", { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/organization-invitations", maxAge: 0 });
   let activeToken = sessionToken;
   if (!preview.data.account_exists) {

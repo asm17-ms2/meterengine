@@ -291,7 +291,7 @@ class LiveEnvironmentApplicationIntegrationTest {
     assertThat((List<String>) JsonPath.read(body(result), "$.errors[*].field"))
         .containsExactly("toss_payments_client_key", "toss_payments_secret_key");
     assertThat((List<String>) JsonPath.read(body(result), "$.errors[*].message"))
-        .containsExactly("실제 환경 키는 live_ck_ 뒤에 값이 이어져야 합니다", "실제 환경 키는 live_sk_ 뒤에 값이 이어져야 합니다");
+        .containsExactly("라이브 키는 live_ck_ 뒤에 값이 이어져야 합니다", "라이브 키는 live_sk_ 뒤에 값이 이어져야 합니다");
     verifyNoInteractions(tossPaymentsClient);
   }
 

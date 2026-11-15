@@ -30,10 +30,9 @@ test("in frontend sources the pre-environment data label lives only in the envir
   assert.deepEqual(hits(/기존 데이터/, ["lib/environment.ts"]), []);
 });
 
-// 약관의 "데모 릴리스"는 서비스 단계의 이름이라 남긴다.
 test("frontend sources carry no demo-only wording", () => {
   assert.deepEqual(hits(/시연/), []);
-  assert.deepEqual(hits(/데모/, ["app/(public)/terms/page.tsx"]), []);
+  assert.deepEqual(hits(/데모/), []);
 });
 
 // 텍스트 모양이 기본인 이모지(U+26A0 등)와 가운뎃점 대용 글자(U+318D, U+30FB, U+2027)도 잡는다. 저작권, 등록상표, 상표 기호는 이모지가 아니라 뺀다.
@@ -46,4 +45,17 @@ test("the banned character pattern catches text-style emoji and middle-dot looka
 
 test("frontend sources have no banned characters", () => {
   assert.deepEqual(hits(BANNED_CHARACTERS), []);
+});
+
+// 환경은 테스트와 라이브로, 웹훅은 웹훅으로, 요금 메뉴는 요금 설정으로 부른다(결정 9, 번역투 A, B).
+test("frontend sources use the console names for environments, webhooks and pricing", () => {
+  assert.deepEqual(hits(/실제 환경/), []);
+  assert.deepEqual(hits(/운영 키/), []);
+  assert.deepEqual(hits(/통보/), []);
+  assert.deepEqual(hits(/요금 설계/), []);
+});
+
+// 화면은 청구서라 부르고, 법적 문서인 약관과 개인정보 처리방침만 예외다(결정 10).
+test("frontend sources call an invoice a 청구서 outside the terms and the privacy policy", () => {
+  assert.deepEqual(hits(/인보이스/, ["app/(public)/terms/page.tsx", "app/(public)/privacy/page.tsx"]), []);
 });

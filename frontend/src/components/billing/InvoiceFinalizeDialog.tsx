@@ -35,7 +35,7 @@ function toFinalizeFormData(month: string): FormData {
 }
 
 
-// 확정 결과는 처음 몇 건만 보이고 나머지는 이미 전체 목록인 인보이스 화면으로 보낸다.
+// 확정 결과는 처음 몇 건만 보이고 나머지는 이미 전체 목록인 확정 청구서 화면으로 보낸다.
 const FINALIZED_PREVIEW_COUNT = 5;
 export function InvoiceFinalizeDialog(target: FinalizeTarget) {
   const [isOpen, setIsOpen] = useState(false);
@@ -81,8 +81,8 @@ function InvoiceFinalizeForm({ onClose, ...target }: FinalizeTarget & { onClose:
         width={MODAL_WIDTH}
         title={
           state.finalizedCount > 0
-            ? `${monthLabel} 인보이스 ${state.finalizedCount}건을 확정했어요`
-            : "새로 확정한 인보이스가 없어요"
+            ? `${monthLabel} 청구서 ${state.finalizedCount}건을 확정했어요`
+            : "새로 확정한 청구서가 없어요"
         }
         onCancel={onClose}
         closable={{ closeIcon: <CloseOutlined aria-hidden aria-label={undefined} /> }}
@@ -91,20 +91,20 @@ function InvoiceFinalizeForm({ onClose, ...target }: FinalizeTarget & { onClose:
             닫기
           </Button>,
           <LinkButton key="invoices" type="primary" href={`/invoices?month=${month}`}>
-            인보이스 보기
+            청구서 보기
           </LinkButton>,
         ]}
       >
         <p>확정한 공급가액 {formatKrw(state.supplyAmount)}, 세액 {formatKrw(state.taxAmount)}, 합계 {formatKrw(state.totalAmount)}</p>
         <ul>{state.invoices.slice(0, FINALIZED_PREVIEW_COUNT).map(invoice => <li key={invoice.id}><LinkButton href={`/payments/${invoice.id}`}>{invoice.invoice_number ?? invoice.id}</LinkButton> {invoice.customer_name} / {formatKrw(invoice.total_amount)}</li>)}</ul>
-        {state.invoices.length > FINALIZED_PREVIEW_COUNT && <p className="field-hint">{`나머지 ${state.invoices.length - FINALIZED_PREVIEW_COUNT}건은 '인보이스 보기'에서 확인하세요.`}</p>}
+        {state.invoices.length > FINALIZED_PREVIEW_COUNT && <p className="field-hint">{`나머지 ${state.invoices.length - FINALIZED_PREVIEW_COUNT}건은 '청구서 보기'에서 확인하세요.`}</p>}
         {state.failedCount > 0 || state.finalizedCount !== targetCount ? (
           <Typography.Paragraph style={PARAGRAPH_STYLE}>
             {state.failedCount > 0
-              ? `확정하지 못한 고객이 ${state.failedCount}곳 있어요. 확정한 고객은 그대로 남고, 다시 확정하면 남은 고객만 다시 시도해요.`
+              ? `확정하지 못한 고객이 ${state.failedCount}명 있어요. 확정한 고객은 그대로 남고, 다시 확정하면 남은 고객만 다시 시도해요.`
               : state.finalizedCount === 0
                 ? `${monthLabel}에 청구할 금액이 있는 고객이 없거나 이미 모두 확정됐어요.`
-                : `확정한 고객 수가 처음 안내한 ${targetCount}곳과 달라요. 창을 연 뒤 사용량이 바뀌었거나 그사이 먼저 확정된 고객이 있어요. 금액은 인보이스에서 확인하세요.`}
+                : `확정한 고객 수가 처음 안내한 ${targetCount}명과 달라요. 창을 연 뒤 사용량이 바뀌었거나 그사이 먼저 확정된 고객이 있어요. 금액은 청구서에서 확인하세요.`}
           </Typography.Paragraph>
         ) : null}
       </Modal>
@@ -116,7 +116,7 @@ function InvoiceFinalizeForm({ onClose, ...target }: FinalizeTarget & { onClose:
       key="confirm"
       open
       width={MODAL_WIDTH}
-      title={`${ENVIRONMENT_LABELS[environment]}의 ${monthLabel} 인보이스를 확정할까요?`}
+      title={`${ENVIRONMENT_LABELS[environment]}의 ${monthLabel} 청구서를 확정할까요?`}
       onCancel={isPending ? undefined : onClose}
       keyboard={!isPending}
       mask={{ closable: !isPending }}
@@ -131,19 +131,19 @@ function InvoiceFinalizeForm({ onClose, ...target }: FinalizeTarget & { onClose:
           loading={isPending}
           onClick={() => startTransition(() => formAction(bindScope(toFinalizeFormData(month))))}
         >
-          {isPending ? "확정 중..." : "확정"}
+          {isPending ? "확정 중" : "확정"}
         </Button>,
       ]}
     >
       <Flex vertical gap="medium">
         <Typography.Paragraph style={PARAGRAPH_STYLE}>
-          청구할 금액이 있는 고객 {targetCount}곳의 인보이스를 확정해요. 공급가액 합계는{" "}
-          {supplyAmount}이고, 인보이스에는 세액 10%를 더한 합계가 적혀요. 금액은 집계 마감
+          청구할 금액이 있는 고객 {targetCount}명의 청구서를 확정해요. 공급가액 합계는{" "}
+          {supplyAmount}이고, 청구서에는 세액 10%를 더한 합계가 적혀요. 금액은 집계 마감
           시각(다음 달 1일 13:00 KST)까지 받은 사용량으로 다시 계산하고, 마감 전이면 확정하는
           순간까지 받은 사용량으로 계산해요.
         </Typography.Paragraph>
         <Typography.Paragraph style={PARAGRAPH_STYLE}>
-          확정한 인보이스는 고치거나 지울 수 없어요. 확정한 고객에게는 그 뒤 이 달에 들어온 사용량을
+          확정한 청구서는 고치거나 지울 수 없어요. 확정한 고객에게는 그 뒤 이 달에 들어온 사용량을
           청구하지 않아요.
         </Typography.Paragraph>
         <Typography.Paragraph style={PARAGRAPH_STYLE}>
@@ -165,7 +165,7 @@ function InvoiceFinalizeForm({ onClose, ...target }: FinalizeTarget & { onClose:
             type="warning"
             showIcon
             icon={alertIcon("warning")}
-            title="확정할 고객에게 단가 없는 사용량이 있어요. 이 사용량은 청구되지 않고, 확정한 뒤에 단가를 등록해도 이 달 인보이스에는 실리지 않아요."
+            title="확정할 고객에게 단가 없는 사용량이 있어요. 이 사용량은 청구되지 않고, 확정한 뒤에 단가를 등록해도 이 달 청구서에는 실리지 않아요."
           />
         ) : null}
 

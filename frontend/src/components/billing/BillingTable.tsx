@@ -209,7 +209,7 @@ export function BillingTable({
   const sortableColumns: SortableColumn<BillingRow>[] = [
     {
       key: "label",
-      title: "고객 / 미터 라인",
+      title: "고객 / 청구 항목",
       ellipsis: true,
       sortKey: "customer_name",
       clientSorter: byCustomerName,
@@ -235,7 +235,7 @@ export function BillingTable({
           return (
             <MeterLabel
               label={UNPRICED_LABEL}
-              labelTooltip="단가가 등록되지 않은 조합이라 금액에 들지 않는 사용량"
+              labelTooltip="단가가 등록되지 않은 구분 값이라 금액에 들지 않는 사용량"
               isCodeLabel={false}
             />
           );
@@ -246,14 +246,14 @@ export function BillingTable({
     },
     {
       key: "combination",
-      title: "조합",
+      title: "구분 값",
       onCell: (row) => ({ colSpan: row.kind === "customer" ? 0 : 1 }),
       render: (_, row) => {
         if (row.kind === "line" || row.kind === "unpricedLine") {
           return <DimensionValues dimensionValues={row.line.dimensionValues} slotCount={slotCount} />;
         }
         if (row.kind === "meter" || row.kind === "unpriced") {
-          return <Typography.Text type="secondary">조합 {row.combinationCount}개</Typography.Text>;
+          return <Typography.Text type="secondary">구분 값 {row.combinationCount}개</Typography.Text>;
         }
         return null;
       },
@@ -265,7 +265,7 @@ export function BillingTable({
       width: 170,
       render: (_, row) => {
         if (row.kind === "customer") {
-          return <Typography.Text type="secondary">청구 라인 {row.lineCount}줄</Typography.Text>;
+          return <Typography.Text type="secondary">청구 항목 {row.lineCount}개</Typography.Text>;
         }
         if (row.kind === "meter" || row.kind === "unpriced") {
           return <NumberText>{row.quantity}</NumberText>;
@@ -301,7 +301,7 @@ export function BillingTable({
 
   return (
     <>
-    <div className="data-mobile-records">{groups.map(group => <article key={group.customerId} className="data-mobile-record"><div className="data-mobile-line"><h3>{group.customerName}</h3><strong className="numeric">{group.amount}</strong></div><details><summary>청구 계산 내역</summary>{linesOf(group.items).map((line, index) => <div key={index}><div className="data-mobile-line"><span>{line.label}</span><strong className="numeric">{line.amount}</strong></div><p className="field-hint">수량 {line.quantity} / 단가 {line.unitPrice}</p>{line.quantityBasis && <p className="field-hint" style={{ overflowWrap: "anywhere" }}>{line.quantityBasis}</p>}{Object.keys(line.dimensionValues).length > 0 && <p className="field-hint">{Object.entries(line.dimensionValues).map(([key, value]) => `${key}: ${String(value)}`).join(", ")}</p>}</div>)}</details>{group.unpricedUsage && <p className="field-error">단가 없는 사용량 {group.unpricedUsage.quantity}, {group.unpricedUsage.lines.length}개 조합</p>}{group.isHeld && <><p><HeldTag customerId={group.customerId} month={query.month} isPastMonth={isPastMonth} guidanceId={`held-guidance-mobile-${group.customerId}`} /></p><HeldGuidance id={`held-guidance-mobile-${group.customerId}`} isPastMonth={isPastMonth} /></>}</article>)}<div className="data-mobile-total"><span>{query.customerId ? "선택 고객 공급가액" : "조건 전체 공급가액"}</span><span className="numeric">{totalAmount}</span></div></div>
+    <div className="data-mobile-records">{groups.map(group => <article key={group.customerId} className="data-mobile-record"><div className="data-mobile-line"><h3>{group.customerName}</h3><strong className="numeric">{group.amount}</strong></div><details><summary>청구 계산 내역</summary>{linesOf(group.items).map((line, index) => <div key={index}><div className="data-mobile-line"><span>{line.label}</span><strong className="numeric">{line.amount}</strong></div><p className="field-hint">수량 {line.quantity} / 단가 {line.unitPrice}</p>{line.quantityBasis && <p className="field-hint" style={{ overflowWrap: "anywhere" }}>{line.quantityBasis}</p>}{Object.keys(line.dimensionValues).length > 0 && <p className="field-hint">{Object.entries(line.dimensionValues).map(([key, value]) => `${key}: ${String(value)}`).join(", ")}</p>}</div>)}</details>{group.unpricedUsage && <p className="field-error">단가 없는 사용량 {group.unpricedUsage.quantity}, 구분 값 {group.unpricedUsage.lines.length}개</p>}{group.isHeld && <><p><HeldTag customerId={group.customerId} month={query.month} isPastMonth={isPastMonth} guidanceId={`held-guidance-mobile-${group.customerId}`} /></p><HeldGuidance id={`held-guidance-mobile-${group.customerId}`} isPastMonth={isPastMonth} /></>}</article>)}<div className="data-mobile-total"><span>{query.customerId ? "선택 고객 공급가액" : "조건 전체 공급가액"}</span><span className="numeric">{totalAmount}</span></div></div>
     <div className="data-desktop-table"><Table<BillingRow>
       rowKey="key"
       columns={columns}

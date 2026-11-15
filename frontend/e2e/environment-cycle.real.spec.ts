@@ -73,8 +73,8 @@ test("한 조직의 test와 live가 같은 고객 외부 ID와 미터 코드로 
       await page.getByLabel(/^사업장 주소/).fill(`${environment} 사업장 주소`);
       await page.getByRole("button", { name: "공급자 정보 저장", exact: true }).click();
       await expect(page.getByText("공급자 정보를 저장했어요.", { exact: true })).toBeVisible();
-      await expect(page.getByRole("button", { name: "결제 모드 변경", exact: true })).toHaveCount(0);
-      await expect(page.getByText("결제 모드를 바꾸려면 화면 위에서 업무 환경을 바꾸세요.", { exact: false })).toBeVisible();
+      await expect(page.getByRole("button", { name: "결제 설정 변경", exact: true })).toHaveCount(0);
+      await expect(page.getByText("다른 환경을 쓰려면 화면 위에서 업무 환경을 바꾸세요.", { exact: false })).toBeVisible();
       await page.getByRole("button", { name: "토스페이먼츠 키 저장", exact: true }).click();
       const credentials = page.getByRole("dialog");
       await expect(credentials.locator('input[name="mode"]')).toHaveValue(environment);
@@ -122,7 +122,7 @@ test("한 조직의 test와 live가 같은 고객 외부 ID와 미터 코드로 
       const other = scopes[1 - index];
       const otherBefore = await state(request, other);
       await page.goto(href(`/payments/${scope.invoiceId}`, scope.environment));
-      await page.getByRole("button", { name: "잔액 전액 취소", exact: true }).click();
+      await page.getByRole("button", { name: "남은 금액 전액 취소", exact: true }).click();
       const cancellation = page.getByRole("dialog");
       await cancellation.getByLabel(/^취소 사유/).fill(`${scope.environment} 격리 취소`);
       await cancellation.getByRole("button", { name: /전액 취소 요청$/ }).click();
@@ -144,7 +144,7 @@ test("한 조직의 test와 live가 같은 고객 외부 ID와 미터 코드로 
     for (const scope of scopes) {
       for (const screen of ["overview", "settings", "events", "payments"]) {
         await page.goto(href(`/${screen}`, scope.environment));
-        const heading = { overview: `${formatKoreanMonth(month)} 개요`, settings: "조직 설정", events: "수집 로그", payments: "수납과 취소" }[screen];
+        const heading = { overview: `${formatKoreanMonth(month)} 개요`, settings: "조직 설정", events: "수집 이벤트", payments: "수납과 취소" }[screen];
         await expect(page.getByRole("heading", { level: 1, name: heading, exact: true })).toBeVisible();
         await expect(page.locator(".workspace-environment")).toContainText(ENVIRONMENT_LABELS[scope.environment]);
         await expect(page.getByText("불러오는 중이에요.", { exact: true })).toHaveCount(0);

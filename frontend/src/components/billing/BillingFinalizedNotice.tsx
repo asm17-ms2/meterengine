@@ -26,12 +26,12 @@ export function BillingFinalizedNotice({
         showIcon
         icon={alertIcon("success")}
         title={title}
-        description={`청구 예정액이 0원인 고객 ${zeroAmountCustomerCount}곳은 인보이스가 만들어지지 않았어요.`}
+        description={`청구 예정액이 0원인 고객 ${zeroAmountCustomerCount}명은 청구서가 만들어지지 않았어요.`}
         action={
           <Flex vertical gap="small">
-            <LinkButton href={invoicesHref}>인보이스 보기</LinkButton>
+            <LinkButton href={invoicesHref}>청구서 보기</LinkButton>
             <Button aria-expanded={isOpen} onClick={() => setIsOpen(!isOpen)}>
-              0원 고객 {zeroAmountCustomerCount}곳 {isOpen ? "접기" : "보기"}
+              0원 고객 {zeroAmountCustomerCount}명 {isOpen ? "접기" : "보기"}
             </Button>
           </Flex>
         }

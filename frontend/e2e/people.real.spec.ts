@@ -158,7 +158,7 @@ test("직접 생성과 초대, 본인 동의와 권한, 감사 조회와 고객 
       let dialog = owner.getByRole("dialog");
       await dialog.getByLabel(/^고객명/).fill(customerName);
       await dialog.getByLabel(/^외부 고객 ID/).fill(`people-customer-${suffix}`);
-      await dialog.getByRole("button", { name: "고객 저장", exact: true }).click();
+      await dialog.getByRole("button", { name: "등록", exact: true }).click();
       await expect(dialog).toHaveCount(0);
       await owner.getByRole("link", { name: customerName, exact: true }).click();
       await owner.getByRole("button", { name: "고객 보관", exact: true }).click();
@@ -168,7 +168,7 @@ test("직접 생성과 초대, 본인 동의와 권한, 감사 조회와 고객 
       await expect(owner.getByText("고객을 보관했어요. 보관 목록에서 확인하세요.", { exact: true })).toBeVisible();
       await expect(owner).toHaveURL(url => url.pathname === "/customers" && url.searchParams.get("status") === "archived" && /^\d{4}-\d{2}$/.test(url.searchParams.get("month") ?? ""));
       await expect(owner.getByRole("link", { name: customerName, exact: true })).toBeVisible();
-      const status = owner.getByRole("combobox", { name: "관리 상태", exact: true });
+      const status = owner.getByRole("combobox", { name: "상태", exact: true });
       await status.selectOption("active");
       await owner.getByRole("button", { name: "조건 적용", exact: true }).click();
       await expect(owner.getByRole("link", { name: customerName, exact: true })).toHaveCount(0);

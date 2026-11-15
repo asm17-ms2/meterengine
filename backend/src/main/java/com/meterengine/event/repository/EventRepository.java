@@ -1,11 +1,14 @@
 package com.meterengine.event.repository;
 
 import com.meterengine.event.dto.Event;
+import com.meterengine.event.dto.EventIngestMessage;
 import com.meterengine.event.dto.EventInsertion;
+import com.meterengine.event.dto.EventMessageInsertion;
 import com.meterengine.event.service.EventSearch;
 import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.global.security.RequestIdentity;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -76,6 +79,39 @@ public class EventRepository {
     }
     return jdbcTemplate.query(
         "INSERT INTO event (organization_id, transaction_id, customer_id, type, properties, occurred_at, environment_id, request_id, actor_type, actor_id) VALUES "
+            + placeholders
+            + " ON CONFLICT (organization_id, environment_scope_id, transaction_id) DO NOTHING RETURNING transaction_id",
+        (rs, rowNum) -> rs.getString("transaction_id"),
+        parameters.toArray());
+  }
+
+  // 컨슈머는 요청 밖에서 돌아 환경과 요청 주체를 메시지에서 받는다. received_at은 수집 서버가 받은 시각이다.
+  public List<String> insertAllMessagesIfAbsent(List<EventMessageInsertion> insertions) {
+    if (insertions.isEmpty()) {
+      return List.of();
+    }
+    String placeholders =
+        String.join(
+            ",",
+            java.util.Collections.nCopies(
+                insertions.size(), "(?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?, ?, ?)"));
+    List<Object> parameters = new ArrayList<>();
+    for (EventMessageInsertion insertion : insertions) {
+      EventIngestMessage message = insertion.message();
+      parameters.add(message.organizationId());
+      parameters.add(message.transactionId());
+      parameters.add(message.customerId());
+      parameters.add(message.type());
+      parameters.add(insertion.properties());
+      parameters.add(message.occurredAt());
+      parameters.add(OffsetDateTime.ofInstant(message.acceptedAt(), ZoneOffset.UTC));
+      parameters.add(message.environmentId());
+      parameters.add(message.requestId());
+      parameters.add(message.actorType());
+      parameters.add(message.actorId());
+    }
+    return jdbcTemplate.query(
+        "INSERT INTO event (organization_id, transaction_id, customer_id, type, properties, occurred_at, received_at, environment_id, request_id, actor_type, actor_id) VALUES "
             + placeholders
             + " ON CONFLICT (organization_id, environment_scope_id, transaction_id) DO NOTHING RETURNING transaction_id",
         (rs, rowNum) -> rs.getString("transaction_id"),

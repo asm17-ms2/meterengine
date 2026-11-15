@@ -49,8 +49,8 @@ public class SignupController {
           """
           조직과 그 조직에 소속된 member 사용자를 만들고 필수 동의를 기록한다.
           조직은 active로 만들어져 운영자 승인 없이 바로 로그인해 테스트 환경을 쓴다.
-          실제 환경은 잠겨 있고(live_environment_opened_at이 null) 실제 환경 이용 신청이 승인되면 열린다.
-          잠긴 동안 실제 환경이나 환경 헤더 없는 요청은 403(live_environment_locked)이다.
+          라이브 환경은 잠겨 있고(live_environment_opened_at이 null) 라이브 환경 이용 신청이 승인되면 열린다.
+          잠긴 동안 라이브 환경이나 환경 헤더 없는 요청은 403(live_environment_locked)이다.
           이메일은 소문자로 바꿔 저장한다.
           서버가 이메일 인증을 켰으면 user_account.email_verified가 false이고, 커밋 뒤 인증 메일을 보낸다.
           메일을 보내지 못해도 가입은 201이며 POST /v1/email-verifications로 다시 받는다.

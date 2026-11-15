@@ -117,6 +117,20 @@ class SendLoopTest(unittest.TestCase):
         self.assertEqual(len(client.posted), 3)
         self.assertEqual(code, 0)
 
+    def test_202로_받아_둔_단건은_new로_세고_끝까지_보낸다(self):
+        client = FakeClient([(202, {"transaction_id": "evt-%d" % n}) for n in range(1, 4)])
+        code, out, err = self.run_send(client)
+        records = [json.loads(line) for line in self.log_text().splitlines()][1:]
+        self.assertEqual(len(client.posted), 3)
+        self.assertEqual([row["outcome"] for row in records], ["new", "new", "new"])
+        self.assertEqual(code, 0)
+
+    def test_202로_받아_둔_단건의_요약은_202_accepted다(self):
+        client = FakeClient([(202, {"transaction_id": "evt-%d" % n}) for n in range(1, 4)])
+        code, out, err = self.run_send(client)
+        self.assertIn("202 accepted", out)
+        self.assertNotIn("duplicate=", out)
+
     def test_기록_머리말에_조직_id가_남고_키는_어디에도_없다(self):
         client = FakeClient([(200, {"duplicate": False})] * 3)
         code, out, err = self.run_send(client)
@@ -146,6 +160,23 @@ class FormatGateTest(unittest.TestCase):
 class BatchSendTest(unittest.TestCase):
     setUp = SendLoopTest.setUp
     log_text = SendLoopTest.log_text
+
+    def test_202와_accepted로_받아_둔_묶음은_행마다_new로_센다(self):
+        class BatchClient(FakeClient):
+            def post_events(self, body_text):
+                rows = json.loads(body_text)["events"]
+                self.posted.append(body_text)
+                return _result(202, {"results": [{"index": i, "transaction_id": row["transaction_id"], "result": "accepted"} for i, row in enumerate(rows)]})
+
+        args = Args()
+        args.batch_size = 2
+        client = BatchClient([])
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            code = send_cmd.send_events(_events(3), client, ORGANIZATION, Console(False), args)
+        records = [json.loads(line) for line in self.log_text().splitlines()][1:]
+        self.assertEqual(len(client.posted), 2)
+        self.assertEqual([row["outcome"] for row in records], ["new", "new", "new"])
+        self.assertEqual(code, 0)
 
     def test_배치_실패_뒤_모든_입력행을_UNKNOWN과_NOT_SENT로_구분해_남긴다(self):
         class BatchClient(FakeClient):

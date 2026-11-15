@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 앱 서버 오토스케일링 그룹을 0대로 내린 뒤 SUT RDS를 멈춘다. 지우지는 않는다.
+# 수집 서버와 컨슈머 서버 오토스케일링 그룹을 0대로 내린 뒤 SUT RDS를 멈춘다. 지우지는 않는다. MSK는 apply로 지운다.
 
 set -euo pipefail
 
@@ -35,6 +35,21 @@ stop_servers() {
 	wait_asg_empty "$asg_name"
 }
 
+# 컨슈머 그룹을 더하기 전에 apply한 상태에는 출력도 그룹도 없다. 그때는 건너뛰고 나머지를 끈다.
+stop_consumer_servers() {
+	local consumer_asg_name
+	consumer_asg_name=$(tf_out_or_empty consumer_asg_name)
+	if [ -z "$consumer_asg_name" ]; then
+		log "terraform output consumer_asg_name 이 없어 컨슈머 서버는 건너뛴다"
+		return 0
+	fi
+	if ! asg_exists "$consumer_asg_name"; then
+		log "오토스케일링 그룹 $consumer_asg_name 이 없어 건너뛴다"
+		return 0
+	fi
+	stop_servers "$consumer_asg_name"
+}
+
 main() {
 	need_cmd aws terraform
 
@@ -42,7 +57,9 @@ main() {
 	asg_name=$(tf_out asg_name)
 	db_identifier=$(tf_out db_identifier)
 
+	# 발행하는 쪽을 먼저 내리고, DB에 쓰는 컨슈머 서버가 다 빠진 뒤에 DB를 멈춘다.
 	stop_servers "$asg_name"
+	stop_consumer_servers
 	stop_db "$db_identifier"
 
 	log "RDS는 꺼 둔 지 7일 뒤 저절로 켜진다. 자동 중지가 켜져 있으면 다음 04:00에 다시 꺼진다"

@@ -89,6 +89,15 @@ test("응답에서 빠진 행은 미확인으로 남고 접수와 거절, 중복
   assert.equal(results[2].message, "거절됨");
 });
 
+test("서버가 받아 두고 뒤에서 저장하는 accepted 결과도 접수로 본다", () => {
+  const rows = eventRows(2);
+  const results = toRowResults(rows, [
+    { index: 0, transaction_id: "tx-0", result: "accepted" },
+    { index: 1, transaction_id: "tx-1", result: "accepted" },
+  ]);
+  assert.deepEqual(results.map((row) => row.tag), ["NEW", "NEW"]);
+});
+
 test("대상 설정 오류처럼 배치를 시작하지 못한 경우 모든 유효 행은 미전송이다", async () => {
   const rows = eventRows(201);
   const sent = await sendCsvRows(rows, () => { throw new Error("대상 없음"); });

@@ -38,6 +38,9 @@ class LocalCredentialsTest {
 
   private static final String TEST_KEY = "me_test_wiCp766QYNqhyYm4Z7Xq9wYosNvQCeVC";
 
+  private static final String LOCAL_KEY_IDS =
+      "('e0c3a216-82f4-40fe-babe-e35b49ebd24a', 'b5e65980-3d64-47fa-9b59-0ba963529bc6')";
+
   private static final String MEMBER_EMAIL = "member@meterengine.local";
 
   private static final String OPERATOR_EMAIL = "operator@meterengine.local";
@@ -65,13 +68,31 @@ class LocalCredentialsTest {
   }
 
   @Test
-  void README의_로컬_키는_데모_도입사의_admin_키로_인증된다() {
+  void README의_로컬_키는_데모_도입사의_같은_모드_환경_admin_키로_인증된다() {
     assertThat(apiKeyCredentialService.authenticate(LIVE_KEY))
         .hasValueSatisfying(
             credential -> assertAdminKeyOfDemoOrganization(credential.principal(), "live"));
     assertThat(apiKeyCredentialService.authenticate(TEST_KEY))
         .hasValueSatisfying(
             credential -> assertAdminKeyOfDemoOrganization(credential.principal(), "test"));
+  }
+
+  @Test
+  void legacy에_있던_로컬_키도_다시_실행하면_같은_모드_환경으로_옮겨진다() {
+    jdbcTemplate.update("UPDATE api_key SET environment_id = NULL WHERE id IN " + LOCAL_KEY_IDS);
+
+    jdbcTemplate.execute(readLocalCredentialsScript());
+
+    assertThat(
+            jdbcTemplate.queryForList(
+                """
+                SELECT k.mode || ':' || e.mode FROM api_key k
+                JOIN organization_environment e ON e.id = k.environment_id
+                WHERE k.id IN %s ORDER BY k.mode
+                """
+                    .formatted(LOCAL_KEY_IDS),
+                String.class))
+        .containsExactly("live:live", "test:test");
   }
 
   @Test
@@ -103,12 +124,20 @@ class LocalCredentialsTest {
     assertThat(memberRolesOf(MEMBER_EMAIL)).containsExactly("owner:admin", "owner:admin");
   }
 
-  private static void assertAdminKeyOfDemoOrganization(
-      AuthenticatedPrincipal principal, String mode) {
+  private void assertAdminKeyOfDemoOrganization(AuthenticatedPrincipal principal, String mode) {
     assertThat(principal.kind()).isEqualTo(PrincipalKind.API_KEY);
     assertThat(principal.organizationId()).isEqualTo(DEMO_ORGANIZATION_ID);
     assertThat(principal.mode()).isEqualTo(mode);
+    assertThat(principal.environmentId()).isEqualTo(environmentIdOf(mode));
     assertThat(principal.scopes()).containsExactly("admin");
+  }
+
+  private UUID environmentIdOf(String mode) {
+    return jdbcTemplate.queryForObject(
+        "SELECT id FROM organization_environment WHERE organization_id = ? AND mode = ?",
+        UUID.class,
+        DEMO_ORGANIZATION_ID,
+        mode);
   }
 
   private String passwordHashOf(String email) {

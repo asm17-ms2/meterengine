@@ -19,6 +19,9 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
 | agents | node-exporter, cAdvisor |
 
 - `deploy.sh`는 env 파일과 컨테이너를 건드리기 전에 Parameter Store `db-host`의 RDS 식별자를 환경 파일과 대조하고, staging과 production은 이 서버가 환경 파일의 오토스케일링 그룹(`autoscaling_group_name`) 서버인지도 인스턴스 메타데이터 태그로 대조한다. 다르면 멈춘다.
+- `deploy.sh`는 인스턴스 메타데이터에서 서버의 `ServerRole` 태그도 읽어 backend에 `METERENGINE_ROLE`로 넘긴다. 같은 파라미터 경로를 쓰는 서버들의 역할을 이 태그로 가른다.
+  - 값은 `all`(전부), `ingest`(수집 API), `consumer`(카프카를 읽어 저장), `api`(관리 API와 예약 작업)다. 카프카 컨슈머는 `all`과 `consumer`에서만, 예약 작업은 `all`과 `api`에서만 돈다.
+  - 태그가 없으면 `all`이다. 모르는 값이거나 태그를 읽지 못하면 배포를 멈춘다.
 
 아래 그림과 항목은 production 기준이다.
 
@@ -96,6 +99,7 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
 - `/etc/meterengine/prod.env`는 배포할 때마다 `deploy.sh`가 Parameter Store 값으로 새로 쓴다.
 - `deploy/environments/<환경>.json`의 값이다.
   - `autoscaling_group_name`은 staging과 production에만 적고, `meterengine-<환경>-app`이어야 한다.
+  - `kafka_autoscaling_group_names`는 카프카를 켰을 때만 있는 서버 그룹(`-consumer`, `-ingest`)이다. 배포가 이 그룹들도 새 버전으로 바꾸고, 그 서버들은 부팅 때 자기 그룹 이름을 여기서 찾는다. 그룹이 없으면 배포가 건너뛴다.
   - 프론트는 `https://<site_domain>`에서 온 공개 인보이스 조회와 결제 재시도만 받는다. compose가 이 값을 `METERENGINE_PUBLIC_ORIGIN`으로 넣는다.
   - compose는 프론트에 `METERENGINE_SHOW_LEGACY_ENVIRONMENT`를 넣지 않는다. staging과 production 모두 콘솔 업무 환경 목록에 기존 데이터가 나오지 않는다. 테스트 환경으로 옮긴 자료에 문제가 있어 옛 범위를 봐야 할 때만 compose의 frontend `environment`에 `METERENGINE_SHOW_LEGACY_ENVIRONMENT: "true"`를 넣어 배포한다.
   - `site_aliases`는 지금 배포에서 쓰지 않는다. 별칭 리다이렉트는 ALB 규칙(Terraform)이 정한다.
@@ -405,6 +409,13 @@ ALB는 받은 `X-Forwarded-For` 뒤에 접속 주소를 붙이므로 맨 오른�
 | `business-registration-lookup-enabled` | String | 선택. `true`면 실제 환경 이용 신청을 받을 때 국세청 사업자 상태조회(공공데이터포털)로 사업자등록번호를 확인하고, 등록되지 않았거나 폐업한 번호는 그 자리에서 거절한다. 없으면 compose가 `false`를 넣고, 신청은 조회 없이 "자동 확인 못 함"으로 받는다("실제 환경 이용 신청의 사업자 조회 켜기") |
 | `nts-service-key` | SecureString | 선택. 공공데이터포털에서 받은 국세청 사업자등록정보 서비스의 인증키. `business-registration-lookup-enabled`가 `true`인데 비어 있으면 백엔드가 뜨지 못한다 |
 | `api-key-test-rate-limit-per-minute` | String | 선택. 테스트 환경 API 키의 분당 요청 상한. 키에 넣은 한도와 이 값 가운데 작은 쪽을 쓴다. 없으면 compose가 `300`을 넣는다. 1보다 작거나 숫자가 아니면 백엔드가 뜨지 않는다. 서버마다 따로 세므로 서버가 N대면 키 하나가 분당 N배까지 지나간다 |
+| `event-write-path` | String | 선택. 수집 API가 받은 이벤트를 보내는 곳. `direct`면 요청 안에서 DB에 저장하고, `kafka`면 카프카에 발행한 뒤 202로 답한다. 없으면 compose가 `direct`를 넣는다 |
+| `kafka-bootstrap-servers` | String | 선택. 카프카 브로커 주소. `event-write-path`가 `direct`면 브로커에 연결하지 않는다. 없으면 compose가 `localhost:9092`를 넣는다 |
+| `kafka-security-protocol` | String | 선택. 브로커와 통신하는 방식. MSK는 TLS만 받으므로 `SSL`을 넣는다. 없으면 compose가 `PLAINTEXT`를 넣는다 |
+| `kafka-create-topics` | String | 선택. `true`면 백엔드가 뜰 때 없는 토픽(`event.ingest`, `event.dlq`)을 만든다. 이미 있는 토픽의 설정은 건드리지 않는다. 없으면 compose가 `false`를 넣는다 |
+| `kafka-consumer-threads`, `kafka-consumer-max-poll-records`, `kafka-consumer-session-timeout-ms` | String | 선택. 서버 한 대에서 토픽을 읽는 스레드 수, 한 번에 읽는 묶음의 최대 건수, 컨슈머 서버가 죽었을 때 그 파티션을 다른 서버에 넘기기까지 기다리는 시간(ms). 없으면 compose가 `1`, `500`, `15000`을 넣는다. 스레드는 모든 컨슈머 서버를 합쳐 파티션 수까지만 일한다 |
+| `kafka-producer-linger-ms`, `kafka-producer-batch-size`, `kafka-producer-compression-type` | String | 선택. 수집 서버가 발행할 메시지를 모으는 시간(ms), 한 묶음의 최대 크기(바이트), 압축 방식. 없으면 compose가 `25`, `16384`, `lz4`를 넣는다 |
+| `kafka-producer-delivery-timeout-ms`, `kafka-publish-timeout` | String | 선택. 프로듀서가 재시도를 합쳐 발행 하나에 쓰는 전체 시간(ms)과 요청 스레드가 발행을 기다리는 상한. 없으면 compose가 `15000`, `20s`를 넣는다. 발행 대기가 전체 시간보다 길어야 프로듀서가 먼저 결론을 낸다 |
 | `frontend-api-key` | SecureString | 이 버전의 compose는 읽지 않는다. 옛 프론트가 백엔드를 부르던 API 키 원문이고, 옛 버전으로 되돌리는 배포가 요구해 남긴다 |
 | `app-version` | String | 앱 서버가 띄울 커밋 SHA 40자. CD와 `rollout.sh`가 쓰고 서버가 부팅 때 읽는다. Terraform은 자리 값 `unset`만 만들고 되돌리지 않는다. `prod.env`에는 들어가지 않는다 |
 
@@ -440,8 +451,8 @@ aws ssm get-parameter --name /meterengine/production/operator-password --with-de
 ### 가입 메일 인증과 캡차 켜기
 
 - 둘 다 꺼진 채로 배포된다. 꺼져 있으면 가입과 로그인은 이 기능이 없던 때와 같다.
-- SES 도메인 인증(`meterengine.com`), Easy DKIM과 Route53 DKIM CNAME 셋, MAIL FROM 도메인(`mail.meterengine.com`의 MX와 SPF), DMARC TXT는 콘솔에서 만들어 Terraform 밖에 있다. 이 자원을 Terraform으로 가져오는(import) 일이 남았다.
-- Terraform은 앱 서버 역할의 `ses:SendEmail`(identity `meterengine.com`과 그 기본 구성 세트 `my-first-configuration-set`, 보내는 주소 `no-reply@meterengine.com`만)과 파라미터 `mail-sender`, `mail-from`, `turnstile-allowed-hostnames`를 만든다(`terraform/production/ses.tf`, `parameters.tf`, `app_fleet` 모듈).
+- SES 도메인 인증(`meterengine.com`)과 그 기본 구성 세트 `my-first-configuration-set`, MAIL FROM 도메인(`mail.meterengine.com`), Route53의 DKIM CNAME 셋과 MAIL FROM의 MX와 SPF, DMARC TXT는 콘솔에서 만든 것을 import 블록으로 가져와 Terraform이 갖는다(`terraform/production/ses.tf`, `imports.tf`). 콘솔에서 바꾸면 다음 apply가 되돌린다.
+- Terraform은 앱 서버 역할의 `ses:SendEmail`(identity `meterengine.com`과 그 기본 구성 세트, 보내는 주소 `no-reply@meterengine.com`만)과 파라미터 `mail-sender`, `mail-from`, `turnstile-allowed-hostnames`도 만든다(`parameters.tf`, `app_fleet` 모듈).
 - 아래 순서로 켠다. 앞 단계가 끝나기 전에 다음 값을 켜지 않는다.
   1. Terraform을 apply해 발송 권한과 파라미터 셋을 만든다. SES 콘솔에서 도메인 인증과 DKIM이 여전히 `Verified`인지 본다.
   2. SES 콘솔에서 프로덕션 액세스(샌드박스 해제)를 신청하고 승인을 기다린다. 승인 전에는 인증한 주소로만 메일이 간다.
@@ -706,6 +717,63 @@ aws ec2 describe-images --owners self --filters Name=tag:Role,Values=app-image \
 
 - compose 버전을 올릴 때는 provision.sh와 `terraform/monitoring/bootstrap.sh`를 같이 고친다. 각 파일이 같은 버전과 sha256을 따로 고정하고, 서로 다르면 deploy 시험이 실패한다.
 
+## 카프카 켜기와 끄기
+
+staging과 production은 `kafka_enabled` 변수로 수집 경로를 고른다. 기본값은 꺼짐이다. 설정값의 근거는 [Discussion #601](https://github.com/asm17-ms2/meterengine/discussions/601)이다.
+
+| 상태 | 있는 것 | 서버 그룹 |
+| --- | --- | --- |
+| 꺼짐 | 카프카 관련 자원이 없다 | `meterengine-<환경>-app` 하나가 전부 맡고 요청마다 DB에 저장한다 |
+| 켜짐 | MSK 클러스터(kafka.t3.small 브로커 3대, 브로커마다 100GB), 카프카 파라미터 다섯 개, 수집용 대상 그룹과 ALB 규칙 | `-app`은 관리 API, 화면, 예약 작업을 맡는다(역할 api). `-ingest`가 이벤트를 받아 카프카에 넣고(역할 ingest, 1대에서 3대), `-consumer`가 카프카를 읽어 DB에 넣는다(역할 consumer, staging 1대, production 2대) |
+
+이벤트를 받는 두 주소(`POST /v1/events`, `POST /v1/event-batches`)만 `-ingest` 그룹으로 가고 나머지는 `-app` 그룹으로 간다.
+
+### 켜기 전에 끝낼 일
+
+staging은 지금 켜 볼 수 있다. production은 아래가 모두 끝난 뒤에 켠다.
+
+1. 데모 CLI와 OTel 브리지가 202를 성공으로 받게 고친다. 지금은 200만 성공으로 본다.
+2. production의 GitHub 배포 역할에 `-ingest`와 `-consumer` 그룹의 새로 고침 권한을 더한다. 이 역할은 Terraform 밖에 있다.
+
+인보이스 확정이 컨슈머를 기다리게 하는 일은 지금 하지 않고 미룬다(2026-11-14).
+
+- 컨슈머는 받은 시각을 접수 시각으로 적으므로, 마감 전에 받고 확정 뒤에 저장된 이벤트는 어느 인보이스에도 들지 않는다.
+- 자동 확정은 다음 달 1일 14:00에 돈다. 그래서 컨슈머가 월말부터 14시간 넘게 밀려 있어야 이 일이 생긴다.
+- 그보다 훨씬 먼저 이벤트 저장 멈춤, 이벤트 저장 재시도 지속, 이벤트 저장 지연 경보가 울린다("경보"). 월말에 이 경보가 울리고 있으면 1일 14:00 전에 밀린 것을 비운다.
+
+### 켜기
+
+```sh
+terraform -chdir=deploy/terraform/staging apply -var kafka_enabled=true
+```
+
+- 순서는 Terraform이 지킨다. 클러스터(약 30분), 파라미터, `-consumer`와 `-ingest` 그룹, 수집 요청을 돌리는 ALB 규칙 순으로 만들고, 마지막에 `-app` 그룹의 서버를 api 역할로 하나씩 교체한다.
+- 서버는 뜰 때 역할 태그와 카프카 파라미터를 한 번 읽는다. 그래서 `-app` 그룹은 태그가 바뀌면 서버를 새로 띄우게 해 두었다. 교체하는 동안 옛 서버(요청마다 저장)와 새 서버가 잠깐 같이 돌아도 같은 이벤트는 `transaction_id`로 걸러진다.
+- 켠 상태는 코드에 남지 않는다. 켠 뒤에는 이 환경의 모든 apply에 `-var kafka_enabled=true`를 붙이거나 `TF_VAR_kafka_enabled=true`를 둔다. 빼고 apply하면 아래 "끄기"가 된다.
+- 브로커가 들어가는 프라이빗 서브넷 가운데 2c는 측정 환경 루트(`measurements/test-storage/sut/terraform`)가 만든다. 그 루트를 destroy하면 이 환경의 plan이 멈춘다.
+- apply가 끝나는 대로 공용 모니터링 서버의 `start.sh`를 다시 부른다("공용 모니터링 서버"). 브로커 주소는 클러스터를 만들 때마다 바뀌고, `start.sh`가 이 환경의 `kafka-bootstrap-servers` 파라미터를 읽어 Prometheus에 알려 준다. 새 서버 그룹이 뜬 뒤 10분 안에 부르지 않으면 카프카 브로커 응답 없음 경보가 울린다.
+- 켜는 동안에는 수집 서버 없음 경보가 울릴 수 있다. 새 그룹의 서버가 뜨는 데 2분 넘게 걸리면 울리고, 서버가 응답하면 멎는다.
+
+켠 뒤의 배포는 `-consumer`, `-ingest`, `-app` 순서로 세 그룹을 모두 새 버전으로 바꾼다(환경 파일의 `kafka_autoscaling_group_names`).
+
+- 뒤 그룹이 실패하면 버전 파라미터는 배포 전 값으로 돌아가지만, 먼저 바뀐 그룹의 서버는 새 버전으로 남는다. 고친 커밋이나 이전 커밋으로 다시 배포해 맞춘다.
+- `-consumer` 그룹은 대상 그룹이 없어 서버가 InService인지만 본다. 앱이 떴는지는 컨슈머 지표(`meterengine_event_consume_total`)로 확인한다.
+- 이 조각이 들어가기 전의 커밋으로 롤백하면 `-app` 그룹만 바뀐다. 켠 환경에서는 그런 커밋으로 롤백하지 않는다.
+
+### 끄기
+
+MSK는 멈출 수 없고 떠 있는 동안 과금된다. 변수를 빼고 apply하면 컨슈머 그룹과 클러스터가 먼저 지워지고, 그 뒤에 `-app` 그룹이 요청마다 저장하는 쪽으로 교체된다.
+
+- 끄는 동안 받은 이벤트는 잃을 수 있다. 컨슈머가 내려간 뒤에도 서버가 열린 연결로 발행에 성공해 202로 응답하면, 그 이벤트는 읽히지 않은 채 클러스터와 함께 지워진다. 그 뒤로는 `-app` 서버가 교체될 때까지 503으로 응답한다.
+- 그래서 수집이 들어오지 않는 시간에 끈다. 끄기 전에 `sum(meterengine_event_ingest_total{result="accepted"})`와 `sum(meterengine_event_consume_total)`의 증가가 같은지 Prometheus에서 직접 보아 밀린 것이 없는지 확인한다.
+
+```sh
+terraform -chdir=deploy/terraform/staging apply
+```
+
+- 끄는 동안에는 수집 서버 없음, 컨슈머 서버 없음, 카프카 브로커 응답 없음 경보가 울릴 수 있다. `-app` 그룹의 교체가 끝나면 멎는다.
+- 끈 뒤에도 공용 모니터링 서버의 `start.sh`를 다시 불러 지워진 브로커를 긁지 않게 한다.
+
 ## 모니터링
 
 - 모든 환경의 앱 서버와 DB를 공용 모니터링 서버 한 대가 긁는다. 앱 서버에는 agents 프로필의 node exporter와 cAdvisor만 뜬다.
@@ -721,6 +789,7 @@ GRANT pg_monitor TO meterengine_exporter;
 EC2 `meterengine-monitoring`(t4g.medium) 한 대가 모든 환경의 앱 서버와 DB를 긁는다. 서버와 권한은 `deploy/terraform/monitoring`이 정한다.
 
 - 앱 서버는 태그 `Role=app`인 실행 중 서버를 30초마다 다시 찾아 백엔드 `8080`, node exporter `9100`, cAdvisor `9101`을 긁는다. `Environment` 태그가 `env` 라벨, 인스턴스 ID가 `instance` 라벨이 된다.
+  - 카프카를 켠 환경은 `ServerRole` 태그(api, ingest, consumer)가 `server_role` 라벨이 된다. staging과 production은 켜지 않으면 이 라벨이 없다. 측정 환경 test-storage는 꺼져 있어도 `all`이 붙는다.
 - DB는 환경마다 postgres exporter를 하나씩 띄워 `env`를 붙이고, RDS 지표는 DB 식별자에서 `env`를 만든다.
 - 서버나 DB 보안 그룹이 보안 그룹 `meterengine-monitoring`을 들여야 긁힌다. 들이지 않은 대상은 down으로 보인다. 다른 루트가 이 이름으로 찾으므로 이름을 바꾸지 않는다.
 - 들어오는 규칙은 운영 ALB에서 오는 3000 하나다. Prometheus는 서버의 127.0.0.1:9090, Grafana는 3000에 뜬다.
@@ -733,7 +802,11 @@ EC2 `meterengine-monitoring`(t4g.medium) 한 대가 모든 환경의 앱 서버�
   - 한도를 올릴 때는 합이 서버 메모리에서 1GB쯤 남는지 본다. 시험이 합을 확인한다.
 - 지표 보관은 15일 또는 20GB 중 먼저 닿는 쪽에서 오래된 것부터 지운다. 기록은 서버 디스크에만 있어 서버를 다시 만들면 지워진다.
 - 서버가 읽는 파라미터 이름은 `monitoring/parameters.json` 하나가 정한다. `start.sh`와 서버 역할이 이 파일을 같이 읽어, 목록 밖 파라미터는 읽지 못한다. 환경을 더하면 이 파일과 `compose.monitoring.yml`, `monitoring/prometheus/prometheus.yml`을 같이 고친다.
+  - 이 파일에 이름을 더하면 `deploy/terraform/monitoring`을 먼저 apply해 읽기 권한을 준 뒤에 `start.sh`를 부른다. 권한이 없으면 `start.sh`가 컨테이너를 건드리기 전에 멈춘다.
 - 환경의 `db-exporter-password`가 없으면 그 환경 exporter는 띄우지 않는다.
+- 저장소에 주소를 적을 수 없는 대상은 서버의 `/etc/meterengine/prometheus-targets`에 써 둔 파일에서 읽는다. 지금은 만들 때마다 주소가 바뀌는 MSK 브로커(`kafka-jmx-<환경>.json`, `kafka-node-<환경>.json`)다.
+  - `start.sh`가 부를 때마다 환경별 `kafka-bootstrap-servers` 파라미터를 읽어 파일을 맞춘다. 파라미터가 있는 환경은 쓰고 없는 환경은 지운다. 서버를 다시 만들어도 `start.sh`가 다시 쓴다.
+  - 그래서 카프카를 켜거나 끈 뒤에는 `start.sh`를 다시 부른다. 측정 환경은 켜고 끌 때마다 `kafka-monitoring-targets.sh`가 같은 파일을 바로 쓰고 지운다.
 
 서버를 만들면 `/meterengine/monitoring/` 아래 비밀 파라미터가 생긴다. Terraform은 값을 쓰기만 하고 읽거나 되돌리지 않는다.
 
@@ -786,10 +859,13 @@ aws ssm start-session --target <서버 ID> \
   - 대시보드마다 맨 위 `환경` 변수로 `env`를 고른다. 관측 시스템 패널은 환경을 가리지 않는다.
   - 앱 자원 대시보드의 `서버` 변수는 고른 환경의 백엔드 서버다. 서버 안 Grafana에서는 백엔드 색이라 특정 색을 고르면 서버와 컨테이너 패널이 빈다.
   - MeterEngine 서비스 개요는 가용성, 요청 수, 5xx 비율, 느린 API와 ALB의 요청, 5xx, 지연, 정상 서버 수다.
-    - ALB 패널은 cloudwatch exporter가 읽는 CloudWatch 지표라 3분쯤 늦다. 앱 서버 대상 그룹만 읽는다.
+    - ALB 패널은 cloudwatch exporter가 읽는 CloudWatch 지표라 3분쯤 늦다. 앱 서버 대상 그룹만 읽는다. 카프카를 켠 환경의 수집 대상 그룹은 `service="ingest"`로 따로 잡힌다.
     - 비용: `cloudwatch/config.yml`의 ALB 지표마다 1분에 한 번씩 CloudWatch를 조회하고, 대상 그룹 지표는 대상 그룹마다 조회한다. 계정의 무료 한도를 넘으면 조회 1,000번에 0.01달러다.
   - MeterEngine API 상세는 uri와 method로 고른 API의 지연과 오류, 그리고 전체 요청의 인증, 호출 제한, 감사 기록 실패 지표다.
   - MeterEngine 이벤트 수집은 수집 API 요청, 이벤트 결과, 저장 실패 지표다. 맨 아래 접힌 DB 왕복 행은 단건 수집이 거치는 DB 왕복별 평균과 p99다.
+  - MeterEngine 카프카 경로는 카프카를 켠 환경의 발행, 저장, 밀린 메시지 수, 브로커 상태, 역할별 서버 수다. 켜지 않은 환경을 고르면 브로커와 서버 그룹 패널이 비고 나머지는 0이다.
+    - 브로커 패널은 `start.sh`가 브로커 주소를 등록한 뒤에 그려진다. 브로커 지표는 60초마다 긁어 4분 넘는 구간의 평균으로 그린다.
+    - 브로커의 JMX 지표는 측정 환경에서 브로커 3대가 시계열 약 2만 5천 개를 냈다. staging과 production은 이 대시보드와 경보가 읽는 것만 남기고 버린다(`monitoring/prometheus/prometheus.yml`의 `kafka-broker`). 새 브로커 지표를 그리려면 그 목록에 먼저 더한다. 측정 환경은 다 남긴다.
   - MeterEngine 청구와 결제는 인보이스 확정, 결제, 토스페이먼츠 지표다.
   - MeterEngine 예약 작업과 웹훅 발송은 예약 작업 실행과 웹훅 전달, 적체 지표다.
   - MeterEngine 앱 자원은 JVM, 톰캣, 커넥션 풀, 서버와 컨테이너 자원, 관측 시스템 상태다.
@@ -825,10 +901,22 @@ GitHub 로그인이 안 되면 공용 모니터링 서버의 9090을 포트 포�
 | 결제 대사 불일치 | 1시간 안에 live 대사 불일치 > 0 | 우리 결제 기록과 토스페이먼츠 거래가 다르다 |
 | 웹훅 전송 실패 | 15분 안에 실패로 끝난 웹훅 > 0. 재시도 상한, 마지막 시도의 선점 만료(`lease_expired`), 첫 시도에 끝나는 막힌 주소(`blocked_address`)를 센다. 도입사가 끄거나 지운 엔드포인트(`endpoint_disabled`)와 test 환경 전송은 뺀다 | 도입사가 이벤트를 받지 못했다 |
 | 웹훅 발송 적체 | 보낼 때가 지난 웹훅 가운데 가장 오래 밀린 것 > 10분, 5분 지속. test 환경 전송은 뺀다 | 발송이 처리량을 따라가지 못해 도입사 통보가 늦다 |
+| 수집 서버 없음 | 역할이 ingest인 응답하는 서버 0대, 2분 지속 | 이벤트 수집 API가 요청을 받지 못한다. 다른 역할의 서버가 살아 있으면 백엔드 헬스체크 실패가 울리지 않아 따로 센다 |
+| API 서버 없음 | 역할이 api이거나 역할 태그가 없는 응답하는 서버 0대, 2분 지속 | 관리 API와 화면이 멈추고 예약 작업이 돌지 않는다. 수집과 저장은 이어진다. 켜고 끄는 동안에는 태그 없는 옛 서버가 이 일을 맡아 같이 센다 |
+| 컨슈머 서버 없음 | 역할이 consumer인 응답하는 서버 0대, 10분 지속 | 수집은 202로 계속 받지만 이벤트가 카프카에 쌓이기만 하고 저장되지 않는다. 컨슈머가 한 대인 staging은 배포로 교체하는 약 5분 동안 0대라 그보다 길게 기다린다 |
+| 이벤트 저장 멈춤 | 밀린 메시지 > 0인데 컨슈머가 끝낸 메시지가 5분 창에 0건, 5분 지속 | 컨슈머 서버는 있지만 저장이 서 있다. DB 장애이거나 컨슈머가 멈췄다 |
+| 이벤트 저장 재시도 지속 | 5분 창에서 저장 재시도 > 0, 10분 지속 | 컨슈머가 같은 묶음을 5분 넘게 다시 시도한다. 파티션 하나만 멈추면 나머지가 흘러 위 경보가 울리지 않아 따로 본다. 1분 안에 끝나는 DB 장애 조치로는 울리지 않는다 |
+| 이벤트 저장 지연 | 접수부터 저장까지 걸린 시간 p99 > 60초, 5분 지속 | 컨슈머가 들어오는 양을 따라가지 못한다. 평소는 1초 안이다 |
+| 이벤트 DLQ 발생 | 15분 안에 DLQ로 간 메시지 > 0 | 저장할 수 없는 메시지가 있었다. 그 이벤트는 DB에 없다 |
+| 이벤트 발행 실패 | 5분 창에서 카프카에 넣지 못한 비율 > 5%, 5분 지속 | 수집 서버가 503으로 돌려주고 있다. 브로커가 느리거나 닿지 않는다 |
+| 카프카 브로커 응답 없음 | 브로커 한 대라도 지표 수집에 응답하지 않거나, 브로커가 모니터링에 등록되지 않음, 10분 지속 | 한 대가 빠져도 수집은 이어지지만 한 대 더 빠지면 멈춘다. 켠 뒤 `start.sh`를 부르지 않았을 때도 울린다 |
+| 카프카 브로커 디스크 부족 | 브로커 데이터 디스크 사용률 > 80%, 10분 지속 | 디스크가 차면 브로커가 쓰기를 멈춘다 |
 
+- 표에서 수집 서버 없음부터 끝까지의 경보는 카프카를 켠 환경에서만 울린다. 켜지 않은 환경은 역할 라벨과 브로커 지표가 없어 조용하다.
+  - 실제 카프카 환경에서 울려 본 적은 없다. 식은 가짜 지표로 돌려 확인했다. staging에서 처음 켤 때 이벤트를 보내면서 컨슈머 서버를 0대로 내려 이벤트 저장 멈춤과 컨슈머 서버 없음이 오는지 본다.
 - 예약 작업 경보는 결제, 웹훅 발송, 청구 제외 통보 작업만 본다. 인보이스 자동 확정은 위의 전용 경보로 따로 본다.
 - 결제 경보는 테스트 모드 결제에서도 울리고 `mode` 라벨로 구분한다.
-- 예약 작업, 인보이스 자동 확정, 결제, 웹훅 경보는 Prometheus 조회가 실패하면 업무 경보 대신 `DatasourceError` 하나로 묶여 온다. 어느 규칙인지는 `rulename` 라벨로 보고, 업무 문제가 아니라 Prometheus와 Grafana 데이터 소스를 확인한다.
+- 예약 작업, 인보이스 자동 확정, 결제, 웹훅, 카프카 경보는 Prometheus 조회가 실패하면 업무 경보 대신 `DatasourceError` 하나로 묶여 온다. 어느 규칙인지는 `rulename` 라벨로 보고, 업무 문제가 아니라 Prometheus와 Grafana 데이터 소스를 확인한다.
 
 - 임계값과 수신처를 바꾸려면 UI가 아니라 `grafana/provisioning/alerting/alerting.yml`을 고쳐 배포한다.
 - 새 경보를 만들었으면 임계값을 낮춰 한 번 발화시켜 Slack 수신을 확인하고 원복한다.

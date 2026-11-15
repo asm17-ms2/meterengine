@@ -8,7 +8,7 @@ import { usePathname } from "next/navigation";
 type FilterOption = { value: string; label: string };
 const ARCHIVE_OPTIONS: FilterOption[] = [{ value: "active", label: "사용 중" }, { value: "archived", label: "보관됨" }, { value: "all", label: "전체" }];
 
-export function ArchiveFilter({ label = "관리 상태", parameterName = "status", defaultValue = "active", options = ARCHIVE_OPTIONS }: { label?: string; parameterName?: string; defaultValue?: string; options?: readonly FilterOption[] }) {
+export function ArchiveFilter({ label = "상태", parameterName = "status", defaultValue = "active", options = ARCHIVE_OPTIONS }: { label?: string; parameterName?: string; defaultValue?: string; options?: readonly FilterOption[] }) {
   const pathname = usePathname();
   const search = useWorkspaceSearch();
   const requestedValues = search.getAll(parameterName);

@@ -44,13 +44,13 @@ const UPDATE_REQUIRED_FIELDS: readonly RequiredBillableMetricField[] = [
 const REQUIRED_MESSAGES: Record<RequiredBillableMetricField, string> = {
   code: "코드를 입력하세요",
   name: "이름을 입력하세요",
-  event_type: "이벤트 타입을 입력하세요",
+  event_type: "이벤트 유형을 입력하세요",
 };
 
 const DIMENSION_PROPERTIES_SEPARATOR = ",";
 
 const ADMIN_REQUIRED_MESSAGE = "전체 관리 권한이 없어 이 작업을 할 수 없어요. 대표관리자에게 권한을 요청하세요.";
-const METRIC_UNKNOWN_MESSAGE = "어느 미터인지 확인하지 못했어요. 목록을 새로 조회한 뒤 다시 시도해 주세요.";
+const METRIC_UNKNOWN_MESSAGE = "어느 미터인지 확인하지 못했어요. 목록을 새로고침한 뒤 다시 시도해 주세요.";
 
 function readField(formData: FormData, field: BillableMetricField): string {
   const raw = formData.get(field);
@@ -97,7 +97,7 @@ function readCalculation(formData: FormData): {
   const unitSize = Number(readField(formData, "unit_size") || "1");
   if (!Number.isFinite(unitSize) || unitSize <= 0) fieldErrors.unit_size = "과금 단위 크기는 0보다 커야 해요";
   const roundingMode = readField(formData, "rounding_mode") || "none";
-  if (!isMetricRoundingMode(roundingMode)) fieldErrors.rounding_mode = "반올림 방식을 선택하세요";
+  if (!isMetricRoundingMode(roundingMode)) fieldErrors.rounding_mode = "끝수 처리 방식을 선택하세요";
   const roundingPrecision = Number(readField(formData, "rounding_precision") || "0");
   if (!Number.isInteger(roundingPrecision) || roundingPrecision < 0 || roundingPrecision > 12) {
     fieldErrors.rounding_precision = "소수 자릿수는 0부터 12 사이의 정수로 입력하세요";
@@ -192,7 +192,7 @@ export async function updateBillableMetricAction(
   }
 
   const version = formData.get("version");
-  if (typeof version !== "string" || !/^\d+$/.test(version) || !Number.isSafeInteger(Number(version))) return { status: "failed", message: "미터 정보를 확인하지 못했어요. 목록을 새로 조회한 뒤 다시 수정하세요." };
+  if (typeof version !== "string" || !/^\d+$/.test(version) || !Number.isSafeInteger(Number(version))) return { status: "failed", message: "미터 정보를 확인하지 못했어요. 목록을 새로고침한 뒤 다시 수정하세요." };
 
   const result = await updateBillableMetric(code, {
     name: values.name,

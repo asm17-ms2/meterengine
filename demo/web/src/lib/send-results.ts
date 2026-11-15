@@ -17,6 +17,7 @@ export type RowResult = {
 
 const RESULT_TAGS: Record<IngestEventBatchResult["result"], RowResult["tag"]> = {
   stored: "NEW",
+  accepted: "NEW",
   duplicate: "DUP",
   rejected: "REJ",
 };

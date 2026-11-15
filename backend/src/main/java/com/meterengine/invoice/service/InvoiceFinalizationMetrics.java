@@ -12,8 +12,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 // 수집 때 DB를 읽지 않도록 기동 때와 매 정시 실행 뒤에 센 값을 낸다. 정시 슬롯을 놓친 인스턴스는 한 시간 늦을 수 있다.
@@ -42,7 +40,6 @@ public class InvoiceFinalizationMetrics {
   }
 
   // 세지 못하면 앞서 센 값을 그대로 둔다. 처음 센 뒤에 등록해 세기 전에는 0으로 보이지 않는다.
-  @EventListener(ApplicationReadyEvent.class)
   public void refresh() {
     Map<String, Long> counts = new HashMap<>();
     try {

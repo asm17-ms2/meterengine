@@ -64,9 +64,10 @@ class SchemaConstraintTest {
         .hasMessageContaining("append-only");
   }
 
+  // 카프카 경로에서는 수집 서버가 받은 시각을 컨슈머가 그대로 넣어야 저장이 늦어도 받은 시각이 밀리지 않는다.
   @Test
-  void received_at은_요청이_값을_보내도_서버가_찍은_시각으로_덮어쓴다() {
-    OffsetDateTime clientSuppliedTime = OffsetDateTime.parse("2020-01-01T00:00:00Z");
+  void received_at은_넣는_쪽이_준_시각을_유지한다() {
+    OffsetDateTime acceptedAt = OffsetDateTime.parse("2026-11-30T14:59:50Z");
     UUID organizationId = insertOrganization();
 
     jdbcTemplate.update(
@@ -77,12 +78,52 @@ class SchemaConstraintTest {
         """,
         organizationId,
         insertCustomer(organizationId, "acme"),
-        clientSuppliedTime);
+        acceptedAt);
 
     OffsetDateTime receivedAt =
         jdbcTemplate.queryForObject(
             "SELECT received_at FROM event WHERE transaction_id = 'tx-1'", OffsetDateTime.class);
-    assertThat(receivedAt).isAfter(clientSuppliedTime);
+    assertThat(receivedAt).isEqualTo(acceptedAt);
+  }
+
+  @Test
+  void received_at을_주지_않으면_DB_시계로_채운다() {
+    UUID organizationId = insertOrganization();
+    OffsetDateTime before =
+        jdbcTemplate.queryForObject("SELECT clock_timestamp()", OffsetDateTime.class);
+
+    jdbcTemplate.update(
+        """
+        INSERT INTO event (organization_id, transaction_id, customer_id, type, occurred_at)
+        VALUES (?, 'tx-1', ?, 'chat_completion', now())
+        """,
+        organizationId,
+        insertCustomer(organizationId, "acme"));
+
+    OffsetDateTime receivedAt =
+        jdbcTemplate.queryForObject(
+            "SELECT received_at FROM event WHERE transaction_id = 'tx-1'", OffsetDateTime.class);
+    assertThat(receivedAt).isAfterOrEqualTo(before);
+  }
+
+  @Test
+  void received_at에_NULL을_주면_DB_시계로_채운다() {
+    UUID organizationId = insertOrganization();
+
+    jdbcTemplate.update(
+        """
+        INSERT INTO event
+          (organization_id, transaction_id, customer_id, type, occurred_at, received_at)
+        VALUES (?, 'tx-1', ?, 'chat_completion', now(), NULL)
+        """,
+        organizationId,
+        insertCustomer(organizationId, "acme"));
+
+    Integer filled =
+        jdbcTemplate.queryForObject(
+            "SELECT count(*) FROM event WHERE transaction_id = 'tx-1' AND received_at IS NOT NULL",
+            Integer.class);
+    assertThat(filled).isEqualTo(1);
   }
 
   // --- 고객 삭제 가드 ---

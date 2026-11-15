@@ -34,6 +34,11 @@ step_row() {
 		"$(time_columns "$(epoch "$file" .metadata.started_at)" "$(epoch "$file" .metadata.ended_at)")"
 }
 
+# 새로 저장했다는 200과, 받아서 발행했다는 카프카 경로의 202를 합친다.
+answered_ok() {
+	json "$1" '(.k6.metrics.events_stored.values.count // 0) + (.k6.metrics.events_accepted.values.count // 0)'
+}
+
 over() {
 	awk -v value="$1" -v limit="$2" 'BEGIN { exit !(value > limit) }'
 }
@@ -55,14 +60,14 @@ main() {
 	log "RUN_ID=$RUN_ID 준비 ${WARMUP_SECONDS}초"
 	run_step warmup "$WARMUP_RATE" "$WARMUP_SECONDS"
 	local stored_total table="$RESULT_DIR/$RUN_ID-steps.tsv" rate file row
-	stored_total=$(json "$RESULT_DIR/$RUN_ID-ingest-warmup.json" '.k6.metrics.events_stored.values.count // 0')
+	stored_total=$(answered_ok "$RESULT_DIR/$RUN_ID-ingest-warmup.json")
 	printf 'rate\tsent_per_s\tdropped\tp50_ms\tp99_ms\terror_rate\tstored_total\tvus\tstart_kst\tend_kst\tgrafana\tgrafana_db\n' >"$table"
 
 	for rate in $RATES; do
 		log "초당 ${rate}건 ${STEP_SECONDS}초"
 		run_step "r$rate" "$rate" "$STEP_SECONDS"
 		file="$RESULT_DIR/$RUN_ID-ingest-r$rate.json"
-		stored_total=$((stored_total + $(json "$file" '.k6.metrics.events_stored.values.count // 0')))
+		stored_total=$((stored_total + $(answered_ok "$file")))
 		row=$(step_row "$file" "$stored_total")
 		printf '%s\n' "$row" >>"$table"
 		if over "$(cut -f6 <<<"$row")" "$ERROR_RATE_LIMIT"; then

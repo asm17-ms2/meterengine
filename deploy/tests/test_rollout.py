@@ -142,6 +142,23 @@ class RolloutTest(unittest.TestCase):
         self.assertIn('"MinHealthyPercentage":100,"MaxHealthyPercentage":200,"SkipMatching":false', start[0])
         self.assertEqual(len(self.calls("elbv2 describe-target-health")), len(TARGET_GROUPS))
 
+    def test_group_without_target_groups_is_refreshed_without_an_alb(self):
+        self.set_state(target_groups=[], healthy={})
+        result = self.rollout()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, "recorded_only=false\nalb_dns_name=\n")
+        start = self.calls("autoscaling start-instance-refresh")
+        self.assertEqual(len(start), 1)
+        self.assertIn('"MinHealthyPercentage":50,"SkipMatching":false', start[0])
+        self.assertEqual(self.calls("elbv2"), [])
+
+    def test_later_group_restores_the_version_read_before_the_first_group(self):
+        self.set_state(parameter=SHA, statuses={"r-mine": ["Failed"], "r-recovery": ["Successful"]})
+        result = subprocess.run(["bash", str(self.script), GROUP, PARAMETER, SHA], env=dict(self.env, ROLLOUT_PREVIOUS=PREVIOUS),
+                                text=True, capture_output=True, timeout=30)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.state()["writes"], [SHA, PREVIOUS])
+
     def test_minimum_zero_only_records_the_version(self):
         self.set_state(min=0, desired=0)
         result = self.rollout()

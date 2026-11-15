@@ -169,7 +169,7 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
       const form = page.getByRole("form", { name: "조회 조건", exact: true });
       const advanced = await expandAdvanced(page);
       await form.getByRole("searchbox", { name: "이름, 외부 ID, 청구 이메일로 찾기", exact: true }).fill(needle);
-      await form.getByRole("combobox", { name: "관리 상태", exact: true }).selectOption("all");
+      await form.getByRole("combobox", { name: "상태", exact: true }).selectOption("all");
       await form.getByRole("combobox", { name: "표시 건수", exact: true }).selectOption("50");
       await advanced.locator("summary").click();
       await expect(form.getByRole("searchbox", { name: "이름, 외부 ID, 청구 이메일로 찾기", exact: true })).toHaveValue(needle);
@@ -195,13 +195,13 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
     await dialog.getByLabel("계산 방식", { exact: true }).selectOption("graduated");
     await dialog.getByLabel("구간 1 과금 수량 1당 단가 (원)", { exact: true }).fill("10");
     await dialog.getByLabel("구간 2 과금 수량 1당 단가 (원)", { exact: true }).fill("10");
-    const upper = dialog.getByLabel("구간 1 끝 수량", { exact: true });
+    const upper = dialog.getByLabel("구간 1 상한", { exact: true });
     await upper.fill("0");
     await dialog.getByRole("button", { name: "단가 버전 등록", exact: true }).click();
     await expect(upper).toBeFocused();
     await expect(upper).toHaveAttribute("aria-invalid", "true");
     const describedBy = await upper.getAttribute("aria-describedby");
-    const fieldError = dialog.getByText("끝 수량은 0보다 크고 앞 구간보다 커야 해요.", { exact: true });
+    const fieldError = dialog.getByText("구간 상한은 0보다 크고 앞 구간의 상한보다 커야 해요.", { exact: true });
     await expect(fieldError).toHaveAttribute("id", describedBy!);
     await upper.fill("100");
     await expect(upper).toHaveAttribute("aria-invalid", "false");

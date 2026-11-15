@@ -30,7 +30,7 @@ test("overview keeps the selected month and shows unresolved invoices from every
   await login(page, "member@contract.local", "/overview");
   const currentMonth = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit" }).format(new Date());
   await expect(page.getByLabel("청구 월", { exact: true })).toHaveValue(currentMonth);
-  const unresolved = page.locator("section.workspace-panel").filter({ has: page.getByRole("heading", { name: "미해결 결제", exact: true }) });
+  const unresolved = page.locator("section.workspace-panel").filter({ has: page.getByRole("heading", { name: "처리할 결제", exact: true }) });
   await expect(unresolved).toBeVisible();
   await expect(unresolved).toContainText("2026-09");
   const href = await unresolved.getByRole("link", { name: "지난달 실패 고객", exact: true }).getAttribute("href");
@@ -39,7 +39,7 @@ test("overview keeps the selected month and shows unresolved invoices from every
   expect(target.searchParams.get("organization_id")).toBe(ORGANIZATION_ID);
   // 직접 쓴 월은 Enter 없이 조회를 눌러도 반영한다.
   await page.getByLabel("청구 월", { exact: true }).fill("2026-05");
-  await page.getByRole("button", { name: "조회", exact: true }).click();
+  await page.getByRole("button", { name: "조건 적용", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("2026년 5월 개요");
   await expect(unresolved).toContainText("지난달 실패 고객");
   await expect(page.getByText("선택한 달에 확인할 항목이 없어요.", { exact: true })).toBeVisible();
@@ -55,7 +55,7 @@ test("overview keeps the selected month and shows unresolved invoices from every
 test("the overview setup step says which supplier and payment settings are missing", async ({ page }) => {
   await login(page, "member@contract.local", "/overview");
   const step = page.locator(".setup-list li").filter({ has: page.getByText("공급자와 결제 설정", { exact: true }) });
-  await expect(step.getByText("공급자 정보 미입력, 토스페이먼츠 테스트 키 미등록. 현재 결제 모드: 테스트 결제", { exact: true })).toBeVisible();
+  await expect(step.getByText("공급자 정보 미입력, 토스페이먼츠 테스트 키 미등록. 현재 업무 환경: 테스트 환경", { exact: true })).toBeVisible();
 });
 
 test("public health, gated routes, expired session and return URL", async ({ page, request }) => {
@@ -94,7 +94,7 @@ test("signup sends displayed consent versions without stale Bearer or a password
   expect(await page.evaluate(() => localStorage.length + sessionStorage.length)).toBe(0);
   expect(await page.content()).not.toContain(LOGIN_PASSWORD);
   const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
-  expect(calls).toEqual([{ path: "/v1/signups", method: "POST", hasAuthorization: false, hasOrganizationHeader: false, clientIp: "127.0.0.1", consents: [{ document: "terms_of_service", document_version: "2026-11-11" }, { document: "privacy_policy", document_version: "2026-11-11" }] }]);
+  expect(calls).toEqual([{ path: "/v1/signups", method: "POST", hasAuthorization: false, hasOrganizationHeader: false, clientIp: "127.0.0.1", consents: [{ document: "terms_of_service", document_version: "2026-11-15" }, { document: "privacy_policy", document_version: "2026-11-15" }] }]);
 });
 
 test("signup shows the captcha outage message when the backend answers after the default 5 second limit", async ({ page, request }) => {
@@ -156,7 +156,7 @@ test("tenant actions recheck session after revocation, independently of route la
   await page.getByRole("dialog").getByLabel(/^고객명/).fill("보내면 안 되는 고객");
   const cookie = (await page.context().cookies()).find(cookie => cookie.name === "me_session")!;
   await request.post(`${FIXTURE_URL}/__control`, { data: { revoke: cookie.value } });
-  await page.getByRole("dialog").getByRole("button", { name: "고객 저장", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "등록", exact: true }).click();
   await expect(page).toHaveURL(/\/login\?reason=expired(&returnTo=[^&]+)?$/);
   const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
   expect(calls.some((call: { path: string; method: string }) => call.path === "/v1/customers" && call.method === "POST")).toBe(false);
@@ -193,7 +193,7 @@ test("an issued secret is shown first and closing before copying asks for confir
   await expect.poll(() => isAsked).toBe(true);
   await expect(dialog).toBeVisible();
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
-  await dialog.getByRole("button", { name: "비밀값 복사", exact: true }).click();
+  await dialog.getByRole("button", { name: "API 키 복사", exact: true }).click();
   await expect(dialog.getByRole("status")).toHaveText("복사했어요.");
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
@@ -205,7 +205,7 @@ test("a server action after the session cookie disappears goes to login instead 
   await page.getByRole("button", { name: "고객 등록", exact: true }).first().click();
   await page.getByRole("dialog").getByLabel(/^고객명/).fill("보내면 안 되는 고객");
   await page.context().clearCookies();
-  await page.getByRole("dialog").getByRole("button", { name: /^(?:고객 )?저장$/, exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "등록", exact: true }).click();
   await expect(page).toHaveURL(/\/login\?reason=expired(&returnTo=[^&]+)?$/);
   await expect(page.getByText("화면을 표시하지 못했어요")).toHaveCount(0);
   const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
@@ -240,7 +240,7 @@ async function openNewCustomer(page: Page, name: string) {
   await page.getByRole("button", { name: "고객 등록", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel(/^고객명/).fill(name);
-  await dialog.getByRole("button", { name: "고객 저장", exact: true }).click();
+  await dialog.getByRole("button", { name: "등록", exact: true }).click();
   await expect(dialog).toHaveCount(0);
   await page.getByRole("link", { name, exact: true }).click();
   await expect(page.getByRole("heading", { name, level: 1 })).toBeVisible();
@@ -259,7 +259,7 @@ test("the customer archive button sits with the other customer actions, not in t
   await openNewCustomer(page, "배치를 볼 고객");
   const actionRow = page.locator(".workspace-actions").filter({ has: page.getByRole("button", { name: "고객 정보 수정", exact: true }) });
   await expect(actionRow.getByRole("button", { name: "고객 보관", exact: true })).toBeVisible();
-  const navigationRow = page.locator(".workspace-actions").filter({ has: page.getByRole("link", { name: "수집 로그 확인", exact: true }) });
+  const navigationRow = page.locator(".workspace-actions").filter({ has: page.getByRole("link", { name: "수집 이벤트 확인", exact: true }) });
   await expect(navigationRow.getByRole("button", { name: "고객 보관", exact: true })).toHaveCount(0);
 });
 
@@ -268,7 +268,7 @@ test("a customer edit that lost a version race offers to load the latest values 
   await page.getByRole("button", { name: "고객 등록", exact: true }).click();
   let dialog = page.getByRole("dialog");
   await dialog.getByLabel(/^고객명/).fill("처음 이름");
-  await dialog.getByRole("button", { name: "고객 저장", exact: true }).click();
+  await dialog.getByRole("button", { name: "등록", exact: true }).click();
   await expect(dialog).toHaveCount(0);
   await page.getByRole("link", { name: "처음 이름", exact: true }).click();
   await page.getByRole("button", { name: "고객 정보 수정", exact: true }).click();
@@ -291,7 +291,7 @@ test("restoring a customer returns focus to the same button, now offering to arc
   await page.getByRole("button", { name: "고객 등록", exact: true }).click();
   const dialog = page.getByRole("dialog");
   await dialog.getByLabel(/^고객명/).fill("복원할 고객");
-  await dialog.getByRole("button", { name: "고객 저장", exact: true }).click();
+  await dialog.getByRole("button", { name: "등록", exact: true }).click();
   await expect(dialog).toHaveCount(0);
   await request.post(`${FIXTURE_URL}/__control`, { data: { archiveCustomers: true } });
   await page.getByRole("link", { name: "복원할 고객", exact: true }).click();
@@ -384,14 +384,14 @@ test("a forbidden workspace load says so without a retry", async ({ page, reques
 test("webhook delivery history names event types, delivery states and failure reasons", async ({ page }) => {
   await login(page, "member@contract.local", `/integrations/${WEBHOOK_ENDPOINT_ID}`);
   const table = page.locator(".workspace-desktop-table");
-  for (const label of ["결제 실패", "시험 통보", "재시도 대기", "발송 실패", "연결 실패", "허용되지 않는 주소"]) await expect(table.getByText(label, { exact: true })).toBeVisible();
+  for (const label of ["결제 실패", "테스트 웹훅", "재시도 대기", "발송 실패", "연결 실패", "허용되지 않는 주소"]) await expect(table.getByText(label, { exact: true })).toBeVisible();
   for (const raw of ["payment_failed", "webhook_test", "connection_error", "blocked_address", "결과 확인 중"]) await expect(table.getByText(raw, { exact: true })).toHaveCount(0);
 });
 
 test("saving a webhook endpoint keeps its existing description", async ({ page, request }) => {
   await login(page, "member@contract.local", `/integrations/${WEBHOOK_ENDPOINT_ID}`);
-  await page.getByRole("button", { name: "수신 주소와 통보 수정", exact: true }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "수신 주소와 통보 수정", exact: true }).click();
+  await page.getByRole("button", { name: "웹훅 설정 수정", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "웹훅 설정 수정", exact: true }).click();
   await expect.poll(async () => {
     const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
     const update = calls.find((call: { path: string; method: string }) => call.method === "PUT" && call.path === `/v1/webhook-endpoints/${WEBHOOK_ENDPOINT_ID}`);
@@ -561,7 +561,7 @@ test("copy results are announced through a status region that is already present
   await expect(dialog.locator(".secret-result")).toBeVisible();
   await expect(dialog.getByRole("status")).toHaveCount(1);
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
-  await dialog.getByRole("button", { name: "비밀값 복사", exact: true }).click();
+  await dialog.getByRole("button", { name: "API 키 복사", exact: true }).click();
   await expect(dialog.getByRole("status")).toHaveText("복사했어요.");
 });
 
@@ -679,16 +679,16 @@ test("an API key without a rate limit takes the test environment limit, and is u
   const table = page.locator(".workspace-desktop-table");
   await expect(table.getByRole("row", { name: /한도 없는 키/ })).toContainText("테스트 환경 한도");
   await expect(table.getByRole("row", { name: /한도 없는 키/ })).not.toContainText("무제한");
-  // 키는 발급한 환경에만 있으므로 실제 환경에서 따로 발급해 본다.
+  // 키는 발급한 환경에만 있으므로 라이브 환경에서 따로 발급해 본다.
   await page.goto(`/integrations?organization_id=${ORGANIZATION_ID}&environment=live`);
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await expect(table.getByRole("row", { name: /한도 없는 키/ })).toHaveCount(0);
   await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
-  await dialog.getByLabel(/^키 이름/).fill("실제 환경 한도 없는 키");
+  await dialog.getByLabel(/^키 이름/).fill("라이브 환경 한도 없는 키");
   await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
   await expect(dialog.locator(".secret-result")).toBeVisible();
   await page.reload();
-  await expect(table.getByRole("row", { name: /실제 환경 한도 없는 키/ })).toContainText("무제한");
+  await expect(table.getByRole("row", { name: /라이브 환경 한도 없는 키/ })).toContainText("무제한");
 });
 
 test("the sign-in frame starts its headings with the page h1", async ({ page }) => {
@@ -793,7 +793,7 @@ test("the operator organization list shows the signup time in the console KST fo
   await expect(page).toHaveURL(/\/admin\/organizations/);
   await request.post(`${FIXTURE_URL}/__control`, { data: { bulk: true } });
   await page.goto("/admin/organizations?status=all");
-  await expect(page.getByText(/^가입일 /).first()).toHaveText(/^가입일 \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} KST \/ 실제 환경 (사용 중|승인 전)$/);
+  await expect(page.getByText(/^가입일 /).first()).toHaveText(/^가입일 \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} KST \/ 라이브 환경 (사용 중|승인 전)$/);
 });
 
 test("the operator organization list asks the backend for the selected status", async ({ page, request }) => {
@@ -860,7 +860,7 @@ test("operator actions recheck current role after demotion", async ({ page, requ
   await page.getByRole("article").filter({ hasText: "other@contract.local" }).getByRole("button", { name: "플랫폼 운영자로 변경", exact: true }).click();
   const cookie = (await page.context().cookies()).find(cookie => cookie.name === "me_session")!;
   await request.post(`${FIXTURE_URL}/__control`, { data: { demote: cookie.value } });
-  await page.getByRole("button", { name: "플랫폼 운영자로 변경 확정" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "플랫폼 운영자로 변경", exact: true }).click();
   await expect(page).toHaveURL(/\/organizations$/);
   const calls = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
   expect(calls.some((call: { path: string; method: string }) => call.path.endsWith("/role") && call.method === "PUT")).toBe(false);
@@ -922,7 +922,7 @@ test("server action replay on a public route cannot create a customer without a 
   await page.getByRole("button", { name: "고객 등록", exact: true }).first().click();
   await page.getByRole("dialog").getByLabel(/^고객명/).fill("액션 경계 확인");
   const actionRequest = page.waitForRequest(req => req.method() === "POST" && Boolean(req.headers()["next-action"]));
-  await page.getByRole("dialog").getByRole("button", { name: "고객 저장", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "등록", exact: true }).click();
   const captured = await actionRequest;
   await expect(page.getByRole("dialog")).toHaveCount(0);
   const before = await (await request.get(`${FIXTURE_URL}/__requests`)).json();
@@ -996,13 +996,13 @@ test("the root error page shows the error digest so a report can be matched with
 });
 
 for (const viewport of [{ width: 390, height: 844 }, { width: 900, height: 900 }]) {
-  test(`the header height variable matches the real header at ${viewport.width}px`, async ({ page }) => {
+  test(`the header height variable matches the sticky band and header at ${viewport.width}px`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await login(page);
     await expectTenantUrl(page, "/customers");
     await expect(page.locator(".workspace-header")).toBeVisible();
     await expect.poll(() => page.evaluate(() => {
-      const header = document.querySelector(".workspace-header")!.getBoundingClientRect().height;
+      const header = document.querySelector(".workspace-top")!.getBoundingClientRect().height;
       const variable = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--workspace-header-height"));
       return Math.abs(header - variable) <= 1;
     })).toBe(true);
@@ -1015,12 +1015,12 @@ test("on a phone the sticky header keeps only the brand and environment and the 
   await expectTenantUrl(page, "/customers");
   const header = page.locator(".workspace-header");
   await expect(header.getByRole("combobox", { name: "업무 환경" })).toBeVisible();
-  for (const name of ["권한 새로 조회", "로그아웃"]) await expect(header.getByRole("button", { name, exact: true })).toBeHidden();
+  await expect(header.getByRole("button", { name: "로그아웃", exact: true })).toBeHidden();
   expect((await header.boundingBox())!.height).toBeLessThan(130);
   await page.getByRole("button", { name: "메뉴 열기" }).click();
   const drawer = page.getByRole("dialog");
   await expect(drawer.getByText("전체 관리", { exact: true })).toBeVisible();
-  for (const name of ["권한 새로 조회", "로그아웃"]) await expect(drawer.getByRole("button", { name, exact: true })).toBeVisible();
+  await expect(drawer.getByRole("button", { name: "로그아웃", exact: true })).toBeVisible();
 });
 
 test("between phone and desktop widths the header still leaves out the user name", async ({ page }) => {
@@ -1031,15 +1031,13 @@ test("between phone and desktop widths the header still leaves out the user name
   await expect(page.locator(".workspace-header").getByRole("button", { name: "로그아웃", exact: true })).toBeVisible();
 });
 
-test("the header shows the access scope apart from a refresh button that confirms when it finishes", async ({ page }) => {
+// 권한은 새로고침하면 다시 읽으므로 따로 다시 조회하는 버튼을 두지 않는다(결정 17).
+test("the header shows the access scope beside a text logout button and no permission refresh button", async ({ page }) => {
   await login(page);
   await expectTenantUrl(page, "/customers");
   await expect(page.locator(".workspace-scope .ant-tag")).toHaveText("전체 관리");
-  const refresh = page.getByRole("button", { name: "권한 새로 조회", exact: true });
   await expect(page.locator(".workspace-header").getByRole("button", { name: "로그아웃", exact: true })).toHaveClass(/ant-btn-text/);
-  await expect(refresh).toHaveClass(/ant-btn-text/);
-  await refresh.click();
-  await expect(page.getByText("권한을 다시 조회했어요.", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "권한 새로 조회", exact: true })).toHaveCount(0);
 });
 
 test("an unchecked antd checkbox has a visible border", async ({ page }) => {
@@ -1093,14 +1091,24 @@ test("the console no longer carries a demo guide", async ({ page }) => {
   await expect(page.getByRole("region", { name: "시연 안내" })).toHaveCount(0);
 });
 
-test("the environment notice says what is separate and what is shared, and only the live environment draws a warning box", async ({ page }) => {
+// 본문 안내 문단 대신 콘솔 맨 위 띠가 지금 환경을 말하고, 띠의 버튼은 머리의 환경 선택과 같은 확인 창을 연다.
+test("the environment band names the current environment, offers a switch, and turns red only in the live environment", async ({ page }) => {
   await login(page);
   await expectTenantUrl(page, "/customers");
-  const notice = page.locator(".environment-notice");
-  await expect(notice).toHaveText("테스트 환경에서는 고객부터 수납까지 실제 환경과 따로 관리해요. 사용자와 업무 권한은 두 환경에서 같아요.");
-  await expect(notice).not.toHaveClass(/environment-notice-live/);
+  await expect(page.locator(".environment-notice")).toHaveCount(0);
+  const band = page.getByRole("region", { name: "현재 업무 환경" });
+  await expect(band).toHaveText(/^테스트 환경이에요\. 실제 결제와 청구가 일어나지 않아요\.\s*환경 바꾸기$/);
+  await expect(band).toHaveClass(/environment-band-test/);
   await expect(page.locator(".workspace-environment .ant-select")).toContainText("테스트 환경");
   await expect(page).toHaveURL(url => !url.searchParams.has("environment"));
+  await band.getByRole("button", { name: "환경 바꾸기", exact: true }).click();
+  const confirm = page.getByRole("dialog");
+  await expect(confirm).toContainText("라이브 환경으로 전환할까요?");
+  await confirm.getByRole("button", { name: "전환", exact: true }).click();
+  await expect.poll(() => new URL(page.url()).searchParams.get("environment")).toBe("live");
+  await expect(band).toHaveText(/^라이브 환경이에요\. 고객에게 실제로 청구하고 결제해요\.\s*환경 바꾸기$/);
+  await expect(band).toHaveClass(/environment-band-live/);
+  await expect(band).not.toHaveClass(/environment-band-test/);
 });
 
 test("the login side panel title is smaller than the task title", async ({ page }) => {
@@ -1185,22 +1193,23 @@ test("a new organization works in the test environment and is sent to the applic
   await login(page, "locked@contract.local", "/customers");
   await expect(page).toHaveURL(url => url.pathname === "/customers" && url.searchParams.get("organization_id") === LOCKED_ORGANIZATION_ID);
   await expect(page.getByRole("heading", { level: 1, name: "고객", exact: true })).toBeVisible();
-  await expect(page.locator(".environment-notice")).toContainText("실제 환경은 이용 신청이 승인되면 쓸 수 있어요.");
+  await expect(page.getByRole("region", { name: "현재 업무 환경" })).toContainText("테스트 환경이에요.");
   await page.getByRole("combobox", { name: "업무 환경", exact: true }).click();
-  await expect(page.locator(".ant-select-item-option")).toHaveText(["테스트 환경", "실제 환경 (승인 전)"]);
-  await page.locator(".ant-select-item-option", { hasText: "실제 환경" }).click();
+  await expect(page.locator(".ant-select-item-option")).toHaveText(["테스트 환경", "라이브 환경 (승인 전)"]);
+  await page.locator(".ant-select-item-option", { hasText: "라이브 환경" }).click();
   // 신청 화면으로 가면 입력하던 내용이 사라지므로 먼저 묻는다.
   const dialog = page.getByRole("dialog");
-  await expect(dialog).toContainText("실제 환경 이용 신청 화면으로 갈까요?");
-  await expect(dialog).toContainText("실제 환경은 이용 신청이 승인되면 쓸 수 있어요. 이 화면에서 입력하거나 고른 내용은 지워져요.");
+  await expect(dialog).toContainText("라이브 환경 이용 신청 화면으로 갈까요?");
+  await expect(dialog).toContainText("라이브 환경은 이용 신청이 승인되면 쓸 수 있어요. 이 화면에서 입력하거나 고른 내용은 지워져요.");
   await dialog.getByRole("button", { name: "취소", exact: true }).click();
   await expect(page).toHaveURL(url => url.pathname === "/customers");
-  await page.getByRole("combobox", { name: "업무 환경", exact: true }).click();
-  await page.locator(".ant-select-item-option", { hasText: "실제 환경" }).click();
+  // 띠의 환경 바꾸기도 잠긴 라이브 환경 대신 같은 신청 확인 창을 연다.
+  await page.getByRole("region", { name: "현재 업무 환경" }).getByRole("button", { name: "환경 바꾸기", exact: true }).click();
+  await expect(page.getByRole("dialog")).toContainText("라이브 환경 이용 신청 화면으로 갈까요?");
   await page.getByRole("dialog").getByRole("button", { name: "이동", exact: true }).click();
   await expect(page).toHaveURL(url => url.pathname === "/live-environment" && !url.searchParams.has("environment"));
-  await expect(page.getByRole("heading", { level: 1, name: "실제 환경 이용 신청", exact: true })).toBeVisible();
-  // 주소에 실제 환경을 직접 적어도 화면을 열지 않는다.
+  await expect(page.getByRole("heading", { level: 1, name: "라이브 환경 이용 신청", exact: true })).toBeVisible();
+  // 주소에 라이브 환경을 직접 적어도 화면을 열지 않는다.
   await page.goto(`/customers?organization_id=${LOCKED_ORGANIZATION_ID}&environment=live`);
   await expect(page).toHaveURL(url => url.pathname === "/live-environment" && !url.searchParams.has("environment"));
   await expect(page.getByText("운영자", { exact: false })).toHaveCount(0);
@@ -1208,18 +1217,18 @@ test("a new organization works in the test environment and is sent to the applic
 
 test("the application is rejected beside the field at once and waits for review after it passes", async ({ page, request }) => {
   await login(page, "locked@contract.local", "/live-environment");
-  await expect(page.getByRole("heading", { level: 2, name: "실제 환경은 이용 신청이 승인되면 쓸 수 있어요", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "라이브 환경은 이용 신청이 승인되면 쓸 수 있어요", exact: true })).toBeVisible();
   const form = page.locator("form.workspace-form");
   await form.getByLabel(/^사업자등록번호/).fill("000-00-00000");
   await form.getByLabel(/^토스페이먼츠 상점아이디/).fill("contract-mid");
-  await form.getByLabel(/^실결제 클라이언트 키/).fill("live_ck_contract");
-  await form.getByLabel(/^실결제 시크릿 키/).fill("live_sk_contract");
+  await form.getByLabel(/^라이브 클라이언트 키/).fill("live_ck_contract");
+  await form.getByLabel(/^라이브 시크릿 키/).fill("live_sk_contract");
   await form.getByRole("button", { name: "이용 신청", exact: true }).click();
   await expect(form.locator(".field-error")).toHaveText("국세청에 등록되지 않은 사업자등록번호입니다");
   await expect(form.getByLabel(/^사업자등록번호/)).toHaveAttribute("aria-invalid", "true");
   await expect(form.getByLabel(/^토스페이먼츠 상점아이디/)).toHaveValue("contract-mid");
   await form.getByLabel(/^사업자등록번호/).fill("123-45-67891");
-  await form.getByLabel(/^실결제 시크릿 키/).fill("live_sk_contract");
+  await form.getByLabel(/^라이브 시크릿 키/).fill("live_sk_contract");
   await form.getByRole("button", { name: "이용 신청", exact: true }).click();
   await expect(page.getByRole("heading", { level: 2, name: "신청을 받았어요", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "이용 신청", exact: true })).toHaveCount(0);
@@ -1235,17 +1244,17 @@ test("the operator rejects with a reason the organization reads, then approves t
   await login(page, "operator@contract.local", "/admin/live-environment-applications");
   await expect(page).toHaveURL(/\/admin\/live-environment-applications$/);
   const card = page.getByRole("article").filter({ hasText: "새로 가입한 조직" });
-  await expect(card).toContainText("자동 확인 못 함");
+  await expect(card).toContainText("자동으로 확인하지 못함");
   await expect(card).toContainText("승인하기 전에 사업자등록번호를 직접 확인하세요.");
   await card.getByRole("button", { name: "신청 거절", exact: true }).click();
   const reject = page.getByRole("dialog", { name: "신청 거절 확인" });
   // 사유를 비우면 브라우저 말풍선이 아니라 칸 아래에서 알리고 요청을 보내지 않는다.
-  await reject.getByRole("button", { name: "신청 거절 확정", exact: true }).click();
+  await reject.getByRole("button", { name: "거절", exact: true }).click();
   await expect(reject.getByLabel(/^거절 사유/)).toHaveAttribute("aria-invalid", "true");
   await expect(reject.getByLabel(/^거절 사유/)).toHaveAccessibleDescription(/거절 사유를 입력하세요\.$/);
   await expect(reject.getByLabel(/^거절 사유/)).toBeFocused();
   await reject.getByLabel(/^거절 사유/).fill("상점아이디가 계약서와 달라요.");
-  await reject.getByRole("button", { name: "신청 거절 확정", exact: true }).click();
+  await reject.getByRole("button", { name: "거절", exact: true }).click();
   // 검토를 마친 신청은 검토 대기 목록에서 빠지고 결과는 알림으로 남는다.
   await expect(page.getByText("신청을 거절했어요.", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { level: 2, name: "검토할 신청이 없어요", exact: true })).toBeVisible();
@@ -1256,24 +1265,29 @@ test("the operator rejects with a reason the organization reads, then approves t
   await expect(member.getByRole("heading", { level: 2, name: "신청이 승인되지 않았어요", exact: true })).toBeVisible();
   await expect(member.getByText("사유: 상점아이디가 계약서와 달라요.", { exact: true })).toBeVisible();
   await expect(member.getByRole("button", { name: "이용 신청", exact: true })).toBeVisible();
-  // 승인되기 전에 연 화면이라 콘솔 틀은 실제 환경이 잠긴 것으로 알고 있다.
+  // 승인되기 전에 연 화면이라 콘솔 틀은 라이브 환경이 잠긴 것으로 알고 있다.
   await member.goto(`/customers?organization_id=${LOCKED_ORGANIZATION_ID}`);
-  await expect(member.locator(".environment-notice")).toContainText("실제 환경은 이용 신청이 승인되면 쓸 수 있어요.");
+  await member.getByRole("combobox", { name: "업무 환경", exact: true }).click();
+  await expect(member.locator(".ant-select-item-option")).toHaveText(["테스트 환경", "라이브 환경 (승인 전)"]);
+  await member.keyboard.press("Escape");
 
   await request.post(`${FIXTURE_URL}/__control`, { data: { liveEnvironmentApplications: [{ ...LIVE_APPLICATION, id: "bbbbbbbb-0000-4000-8000-000000000002", business_status: "operating", tax_type: "부가가치세 일반과세자" }] } });
   await page.goto("/admin/live-environment-applications");
   await page.getByRole("article").filter({ hasText: "새로 가입한 조직" }).getByRole("button", { name: "이용 승인", exact: true }).click();
   const approve = page.getByRole("dialog", { name: "이용 승인 확인" });
-  await approve.getByRole("button", { name: "이용 승인 확정", exact: true }).click();
-  await expect(page.getByText("실제 환경 이용을 승인했어요.", { exact: true })).toBeVisible();
+  await approve.getByRole("button", { name: "승인", exact: true }).click();
+  await expect(page.getByText("라이브 환경 이용을 승인했어요.", { exact: true })).toBeVisible();
   await page.getByRole("link", { name: "승인", exact: true }).click();
   await expect(page.getByRole("article").filter({ hasText: "새로 가입한 조직" })).toContainText("실제 결제가 아직 없어요. 첫 실제 결제 때 확인해요.");
 
-  // 새로 고치지 않고 화면만 옮겨도 틀이 열린 것을 알아 실제 환경으로 바꿀 수 있다.
-  await member.locator(".environment-notice").getByRole("link", { name: "실제 환경 이용 신청", exact: true }).click();
-  await expect(member.getByRole("heading", { level: 2, name: "실제 환경을 쓰고 있어요", exact: true })).toBeVisible();
+  // 새로 고치지 않고 화면만 옮겨도 틀이 열린 것을 알아 라이브 환경으로 바꿀 수 있다.
+  await member.getByRole("region", { name: "현재 업무 환경" }).getByRole("button", { name: "환경 바꾸기", exact: true }).click();
+  await member.getByRole("dialog").getByRole("button", { name: "이동", exact: true }).click();
+  await expect(member.getByRole("heading", { level: 2, name: "라이브 환경을 쓰고 있어요", exact: true })).toBeVisible();
   await member.getByRole("combobox", { name: "업무 환경", exact: true }).click();
-  await expect(member.locator(".ant-select-item-option")).toHaveText(["테스트 환경", "실제 환경"]);
-  await expect(member.locator(".environment-notice")).not.toContainText("이용 신청");
+  await expect(member.locator(".ant-select-item-option")).toHaveText(["테스트 환경", "라이브 환경"]);
+  await member.keyboard.press("Escape");
+  await member.getByRole("region", { name: "현재 업무 환경" }).getByRole("button", { name: "환경 바꾸기", exact: true }).click();
+  await expect(member.getByRole("dialog")).toContainText("라이브 환경으로 전환할까요?");
   await memberContext.close();
 });
