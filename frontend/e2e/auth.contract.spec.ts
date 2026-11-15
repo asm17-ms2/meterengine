@@ -1002,9 +1002,11 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 900, height: 900 }
     await expectTenantUrl(page, "/customers");
     await expect(page.locator(".workspace-header")).toBeVisible();
     await expect.poll(() => page.evaluate(() => {
-      const header = document.querySelector(".workspace-top")!.getBoundingClientRect().height;
+      // 묶음 상자는 그리드 줄에 맞춰 눌릴 수 있어 띠와 헤더의 높이를 더해 잰다
+      const header = [...document.querySelector(".workspace-top")!.children].reduce((sum, child) => sum + child.getBoundingClientRect().height, 0);
       const variable = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--workspace-header-height"));
-      return Math.abs(header - variable) <= 1;
+      const mainTop = document.querySelector(".workspace-main")!.getBoundingClientRect().top;
+      return Math.abs(header - variable) <= 1 && mainTop >= header - 1;
     })).toBe(true);
   });
 }
@@ -1097,7 +1099,12 @@ test("the environment band names the current environment, offers a switch, and t
   await expectTenantUrl(page, "/customers");
   await expect(page.locator(".environment-notice")).toHaveCount(0);
   const band = page.getByRole("region", { name: "현재 업무 환경" });
-  await expect(band).toHaveText(/^테스트 환경이에요\. 실제 결제와 청구가 일어나지 않아요\.\s*환경 바꾸기$/);
+  // 흐르는 띠는 문구를 되풀이해 그리지만 화면 낭독기에는 한 번만 읽힌다
+  await expect(band).toMatchAriaSnapshot(`
+    - region "현재 업무 환경":
+      - paragraph: 테스트 환경이에요. 실제 결제와 청구가 일어나지 않아요.
+      - button "환경 바꾸기"
+  `);
   await expect(band).toHaveClass(/environment-band-test/);
   await expect(page.locator(".workspace-environment .ant-select")).toContainText("테스트 환경");
   await expect(page).toHaveURL(url => !url.searchParams.has("environment"));
@@ -1106,7 +1113,11 @@ test("the environment band names the current environment, offers a switch, and t
   await expect(confirm).toContainText("라이브 환경으로 전환할까요?");
   await confirm.getByRole("button", { name: "전환", exact: true }).click();
   await expect.poll(() => new URL(page.url()).searchParams.get("environment")).toBe("live");
-  await expect(band).toHaveText(/^라이브 환경이에요\. 고객에게 실제로 청구하고 결제해요\.\s*환경 바꾸기$/);
+  await expect(band).toMatchAriaSnapshot(`
+    - region "현재 업무 환경":
+      - paragraph: 라이브 환경이에요. 고객에게 실제로 청구하고 결제해요.
+      - button "환경 바꾸기"
+  `);
   await expect(band).toHaveClass(/environment-band-live/);
   await expect(band).not.toHaveClass(/environment-band-test/);
 });
