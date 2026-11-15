@@ -49,7 +49,7 @@ description: "가이드 용어를 콘솔 화면 표기, API 값과 나란히 정
 | 끝 네 글자 | 끝 네 글자 | `last_four` | 키를 알아보는 데 쓰는 원문의 끝 네 글자 | [API 키 발급과 첫 호출](/authentication/api-keys) |
 | 키 상태 | 사용 중, 폐기됨, 만료됨 | `active`, `revoked`, `expired` | API 키를 지금 쓸 수 있는지 나타내는 상태 | [API 키 발급과 첫 호출](/authentication/api-keys) |
 | 분당 요청 한도 | 분당 요청 한도, 목록 열 '분당 한도'(빈 값은 '무제한' 또는 '테스트 환경 한도') | `rate_limit_per_minute` | 키마다 발급할 때 정하는 분당 요청 수 상한. 비우면 라이브 키는 제한이 없고, 테스트 키는 늘 테스트 환경 한도를 넘지 못합니다 | [요청 한도와 429](/api-basics/rate-limits) |
-| API 권한 | API 권한 | `scopes` | API 키에 준 권한. 값은 `read`, `ingest`, `admin`입니다 | [화면과 API, 권한](/authentication/scopes) |
+| API 권한 | API 권한 | `scopes` | API 키에 준 권한. 값은 `read`, `ingest`, `admin`, `payments`입니다 | [화면과 API, 권한](/authentication/scopes) |
 | 업무 권한 | 업무 권한 | `scopes` | 콘솔 구성원에게 준 권한. API 키 권한과 같은 값을 쓰지만 따로 관리합니다 | [화면과 API, 권한](/authentication/scopes) |
 | read(조회) | 조회 (read) | `read` | 업무 데이터를 조회하는 권한 | [화면과 API, 권한](/authentication/scopes) |
 | ingest(수집) | 수집 (ingest) | `ingest` | 고객을 등록하고 이벤트를 보내는 권한 | [화면과 API, 권한](/authentication/scopes) |

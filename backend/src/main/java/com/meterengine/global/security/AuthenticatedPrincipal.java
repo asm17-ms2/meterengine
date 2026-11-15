@@ -43,10 +43,6 @@ public record AuthenticatedPrincipal(
         environmentId);
   }
 
-  private static final String ADMIN_SCOPE = "admin";
-
-  private static final List<String> ALL_SCOPES = List.of("ingest", "read", ADMIN_SCOPE);
-
   private static final String SCOPE_AUTHORITY_PREFIX = "SCOPE_";
 
   private static final String ROLE_AUTHORITY_PREFIX = "ROLE_";
@@ -58,7 +54,7 @@ public record AuthenticatedPrincipal(
   // 스코프와 역할을 메서드 보안이 검사할 권한으로 펼친다.
   public List<GrantedAuthority> authorities() {
     List<GrantedAuthority> authorities = new ArrayList<>();
-    for (String scope : ALL_SCOPES) {
+    for (String scope : AccessScopes.ALL) {
       if (grants(scope)) {
         authorities.add(new SimpleGrantedAuthority(SCOPE_AUTHORITY_PREFIX + scope));
       }

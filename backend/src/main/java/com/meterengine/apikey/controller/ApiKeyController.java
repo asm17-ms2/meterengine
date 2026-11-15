@@ -88,7 +88,7 @@ public class ApiKeyController {
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
             """
-            code=validation_error: label이 비었거나 255자를 넘거나, scopes가 비었거나 ingest, read, admin이 아닌 값을 담았거나,
+            code=validation_error: label이 비었거나 255자를 넘거나, scopes가 비었거나 ingest, read, admin, payments가 아닌 값을 담았거나,
             mode가 live나 test가 아니거나, 문자열에 NUL 문자나 짝이 없는 UTF-16 서로게이트를 담았다.
             """),
     @ApiResponse(

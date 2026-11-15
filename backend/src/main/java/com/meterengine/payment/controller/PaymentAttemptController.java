@@ -1,10 +1,10 @@
 package com.meterengine.payment.controller;
 
 import com.meterengine.global.error.ErrorResponse;
-import com.meterengine.global.security.AdminAccess;
 import com.meterengine.global.security.AuthenticatedPrincipal;
 import com.meterengine.global.security.CurrentOrganizationId;
 import com.meterengine.global.security.EnvironmentReady;
+import com.meterengine.global.security.PaymentsAccess;
 import com.meterengine.global.security.ReadAccess;
 import com.meterengine.global.validation.StorableText;
 import com.meterengine.payment.dto.ListPaymentAttemptsResponse;
@@ -38,7 +38,7 @@ public class PaymentAttemptController {
   }
 
   @PostMapping("/v1/invoices/{id}/payment-attempts")
-  @AdminAccess
+  @PaymentsAccess
   @ResponseStatus(HttpStatus.CREATED)
   @Operation(
       summary = "인보이스 결제 요청",

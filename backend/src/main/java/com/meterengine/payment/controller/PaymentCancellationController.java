@@ -1,10 +1,10 @@
 package com.meterengine.payment.controller;
 
 import com.meterengine.global.error.ErrorResponse;
-import com.meterengine.global.security.AdminAccess;
 import com.meterengine.global.security.AuthenticatedPrincipal;
 import com.meterengine.global.security.CurrentOrganizationId;
 import com.meterengine.global.security.EnvironmentReady;
+import com.meterengine.global.security.PaymentsAccess;
 import com.meterengine.global.security.ReadAccess;
 import com.meterengine.payment.dto.CreatePaymentCancellationRequest;
 import com.meterengine.payment.dto.ListPaymentCancellationsResponse;
@@ -39,7 +39,7 @@ public class PaymentCancellationController {
   }
 
   @PostMapping("/v1/payment-attempts/{id}/cancellations")
-  @AdminAccess
+  @PaymentsAccess
   @ResponseStatus(HttpStatus.CREATED)
   @Operation(
       summary = "결제 취소 요청",

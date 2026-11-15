@@ -25,7 +25,7 @@ public class OrganizationInvitation {
 
   @JdbcTypeCode(SqlTypes.ARRAY)
   @Column(nullable = false, updatable = false)
-  private List<String> scopes = AccessScopes.ADMIN;
+  private List<String> scopes = AccessScopes.FULL;
 
   @Column(name = "created_at", nullable = false)
   private OffsetDateTime createdAt;

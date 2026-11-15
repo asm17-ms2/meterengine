@@ -24,6 +24,14 @@ class AccessScopesTest {
   }
 
   @Test
+  void 결제_권한은_관리에_포함되지_않고_따로_받아야_한다() {
+    assertThat(AccessScopes.grants(List.of("admin"), "payments")).isFalse();
+    assertThat(AccessScopes.grants(List.of("payments"), "payments")).isTrue();
+    assertThat(AccessScopes.grants(List.of("payments"), "read")).isFalse();
+    assertThat(AccessScopes.grants(List.of("payments"), "admin")).isFalse();
+  }
+
+  @Test
   void 권한의_순서는_보존하고_중복과_잘못된_입력을_구분한다() {
     assertThat(AccessScopes.normalize(List.of("read", "ingest", "read")))
         .containsExactly("read", "ingest");

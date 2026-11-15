@@ -303,14 +303,22 @@ class SecurityIntegrationTest {
     assertThat(test.role()).isNull();
     assertThat(test.scopes()).containsExactly("read");
     assertThat(live.mode()).isEqualTo("live");
-    assertThat(live.scopes()).containsExactly("admin");
+    assertThat(live.scopes()).containsExactlyInAnyOrder("admin", "payments");
   }
 
   @Test
-  void admin_키는_세_스코프_권한을_모두_받는다() {
-    assertThat(authenticate(issueApiKey(jdbcTemplate, insertOrganization())).authorities())
+  void admin_키는_세_스코프_권한을_받고_결제_권한은_받지_않는다() {
+    assertThat(authenticate(issueApiKey(jdbcTemplate, insertOrganization(), "admin")).authorities())
         .extracting(GrantedAuthority::getAuthority)
         .containsExactlyInAnyOrder("SCOPE_ingest", "SCOPE_read", "SCOPE_admin");
+  }
+
+  @Test
+  void payments_키는_결제_권한만_받는다() {
+    assertThat(
+            authenticate(issueApiKey(jdbcTemplate, insertOrganization(), "payments")).authorities())
+        .extracting(GrantedAuthority::getAuthority)
+        .containsExactly("SCOPE_payments");
   }
 
   @Test

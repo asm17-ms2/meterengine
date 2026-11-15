@@ -89,6 +89,10 @@ actions:
   - target: "$.paths['/v1/billable-metrics/options'].get"
     update:
       x-excluded: true
+  # x-excluded: 콘솔 로그인으로만 바꾸는 정보
+  - target: "$.paths['/v1/organization/supplier'].put"
+    update:
+      x-excluded: true
   # x-hidden: 세션 전용 관리(관리자)
   - target: "$.paths['/v1/api-keys'].post"
     update:

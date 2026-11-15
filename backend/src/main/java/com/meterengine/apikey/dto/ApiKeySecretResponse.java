@@ -18,8 +18,11 @@ public record ApiKeySecretResponse(
             allowableValues = {"live", "test"})
         String mode,
     @ArraySchema(
-            arraySchema = @Schema(description = "키의 스코프. 중복을 없앤 값이다. admin은 ingest와 read를 포함한다"),
-            schema = @Schema(allowableValues = {"ingest", "read", "admin"}))
+            arraySchema =
+                @Schema(
+                    description =
+                        "키의 스코프. 중복을 없앤 값이다. admin은 ingest와 read를 포함하고 payments는 포함하지 않는다"),
+            schema = @Schema(allowableValues = {"ingest", "read", "admin", "payments"}))
         List<String> scopes,
     @Schema(description = "원문의 끝 네 글자. 키를 알아보는 데 쓴다") @JsonProperty("last_four") String lastFour,
     @JsonProperty("created_at") OffsetDateTime createdAt,

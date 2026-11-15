@@ -105,7 +105,7 @@ class SignupIntegrationTest {
                 organizationId,
                 userAccountId))
         .containsEntry("role", "owner")
-        .containsEntry("scopes", "admin");
+        .containsEntry("scopes", "admin,payments");
     assertThat(
             jdbcTemplate.queryForList(
                 "SELECT document, document_version FROM consent WHERE user_account_id = ? ORDER BY document",

@@ -663,7 +663,7 @@ class CustomerPaymentRetryIntegrationTest {
   private Fixture fixture(boolean hasFailure, String failureCode, OffsetDateTime requestedAt) {
     UUID organizationId = UUID.randomUUID();
     String authorization =
-        TestCredentials.issueApiKey(jdbcTemplate, organizationId, "test", "admin");
+        TestCredentials.issueApiKey(jdbcTemplate, organizationId, "test", "admin", "payments");
     UUID customerId = UUID.randomUUID();
     UUID invoiceId = UUID.randomUUID();
     jdbcTemplate.update(
