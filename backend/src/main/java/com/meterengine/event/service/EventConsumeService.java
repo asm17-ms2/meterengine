@@ -1,17 +1,17 @@
 package com.meterengine.event.service;
 
 import com.meterengine.customer.api.CustomerDirectory;
+import com.meterengine.customer.api.CustomerKey;
 import com.meterengine.event.client.EventDeadLetterPublisher;
 import com.meterengine.event.config.EventKafkaConfig;
 import com.meterengine.event.dto.EventDeadLetterReason;
 import com.meterengine.event.dto.EventIngestMessage;
 import com.meterengine.event.dto.EventIngestRecord;
 import com.meterengine.event.dto.EventMessageInsertion;
+import com.meterengine.event.dto.EventTransactionKey;
 import com.meterengine.event.repository.EventRejectionRepository;
 import com.meterengine.event.repository.EventRepository;
 import com.meterengine.global.error.ErrorCode;
-import com.meterengine.global.security.BusinessEnvironment;
-import com.meterengine.global.security.BusinessEnvironmentContext;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -19,12 +19,10 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.UUID;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -42,6 +40,11 @@ import tools.jackson.databind.json.JsonMapper;
 public class EventConsumeService {
 
   private static final String SCHEMA_VERSION = "schema_version";
+  // 스레드마다 같은 순서로 넣어야 겹치는 행을 서로 기다리다 멈추지 않는다.
+  private static final Comparator<EventTransactionKey> INSERT_ORDER =
+      Comparator.comparing(EventTransactionKey::organizationId)
+          .thenComparing(EventTransactionKey::environmentScopeId)
+          .thenComparing(EventTransactionKey::transactionId);
 
   private final EventRepository eventRepository;
   private final EventRejectionRepository eventRejectionRepository;
@@ -124,69 +127,56 @@ public class EventConsumeService {
   }
 
   private Tally storeInTransaction(List<ReadEvent> readEvents) {
-    return transactionTemplate.execute(status -> storeByEnvironment(readEvents));
+    return transactionTemplate.execute(
+        status -> storeMessages(readEvents.stream().map(ReadEvent::message).toList()));
   }
 
-  // 고객과 중복은 도입사의 환경 안에서 판정하므로 환경별로 나눠 넣는다.
-  private Tally storeByEnvironment(List<ReadEvent> readEvents) {
-    Map<BusinessEnvironment, List<EventIngestMessage>> messagesByEnvironment =
-        new LinkedHashMap<>();
-    for (ReadEvent readEvent : readEvents) {
-      EventIngestMessage message = readEvent.message();
-      messagesByEnvironment
-          .computeIfAbsent(
-              new BusinessEnvironment(message.organizationId(), message.environmentId(), null),
-              environment -> new ArrayList<>())
-          .add(message);
-    }
-    Tally tally = new Tally();
-    messagesByEnvironment.forEach(
-        (environment, messages) ->
-            tally.add(
-                BusinessEnvironmentContext.run(
-                    environment, () -> storeEnvironment(environment.organizationId(), messages))));
-    return tally;
-  }
-
+  // 묶음에는 여러 도입사의 메시지가 섞여 있다. 도입사마다 따로 물으면 쿼리가 도입사 수만큼 늘어 묶음 전체를 한 번에 묻는다.
   // 판정 순서는 요청 안에서 저장하는 배치(EventBatchService)와 같다: 없는 고객, 중복, 보관한 고객.
-  private Tally storeEnvironment(UUID organizationId, List<EventIngestMessage> messages) {
-    Set<String> existing =
+  private Tally storeMessages(List<EventIngestMessage> messages) {
+    Set<EventTransactionKey> existing =
         new HashSet<>(
-            eventRepository.findExistingTransactionIds(
-                organizationId,
-                messages.stream().map(EventIngestMessage::transactionId).distinct().toList()));
-    Map<UUID, Boolean> customers =
+            eventRepository.findExistingTransactionKeys(
+                messages.stream().map(EventTransactionKey::of).distinct().toList()));
+    Map<CustomerKey, Boolean> customers =
         customerDirectory.active(
-            organizationId,
-            messages.stream().map(EventIngestMessage::customerId).distinct().toList());
+            messages.stream().map(EventConsumeService::customerKey).distinct().toList());
     Tally tally = new Tally();
-    Set<String> accepted = new HashSet<>();
+    Set<EventTransactionKey> accepted = new HashSet<>();
     List<EventMessageInsertion> insertions = new ArrayList<>();
     for (EventIngestMessage message : messages) {
-      if (!customers.containsKey(message.customerId())) {
+      EventTransactionKey transactionKey = EventTransactionKey.of(message);
+      CustomerKey customerKey = customerKey(message);
+      if (!customers.containsKey(customerKey)) {
         reject(message, ErrorCode.CUSTOMER_NOT_FOUND, tally);
-      } else if (existing.contains(message.transactionId())
-          || accepted.contains(message.transactionId())) {
+      } else if (existing.contains(transactionKey) || accepted.contains(transactionKey)) {
         tally.duplicate++;
-      } else if (!customers.get(message.customerId())) {
+      } else if (!customers.get(customerKey)) {
         reject(message, ErrorCode.CUSTOMER_ARCHIVED, tally);
       } else {
-        accepted.add(message.transactionId());
+        accepted.add(transactionKey);
         insertions.add(
             new EventMessageInsertion(
                 message, jsonMapper.writeValueAsString(message.properties())));
       }
     }
-    insertions.sort(Comparator.comparing(insertion -> insertion.message().transactionId()));
-    Set<String> inserted = new HashSet<>(eventRepository.insertAllMessagesIfAbsent(insertions));
+    insertions.sort(
+        Comparator.comparing(
+            insertion -> EventTransactionKey.of(insertion.message()), INSERT_ORDER));
+    Set<EventTransactionKey> inserted =
+        new HashSet<>(eventRepository.insertAllMessagesIfAbsent(insertions));
     for (EventMessageInsertion insertion : insertions) {
-      if (inserted.contains(insertion.message().transactionId())) {
+      if (inserted.contains(EventTransactionKey.of(insertion.message()))) {
         tally.storedAcceptedAts.add(insertion.message().acceptedAt());
       } else {
         tally.duplicate++;
       }
     }
     return tally;
+  }
+
+  private static CustomerKey customerKey(EventIngestMessage message) {
+    return new CustomerKey(message.organizationId(), message.environmentId(), message.customerId());
   }
 
   // 묶음을 다시 읽어 이미 남긴 거절은 다시 남기지 않고 세지도 않는다.

@@ -4,9 +4,12 @@ import com.meterengine.event.dto.Event;
 import com.meterengine.event.dto.EventIngestMessage;
 import com.meterengine.event.dto.EventInsertion;
 import com.meterengine.event.dto.EventMessageInsertion;
+import com.meterengine.event.dto.EventTransactionKey;
 import com.meterengine.event.service.EventSearch;
 import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.global.security.RequestIdentity;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -86,7 +89,8 @@ public class EventRepository {
   }
 
   // 컨슈머는 요청 밖에서 돌아 환경과 요청 주체를 메시지에서 받는다. received_at은 수집 서버가 받은 시각이다.
-  public List<String> insertAllMessagesIfAbsent(List<EventMessageInsertion> insertions) {
+  public List<EventTransactionKey> insertAllMessagesIfAbsent(
+      List<EventMessageInsertion> insertions) {
     if (insertions.isEmpty()) {
       return List.of();
     }
@@ -113,9 +117,38 @@ public class EventRepository {
     return jdbcTemplate.query(
         "INSERT INTO event (organization_id, transaction_id, customer_id, type, properties, occurred_at, received_at, environment_id, request_id, actor_type, actor_id) VALUES "
             + placeholders
-            + " ON CONFLICT (organization_id, environment_scope_id, transaction_id) DO NOTHING RETURNING transaction_id",
-        (rs, rowNum) -> rs.getString("transaction_id"),
+            + " ON CONFLICT (organization_id, environment_scope_id, transaction_id) DO NOTHING"
+            + " RETURNING organization_id, environment_scope_id, transaction_id",
+        EventRepository::transactionKey,
         parameters.toArray());
+  }
+
+  // 컨슈머가 읽은 묶음에는 여러 도입사의 메시지가 섞여 있다. 세 배열의 같은 자리가 이벤트 하나를 가리킨다.
+  public List<EventTransactionKey> findExistingTransactionKeys(
+      List<EventTransactionKey> transactionKeys) {
+    if (transactionKeys.isEmpty()) {
+      return List.of();
+    }
+    return jdbcTemplate.query(
+        """
+        SELECT e.organization_id, e.environment_scope_id, e.transaction_id
+        FROM unnest(?::uuid[], ?::uuid[], ?::text[]) AS k(organization_id, environment_scope_id, transaction_id)
+        JOIN event e
+          ON e.organization_id = k.organization_id
+         AND e.environment_scope_id = k.environment_scope_id
+         AND e.transaction_id = k.transaction_id
+        """,
+        EventRepository::transactionKey,
+        transactionKeys.stream().map(EventTransactionKey::organizationId).toArray(UUID[]::new),
+        transactionKeys.stream().map(EventTransactionKey::environmentScopeId).toArray(UUID[]::new),
+        transactionKeys.stream().map(EventTransactionKey::transactionId).toArray(String[]::new));
+  }
+
+  private static EventTransactionKey transactionKey(ResultSet rs, int rowNum) throws SQLException {
+    return new EventTransactionKey(
+        rs.getObject("organization_id", UUID.class),
+        rs.getObject("environment_scope_id", UUID.class),
+        rs.getString("transaction_id"));
   }
 
   public List<String> findExistingTransactionIds(UUID organizationId, List<String> transactionIds) {

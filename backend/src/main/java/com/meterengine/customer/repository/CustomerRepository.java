@@ -78,6 +78,15 @@ public interface CustomerRepository extends JpaRepository<Customer, UUID> {
   List<Customer> lockScoped(
       UUID organizationId, UUID environmentId, java.util.Collection<UUID> ids);
 
+  // 세 배열의 같은 자리가 고객 하나를 가리킨다. 도입사와 환경까지 맞는 행만 나온다.
+  @Query(
+      value =
+          "SELECT c.* FROM unnest(CAST(:organizationIds AS uuid[]), CAST(:environmentIds AS uuid[]), CAST(:ids AS uuid[])) AS k(organization_id, environment_id, id)"
+              + " JOIN customer c ON c.id = k.id AND c.organization_id = k.organization_id AND c.environment_id IS NOT DISTINCT FROM k.environment_id"
+              + " ORDER BY c.id FOR SHARE OF c",
+      nativeQuery = true)
+  List<Customer> lockAcrossOrganizations(UUID[] organizationIds, UUID[] environmentIds, UUID[] ids);
+
   @Query(
       "SELECT min(c.createdAt) FROM Customer c WHERE c.organizationId = :organizationId AND"
           + " c.environmentId IS NULL")
