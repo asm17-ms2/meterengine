@@ -25,6 +25,14 @@ override_resource {
   target = aws_route53_record.public
   values = {}
 }
+# 손으로 만든 SES 발신 자원도 import로 가져온다.
+override_resource { target = aws_sesv2_configuration_set.default }
+override_resource { target = aws_sesv2_email_identity.site }
+override_resource { target = aws_sesv2_email_identity_mail_from_attributes.site }
+override_resource { target = aws_route53_record.email_dkim }
+override_resource { target = aws_route53_record.email_dmarc }
+override_resource { target = aws_route53_record.email_mail_from_mx }
+override_resource { target = aws_route53_record.email_mail_from_spf }
 override_resource {
   target = aws_ssm_parameter.coded
   values = {}

@@ -451,8 +451,8 @@ aws ssm get-parameter --name /meterengine/production/operator-password --with-de
 ### 가입 메일 인증과 캡차 켜기
 
 - 둘 다 꺼진 채로 배포된다. 꺼져 있으면 가입과 로그인은 이 기능이 없던 때와 같다.
-- SES 도메인 인증(`meterengine.com`), Easy DKIM과 Route53 DKIM CNAME 셋, MAIL FROM 도메인(`mail.meterengine.com`의 MX와 SPF), DMARC TXT는 콘솔에서 만들어 Terraform 밖에 있다. 이 자원을 Terraform으로 가져오는(import) 일이 남았다.
-- Terraform은 앱 서버 역할의 `ses:SendEmail`(identity `meterengine.com`과 그 기본 구성 세트 `my-first-configuration-set`, 보내는 주소 `no-reply@meterengine.com`만)과 파라미터 `mail-sender`, `mail-from`, `turnstile-allowed-hostnames`를 만든다(`terraform/production/ses.tf`, `parameters.tf`, `app_fleet` 모듈).
+- SES 도메인 인증(`meterengine.com`)과 그 기본 구성 세트 `my-first-configuration-set`, MAIL FROM 도메인(`mail.meterengine.com`), Route53의 DKIM CNAME 셋과 MAIL FROM의 MX와 SPF, DMARC TXT는 콘솔에서 만든 것을 import 블록으로 가져와 Terraform이 갖는다(`terraform/production/ses.tf`, `imports.tf`). 콘솔에서 바꾸면 다음 apply가 되돌린다.
+- Terraform은 앱 서버 역할의 `ses:SendEmail`(identity `meterengine.com`과 그 기본 구성 세트, 보내는 주소 `no-reply@meterengine.com`만)과 파라미터 `mail-sender`, `mail-from`, `turnstile-allowed-hostnames`도 만든다(`parameters.tf`, `app_fleet` 모듈).
 - 아래 순서로 켠다. 앞 단계가 끝나기 전에 다음 값을 켜지 않는다.
   1. Terraform을 apply해 발송 권한과 파라미터 셋을 만든다. SES 콘솔에서 도메인 인증과 DKIM이 여전히 `Verified`인지 본다.
   2. SES 콘솔에서 프로덕션 액세스(샌드박스 해제)를 신청하고 승인을 기다린다. 승인 전에는 인증한 주소로만 메일이 간다.
