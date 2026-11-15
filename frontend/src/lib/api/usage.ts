@@ -2,7 +2,7 @@ import "server-only";
 import type { SearchPage } from "@/lib/api/search";
 
 import { CAPABILITIES } from "@/lib/api/capabilities";
-import { serverFetch, type Result } from "@/lib/api/client";
+import { AGGREGATE_TIMEOUT_MS, serverFetch, type Result } from "@/lib/api/client";
 import { config } from "@/lib/config";
 import type { DevState } from "@/lib/dev-state";
 import { formatTargetPropertyTooltip } from "@/lib/format";
@@ -128,7 +128,7 @@ export async function aggregateBillableMetricUsages(
     };
   }
   const result = await serverFetch<SearchPage<{ customer_id: string; customer_name: string; metrics: BillableMetricUsageResponse[] }, NonNullable<ListBillableMetricUsagesResponse["summary"]>>>(
-    config.apiBaseUrl, "/v1/usage/search", toServerParams(query, CAPABILITIES.aggregateBillableMetricUsages),
+    config.apiBaseUrl, "/v1/usage/search", toServerParams(query, CAPABILITIES.aggregateBillableMetricUsages), { timeoutMs: AGGREGATE_TIMEOUT_MS },
   );
   if (!result.ok) return result;
   const metrics = new Map<string, BillableMetricUsageResponse>();

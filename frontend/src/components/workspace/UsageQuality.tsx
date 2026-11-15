@@ -1,4 +1,5 @@
 import { ScopedLink as Link } from "@/components/workspace/ScopedLink";
+import { AGGREGATE_TIMEOUT_MS } from "@/lib/api/client";
 import { workspaceFetch } from "@/lib/api/workspace";
 import { formatKoreanMonth } from "@/lib/format";
 import { WorkspaceError } from "@/components/workspace/WorkspaceView";
@@ -6,7 +7,7 @@ import { usageQualityReasons, type UnbilledEventCounts } from "@/lib/usage-quali
 
 
 export async function UsageQuality({ selectedMonth }: { selectedMonth: string }) {
-  const result = await workspaceFetch<UnbilledEventCounts>("/v1/unbilled-events", { month: selectedMonth });
+  const result = await workspaceFetch<UnbilledEventCounts>("/v1/unbilled-events", { month: selectedMonth }, { timeoutMs: AGGREGATE_TIMEOUT_MS });
   if (!result.ok) return <section className="workspace-panel"><h2>수집 진단</h2><WorkspaceError message={result.error.message} /></section>;
   const data = result.data;
   const reasons = usageQualityReasons(data);

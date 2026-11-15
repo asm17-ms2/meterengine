@@ -5,6 +5,7 @@ import { ScopedLink as Link } from "@/components/workspace/ScopedLink";
 import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
 import { WorkspaceError, WorkspaceTable } from "@/components/workspace/WorkspaceView";
 import { EnvironmentInput } from "@/components/workspace/EnvironmentSwitch";
+import { AGGREGATE_TIMEOUT_MS } from "@/lib/api/client";
 import { workspaceFetch } from "@/lib/api/workspace";
 import { readMonth } from "@/lib/month";
 import { workspaceHref } from "@/lib/workspace-href";
@@ -31,7 +32,7 @@ export default async function EventIssuesPage({ searchParams }: { searchParams: 
   const size = [20, 50, 100].includes(Number(params.size)) ? Number(params.size) : 20;
   const reason = params.reason && Object.hasOwn(REASONS, params.reason) ? params.reason : undefined;
   const [result, customers] = await Promise.all([
-    workspaceFetch<IssueResult>("/v1/event-issues/search", { month, customer_id: params.customer_id, reason, q: params.q, page: String(page), size: String(size) }),
+    workspaceFetch<IssueResult>("/v1/event-issues/search", { month, customer_id: params.customer_id, reason, q: params.q, page: String(page), size: String(size) }, { timeoutMs: AGGREGATE_TIMEOUT_MS }),
     customerOptions(params.customer_id),
   ]);
   const source = new URLSearchParams(Object.entries(params).filter((entry): entry is [string, string] => typeof entry[1] === "string"));

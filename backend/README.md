@@ -220,7 +220,7 @@ docker build -t meterengine-backend .
 
 페이지 번호의 시작은 경로 이름이 아니라 엔드포인트마다 정한다. 위 목록 자원의 `/search`는 1부터, `/v1/event-issues/search`와 `/v1/event-rejections/search`는 이벤트, 감사, 웹훅 목록처럼 0부터 센다. 각 파라미터 설명에 기준을 적는다.
 
-매핑 진단과 사용량 화면은 요청마다 미터 수만큼 그 달 이벤트를 다시 집계한다. event 표에는 환경 범위 PK만 있고 occurred_at 인덱스는 없어, 한 달 이벤트가 많은 도입사는 이 조회가 느려질 수 있다. 큰 event 표에 인덱스를 더하는 마이그레이션은 배포 준비 시간 안에 끝난다는 근거가 없어 아직 두지 않았다.
+매핑 진단과 사용량 화면은 요청마다 미터 수만큼 그 달 이벤트를 다시 집계한다. event 표의 `(organization_id, environment_scope_id, occurred_at)` 인덱스로 그 달 행만 읽지만 미터 수만큼 다시 읽으므로, 한 달 이벤트가 많은 도입사는 이 조회가 느려질 수 있다.
 
 ### 로컬 계정과 키
 
@@ -416,6 +416,7 @@ unset SESSION
 
 - V58은 실제 환경 이용 신청(`live_environment_application`)을 만든다. 도입사마다 검토 대기(`pending`) 신청은 하나만 둔다.
 - V59는 `auth_request_rate_limit`의 범위에 실제 환경 이용 신청(`live_environment_application`)을 더한다.
+- V61은 event에 `(organization_id, environment_scope_id, occurred_at)` 인덱스를 더한다. CONCURRENTLY 없이 만들어 만드는 동안 event 쓰기가 기다린다. 프로덕션과 같은 DB 사양에서 52만 행에 4초였다.
 - V45는 도입사마다 test, live 업무 환경을 만들고 기존 키, 고객, 이벤트와 감사 기록은 환경 없는 기존 데이터 범위로 둔다. 고객 `external_id` 고유 인덱스와 이벤트 기본키를 환경 범위로 바꾼다.
 
 ## 요금과 결제 연동
