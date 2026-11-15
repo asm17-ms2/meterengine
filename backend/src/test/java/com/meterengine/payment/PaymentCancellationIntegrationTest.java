@@ -155,6 +155,26 @@ class PaymentCancellationIntegrationTest {
   }
 
   @Test
+  void 전체_관리_키도_결제_권한이_없으면_결제를_취소할_수_없다() {
+    Paid paid = paidAttempt();
+
+    assertError(
+        mvc.post()
+            .uri("/v1/payment-attempts/{id}/cancellations", paid.attemptId())
+            .header(
+                "Authorization",
+                TestCredentials.issueApiKey(jdbcTemplate, paid.organizationId(), "test", "admin"))
+            .header("Idempotency-Key", UUID.randomUUID().toString())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"amount\":3000,\"reason\":\"고객 요청\"}")
+            .exchange(),
+        403,
+        ErrorCode.PERMISSION_DENIED);
+    assertThat(countCancellations(paid.attemptId())).isZero();
+    verifyNoInteractions(tossPaymentsClient);
+  }
+
+  @Test
   void 부분_취소가_done이면_201이고_결제_상태는_partially_canceled다() {
     Paid paid = paidAttempt();
     tossReturns(canceledPayment(paid, 10200L, cancel("txkey-first", 3000L)));

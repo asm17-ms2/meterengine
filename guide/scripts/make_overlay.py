@@ -27,6 +27,7 @@ EXCLUDED = {
     ],
     "MeterEngine 화면용 공개 경로": ["getPaymentMethodRegistration", "createBillingKey", "getPublicInvoice", "createInvoicePaymentRetry"],
     "화면 보조 options": ["suggestCustomers", "suggestBillableMetrics"],
+    "콘솔 로그인으로만 바꾸는 정보": ["updateSupplier"],
 }
 # 콘솔에서 쓰지만 API 키로 부를 수 없는 경로. 페이지는 만들고 탐색에서 숨긴다.
 HIDDEN = {

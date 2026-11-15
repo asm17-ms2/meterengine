@@ -93,7 +93,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
           description: |
-            code=validation_error: label이 비었거나 255자를 넘거나, scopes가 비었거나 ingest, read, admin이 아닌 값을 담았거나,
+            code=validation_error: label이 비었거나 255자를 넘거나, scopes가 비었거나 ingest, read, admin, payments가 아닌 값을 담았거나,
             mode가 live나 test가 아니거나, 문자열에 NUL 문자나 짝이 없는 UTF-16 서로게이트를 담았다.
         "401":
           content:
@@ -5474,7 +5474,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
           description: |
             code=validation_error: email이 비었거나 이메일 형식이 아니거나 254자를 넘거나,
-            scopes가 비었거나 ingest, read, admin이 아닌 값을 담았거나, 문자열에 NUL 문자나 짝이 없는 UTF-16 서로게이트를 담았다.
+            scopes가 비었거나 ingest, read, admin, payments가 아닌 값을 담았거나, 문자열에 NUL 문자나 짝이 없는 UTF-16 서로게이트를 담았다.
         "401":
           content:
             application/json:
@@ -5737,7 +5737,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
           description: |
             code=validation_error: email이 비었거나 이메일 형식이 아니거나 254자를 넘거나, name이 비었거나 255자를 넘거나,
-            password가 8자보다 짧거나 72자나 UTF-8 72바이트를 넘거나, scopes가 비었거나 ingest, read, admin이 아닌 값을 담았거나,
+            password가 8자보다 짧거나 72자나 UTF-8 72바이트를 넘거나, scopes가 비었거나 ingest, read, admin, payments가 아닌 값을 담았거나,
             문자열에 NUL 문자나 짝이 없는 UTF-16 서로게이트를 담았다.
         "401":
           content:
@@ -5911,8 +5911,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: "code=validation_error: scopes가 비었거나 ingest, read, admin이 아\
-            닌 값을 담았거나, 경로의 UUID 형식이 틀렸다"
+          description: "code=validation_error: scopes가 비었거나 ingest, read, admin, payments가\
+            \ 아닌 값을 담았거나, 경로의 UUID 형식이 틀렸다"
         "401":
           content:
             application/json:
@@ -6022,20 +6022,6 @@ paths:
             code=permission_denied: 키의 스코프나 계정의 역할로는 할 수 없는 요청이거나, 조직이 정해지지 않은 로그인 세션이다.
             code=organization_not_active: 조직이 활성 상태가 아니다.
             code=consent_required: 로그인 세션의 사용자가 필수 안내에 아직 동의하지 않았다. POST /v1/sessions/current/consents로 동의한다.
-        "429":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었다. Retry-After 헤더\
-            의 초만큼 기다린 뒤 다시 보낸다."
-          headers:
-            Retry-After:
-              description: 다시 보내기 전에 기다릴 초
-              required: true
-              schema:
-                type: integer
-                format: int32
       summary: 공급자 정보 수정
       tags:
       - current-organization-controller
@@ -8636,13 +8622,14 @@ components:
           description: 키를 폐기한 시각. 폐기하지 않았으면 null
         scopes:
           type: array
-          description: 키의 스코프. admin은 ingest와 read를 포함한다
+          description: 키의 스코프. admin은 ingest와 read를 포함하고 payments는 포함하지 않는다
           items:
             type: string
             enum:
             - ingest
             - read
             - admin
+            - payments
         status:
           type: string
           description: 서버 조회 시점의 키 상태. 폐기된 키는 만료 시각과 관계없이 revoked다
@@ -8689,13 +8676,15 @@ components:
           description: 키를 폐기한 시각. 새로 발급한 키는 null
         scopes:
           type: array
-          description: 키의 스코프. 중복을 없앤 값이다. admin은 ingest와 read를 포함한다
+          description: 키의 스코프. 중복을 없앤 값이다. admin은 ingest와 read를 포함하고 payments는 포함하지
+            않는다
           items:
             type: string
             enum:
             - ingest
             - read
             - admin
+            - payments
         secret:
           type: string
           description: "키 원문. 이 응답에서만 볼 수 있다. Authorization: Bearer 값으로 싣는다"
@@ -8938,14 +8927,16 @@ components:
           description: 이 키로 바꿀 옛 키의 ID. 주면 옛 키는 유예 시간이 지나면 끝난다. 없으면 빼거나 null로 보낸다
         scopes:
           type: array
-          description: 키의 스코프. 하나 이상이고 중복은 없애고 저장한다. admin은 ingest와 read를 포함한다
+          description: 키의 스코프. 하나 이상이고 중복은 없애고 저장한다. admin은 ingest와 read를 포함하고 payments는
+            포함하지 않는다
           items:
             type: string
             enum:
             - ingest
             - read
             - admin
-            pattern: ^(ingest|read|admin)$
+            - payments
+            pattern: ^(ingest|read|admin|payments)$
           minItems: 1
       required:
       - label
@@ -9124,7 +9115,7 @@ components:
           description: 부여할 권한. 생략하면 조회 전용
           items:
             type: string
-            pattern: ^(ingest|read|admin)$
+            pattern: ^(ingest|read|admin|payments)$
           minItems: 1
       required:
       - email
@@ -9144,7 +9135,7 @@ components:
           description: 수락 시 부여할 권한. 생략하면 조회 전용
           items:
             type: string
-            pattern: ^(ingest|read|admin)$
+            pattern: ^(ingest|read|admin|payments)$
           minItems: 1
       required:
       - email
@@ -11355,14 +11346,15 @@ components:
       properties:
         scopes:
           type: array
-          description: 하나 이상 선택한다. admin은 ingest와 read를 포함한다
+          description: 하나 이상 선택한다. admin은 ingest와 read를 포함하고 payments는 포함하지 않는다
           items:
             type: string
             enum:
             - ingest
             - read
             - admin
-            pattern: ^(ingest|read|admin)$
+            - payments
+            pattern: ^(ingest|read|admin|payments)$
           minItems: 1
       required:
       - scopes
@@ -11456,7 +11448,7 @@ components:
           type: array
           items:
             type: string
-            pattern: ^(ingest|read|admin)$
+            pattern: ^(ingest|read|admin|payments)$
           minItems: 1
       required:
       - scopes

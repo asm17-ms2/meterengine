@@ -89,9 +89,9 @@ sequenceDiagram
 | 토스페이먼츠 키 목록, 결제 모드 조회 | '조직 설정' 화면 | `GET /v1/toss-payments-credentials`, `GET /v1/payment-setting` (read) |
 | 카드 등록 링크 만들기 | 고객 상세 화면 | `POST /v1/customers/{id}/payment-method-registrations` (admin) |
 | 고객 카드 조회 | 고객 상세 화면 | `GET /v1/customers/{id}/payment-method` (read) |
-| 결제 요청 | '수납과 취소' 화면의 고객별 수납 화면 | `POST /v1/invoices/{id}/payment-attempts` (admin) |
+| 결제 요청 | '수납과 취소' 화면의 고객별 수납 화면 | `POST /v1/invoices/{id}/payment-attempts` (payments) |
 | 결제 시도와 수납 상태 조회 | '수납과 취소' 화면 | `GET /v1/invoices/{id}/payment-attempts`, `GET /v1/invoice-payments` (read) |
-| 결제 취소 | 고객별 수납 화면 | `POST /v1/payment-attempts/{id}/cancellations` (admin) |
+| 결제 취소 | 고객별 수납 화면 | `POST /v1/payment-attempts/{id}/cancellations` (payments) |
 | 청구서 조회 링크 만들기 | 고객별 수납 화면 | `POST /v1/invoices/{id}/view-links` (admin) |
 
 권한의 뜻은 [화면과 API, 권한](/authentication/scopes)에 있습니다. 엔드포인트의 요청과 응답 형식은 [API 참조](/api-reference/introduction)에서 확인합니다.

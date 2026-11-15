@@ -1,8 +1,8 @@
 package com.meterengine.organization.controller;
 
-import com.meterengine.global.security.AdminAccess;
 import com.meterengine.global.security.CurrentOrganizationId;
 import com.meterengine.global.security.EnvironmentReady;
+import com.meterengine.global.security.MemberAdminAccess;
 import com.meterengine.global.security.ReadAccess;
 import com.meterengine.organization.dto.OrganizationResponse;
 import com.meterengine.organization.dto.SupplierResponse;
@@ -46,7 +46,7 @@ public class CurrentOrganizationController {
   }
 
   @PutMapping("/supplier")
-  @AdminAccess
+  @MemberAdminAccess
   @Operation(summary = "공급자 정보 수정")
   public SupplierResponse updateSupplier(
       @CurrentOrganizationId UUID organizationId,

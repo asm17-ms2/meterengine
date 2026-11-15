@@ -720,6 +720,24 @@ class PaymentAttemptIntegrationTest {
   }
 
   @Test
+  void 전체_관리_키도_결제_권한이_없으면_결제를_요청할_수_없다() {
+    Payable payable = payableInvoice("test");
+
+    assertError(
+        mvc.post()
+            .uri("/v1/invoices/{id}/payment-attempts", payable.invoiceId())
+            .header(
+                "Authorization",
+                TestCredentials.issueApiKey(
+                    jdbcTemplate, payable.organizationId(), "test", "admin"))
+            .exchange(),
+        403,
+        ErrorCode.PERMISSION_DENIED);
+    assertThat(countAttempts(payable.invoiceId())).isZero();
+    verifyNoInteractions(tossPaymentsClient);
+  }
+
+  @Test
   void 테스트_키는_실제_모드_설정으로_결제를_요청할_수_없다() {
     Payable payable = payableInvoice("live");
 
@@ -729,7 +747,7 @@ class PaymentAttemptIntegrationTest {
             .header(
                 "Authorization",
                 TestCredentials.issueApiKey(
-                    jdbcTemplate, payable.organizationId(), "test", "admin"))
+                    jdbcTemplate, payable.organizationId(), "test", "payments"))
             .exchange(),
         409,
         ErrorCode.PAYMENT_MODE_MISMATCH);

@@ -8,6 +8,7 @@ import com.meterengine.global.security.MemberAccess;
 import com.meterengine.global.security.MemberAdminAccess;
 import com.meterengine.global.security.MemberReadAccess;
 import com.meterengine.global.security.OperatorAccess;
+import com.meterengine.global.security.PaymentsAccess;
 import com.meterengine.global.security.PublicAccess;
 import com.meterengine.global.security.ReadAccess;
 import com.tngtech.archunit.core.domain.JavaMethod;
@@ -34,6 +35,7 @@ class ApiAccessCoverageTest {
           MemberAccess.class,
           MemberReadAccess.class,
           MemberAdminAccess.class,
+          PaymentsAccess.class,
           OperatorAccess.class,
           PublicAccess.class);
 

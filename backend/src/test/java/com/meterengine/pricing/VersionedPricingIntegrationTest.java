@@ -546,8 +546,28 @@ class VersionedPricingIntegrationTest {
   }
 
   @Test
+  void 공급자_수정은_콘솔_로그인으로만_하고_API_키는_거절한다() {
+    String body =
+        "{\"business_registration_number\":\"1234567890\",\"representative_name\":\"대표자\",\"business_address\":\"서울\"}";
+    assertThat(
+            mvc.put()
+                .uri("/v1/organization/supplier")
+                .header(AUTHORIZATION, TestCredentials.issueApiKey(jdbcTemplate, organizationId))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body)
+                .exchange())
+        .hasStatus(403);
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT representative_name FROM organization WHERE id=?",
+                String.class,
+                organizationId))
+        .isNull();
+  }
+
+  @Test
   void 공급자_수정은_도입사별로_저장하고_감사_기록을_남긴다() {
-    String admin = TestCredentials.issueApiKey(jdbcTemplate, organizationId);
+    String admin = TestCredentials.issueMemberSession(jdbcTemplate, organizationId);
     assertThat(
             mvc.put()
                 .uri("/v1/organization/supplier")

@@ -1021,7 +1021,7 @@ test("on a phone the sticky header keeps only the brand and environment and the 
   expect((await header.boundingBox())!.height).toBeLessThan(130);
   await page.getByRole("button", { name: "메뉴 열기" }).click();
   const drawer = page.getByRole("dialog");
-  await expect(drawer.getByText("전체 관리", { exact: true })).toBeVisible();
+  await expect(drawer.getByText("전체 관리, 결제", { exact: true })).toBeVisible();
   await expect(drawer.getByRole("button", { name: "로그아웃", exact: true })).toBeVisible();
 });
 
@@ -1037,7 +1037,7 @@ test("between phone and desktop widths the header still leaves out the user name
 test("the header shows the access scope beside a text logout button and no permission refresh button", async ({ page }) => {
   await login(page);
   await expectTenantUrl(page, "/customers");
-  await expect(page.locator(".workspace-scope .ant-tag")).toHaveText("전체 관리");
+  await expect(page.locator(".workspace-scope .ant-tag")).toHaveText("전체 관리, 결제");
   await expect(page.locator(".workspace-header").getByRole("button", { name: "로그아웃", exact: true })).toHaveClass(/ant-btn-text/);
   await expect(page.getByRole("button", { name: "권한 새로 조회", exact: true })).toHaveCount(0);
 });

@@ -66,7 +66,7 @@ mvc = MockMvcTester.from(webApplicationContext, builder -> builder.apply(springS
 ```
 
 - 자격은 `com.meterengine.TestCredentials`로 넣고 돌려받은 값을 `Authorization` 헤더에 싣는다.
-  - `issueApiKey(jdbcTemplate, organizationId, "test", "ingest", "read")`: 첫 값이 `live`나 `test`면 모드이고 나머지는 스코프다. 모드를 빼면 live, 스코프를 빼면 admin이다.
+  - `issueApiKey(jdbcTemplate, organizationId, "test", "ingest", "read")`: 첫 값이 `live`나 `test`면 모드이고 나머지는 스코프다. 모드를 빼면 live, 스코프를 빼면 admin과 payments다.
   - `issueMemberSession(jdbcTemplate, organizationId)`: 그 도입사 소속 member의 세션. `issueOperatorSession(jdbcTemplate)`: 소속 없는 operator의 세션.
 
 ## 컨테이너 이미지
@@ -172,7 +172,7 @@ docker build -t meterengine-backend .
 
 - `/v1` 요청은 `Authorization: Bearer <값>`으로 인증한다. 값은 API 키(`me_live_`, `me_test_`)나 로그인 세션 토큰(`me_session_`)이고, 도입사는 키나 세션이 정한다.
 - 로그인과 가입, 인증 메일 다시 보내기와 이메일 인증, 초대 확인과 수락, 헬스체크, 메트릭과 API 문서는 공개다. 카드 등록은 일회용 토큰, 고객 인보이스 조회는 만료와 폐기가 가능한 조회 토큰으로 인증한다. 토스 웹훅은 PG 상태 재조회로 검증한다. 나머지 도입사 요청은 세션이나 API 키가 필요하다.
-- 사용자와 API 키의 권한은 `read`(조회), `ingest`(고객 등록과 이벤트 수집), `admin`(업무 관리)이며 `admin`은 나머지를 포함한다. 로그인 사용자는 선택한 도입사의 소속 권한을 쓰고, 변경한 권한은 기존 세션의 다음 요청부터 적용된다.
+- 사용자와 API 키의 권한은 `read`(조회), `ingest`(고객 등록과 이벤트 수집), `admin`(업무 관리), `payments`(결제 요청과 취소)이며 `admin`은 `read`와 `ingest`를 포함하고 `payments`는 포함하지 않는다. 로그인 사용자는 선택한 도입사의 소속 권한을 쓰고, 변경한 권한은 기존 세션의 다음 요청부터 적용된다.
 - 새 사용자와 초대의 기본 권한은 `read`다. 대표관리자는 사용자와 초대, 소속별 권한을 관리하며 관리 권한을 유지한다. 플랫폼 도입사와 사용자 관리는 별도의 `operator` 역할이 필요하다.
 - 대표관리자가 없는 도입사는 사용자와 초대를 관리할 사람이 없다. 가입은 대표관리자를 한 명 만들고 마지막 대표관리자는 낮추거나 뗄 수 없어(409 `last_owner_required`), SQL로 넣은 도입사(데모 도입사)에서만 생긴다. 운영자가 계정을 도입사에 붙이는 API는 없으므로 DB에서 고친다. 첫 쿼리로 찾고, 둘째 쿼리로 그 도입사의 구성원 한 명을 대표관리자로 올린다. 구성원이 한 명도 없는 도입사는 올릴 사람이 없다. 그 도입사를 쓰려면 가입으로 새로 만든다.
 
@@ -185,13 +185,13 @@ docker build -t meterengine-backend .
   ORDER BY o.name;
 
   UPDATE organization_member
-  SET role = 'owner', scopes = ARRAY['admin']::VARCHAR[]
+  SET role = 'owner', scopes = ARRAY['admin', 'payments']::VARCHAR[]
   WHERE organization_id = '<도입사 id>' AND user_account_id = '<계정 id>' AND revoked_at IS NULL;
   ```
 
 - API 키는 로그인 관리 권한으로 발급, 폐기와 스코프를 변경한다. 조회 세션은 메타데이터만 읽고 API 키 자체는 키 관리 API를 부를 수 없다. 키의 권한 변경은 같은 원문으로 다음 요청부터 반영하며, 폐기하거나 만료된 키는 변경할 수 없다. 원문, 수명, 모드와 레이트 한도는 유지한다.
 - 원문은 발급 응답에만 나오고 다시 볼 수 없다(서버는 해시만 둔다).
-- 토스페이먼츠 키 저장과 보관, 결제 모드 변경도 로그인 관리 권한으로만 한다. API 키로는 부를 수 없다.
+- 토스페이먼츠 키 저장과 보관, 결제 모드 변경, 공급자 정보 변경도 로그인 관리 권한으로만 한다. API 키로는 부를 수 없다.
 - 업무 환경은 `X-MeterEngine-Environment: test|live`로 지정한다. 생략하면 기존 데이터 범위다. 새 환경 키는 발급 환경에 고정되며 헤더를 생략해도 그 환경을 쓴다. 다른 환경을 명시하면 거절한다. 기존 키의 test/live 접두사는 격리를 뜻하지 않으며 기존 키로 새 환경에 접근할 수 없다.
 - 가입한 도입사는 바로 active이고 실제 환경이 잠겨 있다(`organization.live_environment_opened_at`이 NULL). 잠긴 동안 로그인 세션의 도입사 범위 요청은 `X-MeterEngine-Environment: test`일 때만 통과하고, 헤더를 생략하거나 `live`를 보내면 403 `live_environment_locked`다. API 키 요청은 이 검사를 다시 보지 않지만, 잠긴 동안에는 테스트 환경 키만 발급할 수 있다.
 - 실제 환경은 이용 신청을 운영자가 승인하면 열리고 다시 잠기지 않는다. 아래 "실제 환경 이용 신청" 참조.
@@ -226,8 +226,8 @@ docker build -t meterengine-backend .
 
 | 구분 | 값 | 비밀번호 | 내용 |
 | --- | --- | --- | --- |
-| live 키 | `me_live_QouOFuCiJyAbC0VGK1ltUCkG4IZM2LtA` | | 데모 도입사 실제 환경, admin 스코프 |
-| test 키 | `me_test_wiCp766QYNqhyYm4Z7Xq9wYosNvQCeVC` | | 데모 도입사 테스트 환경, admin 스코프. 로컬 시드가 이 환경에 있다. 데모 CLI의 기본값 |
+| live 키 | `me_live_QouOFuCiJyAbC0VGK1ltUCkG4IZM2LtA` | | 데모 도입사 실제 환경, admin과 payments 스코프 |
+| test 키 | `me_test_wiCp766QYNqhyYm4Z7Xq9wYosNvQCeVC` | | 데모 도입사 테스트 환경, admin과 payments 스코프. 로컬 시드가 이 환경에 있다. 데모 CLI의 기본값 |
 | member | `member@meterengine.local` | `local-member-password` | 데모 도입사와 `로컬 두 번째 도입사`의 대표관리자 |
 | operator | `operator@meterengine.local` | `local-operator-password` | 소속이 없어 로그인하면 도입사가 없다 |
 

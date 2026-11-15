@@ -26,8 +26,6 @@ description: "조직 설정의 공급자 정보를 저장하는 방법과 지금
 
 사업자등록번호, 대표자명, 사업장 주소는 한 번에 함께 저장합니다. 하나만 바꿀 때도 모두 넣고, 저장한 뒤에는 빈 값으로 지울 수 없고 다른 값으로 덮어쓰기만 할 수 있습니다. 사업자등록번호는 자릿수만 확인하고 실제로 등록된 번호인지는 확인하지 않습니다.
 
-<Tabs>
-<Tab title="콘솔에서">
 <Steps>
 <Step title="업무 환경을 확인한다">
 화면 위 '업무 환경'이 저장할 환경인지 확인합니다.
@@ -39,47 +37,8 @@ description: "조직 설정의 공급자 정보를 저장하는 방법과 지금
 '공급자 정보 저장'을 누릅니다. 저장하려면 전체 관리 (admin) 권한이 필요합니다. 조회 (read) 권한만 있으면 저장된 값을 보기만 하고, 저장 전인 값은 '미등록'으로 보입니다.
 </Step>
 </Steps>
-</Tab>
-<Tab title="API로">
-조회는 read 권한, 저장은 admin 권한 API 키가 필요합니다. 키가 발급된 업무 환경의 공급자 정보를 다룹니다. API는 하이픈을 빼 주지 않으므로 사업자등록번호는 숫자 10자리로만 보냅니다.
 
-```bash 저장
-curl -X PUT https://meterengine.com/v1/organization/supplier \
-  -H "Authorization: Bearer me_test_xxxxxxxx" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "business_registration_number": "1234567890",
-    "representative_name": "홍길동",
-    "business_address": "서울특별시 강남구 테헤란로 123"
-  }'
-```
-
-```json 200 응답
-{
-  "business_registration_number": "1234567890",
-  "representative_name": "홍길동",
-  "business_address": "서울특별시 강남구 테헤란로 123"
-}
-```
-
-```bash 조회
-curl https://meterengine.com/v1/organization/supplier \
-  -H "Authorization: Bearer me_test_xxxxxxxx"
-```
-
-아직 저장하지 않은 환경에서 조회하면 모든 값이 `null`입니다.
-
-```json 저장 전 응답
-{
-  "business_registration_number": null,
-  "representative_name": null,
-  "business_address": null
-}
-```
-
-값이 제한을 벗어나면 `400 validation_error`를 받고, 응답의 `errors`에 틀린 필드 이름이 실립니다. 권한이 부족하면 `403 permission_denied`입니다. 오류 형식은 [오류 응답과 X-Request-ID](/api-basics/errors), 권한은 [화면과 API, 권한](/authentication/scopes)을 보세요.
-</Tab>
-</Tabs>
+공급자 정보는 콘솔에서만 저장합니다. API 키로는 조회만 할 수 있고, 저장 요청은 `403 permission_denied`를 받습니다.
 
 ## 세금계산서
 

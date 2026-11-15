@@ -230,10 +230,11 @@ class SessionIntegrationTest {
     assertThat(principal.userSessionId()).isEqualTo(sessionIdOf(authorization));
     assertThat(principal.organizationId()).isEqualTo(organizationId);
     assertThat(principal.role()).isEqualTo("member");
-    assertThat(principal.scopes()).containsExactly("admin");
+    assertThat(principal.scopes()).containsExactlyInAnyOrder("admin", "payments");
     assertThat(principal.authorities())
         .extracting(GrantedAuthority::getAuthority)
-        .containsExactlyInAnyOrder("SCOPE_ingest", "SCOPE_read", "SCOPE_admin", "ROLE_member");
+        .containsExactlyInAnyOrder(
+            "SCOPE_ingest", "SCOPE_read", "SCOPE_admin", "SCOPE_payments", "ROLE_member");
   }
 
   @Test

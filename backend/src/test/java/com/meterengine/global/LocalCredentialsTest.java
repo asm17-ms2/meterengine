@@ -111,7 +111,8 @@ class LocalCredentialsTest {
 
   @Test
   void 로컬_member는_두_도입사의_대표관리자이고_이미_있는_소속도_다시_실행하면_대표관리자가_된다() {
-    assertThat(memberRolesOf(MEMBER_EMAIL)).containsExactly("owner:admin", "owner:admin");
+    assertThat(memberRolesOf(MEMBER_EMAIL))
+        .containsExactly("owner:admin,payments", "owner:admin,payments");
 
     jdbcTemplate.update(
         """
@@ -121,7 +122,8 @@ class LocalCredentialsTest {
         MEMBER_EMAIL);
     jdbcTemplate.execute(readLocalCredentialsScript());
 
-    assertThat(memberRolesOf(MEMBER_EMAIL)).containsExactly("owner:admin", "owner:admin");
+    assertThat(memberRolesOf(MEMBER_EMAIL))
+        .containsExactly("owner:admin,payments", "owner:admin,payments");
   }
 
   private void assertAdminKeyOfDemoOrganization(AuthenticatedPrincipal principal, String mode) {
@@ -129,7 +131,7 @@ class LocalCredentialsTest {
     assertThat(principal.organizationId()).isEqualTo(DEMO_ORGANIZATION_ID);
     assertThat(principal.mode()).isEqualTo(mode);
     assertThat(principal.environmentId()).isEqualTo(environmentIdOf(mode));
-    assertThat(principal.scopes()).containsExactly("admin");
+    assertThat(principal.scopes()).containsExactlyInAnyOrder("admin", "payments");
   }
 
   private UUID environmentIdOf(String mode) {

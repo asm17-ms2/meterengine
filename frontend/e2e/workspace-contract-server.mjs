@@ -14,7 +14,7 @@ const session = {
   user_account: { id: "66666666-6666-4666-8666-666666666666", email: "workspace@contract.local", name: "계약 테스트 사용자", role: "member" },
   organization,
   organization_role: "owner",
-  scopes: ["admin"],
+  scopes: ["admin", "payments"],
   organizations: [organization],
   expires_at: "2099-01-01T00:00:00Z",
 };

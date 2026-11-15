@@ -35,7 +35,7 @@ public class OrganizationMember implements Persistable<OrganizationMemberId> {
 
   @JdbcTypeCode(SqlTypes.ARRAY)
   @Column(nullable = false)
-  private List<String> scopes = AccessScopes.ADMIN;
+  private List<String> scopes = AccessScopes.FULL;
 
   @Column(name = "revoked_at")
   private OffsetDateTime revokedAt;
@@ -104,7 +104,7 @@ public class OrganizationMember implements Persistable<OrganizationMemberId> {
 
   public void changeRole(String role) {
     this.role = role;
-    if ("owner".equals(role) || "admin".equals(role)) this.scopes = AccessScopes.ADMIN;
+    if ("owner".equals(role) || "admin".equals(role)) this.scopes = AccessScopes.FULL;
   }
 
   public List<String> getScopes() {
