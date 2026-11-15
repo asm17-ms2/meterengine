@@ -132,7 +132,7 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     await expect(webhookDialog.locator(".secret-result code")).toBeVisible();
     const webhookSecret = await webhookDialog.locator(".secret-result code").textContent();
     await request.post(`${PG_URL}/__control`, { data: { webhookSecret, channel: suffix } });
-    await webhookDialog.getByRole("button", { name: "서명 비밀값 복사", exact: true }).click();
+    await webhookDialog.getByRole("button", { name: "웹훅 시크릿 복사", exact: true }).click();
     await expect(webhookDialog.getByText("복사했어요.", { exact: true })).toBeVisible();
     await page.keyboard.press("Escape");
   });

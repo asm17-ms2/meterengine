@@ -8,7 +8,7 @@ import { PageLinks } from "@/components/screen/ListPagination";
 type WebhookDeliveryResponse = Record<string, unknown> & { id: string; status: string; type: string };
 const EVENT_TYPES = [{ value: "payment_succeeded", label: "결제 성공" }, { value: "payment_failed", label: "결제 실패" }, { value: "payment_canceled", label: "결제 취소" }, { value: "unbilled_usage_detected", label: "과금 제외 사용량" }, { value: "webhook_test", label: "테스트 웹훅" }];
 const DELIVERY_STATES = { waiting: "발송 대기", retry: "재시도 대기", done: "발송 완료", failed: "발송 실패" };
-const FAILURE_REASONS: Record<string, string> = { timeout: "응답 시간 초과", connection_error: "연결 실패", unexpected_status: "2xx가 아닌 응답", blocked_address: "허용되지 않는 주소", endpoint_disabled: "발송을 멈춘 웹훅 URL", lease_expired: "발송 결과를 기록하지 못함", secret_unavailable: "서명 비밀값을 읽지 못함" };
+const FAILURE_REASONS: Record<string, string> = { timeout: "응답 시간 초과", connection_error: "연결 실패", unexpected_status: "2xx가 아닌 응답", blocked_address: "허용되지 않는 주소", endpoint_disabled: "발송을 멈춘 웹훅 URL", lease_expired: "발송 결과를 기록하지 못함", secret_unavailable: "웹훅 시크릿을 읽지 못함" };
 const eventLabel = (type: string) => EVENT_TYPES.find(option => option.value === type)?.label ?? type;
 const deliveryState = (delivery: WebhookDeliveryResponse) => delivery.status === "pending" ? (Number(delivery.attempt_count) > 0 ? "retry" : "waiting") : delivery.status;
 

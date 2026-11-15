@@ -109,7 +109,7 @@ public class EventBatchParser {
         index,
         transactionId,
         ErrorCode.EVENT_TOO_OLD,
-        List.of(new FieldError("events[" + index + "].timestamp", "수집 판정 시각보다 35일 넘게 과거인 시각입니다")));
+        List.of(new FieldError("events[" + index + "].timestamp", "수신 시각보다 35일 넘게 지난 시각입니다")));
   }
 
   private static String jsonField(String javaField) {
