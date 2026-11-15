@@ -27,14 +27,17 @@ async function tenantRequest<T>(path: string, options: { method?: "GET" | "POST"
   return result;
 }
 
+// 그 달 이벤트를 집계하는 조회는 데이터가 메모리에 없을 때 5초를 넘을 수 있어 10초를 기다린다.
+export const AGGREGATE_TIMEOUT_MS = 10_000;
+
 export async function serverFetch<T>(
-  _baseUrl: string, path: string, searchParams?: Record<string, string | undefined>,
+  _baseUrl: string, path: string, searchParams?: Record<string, string | undefined>, options: { timeoutMs?: number } = {},
 ): Promise<Result<T>> {
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries(searchParams ?? {})) {
     if (value !== undefined) query.set(key, value);
   }
-  return tenantRequest<T>(`${path}${query.size ? `?${query}` : ""}`, {});
+  return tenantRequest<T>(`${path}${query.size ? `?${query}` : ""}`, { timeoutMs: options.timeoutMs });
 }
 
 export async function serverSend<T>(
