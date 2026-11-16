@@ -159,7 +159,7 @@ export function BillableMetricFormDialog({
       forceRender
       width="min(680px, calc(100vw - 32px))"
       style={{ top: 24 }}
-      styles={{ body: { maxHeight: "calc(100dvh - 180px)", overflowY: "auto", paddingInlineEnd: 4 } }}
+      styles={{ body: { maxHeight: "calc(100dvh - 180px)", overflowY: "auto", paddingInline: 8, marginInline: -8 } }}
       title={isEdit ? "미터 수정" : "미터 등록"}
       onCancel={isPending ? undefined : close}
       keyboard={!isPending}

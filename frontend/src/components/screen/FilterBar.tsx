@@ -11,7 +11,7 @@ export function FilterBar({
 }) {
   return (
     <Flex justify="space-between" align="center" gap="medium" wrap>
-      <Flex align="center" gap="small" wrap style={{ minWidth: 0, maxWidth: "100%" }}>
+      <Flex align="center" gap="small" wrap style={{ flex: "1 1 auto", minWidth: 0, maxWidth: "100%" }}>
         {children}
       </Flex>
       {end ? (

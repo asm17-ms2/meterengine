@@ -63,7 +63,7 @@ export async function AuditScreen({ query, isOperator = false }: { query: Query;
         <label className="workspace-field"><span>시작 일시 (KST)</span><input name="from" type="datetime-local" step="1" defaultValue={localTime(value(query, "from"))} /></label>
         <label className="workspace-field"><span>종료 일시 (KST, 미포함)</span><input name="to" type="datetime-local" step="1" defaultValue={localTime(value(query, "to"))} aria-invalid={isRangeInvalid} aria-describedby={isRangeInvalid ? "audit-range-error" : undefined} /></label>
         {isRangeInvalid && <p id="audit-range-error" role="alert" className="field-error">{RANGE_ERROR}</p>}
-      </div><div className="workspace-actions"><Button type="primary" htmlType="submit">조건 적용</Button><ScopedLink href={pagePath}>조건 초기화</ScopedLink></div>
+      </div><div className="event-filter-submit"><Button type="primary" htmlType="submit">조건 적용</Button><ScopedLink href={pagePath}>조건 초기화</ScopedLink></div>
     </form></section>
     {!result ? null : !result.ok ? <WorkspaceError message={result.error.message} /> : <section className="workspace-panel"><div className="workspace-heading"><h2>활동 {new Intl.NumberFormat("ko-KR").format(result.data.total)}건</h2><p className="field-hint">시간은 KST예요. 조회한 것도 기록돼서 새로 조회할 때마다 기록이 늘어나요.</p></div>
       {result.data.audit_logs.length === 0 ? <EmptyState title="이 조건에 맞는 기록이 없어요" body="기간이나 활동 조건을 바꿔 보세요." /> : <div className="audit-list">{result.data.audit_logs.map(log => {
