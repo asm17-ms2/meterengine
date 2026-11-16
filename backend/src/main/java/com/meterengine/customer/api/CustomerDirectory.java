@@ -12,4 +12,7 @@ public interface CustomerDirectory {
 
   // 고객 행에 FOR SHARE 잠금을 걸고 고객마다 보관하지 않았는지를 돌려준다.
   Map<UUID, Boolean> active(UUID organizationId, Collection<UUID> customerIds);
+
+  // 여러 도입사의 고객을 한 번에 본다. 고객 행에 FOR SHARE 잠금을 걸고, 그 도입사의 그 환경에 있는 고객만 돌려준다.
+  Map<CustomerKey, Boolean> active(Collection<CustomerKey> customerKeys);
 }

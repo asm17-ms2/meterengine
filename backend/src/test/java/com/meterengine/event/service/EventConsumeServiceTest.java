@@ -3,13 +3,17 @@ package com.meterengine.event.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.meterengine.customer.api.CustomerDirectory;
+import com.meterengine.customer.api.CustomerKey;
 import com.meterengine.event.client.EventDeadLetterPublisher;
 import com.meterengine.event.dto.EventIngestMessage;
 import com.meterengine.event.dto.EventIngestRecord;
+import com.meterengine.event.dto.EventTransactionKey;
 import com.meterengine.event.repository.EventRejectionRepository;
 import com.meterengine.event.repository.EventRepository;
 import io.micrometer.core.instrument.Timer;
@@ -46,6 +50,7 @@ class EventConsumeServiceTest {
 
   private final JsonMapper jsonMapper = JsonMapper.builder().build();
   private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+  private final UUID organizationId = UUID.randomUUID();
   private final UUID customerId = UUID.randomUUID();
 
   private EventConsumeService eventConsumeService;
@@ -67,7 +72,7 @@ class EventConsumeServiceTest {
   // DLQ로 보내고 넘어가면 DB가 죽은 동안의 이벤트가 전부 DLQ에 쌓인다. 던져서 같은 묶음을 다시 읽게 한다.
   @Test
   void DB가_답하지_않으면_DLQ로_보내지_않고_던진다() {
-    when(eventRepository.findExistingTransactionIds(any(), any()))
+    when(eventRepository.findExistingTransactionKeys(any()))
         .thenThrow(new QueryTimeoutException("statement timeout"));
 
     assertThatThrownBy(() -> eventConsumeService.consume(List.of(eventIngestRecord())))
@@ -78,8 +83,9 @@ class EventConsumeServiceTest {
   // 수집 서버가 202로 답한 때부터 DB에 들어간 때까지가 도입사가 조회에서 겪는 지연이다.
   @Test
   void 저장한_이벤트마다_접수부터_저장까지_걸린_시간을_남긴다() {
-    when(customerDirectory.active(any(), any())).thenReturn(Map.of(customerId, true));
-    when(eventRepository.insertAllMessagesIfAbsent(any())).thenReturn(List.of("tx-1"));
+    when(customerDirectory.active(any())).thenReturn(Map.of(customerKey(), true));
+    when(eventRepository.insertAllMessagesIfAbsent(any()))
+        .thenReturn(List.of(EventTransactionKey.of(message(organizationId))));
 
     eventConsumeService.consume(List.of(eventIngestRecord()));
 
@@ -91,7 +97,7 @@ class EventConsumeServiceTest {
   // 이미 있던 이벤트는 이번에 저장한 것이 아니라서, 넣으면 다시 읽을 때마다 지연이 길게 찍힌다.
   @Test
   void 중복은_저장_지연을_남기지_않는다() {
-    when(customerDirectory.active(any(), any())).thenReturn(Map.of(customerId, true));
+    when(customerDirectory.active(any())).thenReturn(Map.of(customerKey(), true));
     when(eventRepository.insertAllMessagesIfAbsent(any())).thenReturn(List.of());
 
     eventConsumeService.consume(List.of(eventIngestRecord()));
@@ -99,25 +105,48 @@ class EventConsumeServiceTest {
     assertThat(storageDelayTimer().count()).isZero();
   }
 
+  // 도입사마다 따로 물으면 쿼리가 묶음에 든 도입사 수만큼 늘어 저장이 느려진다.
+  @Test
+  void 도입사가_섞인_묶음도_쿼리를_한_번씩만_보낸다() {
+    eventConsumeService.consume(
+        List.of(
+            eventIngestRecord(message(organizationId)),
+            eventIngestRecord(message(UUID.randomUUID()))));
+
+    verify(eventRepository, times(1)).findExistingTransactionKeys(any());
+    verify(customerDirectory, times(1)).active(any());
+    verify(eventRepository, times(1)).insertAllMessagesIfAbsent(any());
+  }
+
+  private CustomerKey customerKey() {
+    return new CustomerKey(organizationId, null, customerId);
+  }
+
   private Timer storageDelayTimer() {
     return meterRegistry.get(EventConsumeMetrics.STORAGE_DELAY_TIMER_NAME).timer();
   }
 
   private EventIngestRecord eventIngestRecord() {
-    EventIngestMessage message =
-        new EventIngestMessage(
-            EventIngestMessage.CURRENT_SCHEMA_VERSION,
-            UUID.randomUUID(),
-            null,
-            "tx-1",
-            customerId,
-            "api_call",
-            Map.of(),
-            OffsetDateTime.now(),
-            STORED_AT.minus(STORAGE_DELAY),
-            UUID.randomUUID(),
-            "api_key",
-            UUID.randomUUID());
+    return eventIngestRecord(message(organizationId));
+  }
+
+  private EventIngestRecord eventIngestRecord(EventIngestMessage message) {
     return new EventIngestRecord(message.key(), jsonMapper.writeValueAsBytes(message), Map.of());
+  }
+
+  private EventIngestMessage message(UUID messageOrganizationId) {
+    return new EventIngestMessage(
+        EventIngestMessage.CURRENT_SCHEMA_VERSION,
+        messageOrganizationId,
+        null,
+        "tx-1",
+        customerId,
+        "api_call",
+        Map.of(),
+        OffsetDateTime.now(),
+        STORED_AT.minus(STORAGE_DELAY),
+        UUID.randomUUID(),
+        "api_key",
+        UUID.randomUUID());
   }
 }
