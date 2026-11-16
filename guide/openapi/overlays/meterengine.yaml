@@ -82,75 +82,97 @@ actions:
   - target: "$.paths['/v1/public/invoice-links/payment-retries'].post"
     update:
       x-excluded: true
-  # x-excluded: 화면 보조 options
+  # x-excluded: 화면 보조
   - target: "$.paths['/v1/customers/options'].get"
     update:
       x-excluded: true
   - target: "$.paths['/v1/billable-metrics/options'].get"
     update:
       x-excluded: true
+  - target: "$.paths['/v1/events/months'].get"
+    update:
+      x-excluded: true
+  - target: "$.paths['/v1/usage/months'].get"
+    update:
+      x-excluded: true
+  - target: "$.paths['/v1/invoices/months'].get"
+    update:
+      x-excluded: true
+  - target: "$.paths['/v1/billable-metric-prices/months'].get"
+    update:
+      x-excluded: true
+  - target: "$.paths['/v1/events/types'].get"
+    update:
+      x-excluded: true
   # x-excluded: 콘솔 로그인으로만 바꾸는 정보
   - target: "$.paths['/v1/organization/supplier'].put"
     update:
       x-excluded: true
-  # x-hidden: 세션 전용 관리(관리자)
+  # x-excluded: 세션 전용 관리(관리자)
   - target: "$.paths['/v1/api-keys'].post"
     update:
-      x-hidden: true
+      x-excluded: true
   - target: "$.paths['/v1/api-keys/{id}'].delete"
     update:
-      x-hidden: true
+      x-excluded: true
   - target: "$.paths['/v1/api-keys/{id}/scopes'].put"
     update:
-      x-hidden: true
+      x-excluded: true
   - target: "$.paths['/v1/organization/members'].post"
     update:
-      x-hidden: true
+      x-excluded: true
   - target: "$.paths['/v1/organization/invitations'].post"
     update:
-      x-hidden: true
+      x-excluded: true
   - target: "$.paths['/v1/organization/invitations'].get"
     update:
-      x-hidden: true
+      x-excluded: true
   - target: "$.paths['/v1/organization/members/{id}'].delete"
     update:
-      x-hidden: true
+      x-excluded: true
   - target: "$.paths['/v1/organization/invitations/{id}'].delete"
     update:
-      x-hidden: true
+      x-excluded: true
   - target: "$.paths['/v1/organization/members/{id}/role'].put"
     update:
-      x-hidden: true
+      x-excluded: true
   - target: "$.paths['/v1/organization/members/{id}/scopes'].put"
     update:
-      x-hidden: true
+      x-excluded: true
   - target: "$.paths['/v1/payment-setting'].put"
     update:
-      x-hidden: true
+      x-excluded: true
   - target: "$.paths['/v1/toss-payments-credentials/{mode}'].put"
     update:
-      x-hidden: true
+      x-excluded: true
   - target: "$.paths['/v1/toss-payments-credentials/{mode}'].delete"
     update:
-      x-hidden: true
+      x-excluded: true
   - target: "$.paths['/v1/organization/live-environment-applications'].post"
     update:
-      x-hidden: true
-  # x-hidden: 세션 전용 관리(조회)
+      x-excluded: true
+  # x-excluded: 세션 전용 관리(조회)
   - target: "$.paths['/v1/api-keys'].get"
     update:
-      x-hidden: true
+      x-excluded: true
   - target: "$.paths['/v1/audit-logs'].get"
     update:
-      x-hidden: true
+      x-excluded: true
   - target: "$.paths['/v1/organization/members'].get"
     update:
-      x-hidden: true
+      x-excluded: true
   - target: "$.paths['/v1/organization/live-environment-applications'].get"
     update:
-      x-hidden: true
-  # x-hidden: 토스페이먼츠 웹훅 수신
+      x-excluded: true
+  # x-excluded: 토스페이먼츠 웹훅 수신
   - target: "$.paths['/v1/toss-payments-webhooks/{organization_id}'].post"
+    update:
+      x-excluded: true
+  # x-hidden: 화면 조회
+  - target: "$.paths['/v1/toss-payments-credentials'].get"
+    update:
+      x-hidden: true
+  - target: "$.paths['/v1/organization/supplier'].get"
     update:
       x-hidden: true
   # 최상위 tags 가 원본에 없어 새로 만든다. x-group 은 탐색 그룹 표시 이름이다.
@@ -161,14 +183,6 @@ actions:
           x-group: "업무 환경"
         - name: "current-organization-controller"
           x-group: "조직 정보"
-        - name: "live-environment-application-controller"
-          x-group: "라이브 환경 이용 신청 (콘솔 전용)"
-        - name: "api-key-controller"
-          x-group: "API 키 (콘솔 전용)"
-        - name: "organization-people-controller"
-          x-group: "구성원과 초대 (콘솔 전용)"
-        - name: "audit-log-controller"
-          x-group: "감사 기록 (콘솔 전용)"
         - name: "billable-metric-controller"
           x-group: "미터"
         - name: "billable-metric-price-controller"
@@ -192,7 +206,7 @@ actions:
         - name: "event-rejection-controller"
           x-group: "수집 거절"
         - name: "unbilled-event-controller"
-          x-group: "청구 제외 사용량"
+          x-group: "과금 제외 사용량"
         - name: "dashboard-controller"
           x-group: "개요"
         - name: "workspace-query-controller"
@@ -219,7 +233,5 @@ actions:
           x-group: "결제 취소"
         - name: "payment-reconciliation-mismatch-controller"
           x-group: "대사 불일치"
-        - name: "toss-payments-webhook-controller"
-          x-group: "토스페이먼츠 웹훅 수신"
         - name: "webhook-endpoint-controller"
           x-group: "웹훅"

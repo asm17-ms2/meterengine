@@ -26,13 +26,13 @@ MeterEngine은 한 달 동안 한 고객의 이벤트를 미터의 구분 키 �
 ## 단가가 적용되는 규칙
 
 <Steps>
-<Step title="키 집합이 미터와 정확히 같아야 한다">
+<Step title="키 집합이 미터와 정확히 같아야 합니다">
 단가의 `dimension_values` 키 집합은 미터의 `dimension_properties`와 정확히 같아야 합니다. 키가 빠지거나 남으면 400 `invalid_price_rate`로 거절됩니다. 구분 키가 없는 미터는 `{}`로 등록합니다.
 </Step>
-<Step title="값이 정확히 같은 단가만 쓴다">
+<Step title="값이 정확히 같은 단가만 씁니다">
 이벤트에서 나온 구분 값과 값이 정확히 같은 단가만 적용합니다. 다른 구분 값의 단가로 대신 계산하지 않으며, 구분 키가 있는 미터에는 "나머지 모든 값" 단가를 둘 수 없습니다. 맞는 단가가 없는 구분 값의 사용량은 청구되지 않습니다.
 </Step>
-<Step title="고객 단가가 있으면 그것을 먼저 쓴다">
+<Step title="고객 단가가 있으면 그것을 먼저 씁니다">
 같은 구분 값에 그 고객 전용 단가가 있으면 그것을, 없으면 공통 단가를 씁니다. 고객 단가는 [단가 모델과 버전](/pricing/price-models)에서 다룹니다.
 </Step>
 </Steps>
@@ -114,10 +114,10 @@ const priceRate = await response.json();
 
 | 어디서 | 무엇이 보이나 |
 | --- | --- |
-| `GET /v1/invoices/draft?month=YYYY-MM` | 고객마다 `unpriced_usages`에 미터 code, 대상 속성, 구분 값, 수량이 나옵니다 |
-| 콘솔 '과금에서 빠진 이벤트' 화면 | 사유 '적용 단가 없음'으로 해당 이벤트가 나오고 '단가 등록하기'로 '요금 설정' 화면에 갈 수 있습니다 |
+| `GET /v1/invoices/draft?month=YYYY-MM` | 고객마다 `unpriced_usages`에 미터 코드, 대상 속성, 구분 값, 수량이 나옵니다 |
+| 콘솔 '과금에서 빠진 이벤트' 화면 | 사유 '적용 단가 없음'으로 그 이벤트가 나오고 '단가 등록하기'로 '요금 설정' 화면에 갈 수 있습니다 |
 | 콘솔 '청구 검토' 화면 | 조회 조건 전체의 청구 예정액과 '단가 없는 구분 값' 수가 나옵니다 |
-| `unbilled_usage_detected` 웹훅 | 매일 보내는 청구 제외 웹훅에 `unpriced_usages`가 실립니다([웹훅 이벤트 유형과 data](/webhooks/events)) |
+| `unbilled_usage_detected` 웹훅 | 매일 보내는 과금 제외 사용량 웹훅에 `unpriced_usages`가 실립니다([웹훅 이벤트 유형과 data](/webhooks/events)) |
 
 청구 예정액 조회에 필요한 권한은 read입니다.
 
@@ -126,15 +126,11 @@ curl "https://meterengine.com/v1/invoices/draft?month=2026-11" \
   -H "Authorization: Bearer me_test_xxxxxxxx"
 ```
 
-`lumen-fast`에만 단가 2원이 있을 때 위 고객의 응답은 아래와 같습니다. `lumen-pro`와 `{"model": null}` 구분 값은 라인에 없고 `unpriced_usages`에만 나옵니다.
+`lumen-fast`에만 단가 2원이 있을 때 위 고객의 응답은 아래와 같습니다. `lumen-pro`와 `{"model": null}` 구분 값은 청구 항목(`lines`)에 없고 `unpriced_usages`에만 나옵니다.
 
-```json 200 응답
+```json 200 응답의 일부
 {
   "month": "2026-11",
-  "calculated_at": "2026-11-05T10:00:00+09:00",
-  "auto_finalize_enabled": false,
-  "auto_finalize_at": null,
-  "auto_finalize_running": false,
   "total_amount": 2400,
   "customers": [
     {
@@ -144,15 +140,11 @@ curl "https://meterengine.com/v1/invoices/draft?month=2026-11" \
       "lines": [
         {
           "billable_metric_code": "llm-input-tokens",
-          "target_property": "input_tokens",
           "dimension_values": { "model": "lumen-fast" },
           "quantity": 1200,
           "unit_price": 2,
           "amount": 2400,
-          "line_type": "per_unit",
-          "tier_index": 0,
-          "quantity_numerator": 1200,
-          "quantity_denominator": 1
+          "line_type": "per_unit"
         }
       ],
       "unpriced_usages": [
@@ -169,17 +161,16 @@ curl "https://meterengine.com/v1/invoices/draft?month=2026-11" \
           "quantity": 300
         }
       ],
-      "negative_usages": [],
-      "auto_finalize_held": false
+      "auto_finalize_held": true
     }
   ]
 }
 ```
 
-위 예시의 미터는 `unit_size`가 1입니다. 응답 필드 전체는 [API 참조](/api-reference/introduction)의 `GET /v1/invoices/draft`를 보세요.
+위 예시의 미터는 `unit_size`가 1입니다. 전체 응답 예시는 [빠른 시작](/quickstart)에, 필드 설명은 [API 참조](/api-reference/introduction)의 `GET /v1/invoices/draft`에 있습니다.
 
 <Warning>
-단가 없는 사용량이 남아 있어도 청구서는 확정됩니다. 확정하면 그 사용량은 청구되지 않은 채 굳으므로 확정 전에 `unpriced_usages`가 비었는지 확인하세요([청구서 수동 확정](/billing/finalize-invoices)). {/* 확인 필요: 배포 서버 자동 확정 켜는 시점 */}자동 확정이 켜진 서버에서는 청구 예정액이 0원이 아니면서 단가 없는 사용량이 있는 고객의 자동 확정이 보류되고, 그 고객의 `auto_finalize_held`가 `true`가 됩니다([자동 확정과 보류](/billing/auto-finalization)).
+단가 없는 사용량이 남아 있어도 청구서는 확정됩니다. 확정하면 그 사용량은 청구되지 않은 채 굳으므로 확정 전에 `unpriced_usages`가 비었는지 확인하세요([청구서 수동 확정](/billing/finalize-invoices)). 청구 예정액이 0원이 아니면서 단가 없는 사용량이 있는 고객은 자동 확정이 보류되고, 그 고객의 `auto_finalize_held`가 `true`가 됩니다([자동 확정과 보류](/billing/auto-finalization)).
 </Warning>
 
 ## 구분 키를 정할 때 주의할 것

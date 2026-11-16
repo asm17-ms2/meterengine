@@ -5,7 +5,7 @@ description: "승인된 결제를 전부 또는 일부 취소하는 방법과 �
 
 필요 권한: 취소 요청은 payments(결제), 취소 내역 조회는 read(조회)
 
-결제 취소는 승인된 결제 시도의 금액을 토스페이먼츠에 돌려 달라고 요청하는 일입니다. 한 결제를 여러 번 나눠 일부씩 취소할 수 있고, 남은 금액을 한 번에 전부 취소할 수도 있습니다.
+결제 취소는 승인된 결제를 토스페이먼츠에 취소 요청해 고객에게 금액을 돌려주는 일입니다. 한 결제를 여러 번 나눠 일부씩 취소할 수 있고, 남은 금액을 한 번에 전부 취소할 수도 있습니다.
 
 <Warning>
 결제를 취소해도 확정 청구서의 금액(`supply_amount`, `tax_amount`, `total_amount`)은 바뀌지 않습니다. 취소액은 청구서와 따로 기록됩니다. 확정한 청구서를 고치는 방법은 없습니다. 자세한 내용은 [확정 뒤 바뀌는 것과 안 바뀌는 것](/billing/after-finalization)을 보세요.
@@ -14,37 +14,37 @@ description: "승인된 결제를 전부 또는 일부 취소하는 방법과 �
 ## 취소할 수 있는 결제
 
 - 결과가 `done`(승인)인 결제 시도만 취소할 수 있습니다. 결과 확인 중(`pending`)이거나 실패한 시도는 취소할 수 없습니다.
-- 남은 결제 금액은 시도 금액에서 이미 취소를 마친(`done`) 금액을 뺀 값입니다. 그보다 큰 금액은 취소할 수 없습니다.
+- 취소할 수 있는 금액은 시도 금액에서 이미 취소를 마친(`done`) 금액을 뺀 값입니다. 그보다 큰 금액은 취소할 수 없습니다.
 - 한 결제 시도에 결과 확인 중인 취소가 있는 동안에는 새 취소를 요청할 수 없습니다.
-- 취소는 그 결제를 요청할 때 쓴 토스페이먼츠 키로 요청됩니다. API 키의 모드가 그 결제의 결제 모드와 다르면 거절됩니다.
+- 취소는 그 결제를 요청할 때 쓴 토스페이먼츠 키로 요청됩니다. 테스트 키인지 라이브 키인지가 그 결제의 결제 모드와 다르면 거절됩니다.
 
 <Warning>
-취소는 되돌릴 수 없고, 취소한 청구서로 다시 결제를 받을 방법도 없습니다. 일부 취소든 전액 취소든 그 청구서에는 승인된 결제가 남아 있으므로 새 결제를 요청하면 409 `invoice_already_paid`로 거절됩니다. 금액을 다시 받아야 한다면 MeterEngine 밖에서 처리해야 합니다.
+취소는 되돌릴 수 없고, 결제를 취소한 청구서로는 다시 결제를 받을 수 없습니다. 일부 취소든 전액 취소든 그 청구서에는 승인된 결제가 남아 있으므로 새 결제를 요청하면 409 `invoice_already_paid`로 거절됩니다. 금액을 다시 받아야 한다면 MeterEngine 밖에서 처리해야 합니다.
 </Warning>
 
 ## 콘솔에서 취소하기
 
 <Steps>
-<Step title="수납 상세로 들어간다">
+<Step title="수납 상세 화면으로 들어갑니다">
 '수납과 취소' 화면에서 달을 고르고 고객 이름을 누릅니다.
 </Step>
-<Step title="취소할 승인 결제를 찾는다">
+<Step title="취소할 승인 결제를 찾습니다">
 승인된 결제마다 '결제 취소' 구역이 있고, 승인액, 취소 완료, 취소할 수 있는 금액과 취소 내역이 나옵니다.
 </Step>
-<Step title="취소 방식을 고른다">
+<Step title="취소 방식을 고릅니다">
 남은 금액 전부를 돌려주려면 '남은 금액 전액 취소'를, 일부만 돌려주려면 '부분 취소'를 누릅니다. '부분 취소'에서는 '취소 금액 (원)'에 취소할 수 있는 금액보다 작은 금액을 넣습니다. 남은 금액 전부는 '남은 금액 전액 취소'로만 취소합니다.
 </Step>
-<Step title="사유를 적고 요청한다">
+<Step title="사유를 적고 요청합니다">
 '취소 사유'를 적고 요청 버튼을 누릅니다. 일부 취소는 '입력한 금액 취소 요청', 전액 취소는 취소할 수 있는 금액이 앞에 붙은 '전액 취소 요청' 버튼입니다. 사유는 토스페이먼츠에 그대로 전달됩니다.
 </Step>
 </Steps>
 
-결과가 바로 확인되지 않으면 '취소 결과 확인 중'이 표시됩니다. 확정될 때까지 추가 취소를 받지 않으니 잠시 뒤 내역을 다시 확인하세요.
+결과가 바로 확인되지 않으면 '취소 결과 확인 중'이 표시됩니다. 결과가 나올 때까지 추가로 취소할 수 없으니 잠시 뒤 내역을 다시 확인하세요.
 
 ## API로 취소하기
 
 <Steps>
-<Step title="승인된 결제 시도의 id를 찾는다">
+<Step title="승인된 결제 시도의 id를 찾습니다">
 `GET /v1/invoices/{id}/payment-attempts`로 청구서의 결제 시도를 조회하고 `status`가 `done`인 시도의 `id`를 고릅니다.
 
 ```bash cURL
@@ -52,11 +52,11 @@ curl "https://meterengine.com/v1/invoices/7b0c2f4e-5a1d-4c8e-9f3b-2d6a8e1c4b70/p
   -H "Authorization: Bearer me_test_xxxxxxxx"
 ```
 </Step>
-<Step title="재시도 키를 만들어 저장한다">
+<Step title="재시도 키를 만들어 저장합니다">
 취소 요청마다 UUID를 하나 만들어 자사 시스템에 저장합니다. 응답을 받지 못해 다시 보낼 때 같은 값을 씁니다.
 </Step>
-<Step title="취소를 요청한다">
-`POST /v1/payment-attempts/{id}/cancellations`에 사유와 금액을 보냅니다. `amount`를 빼면 남은 결제 금액 전부를 취소합니다.
+<Step title="취소를 요청합니다">
+`POST /v1/payment-attempts/{id}/cancellations`에 사유와 금액을 보냅니다. `amount`를 빼면 취소할 수 있는 금액 전부를 취소합니다.
 
 <CodeGroup>
 
@@ -88,7 +88,7 @@ const cancellation = await res.json();
 
 </CodeGroup>
 </Step>
-<Step title="결과를 확인한다">
+<Step title="결과를 확인합니다">
 응답은 결과와 관계없이 201이고 `status`로 결과를 구분합니다.
 </Step>
 </Steps>
@@ -122,7 +122,7 @@ const cancellation = await res.json();
 | --- | --- |
 | `HTTP_<상태>` | 토스페이먼츠 거절 응답에 코드가 없어 HTTP 상태를 남겼습니다 |
 | `NOT_FOUND_CANCELLATION` | 요청하고 10분이 지나도 토스페이먼츠 결제 조회에 이 취소에 맞는 거래가 없었습니다. 토스페이먼츠 코드가 아닙니다 |
-| `toss_payments_credential_missing` | 토스페이먼츠를 부르기 전에 그 결제 모드의 키가 없었습니다 |
+| `toss_payments_credential_missing` | 토스페이먼츠를 부르기 전에 그 업무 환경의 키가 없었습니다 |
 
 취소 내역은 `GET /v1/payment-attempts/{id}/cancellations`로 조회합니다. 요청 시각이 늦은 것부터 `payment_cancellations` 배열로 나옵니다.
 
@@ -141,11 +141,11 @@ const cancellation = await res.json();
 | 400 | `malformed_request_body` | 본문을 JSON으로 읽을 수 없거나 `amount`가 정수가 아닙니다 |
 | 404 | `payment_attempt_not_found` | 그런 결제 시도가 없습니다. 다른 업무 환경의 시도도 이렇게 보입니다 |
 | 409 | `payment_attempt_not_cancelable` | 시도가 `done`이 아닙니다 |
-| 409 | `payment_attempt_fully_canceled` | 이미 전액 취소해 남은 결제 금액이 0원입니다 |
+| 409 | `payment_attempt_fully_canceled` | 이미 전액 취소해 취소할 수 있는 금액이 0원입니다 |
 | 409 | `payment_cancellation_in_progress` | 이 시도에 결과 확인 중인 취소가 있습니다 |
-| 409 | `payment_cancellation_amount_exceeded` | `amount`가 남은 결제 금액보다 큽니다 |
+| 409 | `payment_cancellation_amount_exceeded` | `amount`가 취소할 수 있는 금액보다 큽니다 |
 | 409 | `payment_cancellation_idempotency_conflict` | 같은 `Idempotency-Key`를 다른 취소 요청에 썼습니다 |
-| 409 | `payment_mode_mismatch` | API 키의 모드가 취소할 결제의 모드와 다릅니다 |
+| 409 | `payment_mode_mismatch` | 테스트 키인지 라이브 키인지가 취소할 결제의 결제 모드와 다릅니다 |
 
 오류 응답 형식은 [오류 응답과 X-Request-ID](/api-basics/errors)에 있습니다.
 
