@@ -12,6 +12,7 @@ import com.meterengine.metric.entity.MetricAggregation;
 import com.meterengine.metric.repository.BillableMetricPeriodRepository;
 import com.meterengine.metric.repository.BillableMetricRepository;
 import com.meterengine.metric.repository.BillableMetricUsageRepository;
+import com.meterengine.metric.repository.BillableMetricUsageRepository.AggregatedQuantities;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalTime;
@@ -20,6 +21,7 @@ import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.IntStream;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -104,29 +106,28 @@ public class BillableMetricUsageService {
             : billableMetricPeriodRepository.listScoped(
                 organizationId, BusinessEnvironmentContext.environmentId()));
     String period = month.toString();
-    return billableMetrics.stream()
-        .filter(
-            metric ->
-                (metric.getArchivedAt() == null && metric.getActiveFrom().compareTo(period) <= 0)
-                    || periods.stream()
-                        .anyMatch(
-                            interval ->
-                                interval.getBillableMetricCode().equals(metric.getCode())
-                                    && interval.includes(period)))
-        .map(billableMetric -> aggregate(billableMetric, customers, start, end, receivedBefore))
+    List<BillableMetric> selected =
+        billableMetrics.stream()
+            .filter(
+                metric ->
+                    (metric.getArchivedAt() == null
+                            && metric.getActiveFrom().compareTo(period) <= 0)
+                        || periods.stream()
+                            .anyMatch(
+                                interval ->
+                                    interval.getBillableMetricCode().equals(metric.getCode())
+                                        && interval.includes(period)))
+            .toList();
+    selected.forEach(this::requireSupported);
+    List<AggregatedQuantities> quantities =
+        billableMetricUsageRepository.aggregateAll(selected, start, end, receivedBefore);
+    return IntStream.range(0, selected.size())
+        .mapToObj(index -> toUsage(selected.get(index), customers, quantities.get(index)))
         .toList();
   }
 
-  private BillableMetricUsage aggregate(
-      BillableMetric billableMetric,
-      List<Customer> customers,
-      OffsetDateTime start,
-      OffsetDateTime end,
-      OffsetDateTime receivedBefore) {
-    requireSupported(billableMetric);
-
-    var quantities =
-        billableMetricUsageRepository.aggregate(billableMetric, start, end, receivedBefore);
+  private BillableMetricUsage toUsage(
+      BillableMetric billableMetric, List<Customer> customers, AggregatedQuantities quantities) {
     List<CustomerUsage> customerUsages =
         customers.stream()
             .map(

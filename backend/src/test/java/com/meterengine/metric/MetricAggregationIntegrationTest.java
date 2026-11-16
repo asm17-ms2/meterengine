@@ -12,6 +12,7 @@ import com.meterengine.global.error.InvalidRequestException;
 import com.meterengine.metric.dto.CreateBillableMetricRequest;
 import com.meterengine.metric.dto.CustomerUsage;
 import com.meterengine.metric.dto.UpdateBillableMetricRequest;
+import com.meterengine.metric.repository.BillableMetricUsageRepository;
 import com.meterengine.metric.service.BillableMetricService;
 import com.meterengine.metric.service.BillableMetricUsageService;
 import java.math.BigDecimal;
@@ -39,6 +40,7 @@ class MetricAggregationIntegrationTest {
   @Autowired private jakarta.persistence.EntityManager entityManager;
   @Autowired private BillableMetricService metrics;
   @Autowired private BillableMetricUsageService usage;
+  @Autowired private BillableMetricUsageRepository usageRepository;
   @Autowired private UnbilledEventRepository diagnostics;
   @Autowired private com.meterengine.invoice.service.DraftInvoiceService draftInvoices;
   @Autowired private com.meterengine.invoice.service.InvoiceFinalizationService finalization;
@@ -473,6 +475,70 @@ class MetricAggregationIntegrationTest {
     assertThat(result.rawQuantityNumerator()).isEqualByComparingTo("-1E-30");
     assertThat(draftInvoices.preview(organization, MONTH).customers().getFirst().negativeUsages())
         .hasSize(1);
+  }
+
+  @Test
+  void 여러_미터를_함께_집계해도_미터별_집계와_같다() {
+    UUID second = UUID.randomUUID();
+    jdbc.update(
+        "INSERT INTO customer(id, organization_id, name) VALUES (?, ?, '두번째 고객')",
+        second,
+        organization);
+    create("a-sum", "sum", List.of("region"), null, null, null, null);
+    create("b-count", "count", List.of("region"), null, null, null, null);
+    create("c-min", "min", List.of(), null, null, null, null);
+    create("d-max", "max", List.of("region"), null, null, null, null);
+    create("e-avg", "avg", List.of("region"), new BigDecimal("3"), "round", 2, null);
+    create("f-distinct", "count_distinct", List.of(), null, null, null, null);
+    metrics.create(
+        organization,
+        new CreateBillableMetricRequest(
+            "g-tokens", "g-tokens", "llm", "sum", "tokens", List.of(), null, null, null, null));
+    event("a", "{\"value\":5,\"region\":\"kr\"}", START);
+    event("b", "{\"value\":7.5,\"region\":\"us\"}", START.plusSeconds(1));
+    event("c", "{\"value\":\"x\",\"region\":\"kr\"}", START.plusSeconds(2));
+    event("d", "{\"region\":\"jp\"}", START.plusSeconds(3));
+    event("e", "{\"value\":-2}", START.plusSeconds(4));
+    TestEvents.withGivenReceivedAt(
+        jdbc,
+        () -> {
+          jdbc.update(
+              "INSERT INTO event(organization_id, transaction_id, customer_id, type, properties, occurred_at, received_at) VALUES (?, 'f', ?, 'observed', '{\"value\":11,\"region\":\"kr\"}', ?, ?)",
+              organization,
+              second,
+              START,
+              START);
+          jdbc.update(
+              "INSERT INTO event(organization_id, transaction_id, customer_id, type, properties, occurred_at, received_at) VALUES (?, 'g', ?, 'llm', '{\"tokens\":120,\"value\":1}', ?, ?)",
+              organization,
+              second,
+              START,
+              START);
+        });
+
+    var aggregated = usage.aggregate(organization, MONTH);
+
+    assertThat(aggregated).hasSize(7);
+    for (var metricUsage : aggregated) {
+      var expected =
+          usageRepository.aggregate(
+              metricUsage.billableMetric(), START, END, BillableMetricUsageService.cutoffAt(MONTH));
+      for (CustomerUsage customerUsage : metricUsage.customers()) {
+        var total = expected.totalByCustomerId().get(customerUsage.customerId());
+        assertThat(customerUsage.rawQuantity())
+            .as(metricUsage.billableMetric().getCode())
+            .isEqualTo(total == null ? BigDecimal.ZERO : total.rawQuantity());
+        assertThat(customerUsage.quantity())
+            .isEqualTo(total == null ? BigDecimal.ZERO : total.quantity());
+        assertThat(customerUsage.dimensionUsages())
+            .isEqualTo(
+                expected
+                    .dimensionUsagesByCustomerId()
+                    .getOrDefault(customerUsage.customerId(), List.of()));
+      }
+    }
+    assertThat(quantity("a-sum").rawQuantity()).isEqualByComparingTo("10.5");
+    assertThat(quantity("b-count").dimensionUsages()).hasSize(4);
   }
 
   private void create(
