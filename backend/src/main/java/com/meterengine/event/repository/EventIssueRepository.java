@@ -9,7 +9,6 @@ import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -119,35 +118,49 @@ public class EventIssueRepository {
             """;
     String reasonWhere = reason == null ? "" : " WHERE reason = ?";
     if (reason != null) parameters.add(reason);
-    Map<String, Long> counts =
-        jdbcTemplate.query(
-            cte
-                + " SELECT reason, count(*) AS count FROM issues"
-                + reasonWhere
-                + " GROUP BY reason",
-            rs -> {
-              Map<String, Long> result = new java.util.HashMap<>();
-              while (rs.next()) result.put(rs.getString("reason"), rs.getLong("count"));
-              return result;
-            },
-            parameters.toArray());
-    Summary summary =
-        new Summary(
-            counts.getOrDefault("unknown_event_type", 0L),
-            counts.getOrDefault("invalid_target_property", 0L),
-            counts.getOrDefault("unpriced_usage", 0L));
     parameters.add(size);
     parameters.add(Math.multiplyExact((long) page, size));
-    List<EventIssueResponse> rows =
-        jdbcTemplate.query(
-            cte
-                + " SELECT * FROM issues"
-                + reasonWhere
-                + " ORDER BY occurred_at DESC, transaction_id COLLATE \"C\", billable_metric_code"
-                + " COLLATE \"C\" NULLS FIRST, reason LIMIT ? OFFSET ?",
-            EventIssueRepository::row,
-            parameters.toArray());
-    return new IssuePage(rows, summary);
+    // 건수 한 행에 페이지를 붙여 selected_events를 한 번만 만들고, 페이지가 비어도 건수를 받는다
+    return jdbcTemplate.query(
+        cte
+            + ", filtered AS (SELECT * FROM issues"
+            + reasonWhere
+            + "), page AS (SELECT * FROM filtered ORDER BY "
+            + order("")
+            + " LIMIT ? OFFSET ?)"
+            + " SELECT s.*, p.* FROM (SELECT"
+            + " count(*) FILTER (WHERE reason = 'unknown_event_type') AS unknown_event_type_count,"
+            + " count(*) FILTER (WHERE reason = 'invalid_target_property') AS"
+            + " invalid_target_property_count,"
+            + " count(*) FILTER (WHERE reason = 'unpriced_usage') AS unpriced_usage_count"
+            + " FROM filtered) s LEFT JOIN page p ON true ORDER BY "
+            + order("p."),
+        rs -> {
+          Summary summary = null;
+          List<EventIssueResponse> rows = new ArrayList<>();
+          while (rs.next()) {
+            if (summary == null)
+              summary =
+                  new Summary(
+                      rs.getLong("unknown_event_type_count"),
+                      rs.getLong("invalid_target_property_count"),
+                      rs.getLong("unpriced_usage_count"));
+            if (rs.getString("transaction_id") != null) rows.add(row(rs, rows.size()));
+          }
+          return new IssuePage(rows, summary);
+        },
+        parameters.toArray());
+  }
+
+  private static String order(String alias) {
+    return alias
+        + "occurred_at DESC, "
+        + alias
+        + "transaction_id COLLATE \"C\", "
+        + alias
+        + "billable_metric_code COLLATE \"C\" NULLS FIRST, "
+        + alias
+        + "reason";
   }
 
   private static EventIssueResponse row(ResultSet rs, int index) throws SQLException {

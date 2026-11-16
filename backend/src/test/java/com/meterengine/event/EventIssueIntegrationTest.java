@@ -134,6 +134,22 @@ class EventIssueIntegrationTest {
   }
 
   @Test
+  void 페이지가_비어도_사유별_건수와_합계를_준다() {
+    String beyond = body(get(read, "&size=2&page=5"));
+    assertThat((List<?>) JsonPath.read(beyond, "$.issues")).isEmpty();
+    assertThat(number(beyond, "$.total")).isEqualTo(3);
+    assertThat((Map<String, Integer>) JsonPath.read(beyond, "$.summary"))
+        .containsEntry("unknown_event_type", 1)
+        .containsEntry("invalid_target_property", 1)
+        .containsEntry("unpriced_usage", 1);
+    String filtered = body(get(read, "&reason=invalid_target_property&size=1&page=1"));
+    assertThat((List<?>) JsonPath.read(filtered, "$.issues")).isEmpty();
+    assertThat(number(filtered, "$.total")).isEqualTo(1);
+    assertThat(number(filtered, "$.summary.invalid_target_property")).isEqualTo(1);
+    assertThat(number(filtered, "$.summary.unknown_event_type")).isZero();
+  }
+
+  @Test
   void 한_이벤트에_복수_미터_문제가_있으면_각각_근거를_보인다() {
     metric("other_tokens", "usage", "sum", "other", "{}");
     event("multi-event", "usage", "{\"tokens\":\"bad\",\"other\":\"bad\"}", "2026-10-11T00:00:00Z");
