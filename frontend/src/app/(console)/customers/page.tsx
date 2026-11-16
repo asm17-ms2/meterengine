@@ -20,7 +20,7 @@ export default async function CustomersPage({ searchParams }: { searchParams: Pr
   const result = await listCustomers(query, query.devState);
   const rows = result.ok ? result.data.customers.map(customer => ({ ...customer, status: customer.archived_at ? "archived" : "active" })) : [];
   return <>
-    <WorkspaceHeader title="고객" description="외부 고객 ID로 사용량을 연결하고 고객별 청구와 수납을 확인하세요."><ActionPanel title="고객 등록" triggerType="primary" operation="createCustomer" description="외부 고객 ID에는 자사 서비스에서 쓰는 고객 고유 ID를 넣으세요. 이미 등록된 ID를 넣으면 새로 만들지 않고 기존 고객을 그대로 써요." fields={[{ name: "name", label: "고객명", maxLength: 255 }, { name: "external_id", label: "외부 고객 ID", isOptional: true, placeholder: "customer-001" }, { name: "billing_email", label: "청구 이메일", type: "email", isOptional: true, maxLength: 254 }]} label="등록" /></WorkspaceHeader>
+    <WorkspaceHeader title="고객" description="자사 서비스의 고객을 등록하고 고객별 청구와 수납을 확인하세요."><ActionPanel title="고객 등록" triggerType="primary" operation="createCustomer" description="외부 고객 ID에는 자사 서비스에서 쓰는 고객 고유 ID를 넣으세요. 이미 등록된 ID를 넣으면 새로 만들지 않고 기존 고객을 그대로 써요." fields={[{ name: "name", label: "고객명", maxLength: 255 }, { name: "external_id", label: "외부 고객 ID", isOptional: true, placeholder: "customer-001" }, { name: "billing_email", label: "청구 이메일", type: "email", isOptional: true, maxLength: 254 }]} label="등록" /></WorkspaceHeader>
     <section className="workspace-panel">
       <ResourceSearchControls query={query} capabilities={CAPABILITIES.listCustomers} resource="customers" />
       <CsvDownload resource="customers" />

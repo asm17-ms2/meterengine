@@ -1,6 +1,6 @@
 ---
 title: "고객 등록과 ID 대응"
-description: "고객을 등록하고 자사 시스템의 ID와 MeterEngine 고객 id를 대응시키는 방법을 설명합니다."
+description: "고객을 등록하고, 자사 시스템의 ID와 MeterEngine 고객 id를 함께 저장하는 방법을 설명합니다."
 ---
 
 사용량 이벤트는 고객에게 붙습니다. 이벤트를 보내기 전에 청구할 고객을 MeterEngine에 등록하고, 등록 응답으로 받은 고객 id를 자사 시스템에 저장해 둡니다.
@@ -11,8 +11,6 @@ description: "고객을 등록하고 자사 시스템의 ID와 MeterEngine 고�
 | --- | --- | --- |
 | `id` (UUID) | MeterEngine이 등록할 때 만듭니다 | 이벤트의 `customer_id`, 고객 조회와 수정, 결제 |
 | `external_id` | 직접 정합니다(자사 시스템의 회원 번호 등) | 등록 중복 방지, 고객 다시 찾기 |
-
-<Note>콘솔 '고객' 화면에는 '외부 고객 ID로 사용량을 연결'이라고 쓰여 있지만, 외부 고객 ID는 고객을 찾는 값이고 이벤트를 고객에 연결하는 값은 고객 id입니다.</Note>
 
 ## 필요 권한
 
@@ -27,10 +25,10 @@ description: "고객을 등록하고 자사 시스템의 ID와 MeterEngine 고�
 ## 고객 등록하기
 
 <Steps>
-<Step title="업무 환경과 키를 확인한다">
+<Step title="업무 환경과 키를 확인합니다">
 연동을 시험할 때는 테스트 환경에서 발급한 키(`me_test_`로 시작)를 씁니다. 고객은 업무 환경마다 따로 등록되므로 테스트 환경에 등록한 고객은 라이브 환경에 없습니다. 라이브 환경으로 넘어갈 때 고객을 다시 등록합니다. 자세한 내용은 [업무 환경](/concepts/environments)을 보세요.
 </Step>
-<Step title="external_id를 넣어 등록한다">
+<Step title="external_id를 넣어 등록합니다">
 자사 시스템에서 그 고객을 가리키는 고유한 값을 `external_id`에 넣어 보냅니다.
 
 <CodeGroup>
@@ -63,7 +61,7 @@ const customer = await response.json();
 ```
 </CodeGroup>
 </Step>
-<Step title="응답의 id를 저장한다">
+<Step title="응답의 id를 저장합니다">
 새로 만들면 `201 Created`와 함께 고객이 돌아옵니다.
 
 ```json 201 Created
@@ -80,7 +78,7 @@ const customer = await response.json();
 
 `id`를 자사 시스템에 `external_id`와 함께 저장합니다. 이 값이 이벤트의 `customer_id`가 됩니다.
 </Step>
-<Step title="이벤트에 id를 쓴다">
+<Step title="이벤트에 id를 씁니다">
 저장한 `id`를 `customer_id`에 넣어 이벤트를 보냅니다. 방법은 [사용량 이벤트 보내기](/integration/events)를 보세요.
 </Step>
 </Steps>
@@ -158,10 +156,10 @@ MeterEngine 고객 id. 이벤트의 `customer_id`에 넣는 값입니다.
 저장해 둔 고객 id를 잃었으면 다음 중 하나로 다시 찾습니다.
 
 <AccordionGroup>
-<Accordion title="같은 external_id로 다시 등록한다 (ingest 권한)">
+<Accordion title="같은 external_id로 다시 등록합니다 (ingest 권한)">
 `POST /v1/customers`를 같은 `external_id`로 다시 보내면 기존 고객이 `200`으로 돌아오고 `id`가 들어 있습니다. 이벤트를 보내는 ingest 키 하나로 할 수 있습니다.
 </Accordion>
-<Accordion title="external_id로 조회한다 (read 권한)">
+<Accordion title="external_id로 조회합니다 (read 권한)">
 ```bash
 curl "https://meterengine.com/v1/customers?external_id=acct_1024" \
   -H "Authorization: Bearer me_test_xxxxxxxx"
@@ -185,7 +183,7 @@ curl "https://meterengine.com/v1/customers?external_id=acct_1024" \
 
 기본으로는 보관하지 않은 고객만 나옵니다. 보관한 고객까지 찾으려면 `status=all`을 붙입니다(`active`, `archived`, `all`). 없으면 `customers`가 빈 배열입니다.
 </Accordion>
-<Accordion title="콘솔에서 확인한다">
+<Accordion title="콘솔에서 확인합니다">
 콘솔 '고객' 화면의 목록에는 고객 id 열이 없습니다. 고객 이름을 눌러 고객 상세 화면을 열면 주소가 `/customers/<고객 id>?month=...` 형태이고, `/customers/` 뒤부터 `?` 앞까지가 고객 id입니다.
 </Accordion>
 </AccordionGroup>
