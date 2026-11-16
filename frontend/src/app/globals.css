@@ -148,6 +148,11 @@ input, textarea { caret-color: var(--blue); }
 /* Safari는 기본 모양의 select에서 높이와 여백을 무시해, 기본 모양을 끄고 화살표를 직접 그린다. */
 .workspace-field select:not([multiple]), .organization-picker select { appearance: none; padding-right: 28px; line-height: normal; background: var(--paper) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%235a6578' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 10px center / 12px 12px; }
 .workspace-field .ant-picker-input > input, .workspace-field .ant-select input, .workspace-field .ant-checkbox-input { min-height: 0; }
+/* 조회 줄의 입력칸은 내용 폭을 따르는데, 기본 폭이 엔진마다 달라(Pretendard에서 WebKit은 Chrome의 두 배 가까이) Chrome의 폭으로 정해 둔다. */
+.workspace-actions > .workspace-field:not(.resource-search-text) > input:not([type=checkbox], [type=radio]) { width: 171px; max-width: 100%; }
+.workspace-actions > .workspace-field:not(.resource-search-text) > input[type=datetime-local] { width: 229px; }
+.workspace-actions > .workspace-field .ant-picker { width: 134px; max-width: 100%; }
+@media (max-width: 767px) { .workspace-actions > .workspace-field:not(.resource-search-text) > input:not([type=checkbox], [type=radio]) { width: 197px; }.workspace-actions > .workspace-field:not(.resource-search-text) > input[type=datetime-local] { width: 272px; } }
 /* 조회 줄의 antd 컨트롤만 입력칸과 같은 44px로 맞춘다. 테마 토큰으로 바꾸면 월 선택기 팝업까지 커져 모바일 화면을 넘는다. */
 .resource-search form > .workspace-field .ant-picker, .resource-search form > .workspace-field .ant-select, .resource-search form > .ant-btn, .event-filter-grid > .workspace-field .ant-select, .query-row > .workspace-field .ant-picker, .query-row > .workspace-field .ant-select, .query-row > .ant-btn, .event-month .ant-picker { height: 44px; }
 .workspace-field input[aria-invalid=true], .workspace-field textarea[aria-invalid=true], .workspace-field select[aria-invalid=true] { border-color: #b72c3c; }
