@@ -11,6 +11,7 @@ import java.util.List;
 
 public record UpdateApiKeyScopesRequest(
     @ArraySchema(
-            arraySchema = @Schema(description = "하나 이상 선택한다. admin은 ingest와 read를 포함한다"),
-            schema = @Schema(allowableValues = {"ingest", "read", "admin"}))
+            arraySchema =
+                @Schema(description = "하나 이상 선택한다. admin은 ingest와 read를 포함하고 payments는 포함하지 않는다"),
+            schema = @Schema(allowableValues = {"ingest", "read", "admin", "payments"}))
         @NotEmpty List<@NotNull @StorableText @Pattern(regexp = ApiKey.SCOPE_PATTERN) String> scopes) {}

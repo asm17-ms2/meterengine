@@ -88,7 +88,7 @@ public class OrganizationPeopleController {
         description =
             """
             code=validation_error: email이 비었거나 이메일 형식이 아니거나 254자를 넘거나, name이 비었거나 255자를 넘거나,
-            password가 8자보다 짧거나 72자나 UTF-8 72바이트를 넘거나, scopes가 비었거나 ingest, read, admin이 아닌 값을 담았거나,
+            password가 8자보다 짧거나 72자나 UTF-8 72바이트를 넘거나, scopes가 비었거나 ingest, read, admin, payments가 아닌 값을 담았거나,
             문자열에 NUL 문자나 짝이 없는 UTF-16 서로게이트를 담았다.
             """),
     @ApiResponse(
@@ -158,7 +158,7 @@ public class OrganizationPeopleController {
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
-            "code=validation_error: scopes가 비었거나 ingest, read, admin이 아닌 값을 담았거나, 경로의 UUID 형식이 틀렸다"),
+            "code=validation_error: scopes가 비었거나 ingest, read, admin, payments가 아닌 값을 담았거나, 경로의 UUID 형식이 틀렸다"),
     @ApiResponse(
         responseCode = "404",
         content =
@@ -243,7 +243,7 @@ public class OrganizationPeopleController {
         description =
             """
             code=validation_error: email이 비었거나 이메일 형식이 아니거나 254자를 넘거나,
-            scopes가 비었거나 ingest, read, admin이 아닌 값을 담았거나, 문자열에 NUL 문자나 짝이 없는 UTF-16 서로게이트를 담았다.
+            scopes가 비었거나 ingest, read, admin, payments가 아닌 값을 담았거나, 문자열에 NUL 문자나 짝이 없는 UTF-16 서로게이트를 담았다.
             """),
     @ApiResponse(
         responseCode = "409",

@@ -54,7 +54,7 @@ public final class TestCredentials {
         mode,
         rawKey,
         rawKey.substring(rawKey.length() - 4),
-        "{" + String.join(",", scopes.isEmpty() ? List.of("admin") : scopes) + "}");
+        "{" + String.join(",", scopes.isEmpty() ? List.of("admin", "payments") : scopes) + "}");
     refreshApiKeyTable(jdbcTemplate);
     return BEARER_PREFIX + rawKey;
   }

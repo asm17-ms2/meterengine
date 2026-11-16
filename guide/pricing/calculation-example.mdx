@@ -21,13 +21,13 @@ description: "구간 단가, 최소 사용료, 기본료가 있는 예시 하나
 ## 단계별 계산
 
 <Steps>
-<Step title="수량을 구간에 나눈다">
+<Step title="수량을 구간에 나눕니다">
 누진 구간은 수량을 구간마다 잘라 각 구간의 단가를 곱합니다. 1500.5는 0 초과 100 이하에 100, 100 초과 1,000 이하에 900, 1,000 초과에 500.5로 나뉩니다.
 </Step>
-<Step title="구간마다 라인을 만들고 10원 미만을 버린다">
-구간 하나가 라인 하나입니다. 버림은 라인마다 합니다.
+<Step title="구간마다 청구 항목을 만들고 10원 미만을 버립니다">
+구간 하나가 청구 항목 하나입니다. 버림은 청구 항목마다 합니다.
 
-| 라인 | 수량 | 단가 | 곱 | 라인 금액 |
+| 청구 항목 | 수량 | 단가 | 곱 | 청구 항목 금액 |
 | --- | --- | --- | --- | --- |
 | 구간 1 | 100 | 10원 | 1,000원 | 1,000원 |
 | 구간 2 | 900 | 8원 | 7,200원 | 7,200원 |
@@ -35,27 +35,27 @@ description: "구간 단가, 최소 사용료, 기본료가 있는 예시 하나
 
 사용료 합은 10,700원입니다.
 </Step>
-<Step title="최소 사용료를 채운다">
-사용료 10,700원이 최소 사용료 12,000원보다 작으므로 차액 1,300원으로 '최소 사용료 조정' 라인을 더합니다.
+<Step title="최소 사용료를 채웁니다">
+사용료 10,700원이 최소 사용료 12,000원보다 작으므로 차액 1,300원으로 '최소 사용료 조정' 항목을 더합니다.
 </Step>
-<Step title="기본료를 더한다">
-'기본료' 라인 500원을 더합니다. 기본료는 최소 사용료를 채우는 데 쓰이지 않습니다.
+<Step title="기본료를 더합니다">
+'기본료' 청구 항목 500원을 더합니다. 기본료는 최소 사용료를 채우는 데 쓰이지 않습니다.
 </Step>
-<Step title="공급가액이 나온다">
-1,000 + 7,200 + 2,500 + 1,300 + 500 = **12,500원**입니다. 라인은 다섯 줄입니다. 청구 예정액은 이 공급가액이고 세금을 포함하지 않습니다.
+<Step title="공급가액이 나옵니다">
+1,000 + 7,200 + 2,500 + 1,300 + 500 = **12,500원**입니다. 청구 항목은 다섯 줄입니다. 청구 예정액은 이 공급가액이고 부가세를 포함하지 않습니다.
 </Step>
-<Step title="확정하면 세액과 합계가 붙는다">
+<Step title="확정하면 세액과 합계가 붙습니다">
 청구서를 확정하면 세액은 공급가액의 10%인 1,250원, 합계는 13,750원입니다.
 </Step>
 </Steps>
 
 ## 누진 구간과 총량 구간 비교
 
-같은 구간표를 총량 구간(`volume`)으로 등록하면 계산이 달라집니다. 총량 구간은 전체 수량이 드는 구간 하나의 단가를 전체 수량에 곱하고 라인을 하나만 만듭니다.
+같은 구간표를 총량 구간(`volume`)으로 등록하면 계산이 달라집니다. 총량 구간은 전체 수량이 드는 구간 하나의 단가를 전체 수량에 곱하고 청구 항목을 하나만 만듭니다.
 
 <Tabs>
 <Tab title="누진 구간 (graduated)">
-| 라인 | 금액 |
+| 청구 항목 | 금액 |
 | --- | --- |
 | 구간 1, 2, 3 | 1,000원 + 7,200원 + 2,500원 = 10,700원 |
 | 최소 사용료 조정 | 1,300원 |
@@ -63,7 +63,7 @@ description: "구간 단가, 최소 사용료, 기본료가 있는 예시 하나
 | 공급가액 | 12,500원 |
 </Tab>
 <Tab title="총량 구간 (volume)">
-| 라인 | 금액 |
+| 청구 항목 | 금액 |
 | --- | --- |
 | 총량 단가 | 1500.5 x 5원 = 7,502.5원 -> 7,500원 |
 | 최소 사용료 조정 | 12,000원 - 7,500원 = 4,500원 |
@@ -104,15 +104,11 @@ const draft = await response.json();
 ```
 </CodeGroup>
 
-예시 고객 한 명만 있을 때 누진 구간의 응답은 아래와 같습니다. 미터 code는 `example-hours`, 집계 대상 속성은 `hours`로 만든 경우입니다.
+예시 고객 한 명만 있을 때 누진 구간의 응답은 아래와 같습니다. 미터 코드는 `example-hours`, 집계 대상 속성은 `hours`로 만든 경우입니다.
 
-```json 200 응답
+```json 200 응답의 일부
 {
   "month": "2026-11",
-  "calculated_at": "2026-11-05T10:05:00+09:00",
-  "auto_finalize_enabled": false,
-  "auto_finalize_at": null,
-  "auto_finalize_running": false,
   "total_amount": 12500,
   "customers": [
     {
@@ -181,16 +177,13 @@ const draft = await response.json();
           "quantity_denominator": 1
         }
       ],
-      "unpriced_usages": [],
-      "negative_usages": [],
-      "auto_finalize_held": false
+      "unpriced_usages": []
     }
   ]
 }
 ```
 
-{/* 확인 필요: 배포 서버 자동 확정 켜는 시점 */}
-`auto_finalize_enabled`, `auto_finalize_at`, `auto_finalize_running`, `auto_finalize_held`는 자동 확정이 꺼져 있을 때의 값입니다. 자동 확정 필드의 뜻은 [자동 확정과 보류](/billing/auto-finalization)를 보세요.
+전체 응답 예시는 [빠른 시작](/quickstart)에 있습니다.
 
 자사 계산과 맞출 때 보는 필드입니다.
 
@@ -198,48 +191,34 @@ const draft = await response.json();
 고객의 청구 예정액(공급가액, 원)입니다. `lines[].amount`의 합과 같습니다.
 </ResponseField>
 <ResponseField name="lines[].line_type" type="string">
-`per_unit`, `graduated_tier`, `volume`은 사용료 라인, `minimum_adjustment`는 최소 사용료 조정, `base_fee`는 기본료입니다. 조정과 기본료 라인은 `billable_metric_code`가 `null`이고 사용료 라인 뒤에 옵니다.
+`per_unit`, `graduated_tier`, `volume`은 사용료 청구 항목, `minimum_adjustment`는 최소 사용료 조정, `base_fee`는 기본료입니다. 조정 항목과 기본료 항목은 `billable_metric_code`가 `null`이고 사용료 청구 항목 뒤에 옵니다.
 </ResponseField>
 <ResponseField name="lines[].tier_index" type="integer">
-누진 구간의 몇 번째 구간인지 0부터 셉니다. 콘솔에는 '구간 1'처럼 1부터 보입니다. 총량 구간 라인은 어느 구간이 골라졌든 0입니다.
+누진 구간의 몇 번째 구간인지 0부터 셉니다. 콘솔에는 '구간 1'처럼 1부터 보입니다. 총량 구간 청구 항목은 어느 구간이 골라졌든 0입니다.
 </ResponseField>
 <ResponseField name="lines[].quantity_numerator" type="number">
 금액과 구간 판정에 쓴 정확한 수량의 분자입니다. `quantity`는 표시용이므로 금액을 다시 계산할 때는 `quantity_numerator / quantity_denominator x unit_price`를 계산한 뒤 10원 미만을 버립니다.
 </ResponseField>
 <ResponseField name="unpriced_usages" type="array">
-단가가 없어 라인과 금액에서 빠진 구분 값의 사용량입니다. 자사 계산에서 이 구분 값에도 요금을 매겼다면 이 차이만큼 금액이 어긋납니다.
+단가가 없어 청구 항목과 금액에서 빠진 구분 값의 사용량입니다. 자사 계산에서 이 구분 값에도 요금을 매겼다면 이 차이만큼 금액이 어긋납니다.
 </ResponseField>
 
 확정한 청구서는 `GET /v1/invoices/{id}`로 봅니다. 위 예시를 확정하면 `supply_amount`는 12500, `tax_amount`는 1250, `total_amount`는 13750이고 `lines`는 다섯 줄입니다. 확정 방법은 [청구서 수동 확정](/billing/finalize-invoices)을 보세요.
 
 ## 테스트 환경에서 직접 재현하기
 
-위 예시를 테스트 환경에서 그대로 만들어 볼 수 있습니다. 아래 요청은 모두 admin 권한의 테스트 키를 씁니다. 날짜는 오늘이 속한 달로 바꿔 넣으세요.
+위 예시를 테스트 환경에서 그대로 만들어 볼 수 있습니다. 미터 등록 요청 형식은 [미터 설계](/pricing/meters)에, 고객 등록과 이벤트 전송, 청구 예정액 조회의 요청 형식은 [빠른 시작](/quickstart)에 있으니, 여기서는 이 예시에 넣을 값만 적습니다. 요청은 admin 권한의 테스트 키로 보내고, 날짜는 오늘이 속한 달로 바꿔 넣으세요.
 
 {/* 확인 필요: 테스트 키 정의와 mode 설명 */}
 <Warning>
-테스트 환경도 보낸 이벤트는 지울 수 없고, 만든 미터와 고객도 지우지 못하고 보관만 됩니다. 이 예시 전용의 미터 code, 이벤트 `type`, 고객을 따로 써서 다른 시험 데이터와 섞이지 않게 하세요. 테스트 환경의 성질은 [업무 환경](/concepts/environments)을 보세요.
+테스트 환경도 보낸 이벤트는 지울 수 없고, 만든 미터와 고객도 지우지 못하고 보관만 됩니다. 이 예시 전용의 미터 코드, 이벤트 `type`, 고객을 따로 써서 다른 시험 데이터와 섞이지 않게 하세요. 테스트 환경의 성질은 [업무 환경](/concepts/environments)을 보세요.
 </Warning>
 
 <Steps>
-<Step title="미터를 만든다">
-다른 미터와 겹치지 않는 이벤트 `type`을 씁니다. 같은 `type`을 세는 미터가 이미 있으면 그 미터에도 이 이벤트가 집계됩니다.
-
-```bash curl
-curl -X POST https://meterengine.com/v1/billable-metrics \
-  -H "Authorization: Bearer me_test_xxxxxxxx" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "code": "example-hours",
-    "name": "계산 예시 사용 시간",
-    "event_type": "example_job",
-    "aggregation": "sum",
-    "target_property": "hours",
-    "dimension_properties": []
-  }'
-```
+<Step title="미터를 만듭니다">
+미터 코드 `example-hours`, 이벤트 유형 `example_job`, 집계 함수 `sum`, 집계 대상 속성 `hours`, 구분 키 없음으로 등록합니다. 다른 미터와 겹치지 않는 이벤트 `type`을 씁니다. 같은 `type`을 세는 미터가 이미 있으면 그 미터에도 이 이벤트가 집계됩니다.
 </Step>
-<Step title="누진 구간 단가를 등록한다">
+<Step title="누진 구간 단가를 등록합니다">
 구분 키가 없는 미터는 `dimension_values`에 빈 객체를 넣습니다. 마지막 구간의 `up_to`는 `null`입니다. `effective_from`을 생략하면 이번 달부터 적용됩니다.
 
 ```bash curl
@@ -257,20 +236,10 @@ curl -X POST https://meterengine.com/v1/billable-metrics/example-hours/price-rat
   }'
 ```
 </Step>
-<Step title="고객을 등록한다">
-응답의 `id`가 이후 요청의 고객 id입니다.
-
-```bash curl
-curl -X POST https://meterengine.com/v1/customers \
-  -H "Authorization: Bearer me_test_xxxxxxxx" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "external_id": "calc-example-001",
-    "name": "계산 예시 고객"
-  }'
-```
+<Step title="고객을 등록합니다">
+`external_id` `calc-example-001`, 이름 '계산 예시 고객'으로 등록합니다. 응답의 `id`가 이후 요청의 고객 id입니다.
 </Step>
-<Step title="이 고객에게만 요금제를 건다">
+<Step title="이 고객에게만 요금제를 겁니다">
 `customer_id`를 넣어 고객 요금제로 등록합니다. `customer_id`를 빼면 공통 요금제가 되고, 이번 달 공통 요금제가 이미 있으면 그 값을 덮어써 다른 고객의 청구 예정액까지 바뀝니다.
 
 ```bash curl
@@ -284,25 +253,10 @@ curl -X POST https://meterengine.com/v1/price-plans \
   }'
 ```
 </Step>
-<Step title="이벤트를 한 건 보낸다">
-`timestamp`는 이번 달 안의 시각이어야 합니다. 보낸 이벤트는 되돌릴 수 없으니 값을 확인한 뒤 보냅니다.
-
-```bash curl
-curl -X POST https://meterengine.com/v1/events \
-  -H "Authorization: Bearer me_test_xxxxxxxx" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "transaction_id": "calc-example-0001",
-    "customer_id": "8b0f4c2e-6d1a-4f3b-9a57-2c4e8d9b1f60",
-    "type": "example_job",
-    "timestamp": "2026-11-05T10:00:00+09:00",
-    "properties": { "hours": 1500.5 }
-  }'
-```
-
-응답은 `{"transaction_id":"calc-example-0001","duplicate":false}`입니다. 이벤트 형식은 [사용량 이벤트 보내기](/integration/events)를 보세요.
+<Step title="이벤트를 한 건 보냅니다">
+`type` `example_job`, `properties` `{ "hours": 1500.5 }`인 이벤트를 이번 달 안의 `timestamp`로 한 건 보냅니다. 보낸 이벤트는 되돌릴 수 없으니 값을 확인한 뒤 보냅니다.
 </Step>
-<Step title="청구 예정액을 조회한다">
+<Step title="청구 예정액을 조회합니다">
 `GET /v1/invoices/draft`의 이 고객 항목이 위 응답 예시와 같은지 봅니다. 청구 예정액은 조회할 때마다 다시 계산하므로 이벤트를 보낸 직후에도 바로 반영됩니다.
 </Step>
 </Steps>
@@ -310,16 +264,16 @@ curl -X POST https://meterengine.com/v1/events \
 ## 어긋날 때 확인할 것
 
 <AccordionGroup>
-<Accordion title="기본료를 최소 사용료에 넣어 계산했다">
+<Accordion title="기본료를 최소 사용료에 넣어 계산했습니다">
 최소 사용료는 사용료 합하고만 비교합니다. 기본료 500원을 사용료에 넣어 11,200원으로 보면 조정이 800원이 되어 500원이 어긋납니다.
 </Accordion>
-<Accordion title="합계에서 한 번만 10원 미만을 버렸다">
-버림은 라인마다 합니다. 소수 수량이 여러 라인에 나뉘면 합계에서 한 번 버린 값보다 작아질 수 있습니다.
+<Accordion title="합계에서 한 번만 10원 미만을 버렸습니다">
+버림은 청구 항목마다 합니다. 소수 수량이 여러 청구 항목에 나뉘면 합계에서 한 번 버린 값보다 작아질 수 있습니다.
 </Accordion>
-<Accordion title="단가 없는 구분 값만 있는 고객에게 최소 사용료가 붙었다">
-단가가 없는 구분 값의 사용량도 요금제를 붙이는 기준이 되는 사용량으로 셉니다. 사용료는 0원이라 최소 사용료 전액이 조정 라인으로 붙습니다. `unpriced_usages`를 보고 단가를 등록하세요. 자세한 내용은 [기본료와 최소 사용료](/pricing/price-plans)를 보세요.
+<Accordion title="단가 없는 구분 값만 있는 고객에게 최소 사용료가 붙었습니다">
+단가가 없는 구분 값의 사용량도 요금제를 붙이는 기준이 되는 사용량으로 셉니다. 사용료는 0원이라 최소 사용료 전액이 조정 항목으로 붙습니다. `unpriced_usages`를 보고 단가를 등록하세요. 자세한 내용은 [기본료와 최소 사용료](/pricing/price-plans)를 보세요.
 </Accordion>
-<Accordion title="이벤트를 보냈는데 금액이 0원이다">
+<Accordion title="이벤트를 보냈는데 금액이 0원입니다">
 미터의 이벤트 `type`, 단가의 구분 값, 이벤트의 `timestamp`가 맞는지 봅니다. 원인별 확인 순서는 [이벤트가 청구에 안 보일 때](/troubleshooting/events-not-billed)를 보세요.
 </Accordion>
 </AccordionGroup>

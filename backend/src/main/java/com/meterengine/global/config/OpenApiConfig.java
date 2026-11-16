@@ -3,6 +3,7 @@ package com.meterengine.global.config;
 import com.meterengine.global.security.AdminAccess;
 import com.meterengine.global.security.CurrentOrganizationId;
 import com.meterengine.global.security.IngestAccess;
+import com.meterengine.global.security.PaymentsAccess;
 import com.meterengine.global.security.PublicAccess;
 import com.meterengine.global.security.ReadAccess;
 import io.swagger.v3.oas.models.Components;
@@ -142,7 +143,8 @@ class OpenApiConfig {
   private static boolean isRateLimited(HandlerMethod handlerMethod) {
     return handlerMethod.hasMethodAnnotation(ReadAccess.class)
         || handlerMethod.hasMethodAnnotation(IngestAccess.class)
-        || handlerMethod.hasMethodAnnotation(AdminAccess.class);
+        || handlerMethod.hasMethodAnnotation(AdminAccess.class)
+        || handlerMethod.hasMethodAnnotation(PaymentsAccess.class);
   }
 
   private static void addResponse(Operation operation, String status, ApiResponse response) {

@@ -239,7 +239,7 @@ class UserPermissionsIntegrationTest {
                   owner,
                   Map.of("scopes", invalid)))
           .hasStatus(400);
-    assertThat(scopes(get("/v1/sessions/current", owner))).containsExactly("admin");
+    assertThat(scopes(get("/v1/sessions/current", owner))).containsExactly("admin", "payments");
   }
 
   @Test
@@ -316,14 +316,15 @@ class UserPermissionsIntegrationTest {
         .bodyJson()
         .extractingPath("$.scopes")
         .asArray()
-        .containsExactly("admin");
+        .containsExactly("admin", "payments");
     assertThat(
             post(
                 "/v1/organization-invitations/" + token + "/accept",
                 null,
                 Map.of("name", "기존 초대 사용자", "password", PASSWORD, "consents", CONSENTS)))
         .hasStatus(201);
-    assertThat(scopes(get("/v1/sessions/current", login(email)))).containsExactly("admin");
+    assertThat(scopes(get("/v1/sessions/current", login(email))))
+        .containsExactly("admin", "payments");
   }
 
   @Test

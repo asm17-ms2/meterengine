@@ -12,25 +12,13 @@ description: "가입부터 테스트 환경에서 사용량 이벤트를 보내 
 
 가입하면 바로 테스트 환경을 쓸 수 있고, 라이브 환경은 이용 신청이 승인되면 열립니다. 이 페이지의 단계는 모두 테스트 환경에서 합니다.
 
+{/* 확인 필요: 공개 API 주소 */}
+API는 콘솔과 같은 도메인의 `https://meterengine.com/v1/` 아래에 있고, 어느 환경에 기록될지는 API 키가 정합니다.
+
 {/* 확인 필요: 테스트 키 정의와 mode 설명 */}
 <Warning>
 테스트 환경도 보낸 이벤트와 확정한 청구서는 되돌릴 수 없습니다. 이벤트가 들어온 미터는 이름만 바꿀 수 있고 계산 기준을 바꿀 수 없습니다. 이 페이지의 미터 코드, 이벤트 유형, 고객 외부 ID는 빠른 시작 전용 값이니, 실제 연동에 쓸 이름을 여기에 쓰지 마세요. 테스트 환경의 뜻은 [업무 환경](/concepts/environments), 미터의 제약은 [미터 설계](/pricing/meters)에 있습니다.
 </Warning>
-
-## 시작 전 연결 확인
-
-{/* 확인 필요: 공개 API 주소 */}
-API는 콘솔과 같은 도메인의 `https://meterengine.com/v1/` 아래에 있고, 어느 환경에 기록될지는 API 키가 정합니다. 키 없이 요청을 하나 보내 주소가 맞는지 확인하세요.
-
-```bash
-curl -i https://meterengine.com/v1/customers
-```
-
-401과 함께 아래 본문이 오면 주소가 맞습니다.
-
-```json
-{"code":"authentication_required","message":"인증 정보가 없습니다"}
-```
 
 ## 따라 하기
 
@@ -39,7 +27,7 @@ curl -i https://meterengine.com/v1/customers
     https://meterengine.com/signup 의 '가입' 화면에서 조직 이름, 담당자 이름, 이메일, 비밀번호를 입력하고 '이용약관에 동의합니다 (필수)'와 '개인정보 처리방침을 확인했습니다 (필수)'에 체크한 뒤 '가입'을 누릅니다. 입력 규칙과 오류는 [가입과 이메일 인증](/account/signup)에 있습니다.
   </Step>
   <Step title="[화면] 이메일을 인증합니다">
-    '메일함을 확인하세요' 화면이 나오면 가입한 이메일로 온 인증 메일의 '이메일 인증하기'를 열고 '이메일 인증'을 누릅니다. '가입' 뒤 로그인 화면이 바로 나오면 이 단계는 건너뜁니다.
+    '메일함을 확인하세요' 화면이 나오면 가입한 이메일로 온 인증 메일의 '이메일 인증하기'를 열고 '이메일 인증'을 누릅니다.
   </Step>
   <Step title="[화면] 로그인합니다">
     https://meterengine.com/login 에서 가입한 이메일과 비밀번호로 로그인하면 '개요' 화면이 열립니다. 가입한 사람은 그 조직의 대표관리자가 됩니다.
@@ -60,7 +48,7 @@ curl -i https://meterengine.com/v1/customers
     | 과금 단위 크기 | `1` (기본값) |
     | 끝수 처리 | '추가 반올림 없음' (기본값) |
 
-    이 미터는 `type`이 `quickstart_api_call`인 이벤트의 `properties.units` 값을 더해 청구 수량으로 씁니다. 미터 코드는 등록 뒤 바꿀 수 없습니다.
+    이 미터는 `type`이 `quickstart_api_call`인 이벤트의 `properties.units` 값을 더해 과금 수량으로 씁니다. 미터 코드는 등록 뒤 바꿀 수 없습니다.
   </Step>
   <Step title="[화면] 이번 달 단가를 등록합니다">
     왼쪽 메뉴 '요금 설정' 화면의 '무엇을 과금하나요'에서 '빠른 시작 API 호출'을 고르고 '단가 버전 등록'을 누릅니다. 창 위에 '모든 고객 공통'이 보이는지 확인하고 아래처럼 입력한 뒤 창 아래의 '단가 버전 등록'을 누릅니다.
@@ -128,7 +116,7 @@ curl -i https://meterengine.com/v1/customers
     }
     ```
 
-        응답의 `id`를 저장하세요. 이벤트의 `customer_id`에는 외부 고객 ID가 아니라 이 `id`(UUID)를 넣습니다. 같은 `external_id`로 다시 보내면 새 고객을 만들지 않고 기존 고객을 200으로 돌려주므로, `id`를 잃었으면 같은 요청을 다시 보내면 됩니다. 자세한 내용은 [고객 등록과 ID 대응](/integration/customers)에 있습니다.
+    응답의 `id`를 저장하세요. 이벤트의 `customer_id`에는 외부 고객 ID가 아니라 이 `id`(UUID)를 넣습니다. 같은 `external_id`로 다시 보내면 새 고객을 만들지 않고 기존 고객을 200으로 돌려주므로, `id`를 잃었으면 같은 요청을 다시 보내면 됩니다. 자세한 내용은 [고객 등록과 ID 대응](/integration/customers)에 있습니다.
   </Step>
   <Step title="[API] 사용량 이벤트를 보냅니다">
     `POST /v1/events`로 이벤트 두 건을 보냅니다. 첫 건은 `units` 12, 둘째 건은 `transaction_id`를 `quickstart-tx-002`로, `units`를 8로 바꿔 한 번 더 보냅니다. `customer_id`는 앞 단계에서 받은 `id`로 바꿉니다.
@@ -168,15 +156,15 @@ curl -i https://meterengine.com/v1/customers
     ```
     </CodeGroup>
 
-    `timestamp`는 사용량이 생긴 시각이고 지금 시각을 넣었습니다. 저장되면 200과 함께 아래 응답이 옵니다.
+    `timestamp`는 사용량이 생긴 시각이고 지금 시각을 넣었습니다. 받으면 202와 함께 아래 응답이 옵니다. 저장은 뒤에서 합니다. 요청 안에서 저장까지 마치면 200과 `"duplicate": false`가 오기도 하며, 이 경우도 정상입니다.
 
     ```json
-    {"transaction_id": "quickstart-tx-001", "duplicate": false}
+    {"transaction_id": "quickstart-tx-001"}
     ```
 
     - `type`은 미터의 이벤트 유형과 글자까지 같아야 집계됩니다.
     - `units`는 따옴표 없는 숫자로 보냅니다. `"12"`처럼 문자열로 보내면 저장은 되지만 합계에서 빠집니다.
-    - 같은 `transaction_id`로 다시 보내면 처음 것이 남고 응답의 `duplicate`가 `true`입니다. 규칙은 [멱등 규칙](/api-basics/idempotency)에 있습니다.
+    - 같은 `transaction_id`로 다시 보내면 처음 것이 남습니다. 200으로 답할 때는 응답의 `duplicate`가 `true`입니다. 규칙은 [멱등 규칙](/api-basics/idempotency)에 있습니다.
 
     이벤트 형식과 묶어 보내기는 [사용량 이벤트 보내기](/integration/events)에 있습니다.
   </Step>
@@ -201,8 +189,8 @@ curl -i https://meterengine.com/v1/customers
     {
       "month": "2026-11",
       "calculated_at": "2026-11-05T10:05:00+09:00",
-      "auto_finalize_enabled": false,
-      "auto_finalize_at": null,
+      "auto_finalize_enabled": true,
+      "auto_finalize_at": "2026-12-01T14:00:00+09:00",
       "auto_finalize_running": false,
       "total_amount": 2000,
       "customers": [
@@ -232,14 +220,13 @@ curl -i https://meterengine.com/v1/customers
     }
     ```
 
-    두 이벤트의 `units` 합 20에 단가 100원을 곱해 2,000원입니다. 청구 예정액은 세금을 뺀 공급가액이고, 결제는 세금을 포함한 확정 금액으로 합니다. 금액은 라인마다 10원 미만을 버립니다. 금액의 뜻은 [예정액, 확정액, 수납액](/concepts/amounts)에 있습니다.
+    두 이벤트의 `units` 합 20에 단가 100원을 곱해 2,000원입니다. 청구 예정액은 부가세를 뺀 공급가액이고, 결제는 부가세를 포함한 확정 금액으로 합니다. 금액은 청구 항목마다 10원 미만을 버립니다. 금액의 뜻은 [예정액, 확정액, 수납액](/concepts/amounts)에 있습니다.
 
     <Check>
     `total_amount`가 2000이면 빠른 시작을 마친 것입니다.
     </Check>
 
-    {/* 확인 필요: 배포 서버 자동 확정 켜는 시점 */}
-    빠른 시작에서는 청구서를 확정하지 않습니다. 다만 응답의 `auto_finalize_enabled`가 `true`인 서버에서는 다음 달 1일 14:00 KST 이후 이번 달이 테스트 환경에서도 자동으로 확정되고, 확정한 청구서는 되돌릴 수 없습니다. 자동 확정은 [자동 확정과 보류](/billing/auto-finalization), 직접 확정은 [청구서 수동 확정](/billing/finalize-invoices)에 있습니다.
+    빠른 시작에서는 청구서를 직접 확정하지 않습니다. 다만 자동 확정은 모든 조직에 켜져 있고 끌 수 없어, 다음 달 1일 14:00 KST 이후 이번 달이 테스트 환경에서도 자동으로 확정됩니다. 확정한 청구서는 되돌릴 수 없습니다. 다음 자동 확정 시각은 '청구 검토' 화면에서 봅니다. 자동 확정은 [자동 확정과 보류](/billing/auto-finalization), 직접 확정은 [청구서 수동 확정](/billing/finalize-invoices)에 있습니다.
   </Step>
 </Steps>
 
@@ -269,7 +256,7 @@ curl -i https://meterengine.com/v1/customers
     35일보다 오래된 이벤트는 거절됩니다. 같은 이벤트를 다시 보내도 받지 않습니다. `timestamp`에 지금 시각을 넣었는지 확인하세요. 기준은 [시간 규칙](/concepts/time-rules)에 있습니다.
   </Accordion>
   <Accordion title="200으로 저장됐는데 청구 예정액이 0원">
-    이벤트는 저장됐지만 청구 수량이나 단가와 이어지지 않은 경우입니다. 다음을 차례로 봅니다.
+    이벤트는 저장됐지만 과금 수량이나 단가와 이어지지 않은 경우입니다. 다음을 차례로 봅니다.
 
     - 업무 환경: 미터와 단가를 '테스트 환경'에서 만들었는지 봅니다. 고객, 미터, 단가는 업무 환경마다 따로 만들어야 합니다.
     - 단가: 응답의 `unpriced_usages`에 사용량이 나오면 그 미터에 이번 달 단가가 없습니다.

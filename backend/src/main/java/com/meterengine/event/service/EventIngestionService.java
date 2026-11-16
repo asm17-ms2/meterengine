@@ -91,8 +91,7 @@ public class EventIngestionService {
         return IngestEventResponse.alreadyStored(request.transactionId());
       }
       throw new InvalidRequestException(
-          ErrorCode.EVENT_TOO_OLD,
-          List.of(new FieldError("timestamp", "수집 판정 시각보다 35일 넘게 과거인 시각입니다")));
+          ErrorCode.EVENT_TOO_OLD, List.of(new FieldError("timestamp", "수신 시각보다 35일 넘게 지난 시각입니다")));
     }
 
     String propertiesJson = jsonMapper.writeValueAsString(request.properties());

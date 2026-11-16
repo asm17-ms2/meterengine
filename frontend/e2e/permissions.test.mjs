@@ -4,7 +4,7 @@ import { canPerformWorkspaceOperation, hasScope, isAccessScope, scopeSummary, te
 
 test("missing permissions and unrecognized operations fail closed", () => {
   for (const scopes of [null, undefined, [], ["operator"], ["owner"]]) {
-    for (const scope of ["read", "ingest", "admin"]) assert.equal(hasScope(scopes, scope), false);
+    for (const scope of ["read", "ingest", "admin", "payments"]) assert.equal(hasScope(scopes, scope), false);
     assert.equal(canPerformWorkspaceOperation(scopes, "owner", "createMember"), false);
   }
   assert.equal(canPerformWorkspaceOperation(["admin"], "owner", "unknownOperation"), false);
@@ -19,6 +19,21 @@ test("admin includes reads and ingestion but reads and ingestion remain separate
   assert.equal(hasScope(["read"], "ingest"), false);
   assert.equal(hasScope(["ingest"], "read"), false);
   assert.equal(hasScope(["read", "ingest"], "admin"), false);
+});
+
+test("payment requests and cancellations need payments, which admin does not include", () => {
+  assert.equal(hasScope(["admin"], "payments"), false);
+  assert.equal(hasScope(["payments"], "payments"), true);
+  assert.equal(hasScope(["payments"], "read"), false);
+  for (const operation of ["createPaymentAttempt", "createPaymentCancellation"]) {
+    assert.equal(canPerformWorkspaceOperation(["admin"], "owner", operation), false);
+    assert.equal(canPerformWorkspaceOperation(["payments"], "member", operation), true);
+    assert.equal(canPerformWorkspaceOperation(["admin", "payments"], "admin", operation), true);
+  }
+  for (const operation of ["createPaymentMethodRegistration", "updateSupplier"]) {
+    assert.equal(canPerformWorkspaceOperation(["payments"], "member", operation), false);
+    assert.equal(canPerformWorkspaceOperation(["admin"], "admin", operation), true);
+  }
 });
 
 test("membership roles and platform operator never substitute for assigned scopes", () => {
@@ -41,7 +56,7 @@ test("customer creation requires ingestion while customer updates and archival r
 });
 
 test("read-only cannot enter custom payment, pricing, key or restoration mutations", () => {
-  for (const operation of ["createPaymentCancellation", "createPriceRate", "finalizeInvoices", "restoreBillableMetric", "createApiKey", "updateApiKeyScopes", "deleteApiKey", "createPaymentMethodRegistration"]) {
+  for (const operation of ["createPriceRate", "finalizeInvoices", "restoreBillableMetric", "createApiKey", "updateApiKeyScopes", "deleteApiKey", "createPaymentMethodRegistration"]) {
     assert.equal(canPerformWorkspaceOperation(["read"], "member", operation), false);
     assert.equal(canPerformWorkspaceOperation(["admin"], "admin", operation), true);
   }
@@ -53,11 +68,16 @@ test("transport classifies ingestion paths exactly and keeps every other mutatio
     assert.equal(tenantRequestScope(`${path}?test=true`, "POST"), "ingest");
     assert.equal(tenantRequestScope(path, "DELETE"), "admin");
   }
-  for (const path of ["/v1/customers/customer-id", "/v1/events/event-id/reversals", "/v1/event-batches/fake", "/v1/api-keys/key/scopes", "/v1/invoices?month=2026-10"]) assert.equal(tenantRequestScope(path, "POST"), "admin");
+  for (const path of ["/v1/customers/customer-id", "/v1/events/event-id/reversals", "/v1/event-batches/fake", "/v1/api-keys/key/scopes", "/v1/invoices?month=2026-10", "/v1/invoices/invoice-id/payment-methods/registrations"]) assert.equal(tenantRequestScope(path, "POST"), "admin");
+  assert.equal(tenantRequestScope("/v1/invoices/invoice-id/payment-attempts", "POST"), "payments");
+  assert.equal(tenantRequestScope("/v1/payment-attempts/attempt-id/cancellations", "POST"), "payments");
+  assert.equal(tenantRequestScope("/v1/payment-attempts/attempt-id/cancellations", "GET"), "read");
 });
 
 test("permission summaries communicate effective access without inferring roles", () => {
   assert.equal(scopeSummary(["admin"]), "전체 관리");
+  assert.equal(scopeSummary(["admin", "payments"]), "전체 관리, 결제");
+  assert.equal(scopeSummary(["read", "payments"]), "조회, 결제");
   assert.equal(scopeSummary(["read", "ingest"]), "조회, 수집");
   assert.equal(scopeSummary(["ingest"]), "수집");
   assert.equal(scopeSummary(undefined), "권한 없음");

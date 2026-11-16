@@ -16,7 +16,7 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   reporter: "list",
-  use: { ...(mode === "real" ? { baseURL: `http://localhost:${port}` } : {}), browserName: "chromium", trace: "off" },
+  use: { ...(mode === "real" ? { baseURL: `http://localhost:${port}` } : {}), browserName: "chromium", trace: "retain-on-failure" },
   projects: [
     { name: "contract", testMatch: "auth.contract.spec.ts" },
     { name: "real-stack", testMatch: "auth.real.spec.ts" },

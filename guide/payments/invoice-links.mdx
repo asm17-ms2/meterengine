@@ -17,25 +17,25 @@ https://meterengine.com/invoice-links#<token>
 MeterEngine은 청구서 조회 링크와 청구 안내를 메일로 보내지 않으니 직접 전달합니다. 자세한 내용은 [MeterEngine 소개](/index)에 있습니다.
 
 <Warning>
-링크를 가진 사람은 누구나 그 청구서를 볼 수 있습니다. 해당 고객에게만 전달하고, 잘못 보냈으면 바로 폐기하세요.
+링크를 가진 사람은 누구나 그 청구서를 볼 수 있습니다. 그 고객에게만 전달하고, 잘못 보냈으면 바로 폐기하세요.
 </Warning>
 
 ## 콘솔에서 발급하기
 
 <Steps>
-<Step title="청구서의 수납 상세로 들어간다">
+<Step title="청구서의 수납 상세 화면으로 들어갑니다">
 '확정 청구서' 화면에서 청구서의 '수납과 청구서 조회 링크'를 누르거나, '수납과 취소' 화면에서 고객 이름을 누릅니다. 화면 아래 '청구서 조회 링크' 구역에서 발급합니다. admin 권한이 없는 사용자에게는 발급과 폐기 버튼이 보이지 않습니다.
 </Step>
-<Step title="유효 기간을 고른다">
+<Step title="유효 기간을 고릅니다">
 '유효 기간'에서 7일, 30일, 90일 중 하나를 고릅니다. 다른 기간은 API로 발급합니다.
 </Step>
-<Step title="재시도 허용 여부를 정한다">
+<Step title="재시도 허용 여부를 정합니다">
 결제가 실패했을 때 고객이 이 링크에서 등록 카드로 다시 결제하게 하려면 '고객의 실패 결제 재시도 허용'에 체크합니다. 체크하지 않으면 조회 전용 링크가 됩니다. 고객 재시도의 조건은 [결제 실패와 재시도](/payments/retries)에 있습니다.
 </Step>
-<Step title="발급하고 복사한다">
+<Step title="발급하고 복사합니다">
 '청구서 조회 링크 발급'을 누르면 '전달할 청구서 조회 링크'에 전체 주소가 나옵니다. '청구서 조회 링크 복사'로 복사합니다. '고객 화면 열기'로 고객이 볼 화면을 미리 볼 수 있습니다.
 </Step>
-<Step title="고객에게 전달한다">
+<Step title="고객에게 전달합니다">
 메신저나 자사 메일로 고객에게 보냅니다.
 </Step>
 </Steps>
@@ -45,7 +45,7 @@ MeterEngine은 청구서 조회 링크와 청구 안내를 메일로 보내지 �
 ## API로 발급하기
 
 <Steps>
-<Step title="링크를 발급한다">
+<Step title="링크를 발급합니다">
 `POST /v1/invoices/{id}/view-links`를 부릅니다. 본문은 생략할 수 있습니다.
 
 <CodeGroup>
@@ -80,7 +80,7 @@ const url = `https://meterengine.com/invoice-links#${link.token}`;
 | `expires_in_days` | 정수, 선택 | 유효 기간(일). 1부터 90까지 받고, 생략하면 30일입니다 |
 | `allow_payment_retry` | 불리언, 선택 | 고객의 실패 결제 재시도를 허용합니다. 생략하면 `false`입니다 |
 </Step>
-<Step title="응답의 token으로 주소를 만든다">
+<Step title="응답의 token으로 주소를 만듭니다">
 응답은 201입니다.
 
 ```json 응답 201
@@ -97,7 +97,7 @@ const url = `https://meterengine.com/invoice-links#${link.token}`;
 
 `token`을 `#` 뒤에 붙여 `https://meterengine.com/invoice-links#me_invoice_0xXTRGrmL2amO3eiruperPm8I7M82SIr`처럼 만듭니다. 폐기할 때 쓰도록 `id`도 저장해 둡니다.
 </Step>
-<Step title="고객에게 전달한다">
+<Step title="고객에게 전달합니다">
 만든 주소를 고객에게 보냅니다. `token` 원문은 링크를 보낸 뒤 자사 시스템에 남기지 않아도 됩니다.
 </Step>
 </Steps>
@@ -157,7 +157,7 @@ curl -X POST "https://meterengine.com/v1/invoices/7b0c2f4e-5a1d-4c8e-9f3b-2d6a8e
 
 <Warning>폐기는 되돌릴 수 없습니다. 이미 전달한 링크도 그 순간부터 열리지 않습니다. 다시 보여 주려면 새 링크를 발급하세요.</Warning>
 
-- 만료되거나 폐기된 링크, 사용 중이 아닌 조직의 링크는 고객 화면에서 모두 '사용할 수 없는 조회 링크입니다'로 보입니다. 고객에게는 새 링크를 발급해 전달합니다.
+- 만료되거나 폐기된 링크, 이용이 정지된 조직의 링크는 고객 화면에서 모두 '사용할 수 없는 조회 링크입니다'로 보입니다. 고객에게는 새 링크를 발급해 전달합니다.
 - 유효 기간과 재시도 허용은 발급한 뒤 바꿀 수 없습니다. 바꾸려면 새 링크를 발급하고 이전 링크를 폐기합니다.
 - 폐기와 만료는 링크로 보는 권한만 끝냅니다. 확정 청구서와 결제 기록은 그대로입니다.
 
@@ -168,7 +168,7 @@ curl -X POST "https://meterengine.com/v1/invoices/7b0c2f4e-5a1d-4c8e-9f3b-2d6a8e
 | 400 | `validation_error` | 경로의 id가 UUID가 아니거나 `expires_in_days`가 1부터 90까지의 범위 밖입니다 |
 | 404 | `invoice_not_found` | 그런 청구서가 없습니다. 다른 업무 환경의 청구서도 이렇게 보입니다 |
 | 404 | `invoice_view_link_not_found` | 폐기하려는 링크가 그 청구서에 없습니다 |
-| 409 | `payment_mode_mismatch` | 재시도를 허용하는 링크를 API 키로 만들 때 키의 모드가 지금 결제 모드와 다릅니다 |
+| 409 | `payment_mode_mismatch` | 재시도를 허용하는 링크를 API 키로 만들 때 테스트 키인지 라이브 키인지가 지금 결제 모드와 다릅니다 |
 
 ## 자사 서비스 화면에 청구 내용을 보여 주려면
 
