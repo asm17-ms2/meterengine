@@ -1,4 +1,4 @@
-import type { WorkspaceEnvironment, SearchParams, SearchPage, UsageSearchSummary, SearchResource, BillableMetricResponse, CustomerSearchItem, CustomerUsageSearchItem, InvoiceSearchItem, EventIssueReason, EventIssueSearchResponse, EventRejectionSearchResponse } from "./types.ts";
+import type { WorkspaceEnvironment, SearchParams, SearchPage, UsageSearchSummary, SearchResource, BillableMetricResponse, ListBillableMetricsResponse, CustomerSearchItem, CustomerUsageSearchItem, InvoiceSearchItem, EventIssueReason, EventIssueSearchResponse, EventRejectionSearchResponse } from "./types.ts";
 import { MeterEngineApiError, MeterEngineBatchError, MeterEngineConnectionError, MeterEngineTimeoutError } from "./errors.ts";
 import { isRetryable, parseRetryAfter, retryDelayMs } from "./retry.ts";
 import type {
@@ -233,8 +233,24 @@ export class MeterEngineClient {
     return this.request("GET", queryPath(`/v1/webhook-endpoints/${encodeURIComponent(id)}/deliveries`, params));
   }
 
-  getUnbilledEvents(): Promise<UnbilledEventsResponse> {
-    return this.request("GET", "/v1/unbilled-events");
+  getUnbilledEvents(params: { month?: string } = {}): Promise<UnbilledEventsResponse> {
+    return this.request("GET", queryPath("/v1/unbilled-events", params));
+  }
+
+  listBillableMetrics(params: { status?: ArchiveStatus } = {}): Promise<ListBillableMetricsResponse> {
+    return this.request("GET", queryPath("/v1/billable-metrics", params));
+  }
+
+  getBillableMetric(code: string): Promise<BillableMetricResponse> {
+    return this.request("GET", `/v1/billable-metrics/${encodeURIComponent(code)}`);
+  }
+
+  // 전용 메서드가 없는 조회용이다. 경로는 /v1/로 시작하고 쿼리를 함께 줄 수 있다.
+  get<T = unknown>(path: string): Promise<T> {
+    const pathname = path.split("?")[0];
+    // 역슬래시, 제어 문자, 점 경로로 /v1/ 밖을 부르지 못하게 막는다.
+    if (!path.startsWith("/v1/") || /[\\#\u0000-\u001f\u007f]/.test(path) || /(^|\/)(\.|%2e){1,2}(\/|$)/i.test(pathname)) throw new Error("path는 /v1/로 시작하는 API 경로여야 합니다");
+    return this.request("GET", path);
   }
 
   listEnvironments(): Promise<{ environments: { id: string; mode: WorkspaceEnvironment }[] }> {
