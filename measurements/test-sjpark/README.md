@@ -16,7 +16,7 @@
 | 사양 | 앱 서버 | DB |
 | --- | --- | --- |
 | m7g | m7g.large | db.m7g.large |
-| t4g | t4g.medium(CPU 크레딧 설정 없음) | db.t4g.small |
+| t4g | t4g.medium(CPU 크레딧 설정 없음) | db.t4g.medium |
 
 ## 구성
 

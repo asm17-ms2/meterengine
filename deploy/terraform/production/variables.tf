@@ -1,9 +1,9 @@
 variable "db_instance_class" {
   type    = string
-  default = "db.t4g.small"
+  default = "db.t4g.medium"
   validation {
-    condition     = contains(["db.t4g.small"], var.db_instance_class)
-    error_message = "Production runs the observed db.t4g.small database."
+    condition     = contains(["db.t4g.medium"], var.db_instance_class)
+    error_message = "Production runs the db.t4g.medium database."
   }
 }
 

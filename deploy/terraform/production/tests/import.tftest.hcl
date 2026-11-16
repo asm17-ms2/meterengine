@@ -62,7 +62,7 @@ run "import_service_configuration" {
   module { source = "../modules/service" }
   variables {
     db_identifier              = "meterengine-db"
-    db_instance_class          = "db.t4g.small"
+    db_instance_class          = "db.t4g.medium"
     database_apply_immediately = true
     db_subnet_group_name       = "meterengine-rds-subnet-private"
     rds_security_group_ids     = ["sg-068a54ab4cfa91730"]
@@ -75,7 +75,7 @@ run "import_service_configuration" {
     final_snapshot_identifier  = "meterengine-production-final"
   }
   assert {
-    condition     = aws_db_instance.app.instance_class == "db.t4g.small" && aws_db_instance.app.apply_immediately && aws_db_instance.app.db_name == "meterengine" && aws_db_instance.app.username == "meterengine"
+    condition     = aws_db_instance.app.instance_class == "db.t4g.medium" && aws_db_instance.app.apply_immediately && aws_db_instance.app.db_name == "meterengine" && aws_db_instance.app.username == "meterengine"
     error_message = "Resize must preserve the original database and owner."
   }
   assert {

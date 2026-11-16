@@ -6,7 +6,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 ROOTS = ROOT / "measurements/test-sjpark/sut"
 SPECS = {"m7g": ("test-sjpark-m7g", "m7g.large", "db.m7g.large"),
-         "t4g": ("test-sjpark-t4g", "t4g.medium", "db.t4g.small")}
+         "t4g": ("test-sjpark-t4g", "t4g.medium", "db.t4g.medium")}
 
 
 def files(root):
