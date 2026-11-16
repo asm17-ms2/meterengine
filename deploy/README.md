@@ -105,6 +105,7 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
   - `site_aliases`는 지금 배포에서 쓰지 않는다. 별칭 리다이렉트는 ALB 규칙(Terraform)이 정한다.
   - `image_repository_prefix`: ECR 저장소 이름 앞부분. `<값>-backend`, `<값>-frontend`에서 이미지를 받는다.
   - `backend_mem_limit`: 백엔드 컨테이너의 메모리 한도. `backend_max_ram_percentage`: 그 한도 중 JVM 힙의 최대 비율(%).
+    - JVM은 힙 밖에서도 메모리를 쓴다. 한도에서 힙 최대를 뺀 값이 그보다 작으면 힙이 다 차기 전에 커널이 컨테이너를 죽인다. staging 수집 서버에서 힙 밖 사용이 평소 310MB, 요청이 밀렸을 때 410MB였다(2026-11-16).
   - `compose_profiles`: 비우거나 `agents`.
 
 ## 배포
