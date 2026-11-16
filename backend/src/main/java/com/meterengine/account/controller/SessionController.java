@@ -51,10 +51,10 @@ public class SessionController {
       summary = "로그인",
       description =
           """
-          이메일과 비밀번호로 로그인하고 세션 토큰을 돌려준다. 토큰 원문은 이 응답에서만 볼 수 있다.
-          이후 요청의 Authorization 헤더에 Bearer 값으로 싣는다. 세션은 expires_at에 끝난다.
-          세션의 조직은 소속된 활성 조직 가운데 가장 먼저 소속된 곳이다.
-          활성 소속이 없는 operator는 조직 없이 로그인하고 organization이 null이다.
+          이메일과 비밀번호로 로그인하고 세션 토큰을 돌려줍니다. 토큰 원문은 이 응답에서만 볼 수 있습니다.
+          이후 요청의 Authorization 헤더에 Bearer 값으로 싣습니다. 세션은 expires_at에 끝납니다.
+          세션의 조직은 소속된 활성 조직 가운데 가장 먼저 소속된 곳입니다.
+          활성 소속이 없는 MeterEngine 운영자 계정(operator)과, 활성 소속은 없지만 수락할 수 있는 초대가 있는 계정은 조직 없이 로그인하고 organization이 null입니다.
           """)
   @ApiResponses({
     @ApiResponse(responseCode = "201", description = "만든 세션과 토큰"),
@@ -65,7 +65,7 @@ public class SessionController {
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
-            "code=validation_error: email이나 password가 비었거나 NUL 문자나 짝이 없는 UTF-16 서로게이트를 담았다"),
+            "code=validation_error: email이나 password가 비었거나 NUL 문자나 짝이 없는 UTF-16 서로게이트를 담았습니다."),
     @ApiResponse(
         responseCode = "401",
         content =
@@ -74,8 +74,8 @@ public class SessionController {
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
             """
-            code=invalid_credentials: 이메일이나 비밀번호가 틀렸다. 어느 쪽이 틀렸는지는 알려 주지 않는다.
-            Authorization 헤더를 실었는데 그 값이 올바르지 않을 때도 같다.
+            code=invalid_credentials: 이메일이나 비밀번호가 틀렸습니다. 어느 쪽이 틀렸는지는 알려 주지 않습니다.
+            Authorization 헤더를 실었는데 그 값이 올바르지 않을 때도 같습니다.
             """),
     @ApiResponse(
         responseCode = "403",
@@ -85,8 +85,8 @@ public class SessionController {
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
             """
-            code=email_not_verified: 서버가 이메일 인증을 켰는데 이 계정은 아직 인증하지 않았다. 비밀번호가 맞을 때만 준다.
-            code=organization_not_active: member인데 소속된 조직 가운데 활성 상태인 곳이 없다.
+            code=email_not_verified: 이 계정은 아직 이메일 인증을 하지 않았습니다. 비밀번호가 맞을 때만 돌려줍니다.
+            code=organization_not_active: 소속된 조직의 이용이 모두 정지됐고 수락할 수 있는 초대도 없습니다. MeterEngine 운영자 계정은 이 code를 받지 않습니다.
             """),
     @ApiResponse(
         responseCode = "429",
@@ -94,11 +94,12 @@ public class SessionController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=rate_limit_exceeded: 로그인 시도 한도를 넘었다. Retry-After 헤더의 초만큼 기다린 뒤 재시도한다",
+        description =
+            "code=rate_limit_exceeded: 로그인 시도 한도를 넘었습니다. Retry-After 헤더의 초만큼 기다린 뒤 다시 보냅니다.",
         headers =
             @Header(
                 name = "Retry-After",
-                description = "다시 보내기 전에 기다릴 초",
+                description = "다시 보내기 전에 기다릴 시간(초)",
                 required = true,
                 schema = @Schema(type = "integer")))
   })
@@ -114,8 +115,8 @@ public class SessionController {
       summary = "현재 세션 조회",
       description =
           """
-          요청에 실은 세션 토큰의 사용자, 세션이 고른 조직, 소속된 조직 목록, 만료 시각을 돌려준다.
-          조직이 활성 상태가 아니어도 조회할 수 있다. API 키로는 부를 수 없다.
+          요청에 실은 세션 토큰의 사용자, 세션이 고른 조직, 소속된 조직 목록, 만료 시각을 돌려줍니다.
+          조직의 이용이 정지됐어도 조회할 수 있습니다. API 키로는 부를 수 없습니다.
           """)
   @ApiResponses({@ApiResponse(responseCode = "200", description = "현재 세션")})
   public SessionResponse getSession(@AuthenticationPrincipal AuthenticatedPrincipal principal) {
@@ -127,8 +128,8 @@ public class SessionController {
   @MemberAccess
   @Operation(
       summary = "로그아웃",
-      description = "요청에 실은 세션을 끝낸다. 같은 토큰으로 다시 요청하면 401이다. API 키로는 부를 수 없다.")
-  @ApiResponses({@ApiResponse(responseCode = "204", description = "끝냈다. 본문 없음")})
+      description = "요청에 실은 세션을 끝냅니다. 같은 토큰으로 다시 요청하면 401입니다. API 키로는 부를 수 없습니다.")
+  @ApiResponses({@ApiResponse(responseCode = "204", description = "끝냈습니다. 본문은 없습니다.")})
   public void deleteSession(@AuthenticationPrincipal AuthenticatedPrincipal principal) {
     sessionService.delete(principal.userSessionId());
   }
@@ -139,8 +140,8 @@ public class SessionController {
       summary = "조직 전환",
       description =
           """
-          세션의 조직을 사용자가 소속된 다른 조직으로 바꾸고 바뀐 현재 세션을 돌려준다.
-          활성 상태가 아닌 조직으로도 바꿀 수 있지만, 그 조직의 데이터를 다루는 요청은 403(organization_not_active)이다.
+          세션의 조직을 사용자가 소속된 다른 조직으로 바꾸고 바뀐 현재 세션을 돌려줍니다.
+          이용이 정지된 조직으로도 바꿀 수 있지만, 그 조직의 데이터를 다루는 요청은 403(organization_not_active)입니다.
           """)
   @ApiResponses({
     @ApiResponse(responseCode = "200", description = "바뀐 현재 세션"),
@@ -150,14 +151,14 @@ public class SessionController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=validation_error: organization_id가 없거나 UUID 형식이 아니다"),
+        description = "code=validation_error: organization_id가 없거나 UUID 형식이 아닙니다."),
     @ApiResponse(
         responseCode = "403",
         content =
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=permission_denied: API 키로 부른 요청이거나, 사용자가 소속되지 않은 조직이다")
+        description = "code=permission_denied: API 키로 부른 요청이거나, 사용자가 소속되지 않은 조직입니다.")
   })
   public SessionResponse updateSessionOrganization(
       @AuthenticationPrincipal AuthenticatedPrincipal principal,

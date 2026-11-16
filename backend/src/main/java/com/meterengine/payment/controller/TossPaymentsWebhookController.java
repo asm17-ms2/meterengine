@@ -33,30 +33,31 @@ public class TossPaymentsWebhookController {
       summary = "토스페이먼츠 웹훅 수신",
       description =
           """
-          토스페이먼츠 개발자센터에 조직마다 등록하는 웹훅 주소다. 인증하지 않는 공개 API다.
-          본문은 믿지 않는다. eventType이 PAYMENT_STATUS_CHANGED일 때만 data.orderId로 그 조직의 결제 시도를 찾고, 시도 결제 모드의 키로 토스페이먼츠에 결제를 다시 조회해 반영한다.
-          다시 조회한 결제가 DONE이면 pending인 시도를 done으로, ABORTED나 EXPIRED면 failed로 바꾼다. 시도에 pending인 취소가 있고 조회한 cancels에 맞는 취소가 있으면 그 취소를 done으로 바꾼다.
-          본문을 JSON으로 읽을 수 없거나, 다른 eventType이거나, 그런 시도가 없으면 바꾸지 않고 200이다.
+          토스페이먼츠 개발자센터에 조직마다 등록하는 웹훅 URL입니다. 토스페이먼츠가 부르는 주소이고, 인증하지 않는 공개 API입니다.
+          본문 값을 그대로 반영하지 않습니다. eventType이 PAYMENT_STATUS_CHANGED일 때만 data.orderId로 그 조직의 결제 시도를 찾고, 그 시도의 결제 모드에 저장한 키로 토스페이먼츠에 결제를 다시 조회해 반영합니다.
+          다시 조회한 결제가 DONE이면 pending인 시도를 done으로, ABORTED나 EXPIRED면 failed로 바꿉니다. 시도에 pending인 취소가 있고 조회한 cancels에 맞는 취소가 있으면 그 취소를 done으로 바꿉니다.
+          본문을 JSON으로 읽을 수 없거나, 다른 eventType이거나, 그런 시도가 없으면 바꾸지 않고 200입니다.
           """)
   @ApiResponses({
-    @ApiResponse(responseCode = "200", description = "받았다. 본문은 없다"),
+    @ApiResponse(responseCode = "200", description = "받았습니다. 본문 없음"),
     @ApiResponse(
         responseCode = "400",
         content =
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=validation_error: 경로의 organization_id가 UUID가 아니다"),
+        description = "code=validation_error: 경로의 organization_id가 UUID가 아닙니다."),
     @ApiResponse(
         responseCode = "500",
         content =
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=internal_server_error: 토스페이먼츠 재조회 결과를 확인하지 못했다. 토스페이먼츠가 다시 보낸다")
+        description =
+            "code=internal_server_error: 토스페이먼츠에 다시 조회한 결과를 확인하지 못했습니다. 토스페이먼츠가 웹훅을 다시 보냅니다.")
   })
   public void receiveTossPaymentsWebhook(
-      @Parameter(description = "웹훅을 등록한 조직의 ID.") @PathVariable("organization_id")
+      @Parameter(description = "웹훅을 등록한 조직의 ID") @PathVariable("organization_id")
           UUID organizationId,
       @Valid @RequestBody(required = false) String body) {
     tossPaymentsWebhookService.receive(organizationId, body);

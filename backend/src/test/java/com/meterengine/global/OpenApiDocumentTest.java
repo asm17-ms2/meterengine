@@ -260,7 +260,7 @@ class OpenApiDocumentTest {
     for (String path : WORKSPACE_EXPORTS)
       assertThat(getResponses(path).path("400").path("description").asText())
           .as(path)
-          .contains("10000");
+          .contains("10,000");
   }
 
   @Test
@@ -578,8 +578,8 @@ class OpenApiDocumentTest {
                 .path("204")
                 .path("description")
                 .asText())
-        .isEqualTo("이번 달 적용 중인 버전을 보관했다. 본문 없음");
-    assertThat(webhookDelete.path("summary").asText()).isEqualTo("웹훅 엔드포인트 보관");
+        .isEqualTo("이번 달 적용 중인 버전을 보관했습니다. 본문 없음");
+    assertThat(webhookDelete.path("summary").asText()).isEqualTo("웹훅 URL 보관");
     assertThat(webhookDelete.path("description").asText())
         .contains("status=archived")
         .doesNotContain("숨긴다");
@@ -638,9 +638,9 @@ class OpenApiDocumentTest {
             .path("409");
 
     assertThat(response.path("description").asText())
-        .contains("code=invoice_already_paid: 이 결제 모드로 결제 중이거나 결제된 시도가 이미 있다.")
+        .contains("code=invoice_already_paid: 이 결제 모드로 결제 중이거나 결제된 시도가 이미 있습니다.")
         .contains(
-            "code=payment_result_unconfirmed: 이전 결제 시도가 미청구로 확인되지 않았다. 이전 결제 결과를 확인한 뒤 다시 요청한다.");
+            "code=payment_result_unconfirmed: 결과를 모르는 이전 결제 시도가 있습니다. 토스페이먼츠에서 결과를 확인한 뒤 다시 요청합니다.");
     assertThat(
             response.path("content").path("application/json").path("schema").path("$ref").asText())
         .isEqualTo("#/components/schemas/ErrorResponse");

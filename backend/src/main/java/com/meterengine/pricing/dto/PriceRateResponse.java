@@ -8,24 +8,36 @@ import java.util.Map;
 import java.util.UUID;
 
 public record PriceRateResponse(
-    UUID id,
-    @JsonProperty("billable_metric_code") String billableMetricCode,
-    @JsonRawValue @Schema(implementation = Map.class) @JsonProperty("dimension_values")
+    @Schema(description = "단가 버전 ID(UUID)") UUID id,
+    @Schema(description = "미터 코드") @JsonProperty("billable_metric_code") String billableMetricCode,
+    @JsonRawValue
+        @Schema(implementation = Map.class, description = "이 단가를 쓰는 구분 값입니다. 구분 키가 없는 미터는 빈 객체입니다.")
+        @JsonProperty("dimension_values")
         String dimensionValues,
-    @Schema(description = "per_unit 모델의 단가. graduated, volume 모델에서는 null이다")
+    @Schema(description = "per_unit 모델의 과금 수량 1당 단가(원)입니다. graduated, volume 모델에서는 null입니다.")
         @JsonProperty("unit_price")
         BigDecimal unitPrice,
-    @JsonProperty("customer_id") UUID customerId,
-    @JsonProperty("effective_from") String effectiveFrom,
-    @JsonProperty("effective_until") String effectiveUntil,
-    @Schema(allowableValues = {"per_unit", "graduated", "volume"}) String model,
+    @Schema(description = "고객 단가의 고객 ID(UUID)입니다. 공통 단가는 null입니다.") @JsonProperty("customer_id")
+        UUID customerId,
+    @Schema(description = "적용 시작 월(yyyy-MM, KST)") @JsonProperty("effective_from")
+        String effectiveFrom,
+    @Schema(description = "적용 종료 월(yyyy-MM, KST)입니다. 이 달은 포함하지 않습니다. 기한이 없으면 null입니다.")
+        @JsonProperty("effective_until")
+        String effectiveUntil,
+    @Schema(
+            description = "단가 모델입니다. per_unit은 단일 단가, graduated는 누진 구간, volume은 총량 구간입니다.",
+            allowableValues = {"per_unit", "graduated", "volume"})
+        String model,
     @JsonRawValue
         @Schema(
             implementation = PriceRateTier[].class,
-            description = "graduated, volume 모델의 구간. per_unit이면 null이다")
+            description = "graduated, volume 모델의 구간입니다. per_unit이면 null입니다.")
         String tiers,
-    @JsonProperty("archived_at") java.time.OffsetDateTime archivedAt,
-    @JsonProperty("archived_from") String archivedFrom) {
+    @Schema(description = "보관한 시각(ISO 8601)입니다. 보관하지 않은 버전은 null입니다.") @JsonProperty("archived_at")
+        java.time.OffsetDateTime archivedAt,
+    @Schema(description = "보관해 적용을 멈추는 달(yyyy-MM, KST)입니다. 보관하지 않은 버전은 null입니다.")
+        @JsonProperty("archived_from")
+        String archivedFrom) {
   public static PriceRateResponse from(PriceRate rate) {
     return new PriceRateResponse(
         rate.getId(),

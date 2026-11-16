@@ -5,8 +5,8 @@ import com.meterengine.account.service.Signup;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 public record SignupResponse(
-    @Schema(description = "만든 조직. 운영자가 승인할 때까지 pending이다") SignupOrganization organization,
-    @Schema(description = "만든 사용자. 역할은 member다") @JsonProperty("user_account")
+    @Schema(description = "만든 조직입니다. status는 active입니다.") SignupOrganization organization,
+    @Schema(description = "만든 계정입니다. 이 조직의 대표관리자이며 role은 member입니다.") @JsonProperty("user_account")
         SignupUserAccount userAccount) {
 
   public static SignupResponse from(Signup signup) {

@@ -145,6 +145,6 @@ for (const item of results) {
 
 MeterEngine은 단건 요청의 `customer_not_found`, `customer_archived`, `event_too_old` 거절과 묶음 요청의 `rejected` 원소를 수집 거절 기록으로 남깁니다. 콘솔 '수집 거절' 화면이나 read 권한 키로 `GET /v1/event-rejections/search`를 불러 봅니다. `month`(기록한 달, `YYYY-MM`, 생략하면 이번 달), `customer_id`, `error_code`, `q`(`transaction_id`나 `type`의 일부), `page`, `size`로 좁힐 수 있고, 결과마다 `transaction_id`, `error_code`, `error_fields`, `request_id`, 묶음 요청이면 `batch_index`가 있습니다.
 
-단건 요청의 JSON 파싱 오류와 형식 검증 오류(`malformed_request_body`, `validation_error`), 묶음 요청 전체가 `400`으로 거절된 경우, 인증과 한도 거절은 기록되지 않습니다. 이 응답은 본문과 응답 헤더 `X-Request-ID`를 자사 로그에 남겨 두세요.
+단건 요청의 JSON 파싱 오류와 형식 검증 오류(`malformed_request_body`, `validation_error`), 묶음 요청 전체가 `400`으로 거절된 경우, 인증과 한도 거절은 기록되지 않습니다. 이벤트 수집이 202로 답할 때는 요청에서 바로 거절한 `event_too_old`와 묶음 요청의 `rejected` 원소도 기록되지 않고, 저장할 때 찾은 `customer_not_found`, `customer_archived`만 기록됩니다. 이 응답은 본문과 응답 헤더 `X-Request-ID`를 자사 로그에 남겨 두세요.
 
 이벤트 수집 요청은 감사 기록에 나오지 않으니 `request_id`와 `transaction_id`로 찾습니다. [오류 응답](/api-basics/errors)을 보세요.

@@ -42,11 +42,11 @@ public class PaymentMethodRegistrationController {
       summary = "카드 등록 링크 생성",
       description =
           """
-          고객이 카드를 등록할 일회용 링크를 만든다. 본문은 받지 않는다.
-          token은 이 응답에만 실린다. 서버는 token 원문을 저장하지 않으므로 다시 조회할 수 없다.
-          링크는 지금 결제 모드로 만들고 24시간 뒤 만료된다. 카드 등록에 한 번 쓰면 다시 쓸 수 없다.
-          API 키로 부르면 키의 모드가 지금 결제 모드와 같아야 하고, 다르면 409다.
-          expires_at은 KST(+09:00)로 나온다.
+          고객이 카드를 등록할 일회용 링크를 만듭니다. 본문은 받지 않습니다.
+          token은 이 응답에만 실립니다. MeterEngine은 token 원문을 저장하지 않으므로 다시 볼 수 없습니다.
+          링크는 현재 업무 환경의 결제 모드로 만들고 24시간 뒤 만료됩니다. 카드 등록에 한 번 쓰면 다시 쓸 수 없습니다.
+          API 키로 부르면 테스트 키인지 라이브 키인지가 지금 결제 모드와 같아야 하고, 다르면 409입니다.
+          expires_at은 KST(+09:00)로 나옵니다.
           """)
   @ApiResponses({
     @ApiResponse(responseCode = "201", description = "만든 카드 등록 링크"),
@@ -56,14 +56,14 @@ public class PaymentMethodRegistrationController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=validation_error: 경로의 id가 UUID가 아니다"),
+        description = "code=validation_error: 경로의 id가 UUID가 아닙니다."),
     @ApiResponse(
         responseCode = "404",
         content =
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=customer_not_found: 그런 고객이 없다"),
+        description = "code=customer_not_found: 그런 고객이 없습니다."),
     @ApiResponse(
         responseCode = "409",
         content =
@@ -72,15 +72,15 @@ public class PaymentMethodRegistrationController {
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
             """
-            code=payment_mode_mismatch: API 키의 모드가 지금 결제 모드와 다르다.
-            code=customer_archived: 보관한 고객이다.
-            code=toss_payments_credential_missing: 지금 결제 모드의 토스페이먼츠 키가 없다.
+            code=payment_mode_mismatch: 테스트 키인지 라이브 키인지가 지금 결제 모드와 다릅니다.
+            code=customer_archived: 보관한 고객입니다.
+            code=toss_payments_credential_missing: 현재 업무 환경의 토스페이먼츠 키가 없습니다.
             """)
   })
   public PaymentMethodRegistrationResponse createPaymentMethodRegistration(
       @CurrentOrganizationId UUID organizationId,
       @AuthenticationPrincipal AuthenticatedPrincipal principal,
-      @Parameter(description = "카드를 등록할 고객의 id.") @PathVariable UUID id) {
+      @Parameter(description = "카드를 등록할 고객의 ID") @PathVariable UUID id) {
     return paymentMethodRegistrationService.create(organizationId, id, principal.mode());
   }
 
@@ -90,10 +90,10 @@ public class PaymentMethodRegistrationController {
       summary = "카드 등록 링크 조회",
       description =
           """
-          카드 등록 페이지가 토스페이먼츠 SDK를 띄우는 데 쓸 값을 돌려준다. 일회용 카드 등록 토큰으로 인증하는 공개 API다.
-          token은 응답에 싣지 않는다.
-          없거나, 만료됐거나, 이미 카드 등록에 쓴 링크는 모두 404다.
-          expires_at은 KST(+09:00)로 나온다.
+          카드 등록 페이지가 토스페이먼츠 SDK를 띄우는 데 쓸 값을 돌려줍니다. 일회용 카드 등록 token으로 인증하는 공개 API입니다.
+          token은 응답에 싣지 않습니다.
+          없거나, 만료됐거나, 이미 카드 등록에 쓴 링크는 모두 404입니다.
+          expires_at은 KST(+09:00)로 나옵니다.
           """)
   @ApiResponses({
     @ApiResponse(responseCode = "200", description = "카드 등록 링크"),
@@ -103,14 +103,14 @@ public class PaymentMethodRegistrationController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=validation_error: token에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있다"),
+        description = "code=validation_error: token에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있습니다."),
     @ApiResponse(
         responseCode = "404",
         content =
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=payment_method_registration_not_found: 링크가 없거나, 만료됐거나, 이미 쓰였다"),
+        description = "code=payment_method_registration_not_found: 링크가 없거나, 만료됐거나, 이미 쓰였습니다."),
     @ApiResponse(
         responseCode = "409",
         content =
@@ -119,12 +119,12 @@ public class PaymentMethodRegistrationController {
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
             """
-            code=customer_archived: 링크를 만든 뒤 고객을 보관했다.
-            code=toss_payments_credential_missing: 링크를 만든 결제 모드의 토스페이먼츠 키가 없다.
+            code=customer_archived: 링크를 만든 뒤 고객을 보관했습니다.
+            code=toss_payments_credential_missing: 링크를 만든 결제 모드의 토스페이먼츠 키가 없습니다.
             """)
   })
   public PaymentMethodRegistrationResponse getPaymentMethodRegistration(
-      @Parameter(description = "카드 등록 링크를 만들 때 받은 token.") @PathVariable @StorableText
+      @Parameter(description = "카드 등록 링크를 만들 때 받은 token") @PathVariable @StorableText
           String token) {
     return paymentMethodRegistrationService.get(token);
   }

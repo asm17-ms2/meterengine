@@ -8,7 +8,7 @@ import jakarta.validation.constraints.Pattern;
 
 public record UpdateUserAccountRoleRequest(
     @Schema(
-            description = "바꿀 역할",
+            description = "바꿀 역할입니다. operator는 MeterEngine 운영자 계정, member는 그 밖의 계정입니다.",
             allowableValues = {UserAccount.MEMBER, UserAccount.OPERATOR})
         @NotBlank @Pattern(regexp = UserAccount.ROLE_PATTERN) @StorableText
         String role) {}

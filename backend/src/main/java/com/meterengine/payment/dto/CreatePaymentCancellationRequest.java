@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 public record CreatePaymentCancellationRequest(
-    @Schema(description = "취소할 금액. 원 단위 양의 정수. 빼면 남은 결제 금액 전부를 취소한다") @Positive Long amount,
-    @Schema(description = "취소 사유. 토스페이먼츠에 그대로 넘긴다", maxLength = 200)
+    @Schema(description = "취소할 금액(원 단위 양의 정수)입니다. 빼면 남은 결제 금액 전부를 취소합니다.") @Positive Long amount,
+    @Schema(description = "취소 사유입니다. 토스페이먼츠에 그대로 넘깁니다.", maxLength = 200)
         @NotBlank @Size(max = 200) @StorableText
         String reason) {}

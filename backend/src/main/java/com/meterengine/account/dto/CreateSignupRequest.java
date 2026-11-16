@@ -22,14 +22,17 @@ public record CreateSignupRequest(
     @Schema(description = "가입하는 사람 이름")
         @NotBlank @Size(max = UserAccount.NAME_MAX_LENGTH) @StorableText
         String name,
-    @Schema(description = "로그인에 쓸 이메일. 소문자로 바꿔 저장하고 대소문자를 가리지 않고 중복을 막는다")
+    @Schema(description = "로그인에 쓸 이메일입니다. 소문자로 바꿔 저장하고, 대소문자를 가리지 않고 중복을 막습니다.")
         @NotBlank @Email @Pattern(regexp = UserAccount.EMAIL_PATTERN, message = UserAccount.EMAIL_FORMAT_MESSAGE) @Size(max = UserAccount.EMAIL_MAX_LENGTH) @StorableText
         String email,
-    @Schema(format = "password", description = "8자 이상 72자 이하이고 UTF-8로 72바이트 이하")
+    @Schema(format = "password", description = "비밀번호입니다. 8자 이상 72자 이하이고 UTF-8로 72바이트 이하여야 합니다.")
         @NotBlank @Size(min = UserAccount.PASSWORD_MIN_LENGTH, max = UserAccount.PASSWORD_MAX_LENGTH) @StorableText
         String password,
-    @Schema(description = "필수 동의. terms_of_service와 privacy_policy를 한 번씩 담는다") @NotEmpty @Valid List<@NotNull CreateSignupConsentRequest> consents,
-    @Schema(description = "Cloudflare Turnstile 위젯이 준 토큰. 서버가 캡차를 켰을 때만 필요하다")
+    @Schema(description = "이용약관 동의와 개인정보 처리방침 확인입니다. terms_of_service와 privacy_policy를 한 번씩 담습니다.")
+        @NotEmpty @Valid List<@NotNull CreateSignupConsentRequest> consents,
+    @Schema(
+            description =
+                "Cloudflare Turnstile 위젯이 준 토큰입니다. 없거나 확인을 통과하지 못하면 400 captcha_failed입니다.")
         @JsonProperty("turnstile_token")
         @Size(max = TURNSTILE_TOKEN_MAX_LENGTH) @StorableText
         String turnstileToken) {

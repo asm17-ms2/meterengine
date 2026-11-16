@@ -8,6 +8,7 @@ import com.meterengine.global.security.ReadAccess;
 import com.meterengine.global.validation.FourDigitYear;
 import com.meterengine.metric.service.BillableMetricUsageService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import java.time.Clock;
 import java.time.YearMonth;
 import java.util.UUID;
@@ -32,11 +33,14 @@ public class DashboardController {
   @Operation(
       summary = "월별 과금과 수납 현황 조회",
       description =
-          "로그인 세션 또는 read API 키의 조직 현황을 조회한다. 예정액은 공급가액이고, 확정액과 수납액은 세금 포함 금액이다. 취소는 결제 대기액으로 다시"
-              + " 잡지 않는다.")
+          "로그인 세션이나 read 권한 API 키로 현재 업무 환경의 월별 현황을 돌려줍니다. 청구 예정액은 공급가액이고, 확정 청구액과 받은 금액은 부가세 포함 금액입니다."
+              + " 취소한 금액은 받을 금액에 다시 더하지 않습니다.")
   public DashboardResponse getDashboard(
       @CurrentOrganizationId UUID organizationId,
-      @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") @FourDigitYear
+      @Parameter(description = "조회할 달(yyyy-MM, KST)입니다. 생략하면 이번 달입니다.")
+          @RequestParam(required = false)
+          @DateTimeFormat(pattern = "yyyy-MM")
+          @FourDigitYear
           YearMonth month) {
     return dashboardService.get(
         organizationId,
