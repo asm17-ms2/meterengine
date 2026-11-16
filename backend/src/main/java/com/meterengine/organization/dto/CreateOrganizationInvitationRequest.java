@@ -13,13 +13,15 @@ import jakarta.validation.constraints.Size;
 import java.util.List;
 
 public record CreateOrganizationInvitationRequest(
-    @NotBlank @Email @Pattern(
+    @Schema(description = "초대할 이메일입니다. 254자까지이며 소문자로 바꿔 저장합니다.")
+        @NotBlank @Email @Pattern(
             regexp = OrganizationPerson.EMAIL_PATTERN,
             message = OrganizationPerson.EMAIL_FORMAT_MESSAGE)
         @Size(max = OrganizationPerson.EMAIL_MAX_LENGTH) @StorableText
         String email,
     @Schema(
-            description = "수락 시 부여할 권한. 생략하면 조회 전용",
+            description =
+                "수락하면 부여할 권한입니다. ingest, read, admin, payments 가운데 하나 이상을 담고, 생략하면 read(조회)만 줍니다.",
             requiredMode = Schema.RequiredMode.NOT_REQUIRED)
         @NotEmpty List<@NotNull @StorableText @Pattern(regexp = AccessScopes.PATTERN) String> scopes) {
   public CreateOrganizationInvitationRequest {

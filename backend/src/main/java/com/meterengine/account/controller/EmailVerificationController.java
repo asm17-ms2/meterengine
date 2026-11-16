@@ -44,12 +44,12 @@ public class EmailVerificationController {
       summary = "인증 메일 다시 보내기",
       description =
           """
-          가입한 계정이 있고 아직 인증하지 않았으면 새 인증 메일을 보낸다. 앞서 보낸 링크도 만료 전까지 쓸 수 있다.
-          계정이 없거나 이미 인증했거나 서버가 이메일 인증을 껐으면 아무것도 보내지 않는다. 어느 경우든 같은 202를 준다.
-          서버가 캡차를 켰으면 요청 수 제한을 본 뒤 turnstile_token을 확인하고 나서 처리한다.
+          가입한 계정이 있고 아직 인증하지 않았으면 새 인증 메일을 보냅니다. 앞서 보낸 링크도 만료 전까지 쓸 수 있습니다.
+          계정이 없거나 이미 인증했으면 아무것도 보내지 않습니다. 어느 경우든 같은 202를 돌려줍니다.
+          요청 수 한도를 확인한 뒤 turnstile_token을 확인하고 나서 처리합니다.
           """)
   @ApiResponses({
-    @ApiResponse(responseCode = "202", description = "접수했다. 보냈는지는 알려 주지 않는다"),
+    @ApiResponse(responseCode = "202", description = "접수했습니다. 보냈는지는 알려 주지 않습니다."),
     @ApiResponse(
         responseCode = "400",
         content =
@@ -58,8 +58,8 @@ public class EmailVerificationController {
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
             """
-            code=validation_error: email이 비었거나 이메일 형식이 아니거나 254자를 넘거나, turnstile_token이 2048자를 넘는다.
-            code=captcha_failed: 서버가 캡차를 켰는데 turnstile_token이 없거나 확인을 통과하지 못했다. 위젯을 다시 풀고 보낸다.
+            code=validation_error: email이 비었거나 이메일 형식이 아니거나 254자를 넘거나, turnstile_token이 2048자를 넘습니다.
+            code=captcha_failed: turnstile_token이 없거나 확인을 통과하지 못했습니다. 위젯을 다시 풀고 보냅니다.
             """),
     @ApiResponse(
         responseCode = "429",
@@ -67,11 +67,12 @@ public class EmailVerificationController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=rate_limit_exceeded: 다시 보내기 한도를 넘었다. Retry-After 헤더의 초만큼 기다린 뒤 재시도한다",
+        description =
+            "code=rate_limit_exceeded: 다시 보내기 한도를 넘었습니다. Retry-After 헤더의 초만큼 기다린 뒤 다시 보냅니다.",
         headers =
             @Header(
                 name = "Retry-After",
-                description = "다시 보내기 전에 기다릴 초",
+                description = "다시 보내기 전에 기다릴 시간(초)",
                 required = true,
                 schema = @Schema(type = "integer"))),
     @ApiResponse(
@@ -80,7 +81,7 @@ public class EmailVerificationController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=captcha_unavailable: 캡차 확인 결과를 받지 못해 요청을 받지 않았다. 잠시 뒤 다시 시도한다")
+        description = "code=captcha_unavailable: 캡차 확인 결과를 받지 못해 요청을 받지 않았습니다. 잠시 뒤 다시 시도합니다.")
   })
   public void createEmailVerification(
       @Valid @RequestBody CreateEmailVerificationRequest request,
@@ -98,18 +99,17 @@ public class EmailVerificationController {
       summary = "이메일 인증",
       description =
           """
-          인증 메일 링크의 토큰으로 그 계정의 이메일을 인증한다. 토큰은 만료 전에 한 번만 쓸 수 있다.
-          인증한 뒤에도 조직이 승인되기 전에는 로그인하면 403(organization_not_active)이다.
+          인증 메일 링크의 토큰으로 그 계정의 이메일을 인증합니다. 토큰은 만료 전에 한 번만 쓸 수 있습니다.
           """)
   @ApiResponses({
-    @ApiResponse(responseCode = "204", description = "인증했다"),
+    @ApiResponse(responseCode = "204", description = "인증했습니다."),
     @ApiResponse(
         responseCode = "400",
         content =
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=validation_error: token이 비었거나 64자를 넘는다"),
+        description = "code=validation_error: token이 비었거나 64자를 넘습니다."),
     @ApiResponse(
         responseCode = "404",
         content =
@@ -117,7 +117,7 @@ public class EmailVerificationController {
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
-            "code=email_verification_not_found: 토큰이 없거나 만료됐거나 이미 썼다. 어느 쪽인지는 알려 주지 않는다. 인증 메일을 다시 받는다")
+            "code=email_verification_not_found: 토큰이 없거나 만료됐거나 이미 썼습니다. 어느 쪽인지는 알려 주지 않습니다. 인증 메일을 다시 받습니다.")
   })
   public void confirmEmailVerification(
       @Valid @RequestBody ConfirmEmailVerificationRequest request) {

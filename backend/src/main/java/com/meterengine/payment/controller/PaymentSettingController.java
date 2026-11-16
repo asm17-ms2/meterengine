@@ -40,9 +40,9 @@ public class PaymentSettingController {
       summary = "결제 모드 조회",
       description =
           """
-          선택한 환경의 결제 모드를 돌려준다. test/live 환경의 모드는 고정이며 updated_at=null이다.
-          기존 범위는 저장한 모드를 쓰고, 바꾼 적 없으면 mode=test다.
-          updated_at은 KST(+09:00)로 나온다.
+          현재 업무 환경의 결제 모드를 돌려줍니다. 테스트 환경과 라이브 환경의 결제 모드는 고정이며 updated_at=null입니다.
+          기존 데이터는 저장한 결제 모드를 쓰고, 바꾼 적 없으면 mode=test입니다.
+          updated_at은 KST(+09:00)로 나옵니다.
           """)
   @ApiResponses({
     @ApiResponse(responseCode = "200", description = "결제 모드"),
@@ -52,7 +52,7 @@ public class PaymentSettingController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=validation_error: 요청 값이 올바르지 않다")
+        description = "code=validation_error: 요청 값이 올바르지 않습니다.")
   })
   public PaymentSettingResponse getPaymentSetting(@CurrentOrganizationId UUID organizationId) {
     return paymentSettingService.get(organizationId);
@@ -64,10 +64,10 @@ public class PaymentSettingController {
       summary = "결제 모드 변경",
       description =
           """
-          기존 범위의 결제 모드를 바꾼다. live로 바꾸려면 live 키가 먼저 저장돼 있어야 한다.
-          test/live 환경은 선택한 환경과 같은 mode만 받는다. 다른 mode는 payment_mode_mismatch로 거절한다.
-          로그인 세션만 부를 수 있고 API 키로는 부를 수 없다.
-          updated_at은 KST(+09:00)로 나온다.
+          기존 데이터의 결제 모드를 바꿉니다. live로 바꾸려면 live 결제 모드의 토스페이먼츠 키가 먼저 저장되어 있어야 합니다.
+          테스트 환경과 라이브 환경은 현재 업무 환경과 같은 mode만 받습니다. 다른 mode는 payment_mode_mismatch로 거절합니다.
+          로그인 세션만 부를 수 있고 API 키로는 부를 수 없습니다.
+          updated_at은 KST(+09:00)로 나옵니다.
           """)
   @ApiResponses({
     @ApiResponse(responseCode = "200", description = "바뀐 결제 모드"),
@@ -78,14 +78,15 @@ public class PaymentSettingController {
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
-            "code=validation_error: mode가 비었거나 test나 live가 아니거나, NUL 문자나 짝이 없는 UTF-16 서로게이트가 있다"),
+            "code=validation_error: mode가 비었거나 test나 live가 아니거나, NUL 문자나 짝이 없는 UTF-16 서로게이트가 있습니다."),
     @ApiResponse(
         responseCode = "409",
         content =
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=toss_payments_credential_missing: live로 바꾸려는데 live 모드의 토스페이먼츠 키가 없다")
+        description =
+            "code=toss_payments_credential_missing: live로 바꾸려는데 live 결제 모드의 토스페이먼츠 키가 없습니다.")
   })
   public PaymentSettingResponse updatePaymentSetting(
       @CurrentOrganizationId UUID organizationId,

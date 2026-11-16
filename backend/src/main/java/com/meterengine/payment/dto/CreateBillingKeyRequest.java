@@ -10,7 +10,7 @@ public record CreateBillingKeyRequest(
         @NotBlank @StorableText
         @JsonProperty("auth_key")
         String authKey,
-    @Schema(description = "토스페이먼츠 SDK에 넣은 customerKey. 카드 등록 링크의 customer_key와 같아야 한다")
+    @Schema(description = "토스페이먼츠 SDK에 넣은 customerKey입니다. 카드 등록 링크 조회 응답의 customer_key와 같아야 합니다.")
         @NotBlank @StorableText
         @JsonProperty("customer_key")
         String customerKey,

@@ -7,14 +7,30 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 public record SessionTokenResponse(
-    @Schema(description = "세션 토큰 원문. 이 응답에서만 볼 수 있다. Authorization: Bearer 값으로 싣는다") String token,
-    @Schema(description = "세션이 끝나는 시각. 이 시각이 지나면 다시 로그인한다") @JsonProperty("expires_at")
+    @Schema(description = "세션 토큰 원문입니다. 이 응답에서만 볼 수 있습니다. Authorization 헤더에 Bearer 값으로 싣습니다.")
+        String token,
+    @Schema(description = "세션이 끝나는 시각(ISO 8601)입니다. 이 시각이 지나면 다시 로그인합니다.")
+        @JsonProperty("expires_at")
         OffsetDateTime expiresAt,
-    @JsonProperty("user_account") SessionUserAccount userAccount,
-    @Schema(description = "세션이 고른 조직. 활성 소속이 없는 operator면 null") SessionOrganization organization,
-    @JsonProperty("organization_role") String organizationRole,
-    @JsonProperty("consent_required") boolean consentRequired,
-    List<String> scopes) {
+    @Schema(description = "로그인한 계정") @JsonProperty("user_account") SessionUserAccount userAccount,
+    @Schema(
+            description =
+                "세션이 고른 조직입니다. 활성 소속이 없는 MeterEngine 운영자 계정(operator)이나, 활성 소속 없이 수락할 수 있는 초대가 있는 계정이면 null입니다.")
+        SessionOrganization organization,
+    @Schema(
+            description =
+                "세션이 고른 조직에서의 역할입니다. owner는 대표관리자, admin은 관리자, member는 일반 사용자입니다."
+                    + " 고른 조직이 없으면 null입니다.")
+        @JsonProperty("organization_role")
+        String organizationRole,
+    @Schema(
+            description =
+                "이용약관 동의와 개인정보 처리방침 확인이 남았는지 나타냅니다. true면 POST /v1/sessions/current/consents로 동의하기 전까지"
+                    + " 업무 요청이 403(consent_required)입니다.")
+        @JsonProperty("consent_required")
+        boolean consentRequired,
+    @Schema(description = "세션이 고른 조직에서 이 사용자가 가진 업무 권한입니다. 고른 조직이 없으면 빈 배열입니다.")
+        List<String> scopes) {
 
   public static SessionTokenResponse from(IssuedSession issued) {
     return new SessionTokenResponse(

@@ -19,19 +19,39 @@ import java.util.Map;
 import java.util.UUID;
 
 public record CreatePriceRateRequest(
-    @NotNull @StorableJson @JsonProperty("dimension_values") Map<String, Object> dimensionValues,
-    @DecimalMin("0") @Digits(
+    @Schema(
+            description =
+                "구분 값입니다. 키 집합이 미터의 dimension_properties와 같아야 하고, 구분 키가 없는 미터는 빈 객체입니다. 값은 문자열, 숫자, 불리언만 됩니다.")
+        @NotNull @StorableJson
+        @JsonProperty("dimension_values")
+        Map<String, Object> dimensionValues,
+    @Schema(description = "과금 수량 1당 단가(원)입니다. per_unit에만 넣으며 0 이상이고 소수도 됩니다.")
+        @DecimalMin("0") @Digits(
             integer = StorableJsonValidator.MAX_INTEGER_DIGITS,
             fraction = StorableJsonValidator.MAX_FRACTION_DIGITS)
         @JsonProperty("unit_price")
         BigDecimal unitPrice,
-    @JsonProperty("customer_id") UUID customerId,
-    @FourDigitYear @JsonProperty("effective_from") YearMonth effectiveFrom,
-    @FourDigitYear @JsonProperty("effective_until") YearMonth effectiveUntil,
+    @Schema(description = "선택 입력입니다. 넣으면 그 고객에게만 쓰는 고객 단가이고, 생략하면 공통 단가입니다.")
+        @JsonProperty("customer_id")
+        UUID customerId,
+    @Schema(description = "적용 시작 월(yyyy-MM, KST)입니다. 생략하면 이번 달이고, 이번 달보다 앞이면 거절합니다.")
+        @FourDigitYear
+        @JsonProperty("effective_from")
+        YearMonth effectiveFrom,
+    @Schema(description = "적용 종료 월(yyyy-MM, KST)입니다. 이 달은 포함하지 않습니다. 시작 월보다 뒤여야 하고, 생략하면 계속 적용합니다.")
+        @FourDigitYear
+        @JsonProperty("effective_until")
+        YearMonth effectiveUntil,
     @StorableText
-        @Pattern(regexp = "per_unit|graduated|volume") @Schema(allowableValues = {"per_unit", "graduated", "volume"})
+        @Pattern(regexp = "per_unit|graduated|volume") @Schema(
+            description =
+                "단가 모델입니다. per_unit(단일 단가), graduated(누진 구간), volume(총량 구간) 가운데 하나이고 생략하면 per_unit입니다.",
+            allowableValues = {"per_unit", "graduated", "volume"})
         String model,
-    @Valid @Size(min = 1, max = 100) List<@NotNull PriceRateTier> tiers) {
+    @Schema(
+            description =
+                "graduated, volume 모델의 구간(1~100개)입니다. up_to가 커지는 순서로 쓰고 마지막 구간의 up_to는 null로 둡니다. per_unit에는 넣지 않습니다.")
+        @Valid @Size(min = 1, max = 100) List<@NotNull PriceRateTier> tiers) {
   public CreatePriceRateRequest(Map<String, Object> dimensionValues, BigDecimal unitPrice) {
     this(dimensionValues, unitPrice, null, null, null, null, null);
   }

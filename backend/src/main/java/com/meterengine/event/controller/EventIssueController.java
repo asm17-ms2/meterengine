@@ -2,6 +2,7 @@ package com.meterengine.event.controller;
 
 import com.meterengine.event.dto.EventIssuesResponse;
 import com.meterengine.event.service.EventIssueService;
+import com.meterengine.global.error.ErrorResponse;
 import com.meterengine.global.security.CurrentOrganizationId;
 import com.meterengine.global.security.EnvironmentReady;
 import com.meterengine.global.security.ReadAccess;
@@ -9,6 +10,11 @@ import com.meterengine.global.validation.FourDigitYear;
 import com.meterengine.global.validation.StorableText;
 import com.meterengine.global.validation.UnknownQueryParameterValidator;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -34,22 +40,53 @@ public class EventIssueController {
   @GetMapping("/v1/event-issues/search")
   @ReadAccess
   @Operation(
-      summary = "수집된 이벤트의 매핑 문제 조회",
+      summary = "과금에서 빠진 이벤트 검색",
       description =
-          "현재 월 정의와 단가로 cutoff 이전 원본을 진단한다. total과 summary는 고객/검색/사유 필터 전체의 문제 행 수이며 한 이벤트에 여러 미터"
-              + " 문제가 있을 수 있다. warnings는 조직/월 전체다. 고객을 찾지 못해 수집이 거절된 이벤트는 저장되지 않아 포함하지 않는다. 원본"
-              + " properties는 반환하지 않는다. 페이지는 0부터 시작한다. 모르는 조회 조건은 400 validation_error로 거절한다.")
+          "저장된 이벤트를 지금 미터 정의와 단가로 다시 검사해, 연결할 미터가 없거나, 수량을 읽을 수 없거나, 적용 단가가 없어 과금에서 빠진 이벤트를 돌려줍니다."
+              + " 대상은 조회한 달에 발생했고 occurred_at이 cutoff_at보다 이른 이벤트이며, cutoff_at은 지금 시각과 그 달의 끝 가운데 이른 쪽입니다."
+              + " 수신 시각(received_at)은 보지 않으므로 집계 마감 뒤에 받아 청구에서 빠진 지난달 이벤트를 따로 가려내지 않습니다."
+              + " total과 summary는 고객, 검색어, 사유 조건을 적용한 문제 행 수이며, 한 이벤트가 여러 미터에서 문제가 되면 여러 번 셉니다."
+              + " warnings는 이 조건과 관계없이 그 달 전체를 셉니다. 수집을 거절한 이벤트는 저장되지 않아 들지 않습니다."
+              + " 원본 properties는 돌려주지 않습니다. 모르는 조회 조건은 400 validation_error로 거절합니다.")
+  @ApiResponses({
+    @ApiResponse(responseCode = "200", description = "한 페이지 분량의 과금에서 빠진 이벤트입니다."),
+    @ApiResponse(
+        responseCode = "400",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description = "code=validation_error: month, reason, page, size 값이 틀렸거나 모르는 조회 조건이 있습니다."),
+    @ApiResponse(
+        responseCode = "404",
+        content =
+            @Content(
+                mediaType = "application/json",
+                schema = @Schema(implementation = ErrorResponse.class)),
+        description = "code=customer_not_found: customer_id가 가리키는 고객이 없습니다.")
+  })
   public EventIssuesResponse searchEventIssues(
       @CurrentOrganizationId UUID organizationId,
-      @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM") @FourDigitYear
+      @Parameter(description = "조회할 달(yyyy-MM, KST)입니다. 생략하면 이번 달입니다.")
+          @RequestParam(required = false)
+          @DateTimeFormat(pattern = "yyyy-MM")
+          @FourDigitYear
           YearMonth month,
-      @RequestParam(name = "customer_id", required = false) UUID customerId,
-      @RequestParam(required = false)
+      @Parameter(description = "이 고객의 이벤트만 봅니다. 없는 고객이면 404 customer_not_found입니다.")
+          @RequestParam(name = "customer_id", required = false)
+          UUID customerId,
+      @Parameter(
+              description =
+                  "이 문제 종류만 봅니다. unknown_event_type(연결할 미터 없음), invalid_target_property(수량을 읽을 수 없음), unpriced_usage(적용 단가 없음) 가운데 하나입니다.")
+          @RequestParam(required = false)
           @Pattern(regexp = "unknown_event_type|invalid_target_property|unpriced_usage") @StorableText
           String reason,
-      @RequestParam(required = false) @Size(max = 255) @StorableText String q,
-      @RequestParam(defaultValue = "0") @Min(0) int page,
-      @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
+      @Parameter(description = EventController.QUERY_DESCRIPTION)
+          @RequestParam(required = false)
+          @Size(max = 255) @StorableText
+          String q,
+      @Parameter(description = "0부터 세는 페이지 번호") @RequestParam(defaultValue = "0") @Min(0) int page,
+      @Parameter(description = "한 페이지에 담을 개수") @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
       HttpServletRequest request) {
     UnknownQueryParameterValidator.validate(
         request.getParameterMap(), Set.of("month", "customer_id", "reason", "q", "page", "size"));
