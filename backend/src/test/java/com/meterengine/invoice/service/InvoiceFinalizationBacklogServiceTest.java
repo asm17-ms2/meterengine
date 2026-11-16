@@ -91,7 +91,7 @@ class InvoiceFinalizationBacklogServiceTest {
 
     service(OCTOBER_30_KST_10).measure();
 
-    long augustCutoff = OffsetDateTime.parse("2026-09-01T13:00:00+09:00").toEpochSecond();
+    long augustCutoff = OffsetDateTime.parse("2026-09-02T00:00:00+09:00").toEpochSecond();
     assertThat(oldestCutoff("live")).isEqualTo(augustCutoff);
   }
 
@@ -104,7 +104,7 @@ class InvoiceFinalizationBacklogServiceTest {
 
   @Test
   void 집계_마감_전인_지난달은_세지_않는다() {
-    service(Instant.parse("2026-10-01T03:00:00Z")).measure();
+    service(Instant.parse("2026-10-01T14:59:59Z")).measure();
 
     verify(draftInvoiceService, never()).preview(ORGANIZATION_ID, SEPTEMBER);
     verify(draftInvoiceService, atLeastOnce()).preview(ORGANIZATION_ID, AUGUST);

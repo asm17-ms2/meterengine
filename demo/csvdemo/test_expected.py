@@ -166,18 +166,18 @@ class SumQuantitiesTest(unittest.TestCase):
         self.assertEqual(aug[ACME], Decimal("1000"))
         self.assertEqual(sep[ACME], Decimal("500"))
 
-    def test_마감_시각_전에_받은_이벤트만_합산하고_13시_정각에_받은_것은_뺀다(self):
+    def test_다음_달_1일_23시_59분_59초까지_받은_이벤트는_합산하고_2일_0시에_받은_것은_뺀다(self):
         stored = [
-            _stored("evt-1", ts="2026-09-30T10:00:00+09:00", received="2026-10-01T12:59:59+09:00"),
-            _stored("evt-2", ts="2026-09-30T11:00:00+09:00", received="2026-10-01T13:00:00+09:00"),
+            _stored("evt-1", ts="2026-09-30T10:00:00+09:00", received="2026-10-01T23:59:59+09:00"),
+            _stored("evt-2", ts="2026-09-30T11:00:00+09:00", received="2026-10-02T00:00:00+09:00"),
         ]
         sums = _sum_quantities(stored, "2026-09", "chat_completion", "token")
         self.assertEqual(sums[ACME], Decimal("500"))
 
-    def test_십이월의_마감은_다음_해_일월_1일_13시다(self):
+    def test_십이월의_마감은_다음_해_일월_2일_0시다(self):
         stored = [
-            _stored("evt-1", ts="2026-12-31T10:00:00+09:00", received="2027-01-01T12:00:00+09:00"),
-            _stored("evt-2", ts="2026-12-31T11:00:00+09:00", received="2027-01-01T14:00:00+09:00"),
+            _stored("evt-1", ts="2026-12-31T10:00:00+09:00", received="2027-01-01T23:59:59+09:00"),
+            _stored("evt-2", ts="2026-12-31T11:00:00+09:00", received="2027-01-02T00:00:00+09:00"),
         ]
         # 계산 시각을 그 달 뒤로 둬서 아직 오지 않은 달로 빠지지 않게 한다.
         sums = _sum_quantities(stored, "2026-12", "chat_completion", "token", parse_rfc3339("2027-01-02T00:00:00+09:00"))

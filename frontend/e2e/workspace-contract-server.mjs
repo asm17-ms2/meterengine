@@ -32,8 +32,8 @@ const shiftKstMonth = delta => {
 };
 // 화면이 끝난 달을 지금 시각으로 가르므로 이번 달 기준으로 둔다. 이번 달은 확정 시각 전, 지난달은 도는 중, 전전달은 다 훑고 보류만 남은 달, 그 밖은 꺼짐이다.
 const AUTO_FINALIZE_BY_MONTH = {
-  [shiftKstMonth(0)]: { auto_finalize_enabled: true, auto_finalize_at: `${shiftKstMonth(1)}-01T14:00:00+09:00`, auto_finalize_running: false },
-  [shiftKstMonth(-1)]: { auto_finalize_enabled: true, auto_finalize_at: `${shiftKstMonth(0)}-01T15:00:00+09:00`, auto_finalize_running: true },
+  [shiftKstMonth(0)]: { auto_finalize_enabled: true, auto_finalize_at: `${shiftKstMonth(1)}-02T04:00:00+09:00`, auto_finalize_running: false },
+  [shiftKstMonth(-1)]: { auto_finalize_enabled: true, auto_finalize_at: `${shiftKstMonth(0)}-02T04:00:00+09:00`, auto_finalize_running: true },
   [shiftKstMonth(-2)]: { auto_finalize_enabled: true, auto_finalize_at: null, auto_finalize_running: false },
 };
 const initialState = () => ({

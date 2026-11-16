@@ -51,10 +51,10 @@
 | --- | --- | --- | --- | --- |
 | 청구 월은 KST 달력 월이다 | /concepts/time-rules | 청구 월은 한국 시간(KST) 기준 달력 월입니다. | /integration/events, /pricing/price-models | 없음 |
 | 이벤트는 수신 시각 기준 35일보다 오래된 timestamp면 400 event_too_old로 거절된다 | /concepts/time-rules | 35일보다 오래된 이벤트는 거절됩니다. | /integration/events, /integration/retries, /troubleshooting/events-not-billed | 없음 |
-| 집계 마감은 다음 달 1일 13:00 KST(수신 시각 기준)다. 마감 뒤 받은 지난달 이벤트는 저장되지만 청구되지 않는다 | /concepts/time-rules | 지난달 사용량은 다음 달 1일 13:00 KST까지 받은 것만 청구됩니다. | /integration/retries, /integration/verify-usage, /billing/finalize-invoices, /troubleshooting/events-not-billed | 없음 |
+| 집계 마감은 다음 달 2일 00:00 KST(수신 시각 기준, 다음 달 1일이 끝날 때)다. 마감 뒤 받은 지난달 이벤트는 저장되지만 청구되지 않는다 | /concepts/time-rules | 지난달 사용량은 다음 달 2일 00:00 KST 전까지 받은 것만 청구됩니다. | /integration/retries, /integration/verify-usage, /billing/finalize-invoices, /troubleshooting/events-not-billed | 없음 |
 | 지난달 단가는 새로 넣거나 바꿀 수 없다(1일 00:00 KST부터) | /concepts/time-rules | 단가는 이번 달 이후에만 넣을 수 있습니다. | /pricing/price-models, /concepts/how-it-works, /troubleshooting/events-not-billed | 없음 |
-| 자동 확정 시각(다음 달 1일 14:00 KST가 지난 뒤 매 정시) | /concepts/time-rules (시각만), 동작은 /billing/auto-finalization | 자동 확정은 다음 달 1일 14:00 KST 이후에 돕니다. | /billing/finalize-invoices | 없음 |
-| 예약 작업 시각(과금 제외 사용량 웹훅 매일 09:00, 결제 결과 확인, 결제 재시도, 대사 04:00) | /concepts/time-rules | 예약 작업 시각은 시간 규칙 페이지에 모았습니다. | /payments/charging, /payments/retries, /payments/reconciliation, /webhooks/events | 없음 |
+| 자동 확정 시각(매일 04:00 KST에 돌고, 그 달은 다음 달 2일 04:00 KST에 확정한다. 실패한 고객은 다음 날 04:00에 다시 시도한다) | /concepts/time-rules (시각만), 동작은 /billing/auto-finalization | 자동 확정은 다음 달 2일 04:00 KST에 돕니다. | /billing/finalize-invoices | 없음 |
+| 예약 작업 시각(과금 제외 사용량 매일 04:00 검사와 09:00 웹훅 발송, 자동 확정 04:00, 결제 결과 확인, 결제 재시도, 대사 04:00) | /concepts/time-rules | 예약 작업 시각은 시간 규칙 페이지에 모았습니다. | /payments/charging, /payments/retries, /payments/reconciliation, /webhooks/events | 없음 |
 
 ## [5] 금액
 
