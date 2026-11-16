@@ -65,14 +65,8 @@ class EventConsumeIntegrationTest {
 
   @BeforeEach
   void setUp() {
-    organizationId = UUID.randomUUID();
-    jdbcTemplate.update(
-        "INSERT INTO organization (id, name) VALUES (?, '테스트 도입사')", organizationId);
-    customerId =
-        jdbcTemplate.queryForObject(
-            "INSERT INTO customer (organization_id, name) VALUES (?, 'acme') RETURNING id",
-            UUID.class,
-            organizationId);
+    organizationId = insertOrganization();
+    customerId = insertCustomer(organizationId, null);
   }
 
   @Test
@@ -125,6 +119,72 @@ class EventConsumeIntegrationTest {
 
     assertThat(count("event")).isZero();
     assertThat(rejectionCodes()).containsExactly("customer_archived");
+  }
+
+  // 한 묶음에 여러 도입사의 메시지가 섞여 온다. 고객과 중복은 그 도입사의 환경 안에서만 본다.
+  @Test
+  void 다른_도입사의_고객을_가리킨_메시지는_없는_고객으로_거절한다() {
+    UUID otherOrganizationId = insertOrganization();
+    UUID otherCustomerId = insertCustomer(otherOrganizationId, null);
+
+    eventConsumeService.consume(
+        List.of(
+            eventIngestRecord(message("tx-1", otherCustomerId)),
+            eventIngestRecord(message(otherOrganizationId, "tx-2", otherCustomerId, null))));
+
+    assertThat(storedTransactionIds()).isEmpty();
+    assertThat(rejectionCodes()).containsExactly("customer_not_found");
+    assertThat(storedTransactionIds(otherOrganizationId)).containsExactly("tx-2");
+  }
+
+  @Test
+  void 두_도입사가_한_묶음에_같은_번호를_보내면_둘_다_저장한다() {
+    UUID otherOrganizationId = insertOrganization();
+    UUID otherCustomerId = insertCustomer(otherOrganizationId, null);
+
+    eventConsumeService.consume(
+        List.of(
+            eventIngestRecord(message("tx-1", customerId)),
+            eventIngestRecord(message(otherOrganizationId, "tx-1", otherCustomerId, null))));
+
+    assertThat(storedTransactionIds()).containsExactly("tx-1");
+    assertThat(storedTransactionIds(otherOrganizationId)).containsExactly("tx-1");
+  }
+
+  @Test
+  void 다른_도입사가_먼저_저장한_번호는_중복으로_보지_않는다() {
+    UUID otherOrganizationId = insertOrganization();
+    UUID otherCustomerId = insertCustomer(otherOrganizationId, null);
+    eventConsumeService.consume(
+        List.of(eventIngestRecord(message(otherOrganizationId, "tx-1", otherCustomerId, null))));
+
+    eventConsumeService.consume(List.of(eventIngestRecord(message("tx-1", customerId))));
+
+    assertThat(storedTransactionIds()).containsExactly("tx-1");
+  }
+
+  @Test
+  void 환경이_다르면_같은_번호도_따로_저장한다() {
+    UUID environmentId = testEnvironmentId();
+    UUID environmentCustomerId = insertCustomer(organizationId, environmentId);
+
+    eventConsumeService.consume(
+        List.of(
+            eventIngestRecord(message("tx-1", customerId)),
+            eventIngestRecord(
+                message(organizationId, "tx-1", environmentCustomerId, environmentId))));
+
+    assertThat(storedTransactionIds()).containsExactly("tx-1", "tx-1");
+  }
+
+  @Test
+  void 다른_환경의_고객을_가리킨_메시지는_없는_고객으로_거절한다() {
+    eventConsumeService.consume(
+        List.of(
+            eventIngestRecord(message(organizationId, "tx-1", customerId, testEnvironmentId()))));
+
+    assertThat(storedTransactionIds()).isEmpty();
+    assertThat(rejectionCodes()).containsExactly("customer_not_found");
   }
 
   @Test
@@ -251,6 +311,20 @@ class EventConsumeIntegrationTest {
         organizationId + ":broken", "not json".getBytes(StandardCharsets.UTF_8), Map.of());
   }
 
+  private UUID insertOrganization() {
+    UUID id = UUID.randomUUID();
+    jdbcTemplate.update("INSERT INTO organization (id, name) VALUES (?, '테스트 도입사')", id);
+    return id;
+  }
+
+  private UUID insertCustomer(UUID customerOrganizationId, UUID environmentId) {
+    return jdbcTemplate.queryForObject(
+        "INSERT INTO customer (organization_id, environment_id, name) VALUES (?, ?, 'acme') RETURNING id",
+        UUID.class,
+        customerOrganizationId,
+        environmentId);
+  }
+
   private UUID testEnvironmentId() {
     return jdbcTemplate.queryForObject(
         "SELECT id FROM organization_environment WHERE organization_id = ? AND mode = 'test'",
@@ -273,9 +347,31 @@ class EventConsumeIntegrationTest {
 
   private EventIngestMessage message(
       String transactionId, UUID messageCustomerId, UUID environmentId, Instant acceptedAt) {
+    return message(organizationId, transactionId, messageCustomerId, environmentId, acceptedAt);
+  }
+
+  private EventIngestMessage message(
+      UUID messageOrganizationId,
+      String transactionId,
+      UUID messageCustomerId,
+      UUID environmentId) {
+    return message(
+        messageOrganizationId,
+        transactionId,
+        messageCustomerId,
+        environmentId,
+        now().toInstant().minusSeconds(30));
+  }
+
+  private EventIngestMessage message(
+      UUID messageOrganizationId,
+      String transactionId,
+      UUID messageCustomerId,
+      UUID environmentId,
+      Instant acceptedAt) {
     return new EventIngestMessage(
         EventIngestMessage.CURRENT_SCHEMA_VERSION,
-        organizationId,
+        messageOrganizationId,
         environmentId,
         transactionId,
         messageCustomerId,
@@ -309,10 +405,14 @@ class EventConsumeIntegrationTest {
   }
 
   private List<String> storedTransactionIds() {
+    return storedTransactionIds(organizationId);
+  }
+
+  private List<String> storedTransactionIds(UUID storedOrganizationId) {
     return jdbcTemplate.queryForList(
         "SELECT transaction_id FROM event WHERE organization_id = ? ORDER BY transaction_id",
         String.class,
-        organizationId);
+        storedOrganizationId);
   }
 
   private List<String> rejectionCodes() {
