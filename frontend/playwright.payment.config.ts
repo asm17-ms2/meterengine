@@ -11,6 +11,6 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   reporter: "list",
-  use: { browserName: "chromium", trace: "off" },
+  use: { browserName: "chromium", trace: "retain-on-failure" },
   webServer: contractWebServers("payment-registration-server.mjs"),
 });

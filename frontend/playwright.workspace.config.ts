@@ -18,7 +18,7 @@ export default defineConfig({
   reporter: "list",
   use: {
     browserName: "chromium",
-    trace: "off",
+    trace: "retain-on-failure",
     screenshot: "off",
     video: "off",
   },

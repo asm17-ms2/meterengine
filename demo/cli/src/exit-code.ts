@@ -39,7 +39,7 @@ export function errorOutputFor(error: unknown): ErrorOutput {
   }
   if (error instanceof UsageError) return { code: error.code, message: error.message };
   if (error instanceof CommanderError) {
-    const message = error.code === "commander.help" ? "하위 명령을 함께 쓰세요. 목록은 도움말에 있습니다" : error.message.replace(/^error: /, "");
+    const message = error.code === "commander.help" ? "하위 명령을 함께 쓰세요. 목록은 --help로 봅니다" : error.message.replace(/^error: /, "");
     return { code: "invalid_usage", message };
   }
   if (error instanceof MeterEngineConnectionError) return { code: "connection_failed", message: error.message };

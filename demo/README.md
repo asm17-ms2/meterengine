@@ -387,27 +387,35 @@ await client.ingestEvent({
 
 ## cli
 
-자사 서비스 개발자와 코딩 에이전트가 터미널에서 MeterEngine API를 부르는 명령 `meterengine`(`cli/`)이다. 아직 배포하지 않고 이 workspace에서 실행한다. 지금은 키 저장과 청구 예정액 조회만 있다.
+자사 서비스 개발자와 코딩 에이전트가 터미널에서 MeterEngine API를 조회하고 진단하는 명령 `meterengine`(`cli/`)이다. 아직 배포하지 않고 이 workspace에서 실행한다. 쓰기 명령은 두지 않는다.
 
 ```bash
 cd demo && corepack pnpm install
 export METERENGINE_API_BASE_URL=http://localhost:8080   # 생략하면 https://meterengine.com
 node cli/src/main.ts login                              # 키를 화면에 보이지 않게 입력받아 저장
 node cli/src/main.ts invoices draft --month 2026-11
+node cli/src/main.ts diagnose event <transaction_id>
+node cli/src/main.ts --help                             # 명령 목록. 명령마다 --help로 옵션을 본다
 ```
 
+- 명령
+  - 조회: `usage`, `events`, `customers`, `meters`, `prices`, `invoices`.
+  - 진단과 대조: `diagnose`(이벤트 한 건, 한 달), `verify sent`(보낸 `transaction_id` 파일이나 `-`로 받은 표준 입력), `diff`(두 프로필의 미터와 단가).
+  - `api get`: 전용 명령이 없는 `/v1/` 조회 API를 GET으로 부른다.
 - 키
   - `login`은 키를 `~/.config/meterengine/credentials.json`(`XDG_CONFIG_HOME`이 있으면 그 아래)에 권한 600으로 저장한다. 표준 입력이 터미널이 아니면 입력 전체를 키로 읽는다.
-  - `METERENGINE_API_KEY`가 있으면 저장한 키보다 먼저 쓴다.
-- 출력: 성공하면 서버 응답 JSON을 표준 출력에, 실패하면 `{code, message}` JSON을 표준 오류에 낸다.
+  - `login --profile <이름>`으로 test, live 키를 이름 붙여 따로 둔다. 명령은 `--profile`, `METERENGINE_API_KEY`, `default` 프로필 순으로 키를 고른다.
+- 출력: 성공하면 결과 JSON을 표준 출력에, 실패하면 `{code, message}` JSON을 표준 오류에 낸다.
 - 종료 코드
 
 | 코드 | 뜻 | 할 일 |
 |---|---|---|
 | 0 | 성공 | |
 | 1 | 서버가 거절했다 (429를 뺀 4xx) | 입력을 고친다 |
-| 2 | 명령이나 설정이 틀려 보내지 않았다 (모르는 옵션, 키 없음, 키 형식) | 명령이나 키를 고친다 |
+| 2 | 명령이나 설정이 틀려 보내지 않았다 (모르는 옵션, 키 없음, 키 형식, 서버 주소 형식) | 명령이나 설정을 고친다 |
 | 3 | 다시 실행하면 될 수 있다 (연결 오류, 시간 초과, 429, 5xx) | 같은 명령을 다시 실행한다 |
+
+- `diagnose`, `verify sent`, `diff`는 끝까지 했으면 판정과 관계없이 0이다. 판정은 출력 JSON 안에 있다.
 
 ## 테스트 웹
 
