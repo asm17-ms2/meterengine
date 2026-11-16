@@ -13,7 +13,7 @@ SPEC = ROOT / "backend" / "openapi.yaml"
 OUT = ROOT / "guide" / "openapi" / "overlays" / "meterengine.yaml"
 SERVER = "https://meterengine.com"
 
-# 가이드가 링크하지 않는 경로. 페이지를 만들지 않는다.
+# 가이드가 링크하지 않는 경로. 페이지를 만들지 않는다. 콘솔 로그인으로만 되는 경로(API 키로 부르면 403)도 여기에 둔다.
 EXCLUDED = {
     "운영자 전용": [
         "getOperations", "listOperationsAuditLogs", "listOrganizations",
@@ -26,11 +26,11 @@ EXCLUDED = {
         "previewOrganizationInvitation", "acceptOrganizationInvitation",
     ],
     "MeterEngine 화면용 공개 경로": ["getPaymentMethodRegistration", "createBillingKey", "getPublicInvoice", "createInvoicePaymentRetry"],
-    "화면 보조 options": ["suggestCustomers", "suggestBillableMetrics"],
+    "화면 보조": [
+        "suggestCustomers", "suggestBillableMetrics",
+        "listEventMonths", "listUsageMonths", "listInvoiceMonths", "listPriceMonths", "listEventTypes",
+    ],
     "콘솔 로그인으로만 바꾸는 정보": ["updateSupplier"],
-}
-# 콘솔에서 쓰지만 API 키로 부를 수 없는 경로. 페이지는 만들고 탐색에서 숨긴다.
-HIDDEN = {
     "세션 전용 관리(관리자)": [
         "createApiKey", "deleteApiKey", "updateApiKeyScopes",
         "createManagedOrganizationMember", "inviteOrganizationUser", "listOrganizationInvitations",
@@ -45,14 +45,14 @@ HIDDEN = {
     ],
     "토스페이먼츠 웹훅 수신": ["receiveTossPaymentsWebhook"],
 }
+# 콘솔 화면이 읽는 조회 경로. API 키로도 부를 수 있지만 연동에 쓸 일이 없어 페이지는 만들고 탐색에서 숨긴다.
+HIDDEN = {
+    "화면 조회": ["listTossPaymentsCredentials", "findSupplier"],
+}
 # 태그 표시 이름. 나열 순서가 최상위 tags 순서다. 모든 operation이 제외된 태그는 넣지 않는다.
 TAG_NAMES = [
     ("organization-environment-controller", "업무 환경"),
     ("current-organization-controller", "조직 정보"),
-    ("live-environment-application-controller", "라이브 환경 이용 신청 (콘솔 전용)"),
-    ("api-key-controller", "API 키 (콘솔 전용)"),
-    ("organization-people-controller", "구성원과 초대 (콘솔 전용)"),
-    ("audit-log-controller", "감사 기록 (콘솔 전용)"),
     ("billable-metric-controller", "미터"),
     ("billable-metric-price-controller", "미터별 단가 조회"),
     ("price-rate-controller", "단가"),
@@ -64,7 +64,7 @@ TAG_NAMES = [
     ("billable-metric-usage-controller", "사용량 집계"),
     ("event-issue-controller", "과금에서 빠진 이벤트"),
     ("event-rejection-controller", "수집 거절"),
-    ("unbilled-event-controller", "청구 제외 사용량"),
+    ("unbilled-event-controller", "과금 제외 사용량"),
     ("dashboard-controller", "개요"),
     ("workspace-query-controller", "검색과 내보내기"),
     ("draft-invoice-controller", "청구 예정액"),
@@ -78,7 +78,6 @@ TAG_NAMES = [
     ("invoice-payment-controller", "수납 상태"),
     ("payment-cancellation-controller", "결제 취소"),
     ("payment-reconciliation-mismatch-controller", "대사 불일치"),
-    ("toss-payments-webhook-controller", "토스페이먼츠 웹훅 수신"),
     ("webhook-endpoint-controller", "웹훅"),
 ]
 

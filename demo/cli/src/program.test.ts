@@ -1,45 +1,12 @@
 import assert from "node:assert/strict";
-import { mkdtemp, stat } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { stat } from "node:fs/promises";
 import { test } from "node:test";
 import { API_KEY_ENV, credentialsPath } from "./credentials.ts";
 import { EXIT_FAILED, EXIT_OK, EXIT_RETRYABLE, EXIT_USAGE } from "./exit-code.ts";
 import { BASE_URL_ENV, run } from "./program.ts";
-import type { CliDeps } from "./program.ts";
+import { TEST_KEY, json, setup } from "./testing.ts";
 
-const TEST_KEY = "me_test_wiCp766QYNqhyYm4Z7Xq9wYosNvQCeVC";
 const DRAFT = { month: "2026-11", total_amount: 2000, customers: [] };
-
-type Call = { url: string; headers: Headers };
-
-async function setup(replies: (Response | Error)[], env: NodeJS.ProcessEnv = { [API_KEY_ENV]: TEST_KEY }, secret = TEST_KEY) {
-  const out: string[] = [];
-  const err: string[] = [];
-  const calls: Call[] = [];
-  const deps: CliDeps = {
-    env: { [BASE_URL_ENV]: "http://localhost:8080", ...env },
-    configDir: join(await mkdtemp(join(tmpdir(), "meterengine-cli-")), "meterengine"),
-    stdout: (text) => out.push(text),
-    stderr: (text) => err.push(text),
-    readSecret: async () => secret,
-    clientOptions: {
-      maxRetries: 0,
-      fetch: async (input, init = {}) => {
-        calls.push({ url: String(input), headers: new Headers(init.headers) });
-        const reply = replies.shift();
-        if (reply === undefined) throw new Error("준비한 응답보다 호출이 많다");
-        if (reply instanceof Error) throw reply;
-        return reply;
-      },
-    },
-  };
-  return { deps, out, err, calls };
-}
-
-function json(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
-}
 
 test("invoices draft는 서버 응답 JSON을 그대로 표준 출력에 낸다", async () => {
   const { deps, out, err, calls } = await setup([json(200, DRAFT)]);
@@ -71,7 +38,7 @@ test("다시 보내면 될 수 있는 실패는 종료 코드 3이다", async ()
 });
 
 test("키가 없으면 서버에 보내지 않고 종료 코드 2다", async () => {
-  const { deps, err, calls } = await setup([], {});
+  const { deps, err, calls } = await setup([], { env: {} });
 
   assert.equal(await run(["invoices", "draft"], deps), EXIT_USAGE);
   assert.equal(calls.length, 0);
@@ -89,7 +56,7 @@ test("모르는 옵션은 종료 코드 2이고 --help는 0이다", async () => 
 });
 
 test("login은 받은 키를 저장하고 이후 명령이 그 키를 쓴다", async () => {
-  const { deps, out, calls } = await setup([json(200, DRAFT)], {});
+  const { deps, out, calls } = await setup([json(200, DRAFT)], { env: {} });
 
   assert.equal(await run(["login"], deps), EXIT_OK);
   assert.equal((await stat(credentialsPath(deps.configDir))).mode & 0o777, 0o600);
@@ -100,8 +67,38 @@ test("login은 받은 키를 저장하고 이후 명령이 그 키를 쓴다", a
 });
 
 test("login에 형식이 틀린 키를 넣으면 저장하지 않고 종료 코드 2다", async () => {
-  const { deps } = await setup([], {}, "me_test_xxxxxxxx");
+  const { deps } = await setup([], { env: {}, secret: "me_test_xxxxxxxx" });
 
   assert.equal(await run(["login"], deps), EXIT_USAGE);
   await assert.rejects(stat(credentialsPath(deps.configDir)));
+});
+
+test("하위 명령 없이 묶음 명령만 쓰면 표준 오류에 도움말 없이 하위 명령 목록을 담은 JSON만 낸다", async () => {
+  for (const [argv, names] of [[[], /login, usage, events/], [["events"], /get, list, types/], [["verify"], /sent/]] as const) {
+    const { deps, out, err, calls } = await setup([]);
+
+    assert.equal(await run([...argv], deps), EXIT_USAGE);
+    assert.equal(out.join(""), "");
+    assert.equal(calls.length, 0);
+    const error = JSON.parse(err.join("")) as { code: string; message: string };
+    assert.equal(error.code, "invalid_usage");
+    assert.match(error.message, names);
+  }
+});
+
+test("하위 명령 도움말에도 전역 옵션 --profile이 나온다", async () => {
+  const { deps, out } = await setup([]);
+
+  assert.equal(await run(["usage", "--help"], deps), EXIT_OK);
+  assert.match(out.join(""), /Global Options:[\s\S]*--profile <name>/);
+});
+
+test("서버 주소가 http(s) 주소가 아니면 보내지 않고 종료 코드 2다", async () => {
+  for (const baseUrl of ["localhost:8080", "htp://localhost:8080", "http://u:p@localhost:8080", "http://localhost:8080?x=1", "http://"]) {
+    const { deps, calls, err } = await setup([], { env: { [API_KEY_ENV]: TEST_KEY, [BASE_URL_ENV]: baseUrl } });
+
+    assert.equal(await run(["invoices", "draft"], deps), EXIT_USAGE);
+    assert.equal(calls.length, 0);
+    assert.equal(JSON.parse(err.join("")).code, "invalid_base_url");
+  }
 });

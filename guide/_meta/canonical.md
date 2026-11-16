@@ -21,8 +21,8 @@
 
 | 사실 | 정본 페이지 | 다른 페이지에서 쓰는 한 줄 요약 | 주로 쓰는 페이지 | 확인 필요 |
 | --- | --- | --- | --- | --- |
-| 가입한 조직은 바로 사용 중(active)이다. 이용 정지(suspended)와 예전에 가입 거절된(rejected) 조직은 403 organization_not_active를 받는다 | /account/signup | 이용이 정지된 조직은 403 organization_not_active를 받습니다. | /quickstart, /api-basics/errors, /authentication/api-keys, /authentication/scopes, /api-reference/introduction, /account/members |  |
-| 이메일 인증을 켠 서버에서는 가입 뒤 인증 메일의 링크로 인증해야 로그인한다. 가입 뒤 나오는 화면('메일함을 확인하세요' 또는 로그인 화면)으로 구분한다 | /account/signup | '메일함을 확인하세요' 화면이 나오면 인증 메일의 링크로 인증한 뒤 로그인합니다. | /quickstart |  |
+| 가입한 조직은 바로 사용 중(active)이다. 이용이 정지된(suspended) 조직은 403 organization_not_active를 받는다 | /account/signup | 이용이 정지된 조직은 403 organization_not_active를 받습니다. | /quickstart, /api-basics/errors, /authentication/api-keys, /authentication/scopes, /api-reference/introduction, /account/members |  |
+| 가입 뒤 '메일함을 확인하세요' 화면이 나오고, 인증 메일의 링크로 인증해야 로그인한다 | /account/signup | '메일함을 확인하세요' 화면이 나오면 인증 메일의 링크로 인증한 뒤 로그인합니다. | /quickstart |  |
 | 가입 화면의 약관 동의(이용약관, 개인정보 처리방침) | /account/signup | '이용약관에 동의합니다 (필수)'와 '개인정보 처리방침을 확인했습니다 (필수)'에 체크합니다. | /quickstart, /account/members |  |
 | API 키 발급 화면의 기본 권한은 read 하나다. 이벤트를 보내려면 ingest를 더 체크한다 | /authentication/api-keys | 키 발급 화면의 기본 권한은 read뿐이라 이벤트를 보내려면 ingest도 고릅니다. | /quickstart, /authentication/scopes | 없음 |
 | 초대 링크와 계정 직접 생성의 기본 권한은 조회(read)다 | /account/members | 구성원을 추가할 때 기본 권한은 조회(read)입니다. | /authentication/scopes |  |
@@ -30,6 +30,7 @@
 | 콘솔 로그인으로만 되는 기능(API 키 관리, 토스페이먼츠 키 저장, 구성원과 초대, 감사 기록, 라이브 환경 이용 신청 등). API 키로 부르면 거절된다 | /authentication/scopes | 이 기능은 콘솔에 로그인한 상태에서만 됩니다. API 키로 부르면 거절됩니다. | /authentication/api-keys, /account/members, /payments/toss-setup, /api-reference/introduction | API 참조에서 숨기는 범위 |
 | 로그인 세션은 12시간 유지된다 | /authentication/scopes | 콘솔 로그인은 12시간 동안 유지됩니다. | /account/signup | 없음 |
 | API 키 원문은 발급 직후 한 번만 보인다 | /authentication/api-keys | 키 원문은 발급 직후 한 번만 보이니 바로 비밀 저장소에 옮깁니다. | /quickstart, /authentication/key-rotation | 없음 |
+| 키를 발급한 뒤 첫 요청으로 연결을 확인하는 절차 | /authentication/api-keys | 연결 확인은 [API 키 발급과 첫 호출](/authentication/api-keys)을 따릅니다. | /quickstart, /concepts/environments, /api-reference/introduction |  |
 | 대표관리자만 사용자와 초대를 관리한다 | /account/members | 사용자와 초대 관리는 대표관리자만 할 수 있습니다. | /authentication/scopes |  |
 
 ## [3] 업무 환경
@@ -39,6 +40,7 @@
 | 로그인하면 업무 환경이 '테스트 환경'으로 열린다. 주소에 environment가 없으면 테스트 환경이다 | /concepts/environments | 로그인하면 화면 위 '업무 환경'이 '테스트 환경'으로 열립니다. | /quickstart, /account/signup, /authentication/api-keys, /payments/toss-setup, /billing/finalize-invoices, /troubleshooting/events-not-billed |  |
 | 기존 데이터는 새로 가입한 조직의 업무 환경 목록에 나오지 않는다. 그곳에서 발급한 키는 me_live_, me_test_ 접두사가 붙어도 어느 환경에도 격리되지 않는다 | /concepts/environments | 기존 데이터에서는 API 키를 발급하지 마세요. | /authentication/api-keys, /api-reference/introduction, /authentication/key-rotation, /webhooks/overview |  |
 | 라이브 환경은 잠긴 채 시작하고 '라이브 환경 이용 신청'(사업자등록번호, 상점아이디, 실결제 키)이 승인되면 열린다. 승인되면 신청한 실결제 키가 라이브 환경의 토스페이먼츠 키로 저장된다. 잠긴 동안 콘솔의 라이브 환경 요청은 403 live_environment_locked | /concepts/environments | 라이브 환경은 '라이브 환경 이용 신청'이 승인되어야 열립니다. | /index, /account/signup, /authentication/api-keys, /authentication/scopes, /api-basics/errors, /payments/overview, /payments/test-and-live, /payments/toss-setup, /reference/glossary | 배포 서버의 국세청 사업자 상태 조회 사용 여부 |
+| 라이브 환경으로 옮기기 전 점검표(키, 웹훅 URL, 토스페이먼츠 키, 미터와 단가를 라이브 환경에 따로 준비) | /concepts/environments | 라이브 환경으로 옮길 때의 점검표는 [업무 환경](/concepts/environments)에 있습니다. | /payments/test-and-live |  |
 | 테스트 환경의 정의: 데이터가 분리되고 실결제가 없지만 이벤트, 확정, 웹훅은 실제로 일어나고 되돌릴 수 없다. "샌드박스"라고 부르지 않는다 | /concepts/environments | 테스트 환경도 보낸 이벤트와 확정한 청구서는 되돌릴 수 없습니다. | /quickstart, /payments/test-and-live, /api-reference/introduction | 테스트 키 정의와 mode 설명 |
 | 테스트, 라이브 키는 발급 환경에 고정되고 X-MeterEngine-Environment 헤더를 생략해도 된다. 다른 환경을 명시하면 403 environment_mismatch | /concepts/environments | 키는 발급한 환경에 고정되어 환경 헤더를 따로 넣지 않아도 됩니다. | /authentication/api-keys, /api-basics/errors, /api-reference/introduction | 시험 화면 proxy와 테스트 키 안내 |
 | 환경마다 따로인 것(고객, 미터, 단가, 키, 토스페이먼츠 키, 웹훅, 확정)과 공통인 것(계정, 구성원 권한). 환경을 옮겨도 데이터는 복사되지 않는다 | /concepts/environments | 고객, 미터, 단가는 업무 환경마다 따로 만들어야 합니다. | /integration/customers, /pricing/meters, /payments/toss-setup, /webhooks/overview, /billing/auto-finalization | 없음 |
@@ -51,15 +53,15 @@
 | 이벤트는 수신 시각 기준 35일보다 오래된 timestamp면 400 event_too_old로 거절된다 | /concepts/time-rules | 35일보다 오래된 이벤트는 거절됩니다. | /integration/events, /integration/retries, /troubleshooting/events-not-billed | 없음 |
 | 집계 마감은 다음 달 1일 13:00 KST(수신 시각 기준)다. 마감 뒤 받은 지난달 이벤트는 저장되지만 청구되지 않는다 | /concepts/time-rules | 지난달 사용량은 다음 달 1일 13:00 KST까지 받은 것만 청구됩니다. | /integration/retries, /integration/verify-usage, /billing/finalize-invoices, /troubleshooting/events-not-billed | 없음 |
 | 지난달 단가는 새로 넣거나 바꿀 수 없다(1일 00:00 KST부터) | /concepts/time-rules | 단가는 이번 달 이후에만 넣을 수 있습니다. | /pricing/price-models, /concepts/how-it-works, /troubleshooting/events-not-billed | 없음 |
-| 자동 확정 시각(켜져 있을 때 다음 달 1일 14:00 KST가 지난 뒤 매 정시) | /concepts/time-rules (시각만), 동작은 /billing/auto-finalization | 자동 확정은 켜져 있을 때 다음 달 1일 14:00 KST 이후에 돕니다. | /billing/finalize-invoices | 배포 서버 자동 확정 켜는 시점 |
-| 예약 작업 시각(청구 제외 웹훅 매일 09:00, 결제 결과 확인, 결제 재시도, 대사 04:00) | /concepts/time-rules | 예약 작업 시각은 시간 규칙 페이지에 모았습니다. | /payments/charging, /payments/retries, /payments/reconciliation, /webhooks/events | 없음 |
+| 자동 확정 시각(다음 달 1일 14:00 KST가 지난 뒤 매 정시) | /concepts/time-rules (시각만), 동작은 /billing/auto-finalization | 자동 확정은 다음 달 1일 14:00 KST 이후에 돕니다. | /billing/finalize-invoices | 없음 |
+| 예약 작업 시각(과금 제외 사용량 웹훅 매일 09:00, 결제 결과 확인, 결제 재시도, 대사 04:00) | /concepts/time-rules | 예약 작업 시각은 시간 규칙 페이지에 모았습니다. | /payments/charging, /payments/retries, /payments/reconciliation, /webhooks/events | 없음 |
 
 ## [5] 금액
 
 | 사실 | 정본 페이지 | 다른 페이지에서 쓰는 한 줄 요약 | 주로 쓰는 페이지 | 확인 필요 |
 | --- | --- | --- | --- | --- |
-| 금액 용어: 청구 예정액(세전 공급가액, 조회할 때마다 계산), 확정 청구액(supply_amount, tax_amount, total_amount), 수납액(세금 포함) | /concepts/amounts | 청구 예정액은 세금을 뺀 공급가액이고, 결제는 세금을 포함한 확정 금액으로 합니다. | /quickstart, /integration/verify-usage, /billing/finalize-invoices, /payments/charging | 없음 |
-| 금액은 청구서 라인마다 10원 미만을 버린다 | /concepts/amounts | 금액은 라인마다 10원 미만을 버립니다. | /quickstart, /pricing/price-models, /pricing/price-plans, /pricing/calculation-example | 없음 |
+| 금액 용어: 청구 예정액(세전 공급가액, 조회할 때마다 계산), 확정 청구액(supply_amount, tax_amount, total_amount), 수납액(부가세 포함) | /concepts/amounts | 청구 예정액은 부가세를 뺀 공급가액이고, 결제는 부가세 포함 확정 금액으로 합니다. | /quickstart, /integration/verify-usage, /billing/finalize-invoices, /payments/charging | 없음 |
+| 금액은 청구 항목마다 10원 미만을 버린다 | /concepts/amounts | 금액은 청구 항목마다 10원 미만을 버립니다. | /quickstart, /pricing/price-models, /pricing/price-plans, /pricing/calculation-example | 없음 |
 | 세액은 공급가액의 10%다 | /concepts/amounts | 세액은 공급가액의 10%입니다. | /pricing/calculation-example, /billing/finalize-invoices | 없음 |
 | 계산 예시의 숫자(구간 단가, 최소 과금, 기본료) | /pricing/calculation-example | 숫자로 따라가는 예시는 금액 계산 따라가기 페이지에 있습니다. | /concepts/amounts, /pricing/price-models, /pricing/price-plans | 없음 |
 | 공급가액이 0원인 고객에게는 청구서를 만들지 않는다 | /billing/finalize-invoices | 0원 고객은 확정해도 청구서가 생기지 않습니다. | /concepts/amounts, /billing/auto-finalization | 없음 |
@@ -83,18 +85,20 @@
 | 멱등 규칙 표(이벤트 transaction_id, 고객 external_id 또는 Idempotency-Key, 미터 Idempotency-Key, 단가와 요금제 덮어쓰기, 결제 취소 키) | /api-basics/idempotency | 같은 transaction_id로 다시 보내면 처음 것이 남습니다. | /integration/events, /integration/retries, /integration/customers, /pricing/meters | 없음 |
 | 결제 요청에는 Idempotency-Key가 없다. 다시 요청하기 전에 결제 시도를 조회한다 | /payments/charging | 결제 요청은 재시도 키가 없으니 다시 요청하기 전에 결과를 먼저 조회합니다. | /api-basics/idempotency, /payments/retries | 없음 |
 | 오류 응답 형식 {code, message, errors}와 code로 분기하는 규칙, 상태별 다시 보낼지 판단 | /api-basics/errors | 오류는 code로 분기하세요. | /integration/retries, /payments/charging | 없음 |
+| 감사 기록에 남는 것과 찾는 법(업무 변경, API 요청 결과, X-Request-ID 검색, 업무 환경별 범위) | /account/audit-logs | 감사 기록에서 X-Request-ID로 요청을 찾습니다. 자세한 내용은 [감사 기록](/account/audit-logs)을 보세요. | /api-basics/errors, /authentication/key-rotation, /concepts/environments, /reference/glossary |  |
 | 수집 요청은 감사 기록에 남지 않는다. 저장된 이벤트와 수집 거절 기록의 request_id, transaction_id로 찾는다 | /api-basics/errors | 이벤트 수집 요청은 감사 기록에 나오지 않으니 request_id와 transaction_id로 찾습니다. | /integration/verify-usage, /troubleshooting/events-not-billed |  |
 | 이벤트를 다시 보낼 것과 멈출 것(영구 거절 code), 아웃박스 | /integration/retries | 영구 거절 code는 다시 보내지 마세요. | /integration/events, /api-basics/errors | 없음 |
 | 배치는 한 요청에 1건에서 100건, 원소별 결과, HTTP 상태는 200 | /integration/events | 이벤트는 한 요청에 100건까지 묶어 보낼 수 있습니다. | /integration/retries, /api-basics/rate-limits | 없음 |
 | 라이브 키의 분당 요청 한도는 키에 정한 경우에만 걸린다. 테스트 키에는 테스트 환경 한도가 늘 걸려 키에 적은 값과 그 한도 가운데 작은 쪽이 적용된다. 넘으면 429 rate_limit_exceeded와 Retry-After | /api-basics/rate-limits | 한도를 넘으면 429를 받으니 Retry-After만큼 기다렸다가 다시 보냅니다. | /api-basics/errors, /authentication/api-keys, /authentication/scopes, /authentication/key-rotation, /quickstart, /integration/retries, /reference/glossary | 배포 서버의 테스트 환경 한도(기본값 300) |
 | 개요 화면 체크리스트 순서와 가이드 순서가 다르다. 체크리스트는 진행 표시다 | /quickstart | 개요 화면의 목록은 진행 표시이며 순서를 따를 필요는 없습니다. | /concepts/how-it-works | 개요 체크리스트 완료 조건 |
+| 청구 예정액 조회의 전체 응답 예시 | /quickstart | 다른 페이지의 예시 응답은 필요한 필드만 보입니다. | /integration/verify-usage, /pricing/dimensions, /pricing/calculation-example, /billing/finalize-invoices |  |
 | API 참조 시험 화면에는 테스트 키만 넣는다(Mintlify 서버 경유) | /api-reference/introduction | 시험 화면에는 테스트 키(me_test_)만 넣으세요. | /authentication/api-keys | 시험 화면 proxy와 테스트 키 안내 |
 
 ## [8] 청구와 결제
 
 | 사실 | 정본 페이지 | 다른 페이지에서 쓰는 한 줄 요약 | 주로 쓰는 페이지 | 확인 필요 |
 | --- | --- | --- | --- | --- |
-| 자동 확정은 서버 전체 설정이라 콘솔이나 API로 켜고 끌 수 없고, auto_finalize_enabled로 확인한다 | /billing/auto-finalization | 자동 확정 여부는 청구 예정액 응답의 auto_finalize_enabled로 확인합니다. | /billing/finalize-invoices, /quickstart, /concepts/time-rules | 배포 서버 자동 확정 켜는 시점 |
+| 자동 확정은 모든 조직에 켜져 있고 끌 수 없다. 다음 자동 확정 시각은 '청구 검토' 화면에서 본다 | /billing/auto-finalization | 자동 확정은 모든 조직에 켜져 있고 끌 수 없습니다. | /billing/finalize-invoices, /quickstart, /concepts/time-rules | 없음 |
 | 확정해도 결제는 자동으로 시작되지 않는다. 첫 결제는 콘솔이나 API로 요청한다 | /payments/charging | 확정한 뒤 청구서마다 결제를 요청해야 합니다. | /payments/overview, /billing/finalize-invoices, /billing/auto-finalization, /billing/after-finalization | 확정 뒤 자동 첫 결제 없음 |
 | pending은 실패가 아니고 MeterEngine이 결과를 다시 확인한다 | /payments/charging | 결과 확인 중(pending)인 결제는 다시 요청하지 마세요. | /payments/retries, /payments/reconciliation | 없음 |
 | 자동 재시도 조건과 다시 하지 않는 실패 | /payments/retries | 실패한 결제는 조건에 맞으면 자동으로 다시 시도합니다. | /payments/charging, /webhooks/events | 없음 |
@@ -103,7 +107,7 @@
 | 청구서 조회 링크의 token은 발급 응답에만 있고 주소는 직접 조합해 전달한다 | /payments/invoice-links | 청구서 링크는 발급 응답의 token으로 주소를 만들어 직접 전달합니다. | /payments/overview, /billing/after-finalization, /payments/retries | 공개 청구서 조회 API와 카드 등록 링크 권한 |
 | 카드 등록 링크의 token, 24시간, 한 번, MeterEngine 화면에서만 카드 입력 | /payments/card-registration | 카드 등록은 MeterEngine이 제공하는 링크 화면에서만 합니다. | /payments/overview, /payments/charging | 공개 청구서 조회 API와 카드 등록 링크 권한 |
 | 결제 취소해도 확정 금액은 그대로다 | /payments/cancellations | 결제를 취소해도 청구서 금액은 바뀌지 않습니다. | /billing/after-finalization | 없음 |
-| 수납 상태 값(not_required ~ canceled)과 콘솔 표기 | /payments/reconciliation | 수납 상태는 지금 결제 모드의 가장 늦은 결제 시도로 정합니다. 값 전체는 [수납 상태와 대사 확인](/payments/reconciliation)에 있습니다. | /payments/charging, /payments/cancellations, /reference/glossary | |
+| 수납 상태 값(not_required ~ canceled)과 콘솔 표기 | /payments/reconciliation | 수납 상태는 지금 업무 환경의 가장 늦은 결제 시도로 정합니다. 값 전체는 [수납 상태와 대사 확인](/payments/reconciliation)에 있습니다. | /payments/charging, /payments/cancellations, /reference/glossary | |
 
 ## [9] 웹훅
 
@@ -112,7 +116,7 @@
 | 웹훅 본문 {environment, type, timestamp, data}와 유형별 data. 모르는 필드는 무시한다 | /webhooks/events | 웹훅은 type으로 분기하고 모르는 필드는 무시하세요. | /webhooks/overview, /payments/charging, /payments/cancellations | 웹훅 data 공개 형태와 확정 웹훅 없음 |
 | 청구서 확정을 알리는 웹훅은 없다 | /webhooks/events | 확정 결과는 웹훅이 아니라 청구서 목록 API로 확인합니다. | /billing/finalize-invoices, /billing/auto-finalization, /webhooks/overview | 웹훅 data 공개 형태와 확정 웹훅 없음 |
 | payment_failed에는 실패 사유가 없다. 결제 시도 목록이나 수납 상태로 확인한다 | /webhooks/events | 실패 사유는 웹훅이 아니라 결제 시도 조회로 확인합니다. | /payments/retries, /payments/charging | 웹훅 data 공개 형태와 확정 웹훅 없음 |
-| 서명 비밀값(whsec_)은 등록 직후 한 번만 보인다 | /webhooks/overview | 서명 비밀값은 등록 직후 한 번만 보입니다. | /webhooks/verify-signatures | 없음 |
+| 웹훅 시크릿(whsec_)은 등록 직후 한 번만 보인다 | /webhooks/overview | 웹훅 시크릿은 등록 직후 한 번만 보입니다. | /webhooks/verify-signatures | 없음 |
 | 2xx만 성공, 자동 재전송, webhook-id로 중복을 거른다, 순서를 보장하지 않는다 | /webhooks/delivery-and-retries | 같은 webhook-id는 한 번만 처리하고, 처리 전에 자원을 API로 다시 조회하세요. | /webhooks/overview, /webhooks/events, /webhooks/verify-signatures | 없음 |
 
 ## [10] 확인과 진단 (확인과 진단 그룹 작성 중 추가)
@@ -122,5 +126,6 @@
 | 페이지 번호 시작: 고객, 미터, 월별 가격, 사용량, 청구 예정액, 청구서의 /search는 1부터, 이벤트 목록과 수집 거절, 과금에서 빠진 이벤트 검색은 0부터 | /reference/search-and-export | 진단 검색과 이벤트 목록의 page는 0부터, 자원의 /search는 1부터 셉니다. | /troubleshooting/events-not-billed, /api-reference/introduction | 없음 |
 | CSV는 같은 조건 전체 결과를 최대 10,000행까지, UTF-8 BOM과 CRLF, 수식 문자열 앞 작은따옴표. 이벤트 원본 속성 포함 시 32MB 상한 | /reference/search-and-export | CSV는 같은 조건 전체를 최대 10,000행까지 내려받습니다. | /integration/verify-usage, /payments/reconciliation | 없음 |
 | 이벤트의 request_id는 처음 저장한 요청의 응답 헤더 X-Request-ID 값이다 | /integration/verify-usage | 이벤트의 request_id는 그 요청 응답의 X-Request-ID 값입니다. | /api-basics/errors, /troubleshooting/events-not-billed | 없음 |
+| 보낸 이벤트가 청구 예정액에 들어갔는지 확인하는 진단 순서 | /integration/verify-usage | 진단 순서는 [보낸 데이터 확인하기](/integration/verify-usage)를 따릅니다. | /troubleshooting/events-not-billed |  |
 | 증상별 원인과 조치 표(수집 거절, 저장 뒤 미집계, 단가 없음, 마감 뒤 수신, 확정 뒤 이벤트) | /troubleshooting/events-not-billed | 증상별 원인과 조치는 이벤트가 청구에 안 보일 때를 보세요. | /integration/verify-usage, /integration/events, /integration/retries | 음수 상계 이벤트로 정정 |
-| 마감 뒤에 받은 지난달 이벤트는 과금에서 빠진 이벤트와 청구 제외 집계(unbilled-events)에 잡히지 않는다. received_at으로 확인한다 | /troubleshooting/events-not-billed | 마감 뒤에 받은 이벤트는 진단 화면에 잡히지 않으니 received_at으로 확인합니다. | /concepts/time-rules, /integration/retries | 없음 |
+| 마감 뒤에 받은 지난달 이벤트는 과금에서 빠진 이벤트와 과금 제외 사용량 집계(unbilled-events)에 잡히지 않는다. received_at으로 확인한다 | /troubleshooting/events-not-billed | 마감 뒤에 받은 이벤트는 진단 화면에 잡히지 않으니 received_at으로 확인합니다. | /concepts/time-rules, /integration/retries | 없음 |

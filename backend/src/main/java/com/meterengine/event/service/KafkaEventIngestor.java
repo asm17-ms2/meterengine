@@ -72,8 +72,7 @@ public class KafkaEventIngestor implements EventIngestor {
     if (EventIngestionService.isTooOld(request.occurredAt().toInstant(), acceptedAt)) {
       eventIngestMetrics.recordRejected(ErrorCode.EVENT_TOO_OLD);
       throw new InvalidRequestException(
-          ErrorCode.EVENT_TOO_OLD,
-          List.of(new FieldError("timestamp", "수집 판정 시각보다 35일 넘게 과거인 시각입니다")));
+          ErrorCode.EVENT_TOO_OLD, List.of(new FieldError("timestamp", "수신 시각보다 35일 넘게 지난 시각입니다")));
     }
     CompletableFuture<Void> publishing = publish(organizationId, request, acceptedAt);
     Optional<Exception> failure = publishFailure(publishing, acceptedAt.plus(publishTimeout));
