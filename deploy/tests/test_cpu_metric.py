@@ -18,6 +18,9 @@ intr 12345
 """
 
 NO_BASELINE = {"previous_busy": "", "previous_total": "", "ready_since": ""}
+# curl 종료 코드: 연결 거부와 시간 초과.
+CURL_REFUSED = 7
+CURL_TIMED_OUT = 28
 
 
 def baseline(busy, total, ready_since):
@@ -97,17 +100,17 @@ class MeasureSlotTest(FakeCommandTestCase):
         self.fake(
             "curl",
             'case "$*" in\n'
-            '*/actuator/health/readiness*) echo readiness >> "$TRACE"; printf "%s" "$READINESS"; [ "$READINESS" != 000 ] ;;\n'
+            '*/actuator/health/readiness*) echo readiness >> "$TRACE"; printf "%s" "$READINESS"; exit "$READINESS_EXIT" ;;\n'
             "*) exit 22 ;;\n"
             "esac\n",
         )
 
-    def measure(self, readiness, stat, state, slot):
+    def measure(self, readiness, stat, state, slot, curl_exit=0):
         if stat is None:
             self.stat.unlink(missing_ok=True)
         else:
             self.stat.write_text(stat)
-        env = dict(self.env, READINESS=readiness)
+        env = dict(self.env, READINESS=readiness, READINESS_EXIT=str(curl_exit))
         script = (
             f"source {SCRIPT}; cpu=stale; previous_busy={state['previous_busy']}; "
             f"previous_total={state['previous_total']}; ready_since={state['ready_since']}; "
@@ -142,9 +145,17 @@ class MeasureSlotTest(FakeCommandTestCase):
         self.measure("503", None, baseline(300, 1000, 1699999900), 1700000010)
         self.assertEqual(self.trace.read_text().splitlines(), ["readiness"])
 
-    def test_unanswered_readiness_skips_the_slot_and_keeps_the_state(self):
-        state = self.measure("000", proc_stat(325, 1675), baseline(300, 1000, 1699999900), 1700000010)
+    def test_refused_readiness_skips_the_slot_and_keeps_the_state(self):
+        state = self.measure("000", proc_stat(325, 1675), baseline(300, 1000, 1699999900), 1700000010, curl_exit=CURL_REFUSED)
         self.assertEqual(state, {"cpu": "", **baseline(300, 1000, 1699999900)})
+
+    def test_timed_out_readiness_on_a_ready_server_still_reports_cpu(self):
+        state = self.measure("000", proc_stat(325, 1675), baseline(300, 1000, 1699999900), 1700000010, curl_exit=CURL_TIMED_OUT)
+        self.assertEqual(state, {"cpu": "2.5", **baseline(325, 2000, 1699999900)})
+
+    def test_timed_out_readiness_before_the_server_was_ready_skips_the_slot(self):
+        state = self.measure("000", proc_stat(325, 1675), NO_BASELINE, 1700000010, curl_exit=CURL_TIMED_OUT)
+        self.assertEqual(state, {"cpu": "", **NO_BASELINE})
 
     def test_other_readiness_code_skips_the_slot_and_keeps_the_state(self):
         state = self.measure("404", proc_stat(325, 1675), baseline(300, 1000, 1699999900), 1700000010)

@@ -14,6 +14,7 @@ readonly OBSERVED_METRIC=CPUUtilization
 readonly READY_HOLD_SECONDS=60
 readonly PROC_STAT="${PROC_STAT:-/proc/stat}"
 readonly READINESS_URL=http://127.0.0.1:8080/actuator/health/readiness
+readonly CURL_TIMED_OUT=28
 readonly IMDS=http://169.254.169.254/latest
 
 imds() {
@@ -27,9 +28,13 @@ cpu_counters() {
 	awk '$1 == "cpu" {busy = $2 + $3 + $4 + $7 + $8 + $9; printf "%d %d", busy, busy + $5 + $6; found = 1; exit} END {exit !found}'
 }
 
-# 백엔드 readiness의 HTTP 코드. 연결이 안 되거나 시간이 지나면 000이다.
+# 백엔드 readiness의 HTTP 코드. 연결이 안 되면 000, 제한 시간 안에 답이 없으면 busy다.
 readiness_code() {
-	curl -s -o /dev/null -w '%{http_code}' --max-time 3 "$READINESS_URL"
+	local code status
+	code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 "$READINESS_URL")
+	status=$?
+	[ "$status" -eq "$CURL_TIMED_OUT" ] && code=busy
+	printf '%s' "$code"
 }
 
 # 다음 칸 경계에서 READ_DELAY_SECONDS 지난 시각까지 자고, 방금 끝난 칸의 시작 시각(초)을 찍는다.
@@ -73,6 +78,10 @@ measure_slot() {
 	cpu=""
 	case "$(readiness_code)" in
 	200) ;;
+	busy)
+		# 요청이 밀려 readiness도 줄을 선 것이다. 이 칸을 빼면 가장 바쁠 때 확장 지표가 끊긴다(2026-11-16 staging).
+		[ -n "$ready_since" ] || return 0
+		;;
 	503)
 		# 기동이나 예열 중이다. 다시 준비되면 그때부터 유예를 센다.
 		previous_busy=""

@@ -617,6 +617,7 @@ aws ssm delete-parameter --name /meterengine/<환경>/ingest-warmup-api-key
   - 대기는 healthy 수가 최소 대수와 같아야 끝난다. 확장으로 대수가 늘어난 동안 최소 대수를 바꾸면 끝나지 않으니, 원하는 대수가 최소일 때 바꾼다.
 - 확장: 서버마다 `deploy/server/cpu-metric.sh`가 10초마다 (CPU 사용률 / 원하는 대수)를 `MeterEngine/Scaling`의 `CPUUtilizationPerDesiredInstance`에 올리고, 확장 정책은 같은 칸의 합을 60%에 맞춘다. 3칸(30초) 연속 넘으면 늘린다. 서버별 평균을 쓰면 부팅 중인 서버가 빠져 대수를 부풀린다. 60은 test-storage 측정(서버 한 대가 초당 900건에 60%에서 65%)으로 잡은 추정값이다.
   - 백엔드 readiness가 200이 아니면 올리지 않고, 200이 된 뒤 1분도 올리지 않는다. 기동 직후 JIT로 튀는 CPU가 평균을 올려 한 대 더 띄우지 않게 하려는 것이다.
+  - 준비됐던 서버의 readiness가 3초 안에 답하지 않으면 그대로 올린다. 요청이 밀리면 readiness도 같은 포트에서 줄을 서는데, 이때 빼면 가장 바쁠 때 지표가 끊겨 확장이 걸리지 않는다. 연결이 거부되면(백엔드가 내려감) 올리지 않는다.
   - EC2의 `CPUUtilization`은 1분 값이라 판단에 3분이 걸려 쓰지 않는다.
 - 배포 역할이 버전 파라미터를 쓰고 롤링을 시작한다. Terraform은 버전 값과 원하는 대수를 되돌리지 않는다.
 - CD가 도는 동안 apply하지 않는다. 시작 템플릿이 바뀌는 apply는 롤링을 시작해, 배포가 시작한 롤링과 겹치면 실패한다.
