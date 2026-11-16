@@ -3,7 +3,7 @@ import type { SearchPage } from "@/lib/api/search";
 
 import type { DimensionValues } from "@/lib/api/billable-metric-prices";
 import { CAPABILITIES } from "@/lib/api/capabilities";
-import { AGGREGATE_TIMEOUT_MS, serverFetch, type Result } from "@/lib/api/client";
+import { AGGREGATE_REQUEST, serverFetch, type Result } from "@/lib/api/client";
 import { config } from "@/lib/config";
 import type { InvoiceResponse, ListInvoicesResponse } from "@/lib/api/invoices";
 import type { DevState } from "@/lib/dev-state";
@@ -107,7 +107,7 @@ export async function previewDraftInvoice(
     };
   }
   const result = await serverFetch<SearchPage<DraftInvoiceCustomer, NonNullable<DraftInvoiceResponse["summary"]>>>(
-    config.apiBaseUrl, "/v1/invoices/draft/search", toServerParams(query, CAPABILITIES.previewDraftInvoice), { timeoutMs: AGGREGATE_TIMEOUT_MS },
+    config.apiBaseUrl, "/v1/invoices/draft/search", toServerParams(query, CAPABILITIES.previewDraftInvoice), AGGREGATE_REQUEST,
   );
   return result.ok ? { ok: true, data: { ...result.data, customers: result.data.items, page: result.data.page - 1, month: result.data.summary.month, calculated_at: result.data.summary.calculated_at, auto_finalize_at: result.data.summary.auto_finalize_at, auto_finalize_running: result.data.summary.auto_finalize_running, total_amount: result.data.summary.amount } } : result;
 }
