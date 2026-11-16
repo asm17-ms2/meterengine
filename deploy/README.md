@@ -40,8 +40,8 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
 
 - 도메인: https://meterengine.com (Route 53 호스티드 존). apex, www, grafana 레코드는 ALB 별칭이고 Terraform이 관리한다. 아래 "도메인" 참조.
 - 앱 서버: 오토스케일링 그룹 `meterengine-production-app`(t4g.medium, arm64, Amazon Linux 2023, ap-northeast-2). "앱 서버 오토스케일링 그룹" 참조.
-- DB: RDS `meterengine-db` (db.t4g.small, PostgreSQL 18, 단일 AZ).
-- staging은 ALB, 오토스케일링 그룹 `meterengine-staging-app`, DB `meterengine-staging-db`(db.t4g.small)를 따로 쓴다. ALB는 인터넷에 열려 있지 않고 콘솔에서 넣은 IP만 받는다. 아래 "스테이징 접근" 참조.
+- DB: RDS `meterengine-db` (db.t4g.medium, PostgreSQL 18, 단일 AZ).
+- staging은 ALB, 오토스케일링 그룹 `meterengine-staging-app`, DB `meterengine-staging-db`(db.t4g.medium)를 따로 쓴다. ALB는 인터넷에 열려 있지 않고 콘솔에서 넣은 IP만 받는다. 아래 "스테이징 접근" 참조.
 - production과 staging은 실사용자가 없는 흐름 확인용이다. t4g 계열은 CPU 크레딧을 넘겨 쓰면 요금이 붙어, 부하 시험은 측정 환경(test-sjpark-m7g, test-sjpark-t4g, test-storage)에서만 한다.
 - 이미지: ECR `meterengine-backend`, `meterengine-frontend`(staging은 `meterengine-staging-backend`, `meterengine-staging-frontend`). 태그는 배포한 커밋의 git SHA 40자.
   - 레지스트리 `928618307647.dkr.ecr.ap-northeast-2.amazonaws.com`.

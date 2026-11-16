@@ -4,7 +4,7 @@ data "aws_region" "current" {}
 module "service" {
   source                    = "../modules/service"
   db_identifier             = "meterengine-staging-db"
-  db_instance_class         = "db.t4g.small"
+  db_instance_class         = "db.t4g.medium"
   db_subnet_group_name      = "meterengine-rds-subnet-private"
   rds_security_group_ids    = [aws_security_group.database.id]
   rds_initial_database_name = "meterengine_app"
