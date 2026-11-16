@@ -176,7 +176,7 @@ docker run -p 3000:3000 \
 | `/` | 서비스 소개 (로그인 없이 보는 첫 화면, 로그인과 가입 링크) |
 | `/overview` | 미완료 설정, 과금 경고와 월별 예정액, 확정액, 결제 대기액, 순수납 확인, 전체 월의 미해결 결제 |
 | `/customers`, `/customers/{id}` | 외부 ID로 고객 연결, 보관과 복원, 사용량, 청구, 수납과 카드 등록 연결 |
-| `/usage`, `/events` | 집계, 미터 미연결, 값 오류, 미래 시각과 음수 수량 진단, 원본 로그 조회 |
+| `/usage`, `/events` | 집계, 원본 로그 조회 |
 | `/event-issues`, `/event-rejections` | 받은 이벤트 가운데 미터, 수량, 단가가 연결되지 않은 것 진단, 수집 때 거절한 이벤트 기록 조회 |
 | `/pricing`, `/billable-metrics` | 월과 고객별 단가 이력, 구간 요금, 기본료, 최소 과금과 미터 설정, 보관과 복원 |
 | `/billing`, `/invoices` | 단가 없는 구분 값과 음수 합을 검토한 뒤 확정, 계산 근거 조회 |
@@ -201,12 +201,13 @@ docker run -p 3000:3000 \
 | `/organization-invitations/{token}` | 초대 링크 확인과 수락 (기존 계정 로그인 또는 새 계정 설정) |
 
 - `/billable-metric-prices`는 월과 고객 조건을 유지해 `/pricing`으로 이동한다.
-- 사용량과 청구 검토 화면의 필터 행은 그 달의 집계 마감 시각(다음 달 1일 13:00 KST)과 그 기준이 이미 적용됐는지를 보인다.
+- 사용량과 청구 검토 화면의 필터 행은 그 달의 집계 마감 시각(다음 달 2일 00:00 KST)과 그 기준이 이미 적용됐는지를 보인다.
 - 자동 확정이 켜져 있으면 청구 검토 화면의 필터 행에 다음 자동 확정 시각을 보인다. 그 달을 자동 확정하는 중이면 "자동 확정 진행 중"을, 다 훑었고 다시 시도할 실패가 없으면 아무것도 보이지 않는다. 자동 확정이 보류할 고객(단가 없는 사용량이 있고 0원이 아님) 줄에는 보류 표시를 단다. 이번 달이면 요금 설계 화면 링크를, 끝난 달이면 단가를 등록할 수 없어 월 전체 확정 안내를 단다. 보류 여부는 미터 조건과 관계없이 서버가 고객의 모든 미터로 정한다.
 - 인보이스 일괄 확정이 일부 고객에서 실패하면 결과 창이 다른 안내 대신 확정하지 못한 고객 수를 알린다.
 - API 키의 분당 한도는 양수 또는 무제한으로 정한다. 유한 한도는 인스턴스별이다.
 - 콘솔 결제성 요청은 75초, 고객 직접 재시도는 120초까지 기다린다. 응답 유실은 실패로 단정하지 않고 상태를 새로 조회하기 전 재요청을 막는다. 취소는 같은 요청 식별자를 유지한다.
-- 그 달 이벤트를 집계하는 조회(사용량, 청구 예정액, 대시보드, 미청구 경고, 이벤트 문제)는 기본 5초 대신 10초까지 기다린다.
+- 그 달 이벤트를 집계하는 조회(사용량, 청구 예정액, 대시보드, 이벤트 문제)는 기본 5초 대신 10초까지 기다린다.
+- 같은 집계 조회가 진행 중이면 Next 서버는 백엔드에 다시 보내지 않고 그 결과를 같이 받는다. 같은 세션, 도입사, 환경, 경로일 때만 합치고 서버마다 따로 동작한다.
 - 고객 조회 링크는 기본 조회 전용이다. 도입사가 발급할 때 재시도를 별도로 허용해도 실패한 결제만 대상으로 하며, 처음 결제하거나 취소액을 다시 청구하는 동작은 제공하지 않는다.
 - API 키와 웹훅 비밀값은 발급 직후 한 번만 보여 준다. 서버 호출은 로그인 세션을 다시 검사하며, 공용 API 키로 사용자 인증을 대신하지 않는다.
 - 예정액은 공급가액, 확정액과 수납액은 부가세 포함 금액이다. 취소해도 확정 인보이스는 바뀌지 않는다.
@@ -239,7 +240,7 @@ E2E_OPERATOR_PASSWORD=local-operator-e2e-password \
 pnpm test:e2e:real
 ```
 
-결제와 환경 분리까지 이어지는 실제 스택 시나리오는 같은 변수로 `pnpm exec playwright test -c playwright.mvp.config.ts`를 돌린다. 백엔드는 `local` 프로파일(사설 주소 웹훅 허용)로, `TOSSPAYMENTS_BASE_URL=http://127.0.0.1:38447`과 `UNBILLED_USAGE_REPORT_CRON='*/20 * * * * *'`를 주고 띄운다. 미청구 사용량 통보의 기본 주기(매일 09:00)로는 `mvp.real.spec.ts`의 통보 대기 단계가 실패한다. 토스 대역 `38447`은 설정이 띄우며 `MVP_EXTERNAL_PG_FIXTURE=1`이면 띄우지 않는다. `MVP_REUSE_FRONTEND=1`이면 이미 뜬 `33147` FE를 쓴다.
+결제와 환경 분리까지 이어지는 실제 스택 시나리오는 같은 변수로 `pnpm exec playwright test -c playwright.mvp.config.ts`를 돌린다. 백엔드는 `local` 프로파일(사설 주소 웹훅 허용)로, `TOSSPAYMENTS_BASE_URL=http://127.0.0.1:38447`과 `UNBILLED_USAGE_REPORT_CRON='*/20 * * * * *'`, `UNBILLED_USAGE_DELIVERY_TIME=00:00`을 주고 띄운다. 미청구 사용량 통보의 기본값(매일 04:00 검사, 09:00 발송)으로는 `mvp.real.spec.ts`의 통보 대기 단계가 실패한다. 토스 대역 `38447`은 설정이 띄우며 `MVP_EXTERNAL_PG_FIXTURE=1`이면 띄우지 않는다. `MVP_REUSE_FRONTEND=1`이면 이미 뜬 `33147` FE를 쓴다.
 
 `playwright.mvp.config.ts` 시나리오는 테스트 DB를 `docker exec ... psql`로 직접 고친다. 가입한 도입사는 실제 환경이 잠겨 있어, 잠금이 아닌 기능을 보는 시나리오는 가입 뒤 `e2e/real-organization.ts`의 `openLiveEnvironment`로 실제 환경을 열고 시작한다. `customer-payment-retry`, `invoice-links`, `permissions`는 그 밖의 행도 고친다. `E2E_DB_CONTAINER`에 `S1_API_URL` 백엔드가 쓰는 PostgreSQL 컨테이너 이름(기본 `meterengine-0696-e2e`)을, `E2E_BACKEND_ENV_FILE`에 백엔드를 띄운 `TOSSPAYMENTS_BASE_URL`을 담은 JSON 파일(기본 `/private/tmp/meterengine-orchestration-0696/backend-e2e-environment.json`, 값은 `{"TOSSPAYMENTS_BASE_URL":"http://127.0.0.1:38447"}`)을 지정한다.
 

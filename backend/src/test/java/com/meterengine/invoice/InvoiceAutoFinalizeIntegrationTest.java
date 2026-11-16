@@ -31,10 +31,10 @@ class InvoiceAutoFinalizeIntegrationTest {
   private static final String SEPTEMBER = "2026-09";
   private static final OffsetDateTime REGISTERED_AT =
       OffsetDateTime.parse("2026-08-01T00:00:00+09:00");
-  private static final OffsetDateTime OCTOBER_1_AT_14 =
-      OffsetDateTime.parse("2026-10-01T14:00:00+09:00");
-  private static final OffsetDateTime OCTOBER_1_AT_15 =
-      OffsetDateTime.parse("2026-10-01T15:00:00+09:00");
+  private static final OffsetDateTime OCTOBER_2_AT_4 =
+      OffsetDateTime.parse("2026-10-02T04:00:00+09:00");
+  private static final OffsetDateTime OCTOBER_3_AT_4 =
+      OffsetDateTime.parse("2026-10-03T04:00:00+09:00");
 
   @Autowired private InvoiceAutoFinalizationService invoiceAutoFinalizationService;
   @Autowired private InvoiceFinalizationService invoiceFinalizationService;
@@ -52,9 +52,9 @@ class InvoiceAutoFinalizeIntegrationTest {
     UUID late = insertCustomer(organizationId, "라");
     UUID tiny = insertCustomer(organizationId, "마");
     insertSeptemberEvent(
-        organizationId, "tx-1", priced, "{\"token\": 3299}", "2026-10-01T12:59:59+09:00");
+        organizationId, "tx-1", priced, "{\"token\": 3299}", "2026-10-01T23:59:59+09:00");
     insertSeptemberEvent(
-        organizationId, "tx-2", priced, "{\"token\": 1000}", "2026-10-01T13:00:00+09:00");
+        organizationId, "tx-2", priced, "{\"token\": 1000}", "2026-10-02T00:00:00+09:00");
     insertSeptemberEvent(
         organizationId,
         "tx-3",
@@ -64,12 +64,12 @@ class InvoiceAutoFinalizeIntegrationTest {
     insertSeptemberEvent(
         organizationId, "tx-6", unpriced, "{\"token\": 1000}", "2026-09-30T10:00:00+09:00");
     insertSeptemberEvent(
-        organizationId, "tx-4", late, "{\"token\": 1000}", "2026-10-01T13:30:00+09:00");
+        organizationId, "tx-4", late, "{\"token\": 1000}", "2026-10-02T00:30:00+09:00");
     insertSeptemberEvent(
         organizationId, "tx-5", tiny, "{\"token\": 1}", "2026-09-30T10:00:00+09:00");
 
     ScheduledJobResult result =
-        invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_1_AT_14);
+        invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_2_AT_4);
 
     assertThat(result).isEqualTo(new ScheduledJobResult(1, 1, 0));
     assertThat(invoices(organizationId))
@@ -78,8 +78,8 @@ class InvoiceAutoFinalizeIntegrationTest {
                 "customer_id", priced,
                 "period", SEPTEMBER,
                 "supply_amount", 1640L,
-                "cutoff_at", OffsetDateTime.parse("2026-10-01T13:00:00+09:00"),
-                "finalized_at", OCTOBER_1_AT_14));
+                "cutoff_at", OffsetDateTime.parse("2026-10-02T00:00:00+09:00"),
+                "finalized_at", OCTOBER_2_AT_4));
     assertThat(attempts(organizationId, SEPTEMBER))
         .extracting(attempt -> attempt.get("customer_id"), attempt -> attempt.get("result"))
         .containsExactlyInAnyOrder(
@@ -100,14 +100,14 @@ class InvoiceAutoFinalizeIntegrationTest {
         organizationId, "tx-1", acme, "{\"token\": 3299}", "2026-09-30T10:00:00+09:00");
 
     invoiceAutoFinalizationService.finalize(
-        organizationId, OffsetDateTime.parse("2026-10-01T13:59:00+09:00"));
+        organizationId, OffsetDateTime.parse("2026-10-02T03:59:00+09:00"));
 
     assertThat(invoices(organizationId)).isEmpty();
     assertThat(attempts(organizationId, SEPTEMBER)).isEmpty();
   }
 
   @Test
-  void 보류된_고객은_이번_달부터_적용되는_단가를_넣어도_다음_정시에_다시_시도하지_않고_끝난_고객도_다시_시도하지_않는다() {
+  void 보류된_고객은_이번_달부터_적용되는_단가를_넣어도_다음_날에_다시_시도하지_않고_끝난_고객도_다시_시도하지_않는다() {
     UUID organizationId = organizationWithTokenBillableMetric();
     UUID priced = insertCustomer(organizationId, "가");
     UUID unpriced = insertCustomer(organizationId, "나");
@@ -121,11 +121,11 @@ class InvoiceAutoFinalizeIntegrationTest {
         "2026-09-30T10:00:00+09:00");
     insertSeptemberEvent(
         organizationId, "tx-3", unpriced, "{\"token\": 1000}", "2026-09-30T10:00:00+09:00");
-    invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_1_AT_14);
+    invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_2_AT_4);
 
     insertPrice(organizationId, null, "{\"model\": \"new\"}", "2", "2026-10");
     ScheduledJobResult result =
-        invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_1_AT_15);
+        invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_3_AT_4);
 
     assertThat(result).isEqualTo(new ScheduledJobResult(0, 0, 0));
     assertThat(attempts(organizationId, SEPTEMBER))
@@ -135,7 +135,7 @@ class InvoiceAutoFinalizeIntegrationTest {
   }
 
   @Test
-  void 단가_없는_사용량만_있어_0원인_고객은_보류하지_않고_0원으로_끝내며_다음_정시에_다시_시도하지_않는다() {
+  void 단가_없는_사용량만_있어_0원인_고객은_보류하지_않고_0원으로_끝내며_다음_날에_다시_시도하지_않는다() {
     UUID organizationId = organizationWithTokenBillableMetric();
     UUID unpriced = insertCustomer(organizationId, "가");
     insertSeptemberEvent(
@@ -146,9 +146,9 @@ class InvoiceAutoFinalizeIntegrationTest {
         "2026-09-30T10:00:00+09:00");
 
     ScheduledJobResult first =
-        invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_1_AT_14);
+        invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_2_AT_4);
     ScheduledJobResult next =
-        invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_1_AT_15);
+        invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_3_AT_4);
 
     assertThat(first).isEqualTo(new ScheduledJobResult(0, 0, 0));
     assertThat(next).isEqualTo(new ScheduledJobResult(0, 0, 0));
@@ -181,11 +181,11 @@ class InvoiceAutoFinalizeIntegrationTest {
         mixed,
         "{\"token\": 500, \"model\": \"new\"}",
         "2026-09-30T10:00:00+09:00");
-    invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_1_AT_14);
+    invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_2_AT_4);
 
     invoiceFinalizationService.finalize(organizationId, YearMonth.of(2026, 9));
     ScheduledJobResult result =
-        invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_1_AT_15);
+        invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_3_AT_4);
 
     assertThat(result).isEqualTo(new ScheduledJobResult(0, 0, 0));
     assertThat(attempts(organizationId, SEPTEMBER))
@@ -197,7 +197,7 @@ class InvoiceAutoFinalizeIntegrationTest {
   }
 
   @Test
-  void 다_훑지_못하고_끊긴_달은_다음_정시가_끝난_시도가_없는_고객만_시도하고_다_훑었다고_표시한다() {
+  void 다_훑지_못하고_끊긴_달은_다음_날_실행이_끝난_시도가_없는_고객만_시도하고_다_훑었다고_표시한다() {
     UUID organizationId = organizationWithTokenBillableMetric();
     UUID done = insertCustomer(organizationId, "가");
     UUID left = insertCustomer(organizationId, "나");
@@ -209,12 +209,12 @@ class InvoiceAutoFinalizeIntegrationTest {
         """
         INSERT INTO invoice_finalization_attempt
           (id, organization_id, customer_id, period, result, attempted_at)
-        VALUES (gen_random_uuid(), ?, ?, '2026-09', 'no_events', '2026-10-01T14:00:00+09:00')
+        VALUES (gen_random_uuid(), ?, ?, '2026-09', 'no_events', '2026-10-02T04:00:00+09:00')
         """,
         organizationId,
         done);
 
-    invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_1_AT_15);
+    invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_3_AT_4);
 
     assertThat(attempts(organizationId, SEPTEMBER))
         .extracting(attempt -> attempt.get("customer_id"), attempt -> attempt.get("result"))
@@ -223,7 +223,7 @@ class InvoiceAutoFinalizeIntegrationTest {
   }
 
   @Test
-  void 한_고객의_확정이_실패해도_나머지는_확정되고_다음_정시가_그_고객만_다시_시도한다() {
+  void 한_고객의_확정이_실패해도_나머지는_확정되고_다음_날_실행이_그_고객만_다시_시도한다() {
     UUID organizationId = organizationWithTokenBillableMetric();
     UUID first = insertCustomer(organizationId, "가");
     UUID failing = insertCustomer(organizationId, "나");
@@ -239,15 +239,15 @@ class InvoiceAutoFinalizeIntegrationTest {
     insertSeptemberEvent(
         organizationId, "tx-3", third, "{\"token\": 3000}", "2026-09-30T10:00:00+09:00");
 
-    ScheduledJobResult atFourteen =
-        invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_1_AT_14);
+    ScheduledJobResult firstRun =
+        invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_2_AT_4);
     jdbcTemplate.update(
         "UPDATE price_rate SET unit_price = 0.000001 WHERE organization_id = ?", organizationId);
-    ScheduledJobResult atFifteen =
-        invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_1_AT_15);
+    ScheduledJobResult nextRun =
+        invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_3_AT_4);
 
-    assertThat(atFourteen).isEqualTo(new ScheduledJobResult(2, 0, 1));
-    assertThat(atFifteen).isEqualTo(new ScheduledJobResult(1, 0, 0));
+    assertThat(firstRun).isEqualTo(new ScheduledJobResult(2, 0, 1));
+    assertThat(nextRun).isEqualTo(new ScheduledJobResult(1, 0, 0));
     assertThat(attempts(organizationId, SEPTEMBER))
         .extracting(attempt -> attempt.get("customer_id"), attempt -> attempt.get("result"))
         .containsExactly(
@@ -259,7 +259,41 @@ class InvoiceAutoFinalizeIntegrationTest {
   }
 
   @Test
-  void 도입사_계산이_실패하면_대상_고객을_실패로_남기고_다음_정시에_또_실패해도_실패_기록을_새로_쌓지_않는다() {
+  void 실패를_다시_시도할_때는_실패한_고객의_사용량만_집계해_다른_고객의_사용량이_계산을_막지_않는다() {
+    UUID organizationId = organizationWithTokenBillableMetric();
+    UUID failing = insertCustomer(organizationId, "가");
+    UUID other = insertCustomer(organizationId, "나");
+    insertSeptemberEvent(
+        organizationId,
+        "tx-1",
+        failing,
+        "{\"token\": 2000000000000000000}",
+        "2026-09-30T10:00:00+09:00");
+    ScheduledJobResult firstRun =
+        invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_2_AT_4);
+    jdbcTemplate.update(
+        "UPDATE price_rate SET unit_price = 0.000001 WHERE organization_id = ?", organizationId);
+    // 조직 전체를 집계하면 이 사용량의 금액이 넘쳐 계산이 실패한다.
+    insertSeptemberEvent(
+        organizationId,
+        "tx-2",
+        other,
+        "{\"token\": 1000000000000000000000000000000}",
+        "2026-10-01T10:00:00+09:00");
+
+    ScheduledJobResult nextRun =
+        invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_3_AT_4);
+
+    assertThat(firstRun).isEqualTo(new ScheduledJobResult(0, 0, 1));
+    assertThat(nextRun).isEqualTo(new ScheduledJobResult(1, 0, 0));
+    assertThat(attempts(organizationId, SEPTEMBER))
+        .extracting(attempt -> attempt.get("customer_id"), attempt -> attempt.get("result"))
+        .containsExactly(
+            tuple(failing, "failed"), tuple(other, "no_events"), tuple(failing, "finalized"));
+  }
+
+  @Test
+  void 도입사_계산이_실패하면_대상_고객을_실패로_남기고_다음_날에_또_실패해도_실패_기록을_새로_쌓지_않는다() {
     UUID organizationId = organizationWithTokenBillableMetric();
     UUID overflowing = insertCustomer(organizationId, "가");
     UUID quiet = insertCustomer(organizationId, "나");
@@ -270,13 +304,13 @@ class InvoiceAutoFinalizeIntegrationTest {
         "{\"token\": 100000000000000000000}",
         "2026-09-30T10:00:00+09:00");
 
-    ScheduledJobResult atFourteen =
-        invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_1_AT_14);
-    ScheduledJobResult atFifteen =
-        invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_1_AT_15);
+    ScheduledJobResult firstRun =
+        invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_2_AT_4);
+    ScheduledJobResult nextRun =
+        invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_3_AT_4);
 
-    assertThat(atFourteen).isEqualTo(new ScheduledJobResult(0, 0, 2));
-    assertThat(atFifteen).isEqualTo(new ScheduledJobResult(0, 0, 2));
+    assertThat(firstRun).isEqualTo(new ScheduledJobResult(0, 0, 2));
+    assertThat(nextRun).isEqualTo(new ScheduledJobResult(0, 0, 2));
     assertThat(attempts(organizationId, SEPTEMBER))
         .extracting(attempt -> attempt.get("customer_id"), attempt -> attempt.get("result"))
         .containsExactly(tuple(overflowing, "failed"), tuple(quiet, "failed"));
@@ -294,11 +328,11 @@ class InvoiceAutoFinalizeIntegrationTest {
         "2026-09-30T10:00:00+09:00");
     double before = unfinalized("legacy", "failed");
 
-    invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_1_AT_14);
+    invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_2_AT_4);
     double afterFailure = unfinalized("legacy", "failed");
     jdbcTemplate.update(
         "UPDATE price_rate SET unit_price = 0.000001 WHERE organization_id = ?", organizationId);
-    invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_1_AT_15);
+    invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_3_AT_4);
 
     assertThat(afterFailure).isEqualTo(before + 1);
     assertThat(unfinalized("legacy", "failed")).isEqualTo(before);
@@ -325,7 +359,7 @@ class InvoiceAutoFinalizeIntegrationTest {
         "2026-09-30T10:00:00+09:00");
     double before = unfinalized("legacy", "held");
 
-    invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_1_AT_14);
+    invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_2_AT_4);
     double afterHeld = unfinalized("legacy", "held");
     invoiceFinalizationService.finalize(organizationId, YearMonth.of(2026, 9));
 
@@ -334,7 +368,7 @@ class InvoiceAutoFinalizeIntegrationTest {
   }
 
   @Test
-  void 실패한_고객이_다음_정시에_0원으로_끝나면_미확정_지표의_실패에서_빠진다() {
+  void 실패한_고객이_다음_날에_0원으로_끝나면_미확정_지표의_실패에서_빠진다() {
     UUID organizationId = organizationWithTokenBillableMetric();
     UUID failing = insertCustomer(organizationId, "가");
     insertSeptemberEvent(
@@ -345,11 +379,11 @@ class InvoiceAutoFinalizeIntegrationTest {
         "2026-09-30T10:00:00+09:00");
     double before = unfinalized("legacy", "failed");
 
-    invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_1_AT_14);
+    invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_2_AT_4);
     double afterFailure = unfinalized("legacy", "failed");
     jdbcTemplate.update(
         "UPDATE price_rate SET unit_price = 0 WHERE organization_id = ?", organizationId);
-    invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_1_AT_15);
+    invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_3_AT_4);
 
     assertThat(afterFailure).isEqualTo(before + 1);
     assertThat(attempts(organizationId, SEPTEMBER))
@@ -377,7 +411,7 @@ class InvoiceAutoFinalizeIntegrationTest {
     double legacyBefore = unfinalized("legacy", "failed");
     double liveBefore = unfinalized("live", "failed");
 
-    invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_1_AT_14);
+    invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_2_AT_4);
 
     assertThat(unfinalized("test", "failed")).isEqualTo(testBefore + 1);
     assertThat(unfinalized("legacy", "failed")).isEqualTo(legacyBefore);
@@ -393,7 +427,7 @@ class InvoiceAutoFinalizeIntegrationTest {
     invoiceFinalizationService.finalize(organizationId, YearMonth.of(2026, 9));
 
     ScheduledJobResult result =
-        invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_1_AT_14);
+        invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_2_AT_4);
 
     assertThat(result).isEqualTo(new ScheduledJobResult(0, 0, 0));
     assertThat(invoices(organizationId)).hasSize(1);
@@ -420,7 +454,7 @@ class InvoiceAutoFinalizeIntegrationTest {
             invoice -> {
               assertThat(invoice.get("supply_amount")).isEqualTo(1640L);
               assertThat(invoice.get("cutoff_at"))
-                  .isEqualTo(OffsetDateTime.parse("2026-10-01T13:00:00+09:00"));
+                  .isEqualTo(OffsetDateTime.parse("2026-10-02T00:00:00+09:00"));
             });
   }
 
@@ -445,16 +479,16 @@ class InvoiceAutoFinalizeIntegrationTest {
     assertThat(invoices(organizationId))
         .extracting(invoice -> invoice.get("period"), invoice -> invoice.get("cutoff_at"))
         .containsExactlyInAnyOrder(
-            tuple("2026-08", OffsetDateTime.parse("2026-09-01T13:00:00+09:00")),
-            tuple("2026-09", OffsetDateTime.parse("2026-10-01T13:00:00+09:00")));
+            tuple("2026-08", OffsetDateTime.parse("2026-09-02T00:00:00+09:00")),
+            tuple("2026-09", OffsetDateTime.parse("2026-10-02T00:00:00+09:00")));
   }
 
   @Test
   void 그_달_마감_뒤에_등록된_고객은_그_달의_대상이_아니다() {
     UUID organizationId = organizationWithTokenBillableMetric();
-    insertCustomer(organizationId, null, "아크메", OffsetDateTime.parse("2026-10-01T13:00:00+09:00"));
+    insertCustomer(organizationId, null, "아크메", OffsetDateTime.parse("2026-10-02T00:00:00+09:00"));
 
-    invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_1_AT_14);
+    invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_2_AT_4);
 
     assertThat(attempts(organizationId, SEPTEMBER)).isEmpty();
   }
@@ -481,7 +515,7 @@ class InvoiceAutoFinalizeIntegrationTest {
         "2026-09-30T10:00:00+09:00");
 
     ScheduledJobResult result =
-        invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_1_AT_14);
+        invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_2_AT_4);
 
     assertThat(result).isEqualTo(new ScheduledJobResult(2, 0, 0));
     assertThat(
@@ -512,7 +546,7 @@ class InvoiceAutoFinalizeIntegrationTest {
   }
 
   @Test
-  void live_환경에서_실패한_고객은_다음_정시에_그_환경에서_다시_시도한다() {
+  void live_환경에서_실패한_고객은_다음_날에_그_환경에서_다시_시도한다() {
     UUID organizationId = organizationWithTokenBillableMetric();
     UUID liveEnvironmentId = environmentId(organizationId, "live");
     insertBillableMetric(organizationId, liveEnvironmentId);
@@ -527,15 +561,15 @@ class InvoiceAutoFinalizeIntegrationTest {
         "2026-09-30T10:00:00+09:00",
         "2026-09-30T10:00:00+09:00");
 
-    ScheduledJobResult atFourteen =
-        invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_1_AT_14);
+    ScheduledJobResult firstRun =
+        invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_2_AT_4);
     jdbcTemplate.update(
         "UPDATE price_rate SET unit_price = 0.000001 WHERE organization_id = ?", organizationId);
-    ScheduledJobResult atFifteen =
-        invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_1_AT_15);
+    ScheduledJobResult nextRun =
+        invoiceAutoFinalizationService.finalize(organizationId, OCTOBER_3_AT_4);
 
-    assertThat(atFourteen).isEqualTo(new ScheduledJobResult(0, 0, 1));
-    assertThat(atFifteen).isEqualTo(new ScheduledJobResult(1, 0, 0));
+    assertThat(firstRun).isEqualTo(new ScheduledJobResult(0, 0, 1));
+    assertThat(nextRun).isEqualTo(new ScheduledJobResult(1, 0, 0));
     assertThat(attempts(organizationId, SEPTEMBER))
         .extracting(
             attempt -> attempt.get("customer_id"),
@@ -546,7 +580,7 @@ class InvoiceAutoFinalizeIntegrationTest {
   }
 
   @Test
-  void 꺼져_있으면_정시가_되어도_실행_기록을_남기지_않는다() {
+  void 꺼져_있으면_실행_시각이_되어도_실행_기록을_남기지_않는다() {
     int before = jobRunCount();
 
     invoiceAutoFinalizationService.run();
@@ -632,7 +666,7 @@ class InvoiceAutoFinalizeIntegrationTest {
 
   private static OffsetDateTime toOffsetDateTime(Object timestamp) {
     return OffsetDateTime.ofInstant(
-        ((java.sql.Timestamp) timestamp).toInstant(), OCTOBER_1_AT_14.getOffset());
+        ((java.sql.Timestamp) timestamp).toInstant(), OCTOBER_2_AT_4.getOffset());
   }
 
   private UUID environmentId(UUID organizationId, String mode) {

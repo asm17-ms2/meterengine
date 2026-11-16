@@ -33,7 +33,7 @@ public class UnbilledUsageNotificationConfig {
   }
 
   @Scheduled(
-      cron = "${meterengine.notification.unbilled-usage-cron:0 0 9 * * *}",
+      cron = "${meterengine.notification.unbilled-usage-cron:0 0 4 * * *}",
       zone = "Asia/Seoul")
   public void report() {
     OffsetDateTime slotAt = OffsetDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MINUTES);

@@ -121,7 +121,7 @@ public interface InvoiceFinalizationAttemptRepository
       nativeQuery = true)
   boolean existsSweptPeriod(UUID organizationId, UUID environmentId, String period);
 
-  // 그 달에 끝난 시도도 인보이스도 없고 마지막 시도가 실패인 고객이 있으면 다음 정시가 다시 시도한다.
+  // 그 달에 끝난 시도도 인보이스도 없고 마지막 시도가 실패인 고객이 있으면 다음 날 04:00 실행이 다시 시도한다.
   @Query(
       value =
           """

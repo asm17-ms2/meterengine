@@ -1,6 +1,6 @@
 import "server-only";
 
-import { AGGREGATE_TIMEOUT_MS, serverFetch } from "@/lib/api/client";
+import { AGGREGATE_REQUEST, serverFetch } from "@/lib/api/client";
 import { config } from "@/lib/config";
 import type { DraftInvoiceResponse } from "@/lib/api/billing";
 
@@ -20,9 +20,9 @@ export type DashboardResponse = {
 };
 
 export function getDashboard(month: string) {
-  return serverFetch<DashboardResponse>(config.apiBaseUrl, "/v1/dashboard", { month }, { timeoutMs: AGGREGATE_TIMEOUT_MS });
+  return serverFetch<DashboardResponse>(config.apiBaseUrl, "/v1/dashboard", { month }, AGGREGATE_REQUEST);
 }
 
-export function workspaceFetch<T>(path: string, params?: Record<string, string | undefined>, options?: { timeoutMs?: number }) {
+export function workspaceFetch<T>(path: string, params?: Record<string, string | undefined>, options?: { timeoutMs?: number; shareInFlight?: boolean }) {
   return serverFetch<T>(config.apiBaseUrl, path, params, options);
 }

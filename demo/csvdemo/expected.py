@@ -20,7 +20,6 @@ from core.model import (
 )
 
 CALC_PRECISION = 50
-CUTOFF_HOUR = 13
 SUPPORTED_AGGREGATIONS = frozenset({"sum", "count", "count_distinct", "min", "max", "avg", "first", "last", "median", "percentile"})
 
 
@@ -190,13 +189,13 @@ def _typed_value(value) -> tuple:
 
 
 def cutoff_at(month: str) -> datetime:
-    """서버가 그 달 사용량을 집계하는 마감 시각. 다음 달 1일 13:00 KST다."""
+    """서버가 그 달 사용량을 집계하는 마감 시각. 다음 달 2일 00:00 KST다."""
     year, month_number = (int(part) for part in month.split("-"))
     if month_number == 12:
         year, month_number = year + 1, 1
     else:
         month_number += 1
-    return datetime(year, month_number, 1, CUTOFF_HOUR, tzinfo=KST)
+    return datetime(year, month_number, 2, tzinfo=KST)
 
 
 def sum_quantities_by_dimension_values(
