@@ -1,5 +1,6 @@
 "use client";
 
+import { LoadingOutlined } from "@ant-design/icons";
 import { App, ConfigProvider, type ThemeConfig } from "antd";
 import koreanLocale from "antd/locale/ko_KR";
 import dayjs from "dayjs";
@@ -19,4 +20,7 @@ const CONSOLE_THEME: ThemeConfig = {
   components: { Tag: { green7: "#237804", gold7: "#874d00", orange7: "#ad4e00" }, Input: { colorBorder: "#7c8799" }, Checkbox: { colorBorder: "#7c8799" }, Descriptions: { labelColor: "#5a6578" }, Select: { colorBorder: "#7c8799" }, ["DatePicker"]: { colorBorder: "#7c8799" }, Table: { headerBg: "#f7f8fc", headerColor: "#5a6578", cellPaddingBlock: 15 }, Card: { boxShadow: "none" } },
 };
 
-export function AppProviders({ children }: { children: React.ReactNode }) { return <ConfigProvider locale={koreanLocale} theme={CONSOLE_THEME}><App>{children}</App></ConfigProvider>; }
+// 기본 로딩 아이콘은 퇴장 애니메이션이 끝나지 않으면 버튼 이름에 "loading"을 남긴다. 직접 지정하면 애니메이션 없이 로딩 동안만 그린다.
+const BUTTON_CONFIG = { loadingIcon: <LoadingOutlined aria-hidden /> };
+
+export function AppProviders({ children }: { children: React.ReactNode }) { return <ConfigProvider locale={koreanLocale} theme={CONSOLE_THEME} button={BUTTON_CONFIG}><App>{children}</App></ConfigProvider>; }

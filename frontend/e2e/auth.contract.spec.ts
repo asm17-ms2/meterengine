@@ -1236,6 +1236,8 @@ test("the application is rejected beside the field at once and waits for review 
   await form.getByLabel(/^라이브 시크릿 키/).fill("live_sk_contract");
   await form.getByRole("button", { name: "이용 신청", exact: true }).click();
   await expect(form.locator(".field-error")).toHaveText("국세청에 등록되지 않은 사업자등록번호입니다");
+  // 신청이 끝나는 즉시 버튼 이름에 로딩 아이콘이 섞여 있지 않아야 다시 신청할 수 있다.
+  expect(await form.getByRole("button", { name: "이용 신청", exact: true }).count()).toBe(1);
   await expect(form.getByLabel(/^사업자등록번호/)).toHaveAttribute("aria-invalid", "true");
   await expect(form.getByLabel(/^토스페이먼츠 상점아이디/)).toHaveValue("contract-mid");
   await form.getByLabel(/^사업자등록번호/).fill("123-45-67891");
