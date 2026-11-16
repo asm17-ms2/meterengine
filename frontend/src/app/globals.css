@@ -4,9 +4,6 @@ body {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
-    "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
-    "Noto Color Emoji";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -312,9 +309,9 @@ details[open] > .disclosure-summary + * { margin-top: 12px; }
 .disclosure-list { margin: 8px 0 0; padding-left: 20px; }
 @media(max-width:767px) { .audit-summary { padding-left: 36px; }.audit-summary::before { left: 14px; top: 18px; } }
 
-.wordmark { font-family: "Avenir Next", "Segoe UI", sans-serif; }
+.wordmark { font-family: var(--font-wordmark), var(--font-pretendard), sans-serif; }
 .organization-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.organization-link .anticon { flex: none; }
-.workspace-json, pre, code { font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace; }
+.workspace-json, pre, code { font-family: var(--font-mono), var(--font-pretendard), monospace; }
 .finance-flow strong { font-family: var(--font-pretendard), "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; letter-spacing: -.025em; }
 .organization-link { max-width: min(30vw, 480px); white-space: nowrap; }
 @media (max-width: 767px) { .organization-link { max-width: calc(100vw - 225px); font-size: 12px; } }
