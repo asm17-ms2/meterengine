@@ -8,6 +8,7 @@ import com.meterengine.metric.entity.MetricAggregation;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,13 +36,13 @@ public class BillableMetricUsageRepository {
       Map<UUID, DimensionUsage> totalByCustomerId,
       Map<UUID, List<DimensionUsage>> dimensionUsagesByCustomerId) {}
 
-  // 그 달에 발생했고 receivedBefore 전에 받은 이벤트를 집계한다. customerId가 있으면 그 고객만 집계한다.
+  // 그 달에 발생했고 receivedBefore 전에 받은 이벤트를 집계한다. customerIds가 있으면 그 고객들만 집계한다.
   public AggregatedQuantities aggregate(
       BillableMetric metric,
       OffsetDateTime start,
       OffsetDateTime end,
       OffsetDateTime receivedBefore,
-      UUID customerId) {
+      Collection<UUID> customerIds) {
     if (!MetricAggregation.SUPPORTED.contains(metric.getAggregation()))
       throw new IllegalStateException("Unsupported metric aggregation");
     String filter =
@@ -88,7 +89,7 @@ public class BillableMetricUsageRepository {
         ORDER BY customer_id, is_total, dimension_values
         """
             .formatted(
-                customerId == null ? "" : " AND customer_id = ?",
+                customerIds == null ? "" : " AND customer_id = ANY(?)",
                 filter,
                 expression,
                 percentile ? "ordered_values" : "quantity",
@@ -129,10 +130,13 @@ public class BillableMetricUsageRepository {
           statement.setObject(6, start);
           statement.setObject(7, end);
           statement.setObject(8, receivedBefore);
-          if (customerId != null) statement.setObject(9, customerId);
+          if (customerIds != null)
+            statement.setArray(
+                9,
+                statement.getConnection().createArrayOf("uuid", customerIds.toArray(UUID[]::new)));
           if (percentile)
             statement.setBigDecimal(
-                customerId == null ? 9 : 10,
+                customerIds == null ? 9 : 10,
                 "median".equals(metric.getAggregation())
                     ? new BigDecimal("50")
                     : metric.getPercentile());

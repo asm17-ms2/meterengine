@@ -83,21 +83,21 @@ class DraftInvoiceServiceTest {
   }
 
   @Test
-  void 그_달의_확정_시각_전이면_작업이_도는_중이어도_다음_자동_확정_시각은_다음_달_1일_14시고_진행_중이_아니다() {
-    DraftInvoiceService enabled = draftInvoiceServiceAt("2026-09-01T13:30:00+09:00");
+  void 그_달의_확정_시각_전이면_작업이_도는_중이어도_다음_자동_확정_시각은_다음_달_2일_4시고_진행_중이_아니다() {
+    DraftInvoiceService enabled = draftInvoiceServiceAt("2026-09-02T03:30:00+09:00");
     stubRunningAndUnswept();
 
     DraftInvoiceResponse response = enabled.preview(ORGANIZATION_ID, AUGUST);
 
     assertThat(response.autoFinalizeEnabled()).isTrue();
     assertThat(response.autoFinalizeAt())
-        .isEqualTo(OffsetDateTime.parse("2026-09-01T14:00:00+09:00"));
+        .isEqualTo(OffsetDateTime.parse("2026-09-02T04:00:00+09:00"));
     assertThat(response.autoFinalizeRunning()).isFalse();
   }
 
   @Test
-  void 확정_시각이_지났고_아직_다_훑지_않은_달은_다음_정시이고_작업이_도는_중이면_진행_중이다() {
-    DraftInvoiceService enabled = draftInvoiceServiceAt("2026-09-01T14:05:00+09:00");
+  void 확정_시각이_지났고_아직_다_훑지_않은_달은_다음_날_4시이고_작업이_도는_중이면_진행_중이다() {
+    DraftInvoiceService enabled = draftInvoiceServiceAt("2026-09-02T04:05:00+09:00");
     stubFirstCustomerCreatedAt("2026-07-01T00:00:00+09:00");
     when(invoiceFinalizationAttemptRepository.existsSweptPeriod(ORGANIZATION_ID, null, "2026-08"))
         .thenReturn(false);
@@ -107,13 +107,13 @@ class DraftInvoiceServiceTest {
     DraftInvoiceResponse response = enabled.preview(ORGANIZATION_ID, AUGUST);
 
     assertThat(response.autoFinalizeAt())
-        .isEqualTo(OffsetDateTime.parse("2026-09-01T15:00:00+09:00"));
+        .isEqualTo(OffsetDateTime.parse("2026-09-03T04:00:00+09:00"));
     assertThat(response.autoFinalizeRunning()).isTrue();
   }
 
   @Test
   void 확정_시각이_지났고_아직_다_훑지_않았어도_작업이_돌지_않으면_진행_중이_아니다() {
-    DraftInvoiceService enabled = draftInvoiceServiceAt("2026-09-01T14:05:00+09:00");
+    DraftInvoiceService enabled = draftInvoiceServiceAt("2026-09-02T04:05:00+09:00");
     stubFirstCustomerCreatedAt("2026-07-01T00:00:00+09:00");
     when(invoiceFinalizationAttemptRepository.existsSweptPeriod(ORGANIZATION_ID, null, "2026-08"))
         .thenReturn(false);
@@ -124,8 +124,8 @@ class DraftInvoiceServiceTest {
   }
 
   @Test
-  void 다_훑은_달에_실패가_남았으면_작업이_도는_중이어도_진행_중이_아니고_다음_정시에_다시_시도한다() {
-    DraftInvoiceService enabled = draftInvoiceServiceAt("2026-09-01T15:05:00+09:00");
+  void 다_훑은_달에_실패가_남았으면_작업이_도는_중이어도_진행_중이_아니고_다음_날_4시에_다시_시도한다() {
+    DraftInvoiceService enabled = draftInvoiceServiceAt("2026-09-02T15:05:00+09:00");
     stubFirstCustomerCreatedAt("2026-07-01T00:00:00+09:00");
     lenient()
         .when(scheduledJobRunService.isRunning(InvoiceAutoFinalizationService.JOB_NAME))
@@ -138,7 +138,7 @@ class DraftInvoiceServiceTest {
     DraftInvoiceResponse response = enabled.preview(ORGANIZATION_ID, AUGUST);
 
     assertThat(response.autoFinalizeAt())
-        .isEqualTo(OffsetDateTime.parse("2026-09-01T16:00:00+09:00"));
+        .isEqualTo(OffsetDateTime.parse("2026-09-03T04:00:00+09:00"));
     assertThat(response.autoFinalizeRunning()).isFalse();
   }
 
@@ -185,7 +185,7 @@ class DraftInvoiceServiceTest {
   @Test
   void 환경이_있는_요청은_그_환경의_첫_고객과_다_훑은_표시와_실패로_다음_자동_확정_시각을_정한다() {
     UUID environmentId = UUID.randomUUID();
-    DraftInvoiceService enabled = draftInvoiceServiceAt("2026-09-01T15:05:00+09:00");
+    DraftInvoiceService enabled = draftInvoiceServiceAt("2026-09-02T15:05:00+09:00");
     when(customerRepository.findFirstCreatedAtScoped(ORGANIZATION_ID, environmentId))
         .thenReturn(Optional.of(OffsetDateTime.parse("2026-07-01T00:00:00+09:00")));
     when(invoiceFinalizationAttemptRepository.existsSweptPeriod(
@@ -201,7 +201,7 @@ class DraftInvoiceServiceTest {
             () -> enabled.preview(ORGANIZATION_ID, AUGUST));
 
     assertThat(response.autoFinalizeAt())
-        .isEqualTo(OffsetDateTime.parse("2026-09-01T16:00:00+09:00"));
+        .isEqualTo(OffsetDateTime.parse("2026-09-03T04:00:00+09:00"));
   }
 
   @Test
@@ -461,7 +461,8 @@ class DraftInvoiceServiceTest {
             ORGANIZATION_ID,
             AUGUST,
             OffsetDateTime.parse("2026-10-26T10:00:00+09:00"),
-            BillableMetricUsageService.cutoffAt(AUGUST)))
+            BillableMetricUsageService.cutoffAt(AUGUST),
+            null))
         .thenReturn(billableMetricUsages);
     when(chargeService.calculate(ORGANIZATION_ID, AUGUST, billableMetricUsages))
         .thenReturn(customerChargeByCustomerId);

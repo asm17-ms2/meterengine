@@ -524,7 +524,7 @@ test("격리 계약: 자동 확정이 켜진 이번 달은 다음 자동 확정 
   await control(request, "auto-finalize");
   const month = formatKstMonth();
   await page.goto(`/billing?month=${month}`);
-  await expect(page.getByText(`다음 자동 확정 ${shiftMonth(month, 1)}-01 14:00 KST`, { exact: true })).toBeVisible();
+  await expect(page.getByText(`다음 자동 확정 ${shiftMonth(month, 1)}-02 04:00 KST`, { exact: true })).toBeVisible();
   const held = page.getByRole("link", { name: "자동 확정 보류: 단가 없는 사용량", exact: true }).filter({ visible: true });
   await expect(held).toHaveCount(1);
   await expect(page.getByRole("row").filter({ has: held })).toContainText("단가 없는 사용량 고객");

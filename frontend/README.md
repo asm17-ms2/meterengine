@@ -201,7 +201,7 @@ docker run -p 3000:3000 \
 | `/organization-invitations/{token}` | 초대 링크 확인과 수락 (기존 계정 로그인 또는 새 계정 설정) |
 
 - `/billable-metric-prices`는 월과 고객 조건을 유지해 `/pricing`으로 이동한다.
-- 사용량과 청구 검토 화면의 필터 행은 그 달의 집계 마감 시각(다음 달 1일 13:00 KST)과 그 기준이 이미 적용됐는지를 보인다.
+- 사용량과 청구 검토 화면의 필터 행은 그 달의 집계 마감 시각(다음 달 2일 00:00 KST)과 그 기준이 이미 적용됐는지를 보인다.
 - 자동 확정이 켜져 있으면 청구 검토 화면의 필터 행에 다음 자동 확정 시각을 보인다. 그 달을 자동 확정하는 중이면 "자동 확정 진행 중"을, 다 훑었고 다시 시도할 실패가 없으면 아무것도 보이지 않는다. 자동 확정이 보류할 고객(단가 없는 사용량이 있고 0원이 아님) 줄에는 보류 표시를 단다. 이번 달이면 요금 설계 화면 링크를, 끝난 달이면 단가를 등록할 수 없어 월 전체 확정 안내를 단다. 보류 여부는 미터 조건과 관계없이 서버가 고객의 모든 미터로 정한다.
 - 인보이스 일괄 확정이 일부 고객에서 실패하면 결과 창이 다른 안내 대신 확정하지 못한 고객 수를 알린다.
 - API 키의 분당 한도는 양수 또는 무제한으로 정한다. 유한 한도는 인스턴스별이다.
@@ -240,7 +240,7 @@ E2E_OPERATOR_PASSWORD=local-operator-e2e-password \
 pnpm test:e2e:real
 ```
 
-결제와 환경 분리까지 이어지는 실제 스택 시나리오는 같은 변수로 `pnpm exec playwright test -c playwright.mvp.config.ts`를 돌린다. 백엔드는 `local` 프로파일(사설 주소 웹훅 허용)로, `TOSSPAYMENTS_BASE_URL=http://127.0.0.1:38447`과 `UNBILLED_USAGE_REPORT_CRON='*/20 * * * * *'`를 주고 띄운다. 미청구 사용량 통보의 기본 주기(매일 09:00)로는 `mvp.real.spec.ts`의 통보 대기 단계가 실패한다. 토스 대역 `38447`은 설정이 띄우며 `MVP_EXTERNAL_PG_FIXTURE=1`이면 띄우지 않는다. `MVP_REUSE_FRONTEND=1`이면 이미 뜬 `33147` FE를 쓴다.
+결제와 환경 분리까지 이어지는 실제 스택 시나리오는 같은 변수로 `pnpm exec playwright test -c playwright.mvp.config.ts`를 돌린다. 백엔드는 `local` 프로파일(사설 주소 웹훅 허용)로, `TOSSPAYMENTS_BASE_URL=http://127.0.0.1:38447`과 `UNBILLED_USAGE_REPORT_CRON='*/20 * * * * *'`, `UNBILLED_USAGE_DELIVERY_TIME=00:00`을 주고 띄운다. 미청구 사용량 통보의 기본값(매일 04:00 검사, 09:00 발송)으로는 `mvp.real.spec.ts`의 통보 대기 단계가 실패한다. 토스 대역 `38447`은 설정이 띄우며 `MVP_EXTERNAL_PG_FIXTURE=1`이면 띄우지 않는다. `MVP_REUSE_FRONTEND=1`이면 이미 뜬 `33147` FE를 쓴다.
 
 `playwright.mvp.config.ts` 시나리오는 테스트 DB를 `docker exec ... psql`로 직접 고친다. 가입한 도입사는 실제 환경이 잠겨 있어, 잠금이 아닌 기능을 보는 시나리오는 가입 뒤 `e2e/real-organization.ts`의 `openLiveEnvironment`로 실제 환경을 열고 시작한다. `customer-payment-retry`, `invoice-links`, `permissions`는 그 밖의 행도 고친다. `E2E_DB_CONTAINER`에 `S1_API_URL` 백엔드가 쓰는 PostgreSQL 컨테이너 이름(기본 `meterengine-0696-e2e`)을, `E2E_BACKEND_ENV_FILE`에 백엔드를 띄운 `TOSSPAYMENTS_BASE_URL`을 담은 JSON 파일(기본 `/private/tmp/meterengine-orchestration-0696/backend-e2e-environment.json`, 값은 `{"TOSSPAYMENTS_BASE_URL":"http://127.0.0.1:38447"}`)을 지정한다.
 

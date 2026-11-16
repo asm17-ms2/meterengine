@@ -49,7 +49,7 @@ public class InvoiceAutoFinalizationService {
   private static final Logger logger =
       LoggerFactory.getLogger(InvoiceAutoFinalizationService.class);
 
-  private static final LocalTime AUTO_FINALIZE_TIME = LocalTime.of(14, 0);
+  private static final LocalTime RUN_TIME = LocalTime.of(4, 0);
 
   private final InvoiceAutoFinalizeProperties invoiceAutoFinalizeProperties;
   private final OrganizationRepository organizationRepository;
@@ -88,14 +88,24 @@ public class InvoiceAutoFinalizationService {
     this.clock = clock;
   }
 
-  // 그 달을 자동 확정하는 시각. 다음 달 1일 14:00 KST다.
+  // 그 달을 자동 확정하는 시각. 집계 마감(다음 달 2일 00:00 KST) 뒤 첫 실행인 다음 달 2일 04:00 KST다.
   public static OffsetDateTime autoFinalizeAt(YearMonth month) {
     return month
         .plusMonths(1)
-        .atDay(1)
-        .atTime(AUTO_FINALIZE_TIME)
+        .atDay(2)
+        .atTime(RUN_TIME)
         .atZone(BillableMetricUsageService.BILLING_ZONE)
         .toOffsetDateTime();
+  }
+
+  // now보다 뒤인 가장 가까운 실행 시각(매일 04:00 KST)이다.
+  public static OffsetDateTime nextRunAt(OffsetDateTime now) {
+    var zonedNow = now.atZoneSameInstant(BillableMetricUsageService.BILLING_ZONE);
+    var runAt = zonedNow.toLocalDate().atTime(RUN_TIME).atZone(zonedNow.getZone());
+    if (!runAt.isAfter(zonedNow)) {
+      runAt = zonedNow.toLocalDate().plusDays(1).atTime(RUN_TIME).atZone(zonedNow.getZone());
+    }
+    return runAt.toOffsetDateTime();
   }
 
   @EventListener(ApplicationReadyEvent.class)
@@ -105,7 +115,7 @@ public class InvoiceAutoFinalizationService {
     }
   }
 
-  @Scheduled(cron = "0 0 * * * *", zone = "Asia/Seoul")
+  @Scheduled(cron = "0 0 4 * * *", zone = "Asia/Seoul")
   public void run() {
     if (!invoiceAutoFinalizeProperties.enabled()) {
       return;
@@ -215,7 +225,8 @@ public class InvoiceAutoFinalizationService {
     return total;
   }
 
-  // 실패를 다시 시도하다 도입사 계산이 또 실패하면 이미 실패인 고객에게 실패 기록을 다시 쌓지 않는다.
+  // 실패를 다시 시도할 때는 그 고객들의 이벤트만 집계한다.
+  // 다시 시도하다 계산이 또 실패하면 이미 실패인 고객에게 실패 기록을 다시 쌓지 않는다.
   private ScheduledJobResult finalize(
       Organization organization,
       YearMonth month,
@@ -227,7 +238,12 @@ public class InvoiceAutoFinalizationService {
     try {
       targets =
           transactionTemplate.execute(
-              status -> invoiceFinalizationService.targets(organization.getId(), month, cutoffAt));
+              status ->
+                  invoiceFinalizationService.targets(
+                      organization.getId(),
+                      month,
+                      cutoffAt,
+                      retryingFailures ? customerIds : null));
     } catch (RuntimeException exception) {
       logger.error(
           "invoice auto finalization failed to calculate: organization={}, environment={},"

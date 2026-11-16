@@ -139,7 +139,7 @@ function InvoiceFinalizeForm({ onClose, ...target }: FinalizeTarget & { onClose:
         <Typography.Paragraph style={PARAGRAPH_STYLE}>
           청구할 금액이 있는 고객 {targetCount}명의 청구서를 확정해요. 공급가액 합계는{" "}
           {supplyAmount}이고, 청구서에는 세액 10%를 더한 합계가 적혀요. 금액은 집계 마감
-          시각(다음 달 1일 13:00 KST)까지 받은 사용량으로 다시 계산하고, 마감 전이면 확정하는
+          시각(다음 달 2일 00:00 KST)까지 받은 사용량으로 다시 계산하고, 마감 전이면 확정하는
           순간까지 받은 사용량으로 계산해요.
         </Typography.Paragraph>
         <Typography.Paragraph style={PARAGRAPH_STYLE}>

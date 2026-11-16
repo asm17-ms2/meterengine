@@ -37,8 +37,8 @@ class InvoiceAutoFinalizeSchedulingTest {
   }
 
   @Test
-  void 켜져_있으면_정시_실행이_그_정시를_슬롯으로_한_번만_기록한다() {
-    testClock.fix(OffsetDateTime.parse("2026-10-01T14:00:30+09:00"));
+  void 켜져_있으면_4시_실행이_그_시각을_슬롯으로_한_번만_기록한다() {
+    testClock.fix(OffsetDateTime.parse("2026-10-02T04:00:30+09:00"));
 
     invoiceAutoFinalizationService.run();
     invoiceAutoFinalizationService.run();
@@ -49,15 +49,15 @@ class InvoiceAutoFinalizeSchedulingTest {
             SELECT status FROM scheduled_job_run
             WHERE job_name = 'invoice_auto_finalize' AND scheduled_at = ?
             """,
-            OffsetDateTime.parse("2026-10-01T14:00:00+09:00"));
+            OffsetDateTime.parse("2026-10-02T04:00:00+09:00"));
     assertThat(runs).extracting(run -> run.get("status")).containsExactly("succeeded");
   }
 
   @Test
-  void 정시_실행은_활성_도입사만_확정한다() {
+  void 예약_실행은_활성_도입사만_확정한다() {
     UUID active = organizationWithBilledCustomer("active");
     UUID suspended = organizationWithBilledCustomer("suspended");
-    testClock.fix(OffsetDateTime.parse("2026-10-01T15:00:10+09:00"));
+    testClock.fix(OffsetDateTime.parse("2026-10-03T04:00:10+09:00"));
 
     invoiceAutoFinalizationService.run();
 
@@ -66,10 +66,10 @@ class InvoiceAutoFinalizeSchedulingTest {
   }
 
   @Test
-  void 정시_실행이_끝나면_수집_때_DB를_읽지_않는_미확정_지표를_다시_센다() {
+  void 예약_실행이_끝나면_수집_때_DB를_읽지_않는_미확정_지표를_다시_센다() {
     UUID organizationId = organizationWithBilledCustomer("active", "2000000000000000000");
     invoiceFinalizationMetrics.refresh();
-    testClock.fix(OffsetDateTime.parse("2026-10-01T16:00:10+09:00"));
+    testClock.fix(OffsetDateTime.parse("2026-10-04T04:00:10+09:00"));
 
     invoiceAutoFinalizationService.run();
 
@@ -115,7 +115,7 @@ class InvoiceAutoFinalizeSchedulingTest {
   private UUID organizationWithBilledCustomer(String status, String token) {
     UUID organizationId =
         jdbcTemplate.queryForObject(
-            "INSERT INTO organization (name, status) VALUES ('정시 도입사', ?) RETURNING id",
+            "INSERT INTO organization (name, status) VALUES ('예약 실행 도입사', ?) RETURNING id",
             UUID.class,
             status);
     jdbcTemplate.update(

@@ -17,10 +17,10 @@ export interface Collected<T> {
   complete: boolean;
 }
 
-// 서버는 그 달에 발생한 이벤트 중 다음 달 1일 13:00 KST 전에 받은 것만 집계하고 청구한다.
+// 서버는 그 달에 발생한 이벤트 중 다음 달 2일 00:00 KST 전에 받은 것만 집계하고 청구한다.
 export function usageCutoffOf(month: string): Date {
   const [year, value] = month.split("-").map(Number);
-  return new Date(Date.UTC(year, value, 1, 13) - KST_OFFSET_MS);
+  return new Date(Date.UTC(year, value, 2) - KST_OFFSET_MS);
 }
 
 export function formatKst(instant: Date): string {
