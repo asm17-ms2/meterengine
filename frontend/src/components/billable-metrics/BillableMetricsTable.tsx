@@ -16,7 +16,7 @@ import type { ListCapabilities } from "@/lib/api/capabilities";
 import type { ListQuery } from "@/lib/list-query";
 import { metricAggregationLabel, metricCalculationFormula } from "@/lib/billable-metric-calculation";
 
-const MIN_WIDTH = 1340;
+const MIN_WIDTH = 1080;
 
 function DimensionPropertyTags({
   dimensionProperties,
@@ -62,7 +62,7 @@ export function BillableMetricsTable({
     {
       key: "code",
       title: "코드",
-      width: 195,
+      width: 165,
       ellipsis: true,
       sortKey: "code",
       clientSorter: (left, right) => koreanCompare(left.code, right.code),
@@ -75,7 +75,7 @@ export function BillableMetricsTable({
     {
       key: "name",
       title: "이름",
-      width: 180,
+      width: 150,
       ellipsis: true,
       sortKey: "name",
       clientSorter: (left, right) => koreanCompare(left.name, right.name),
@@ -84,7 +84,7 @@ export function BillableMetricsTable({
     {
       key: "eventType",
       title: "이벤트 유형",
-      width: 145,
+      width: 125,
       ellipsis: true,
       sortKey: "event_type",
       clientSorter: (left, right) => koreanCompare(left.eventType, right.eventType),
@@ -97,13 +97,13 @@ export function BillableMetricsTable({
     {
       key: "aggregation",
       title: "집계 / 변환",
-      width: 240,
+      width: 175,
       render: (_, row) => <><span>{metricAggregationLabel(row.aggregation, row.percentile)}</span><p className="field-hint" style={{ overflowWrap: "anywhere" }}>{metricCalculationFormula({ aggregation: row.aggregation, target_property: row.targetProperty, percentile: row.percentile, unit_size: row.unitSize, rounding_mode: row.roundingMode, rounding_precision: row.roundingPrecision })}</p></>,
     },
     {
       key: "targetProperty",
       title: "집계 대상 속성",
-      width: 195,
+      width: 145,
       ellipsis: true,
       render: (_, row) => (
         <Typography.Text type="secondary" style={monoStyle}>
@@ -122,7 +122,7 @@ export function BillableMetricsTable({
         />
       ),
     },
-    { key: "managementStatus", title: "상태 / 적용", width: 170, render: (_, row) => <><Tag color={row.archivedAt ? "default" : "success"}>{row.archivedAt ? "보관됨" : "사용 중"}</Tag>{row.inactiveFrom && <p className="field-hint">{row.inactiveFrom}부터 집계 중단</p>}{row.isReactivationScheduled && <p className="field-hint">{row.activeFrom}부터 집계 재개</p>}</> },
+    { key: "managementStatus", title: "상태 / 적용", width: 110, render: (_, row) => <><Tag color={row.archivedAt ? "default" : "success"}>{row.archivedAt ? "보관됨" : "사용 중"}</Tag>{row.inactiveFrom && <p className="field-hint">{row.inactiveFrom}부터 집계 중단</p>}{row.isReactivationScheduled && <p className="field-hint">{row.activeFrom}부터 집계 재개</p>}</> },
     {
       key: "actions",
       title: "작업",

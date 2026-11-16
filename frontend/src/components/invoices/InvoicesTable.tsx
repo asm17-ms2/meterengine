@@ -44,6 +44,7 @@ export type InvoiceGroupView = {
 
 export type InvoiceLineView = {
   label: string;
+  isCodeLabel?: boolean;
   labelTooltip?: string;
   dimensionValues: DimensionValueMap;
   quantity: string;
@@ -173,7 +174,7 @@ export function InvoicesTable({
           return <Typography.Text type="secondary">{row.label}</Typography.Text>;
         }
         return row.isNested ? null : (
-          <MeterLabel label={row.line.label} labelTooltip={row.line.labelTooltip} />
+          <MeterLabel label={row.line.label} labelTooltip={row.line.labelTooltip} isCodeLabel={row.line.isCodeLabel} />
         );
       },
     },
