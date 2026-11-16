@@ -11,7 +11,7 @@ resource "aws_db_instance" "sut" {
   engine_version = "18.4"
   instance_class = var.db_instance_class
 
-  allocated_storage     = 20
+  allocated_storage     = var.db_allocated_storage
   max_allocated_storage = var.db_max_allocated_storage
   storage_type          = "gp3"
   storage_encrypted     = true

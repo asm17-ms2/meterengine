@@ -155,10 +155,11 @@ class LoadTargetTest(unittest.TestCase):
         self.assertEqual(prefixes, {"staging": "meterengine-staging", "production": "meterengine", "test-storage": "meterengine-test-storage",
                                     "test-sjpark-m7g": "meterengine-test-sjpark", "test-sjpark-t4g": "meterengine-test-sjpark"})
 
-    def test_production_memory_fits_the_current_server(self):
-        # 서버 메모리에 맞춘 값이다. 사양을 바꾸면 같이 바꾼다.
-        target = environment.load_target("production", ENVIRONMENTS)
-        self.assertEqual((target["backend_mem_limit"], target["backend_max_ram_percentage"]), ("768m", 50))
+    def test_service_memory_fits_the_current_server(self):
+        # 서버 메모리(t4g.medium 4GB)에 맞춘 값이다. 사양을 바꾸면 같이 바꾼다.
+        for name in ("staging", "production"):
+            target = environment.load_target(name, ENVIRONMENTS)
+            self.assertEqual((target["backend_mem_limit"], target["backend_max_ram_percentage"]), ("1536m", 50), name)
 
     def test_production_path_is_production(self):
         write_target(self.directory, "production", parameter_path="/meterengine/prod")
@@ -234,7 +235,7 @@ class PreflightTest(unittest.TestCase):
     def test_preflight_prints_shell_quoted_values(self):
         result = self.preflight('printf "%s|%s|%s|%s|%s" "$PARAM_PATH" "$SITE_ALIASES" "$COMPOSE_PROFILES" "$BACKEND_MEM_LIMIT" "$EXPECTED_DB_IDENTIFIER"')
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(result.stdout, "|".join(["/meterengine/staging", "www.one.example www.two.example", "agents", "768m", self.target["database_identifier"]]))
+        self.assertEqual(result.stdout, "|".join(["/meterengine/staging", "www.one.example www.two.example", "agents", self.target["backend_mem_limit"], self.target["database_identifier"]]))
 
     def test_preflight_prints_image_repository_prefix(self):
         result = self.preflight('printf "%s" "$IMAGE_REPOSITORY_PREFIX"')

@@ -8,7 +8,7 @@ import jakarta.validation.constraints.Pattern;
 
 public record UpdateOrganizationStatusRequest(
     @Schema(
-            description = "바꿀 상태",
+            description = "바꿀 조직 상태입니다. active가 아니면 그 조직의 업무 요청이 403 organization_not_active입니다.",
             allowableValues = {
               Organization.PENDING,
               Organization.ACTIVE,

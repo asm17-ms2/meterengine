@@ -77,11 +77,13 @@ class BillableMetricUsageServiceTest {
   }
 
   @Test
-  void 집계_마감_시각은_다음_달_1일_13시_KST다() {
+  void 집계_마감_시각은_다음_달_2일_0시_KST다() {
     assertThat(BillableMetricUsageService.cutoffAt(AUGUST))
-        .isEqualTo(OffsetDateTime.parse("2026-09-01T13:00:00+09:00"));
+        .isEqualTo(OffsetDateTime.parse("2026-09-02T00:00:00+09:00"));
     assertThat(BillableMetricUsageService.cutoffAt(YearMonth.of(2026, 12)))
-        .isEqualTo(OffsetDateTime.parse("2027-01-01T13:00:00+09:00"));
+        .isEqualTo(OffsetDateTime.parse("2027-01-02T00:00:00+09:00"));
+    assertThat(BillableMetricUsageService.cutoffAt(YearMonth.of(2027, 1)))
+        .isEqualTo(OffsetDateTime.parse("2027-02-02T00:00:00+09:00"));
   }
 
   @Test
@@ -90,7 +92,8 @@ class BillableMetricUsageServiceTest {
         .thenReturn(List.of(billableMetric("token-usage", "token")));
     when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
         .thenReturn(List.of());
-    when(billableMetricUsageRepository.aggregate(any(BillableMetric.class), any(), any(), any()))
+    when(billableMetricUsageRepository.aggregate(
+            any(BillableMetric.class), any(), any(), any(), any()))
         .thenReturn(quantities(Map.of(), Map.of()));
 
     billableMetricUsageService.aggregate(ORGANIZATION_ID, YearMonth.of(2026, 10));
@@ -100,10 +103,11 @@ class BillableMetricUsageServiceTest {
             any(BillableMetric.class),
             startCaptor.capture(),
             endCaptor.capture(),
-            receivedBeforeCaptor.capture());
+            receivedBeforeCaptor.capture(),
+            any());
     assertThat(endCaptor.getValue()).isEqualTo(OffsetDateTime.parse("2026-10-26T10:00:00+09:00"));
     assertThat(receivedBeforeCaptor.getValue())
-        .isEqualTo(OffsetDateTime.parse("2026-11-01T13:00:00+09:00"));
+        .isEqualTo(OffsetDateTime.parse("2026-11-02T00:00:00+09:00"));
   }
 
   @Test
@@ -113,7 +117,8 @@ class BillableMetricUsageServiceTest {
         .thenReturn(List.of(billableMetric("token-usage", "token")));
     when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
         .thenReturn(List.of(new Customer(customerId, ORGANIZATION_ID, "아크메", null)));
-    when(billableMetricUsageRepository.aggregate(any(BillableMetric.class), any(), any(), any()))
+    when(billableMetricUsageRepository.aggregate(
+            any(BillableMetric.class), any(), any(), any(), any()))
         .thenReturn(quantities(Map.of(), Map.of()));
 
     billableMetricUsageService.aggregate(ORGANIZATION_ID, AUGUST);
@@ -123,11 +128,12 @@ class BillableMetricUsageServiceTest {
             argThat(metric -> "token".equals(metric.getTargetProperty())),
             startCaptor.capture(),
             endCaptor.capture(),
-            receivedBeforeCaptor.capture());
+            receivedBeforeCaptor.capture(),
+            any());
     assertThat(startCaptor.getValue()).isEqualTo(OffsetDateTime.parse("2026-08-01T00:00:00+09:00"));
     assertThat(endCaptor.getValue()).isEqualTo(OffsetDateTime.parse("2026-09-01T00:00:00+09:00"));
     assertThat(receivedBeforeCaptor.getValue())
-        .isEqualTo(OffsetDateTime.parse("2026-09-01T13:00:00+09:00"));
+        .isEqualTo(OffsetDateTime.parse("2026-09-02T00:00:00+09:00"));
   }
 
   @Test
@@ -174,7 +180,8 @@ class BillableMetricUsageServiceTest {
             List.of(
                 new Customer(withEvents, ORGANIZATION_ID, "아크메", null),
                 new Customer(withoutEvents, ORGANIZATION_ID, "베타", null)));
-    when(billableMetricUsageRepository.aggregate(any(BillableMetric.class), any(), any(), any()))
+    when(billableMetricUsageRepository.aggregate(
+            any(BillableMetric.class), any(), any(), any(), any()))
         .thenReturn(
             quantities(
                 Map.of(withEvents, baseDimensionUsage("1200")),
@@ -199,7 +206,8 @@ class BillableMetricUsageServiceTest {
         .thenReturn(List.of(billableMetric("token-usage", "token")));
     when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
         .thenReturn(List.of(new Customer(customerId, ORGANIZATION_ID, "아크메", null)));
-    when(billableMetricUsageRepository.aggregate(any(BillableMetric.class), any(), any(), any()))
+    when(billableMetricUsageRepository.aggregate(
+            any(BillableMetric.class), any(), any(), any(), any()))
         .thenReturn(
             quantities(
                 Map.of(customerId, baseDimensionUsage("800")),
@@ -225,12 +233,12 @@ class BillableMetricUsageServiceTest {
         .thenReturn(List.of(tokens, requests));
     when(customerRepository.findByOrganizationIdOrderByNameAscIdAsc(ORGANIZATION_ID))
         .thenReturn(List.of(new Customer(customerId, ORGANIZATION_ID, "아크메", null)));
-    when(billableMetricUsageRepository.aggregate(eq(tokens), any(), any(), any()))
+    when(billableMetricUsageRepository.aggregate(eq(tokens), any(), any(), any(), any()))
         .thenReturn(
             quantities(
                 Map.of(customerId, baseDimensionUsage("1200")),
                 Map.of(customerId, List.of(baseDimensionUsage("1200")))));
-    when(billableMetricUsageRepository.aggregate(eq(requests), any(), any(), any()))
+    when(billableMetricUsageRepository.aggregate(eq(requests), any(), any(), any(), any()))
         .thenReturn(
             quantities(
                 Map.of(customerId, baseDimensionUsage("7")),
@@ -279,7 +287,7 @@ class BillableMetricUsageServiceTest {
         .hasMessageContaining("api-calls")
         .hasMessageContaining("COUNT");
 
-    verify(billableMetricUsageRepository, never()).aggregate(any(), any(), any(), any());
+    verify(billableMetricUsageRepository, never()).aggregate(any(), any(), any(), any(), any());
   }
 
   @Test
@@ -302,7 +310,7 @@ class BillableMetricUsageServiceTest {
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("target_property");
 
-    verify(billableMetricUsageRepository, never()).aggregate(any(), any(), any(), any());
+    verify(billableMetricUsageRepository, never()).aggregate(any(), any(), any(), any(), any());
   }
 
   private static BillableMetricUsageRepository.AggregatedQuantities quantities(

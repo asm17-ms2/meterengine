@@ -41,6 +41,7 @@ import org.springframework.web.bind.annotation.RestController;
 @EnvironmentReady
 @RequestMapping("/v1/webhook-endpoints")
 public class WebhookEndpointController {
+  private static final String ENDPOINT_ID = "웹훅 URL ID(UUID)";
   private final WebhookEndpointService webhookEndpointService;
   private final WebhookDeliveryService webhookDeliveryService;
 
@@ -53,11 +54,12 @@ public class WebhookEndpointController {
 
   @GetMapping
   @ReadAccess
-  @Operation(summary = "웹훅 엔드포인트 목록 조회")
+  @Operation(summary = "웹훅 URL 목록 조회", description = "현재 업무 환경의 웹훅 URL을 등록한 순서대로 돌려줍니다.")
   public ListWebhookEndpointsResponse listWebhookEndpoints(
       @CurrentOrganizationId UUID organizationId,
       @Parameter(
-              description = "보관 상태. 생략하면 active",
+              description =
+                  "보관 상태입니다. active(보관하지 않음), archived(보관함), all 가운데 하나이며 생략하면 active입니다.",
               schema =
                   @Schema(
                       allowableValues = {"active", "archived", "all"},
@@ -70,9 +72,10 @@ public class WebhookEndpointController {
 
   @GetMapping("/{id}")
   @ReadAccess
-  @Operation(summary = "웹훅 엔드포인트 조회")
+  @Operation(summary = "웹훅 URL 조회", description = "보관한 웹훅 URL도 조회됩니다. 웹훅 시크릿은 싣지 않습니다.")
   public WebhookEndpointResponse getWebhookEndpoint(
-      @CurrentOrganizationId UUID organizationId, @PathVariable UUID id) {
+      @CurrentOrganizationId UUID organizationId,
+      @Parameter(description = ENDPOINT_ID) @PathVariable UUID id) {
     return webhookEndpointService.get(organizationId, id);
   }
 
@@ -80,8 +83,9 @@ public class WebhookEndpointController {
   @AdminAccess
   @ResponseStatus(HttpStatus.CREATED)
   @Operation(
-      summary = "웹훅 엔드포인트 등록",
-      description = "서명 비밀값은 이 응답에서만 한 번 돌려준다. 등록 한도는 조직의 환경마다 10개다. 운영에서는 HTTPS와 공개 주소만 허용한다.")
+      summary = "웹훅 URL 등록",
+      description =
+          "웹훅 시크릿은 이 응답에서만 한 번 돌려줍니다. 보관하지 않은 웹훅 URL은 업무 환경마다 10개까지 등록할 수 있습니다. HTTPS이고 공개된 주소만 받습니다.")
   public WebhookEndpointResponse createWebhookEndpoint(
       @CurrentOrganizationId UUID organizationId,
       @Valid @RequestBody CreateWebhookEndpointRequest request) {
@@ -90,20 +94,22 @@ public class WebhookEndpointController {
 
   @PutMapping("/{id}")
   @AdminAccess
-  @Operation(summary = "웹훅 엔드포인트 수정")
+  @Operation(
+      summary = "웹훅 URL 수정",
+      description = "url, event_types, enabled, description을 모두 보내 한꺼번에 바꿉니다.")
   @ApiResponses({
-    @ApiResponse(responseCode = "200", description = "바뀐 엔드포인트"),
+    @ApiResponse(responseCode = "200", description = "바꾼 웹훅 URL"),
     @ApiResponse(
         responseCode = "409",
         content =
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=resource_archived: 보관한 엔드포인트다. 복원한 뒤 고친다")
+        description = "code=resource_archived: 보관한 웹훅 URL입니다. 복원한 뒤 고치세요.")
   })
   public WebhookEndpointResponse updateWebhookEndpoint(
       @CurrentOrganizationId UUID organizationId,
-      @PathVariable UUID id,
+      @Parameter(description = ENDPOINT_ID) @PathVariable UUID id,
       @Valid @RequestBody UpdateWebhookEndpointRequest request) {
     return webhookEndpointService.update(organizationId, id, request);
   }
@@ -112,11 +118,12 @@ public class WebhookEndpointController {
   @AdminAccess
   @ResponseStatus(HttpStatus.NO_CONTENT)
   @Operation(
-      summary = "웹훅 엔드포인트 보관",
+      summary = "웹훅 URL 보관",
       description =
-          "발송을 중지하고 비활성으로 보관한다. 기본 목록에서는 빠지지만 GET /v1/webhook-endpoints/{id}와 status=archived 목록으로 조회된다. 과거 전송 기록은 보존한다. 반복 요청은 204다.")
+          "발송을 멈추고 꺼진 상태로 보관합니다. 기본 목록에서는 빠지지만 GET /v1/webhook-endpoints/{id}와 status=archived 목록으로 조회됩니다. 지난 전송 기록은 남깁니다. 이미 보관한 웹훅 URL에 다시 요청해도 204입니다.")
   public void deleteWebhookEndpoint(
-      @CurrentOrganizationId UUID organizationId, @PathVariable UUID id) {
+      @CurrentOrganizationId UUID organizationId,
+      @Parameter(description = ENDPOINT_ID) @PathVariable UUID id) {
     webhookEndpointService.delete(organizationId, id);
   }
 
@@ -124,22 +131,26 @@ public class WebhookEndpointController {
   @AdminAccess
   @ResponseStatus(HttpStatus.ACCEPTED)
   @Operation(
-      summary = "웹훅 시험 이벤트 발행",
-      description = "선택한 엔드포인트에 webhook_test를 발송 대기 상태로 만든다. 수신 여부는 전송 기록에서 확인한다.")
+      summary = "테스트 웹훅 보내기",
+      description =
+          "경로의 웹훅 URL로 테스트 웹훅(webhook_test)을 보냅니다. 받을 웹훅에 webhook_test를 고르지 않았어도 보냅니다. 테스트 웹훅을 보내도록 예약하고 바로 webhook_event_id를 돌려주며, 받았는지는 전송 기록에서 확인합니다. 꺼 둔 웹훅 URL이면 409 webhook_endpoint_disabled입니다.")
   public Map<String, UUID> testWebhookEndpoint(
-      @CurrentOrganizationId UUID organizationId, @PathVariable UUID id) {
+      @CurrentOrganizationId UUID organizationId,
+      @Parameter(description = ENDPOINT_ID) @PathVariable UUID id) {
     return Map.of("webhook_event_id", webhookEndpointService.test(organizationId, id));
   }
 
   @GetMapping("/{id}/deliveries")
   @ReadAccess
-  @Operation(summary = "웹훅 전송 기록 조회")
+  @Operation(summary = "웹훅 전송 기록 조회", description = "이 웹훅 URL의 전송을 최신순으로 돌려줍니다. 전송마다 시도 기록을 싣습니다.")
   public ListWebhookDeliveriesResponse listWebhookDeliveries(
       @CurrentOrganizationId UUID organizationId,
-      @PathVariable UUID id,
-      @RequestParam(defaultValue = "0") @Min(0) int page,
-      @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
-      @RequestParam(required = false) @Pattern(regexp = "pending|done|failed") @StorableText
+      @Parameter(description = ENDPOINT_ID) @PathVariable UUID id,
+      @Parameter(description = "0부터 세는 페이지 번호") @RequestParam(defaultValue = "0") @Min(0) int page,
+      @Parameter(description = "한 페이지에 담을 개수") @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size,
+      @Parameter(description = "이 전송 상태만 봅니다. pending(보내는 중), done(성공), failed(실패) 가운데 하나입니다.")
+          @RequestParam(required = false)
+          @Pattern(regexp = "pending|done|failed") @StorableText
           String status) {
     return webhookDeliveryService.list(organizationId, id, status, page, size);
   }
@@ -149,9 +160,10 @@ public class WebhookEndpointController {
   @ResponseStatus(HttpStatus.ACCEPTED)
   @Operation(
       summary = "실패한 웹훅 전송 재시도",
-      description = "실패한 전송을 같은 webhook-id로 다시 대기시킨다. 엔드포인트가 활성 상태여야 한다. 이전 시도 이력은 보존한다.")
+      description =
+          "실패한 전송을 같은 webhook-id로 다시 보내도록 예약하고 바로 202로 답합니다. 웹훅 URL이 켜져 있어야 합니다. 시도 수는 처음부터 다시 세고, 이전 시도 기록은 남깁니다.")
   @ApiResponses({
-    @ApiResponse(responseCode = "202", description = "다시 대기시켰다. 본문 없음"),
+    @ApiResponse(responseCode = "202", description = "다시 보내도록 예약했습니다. 본문 없음"),
     @ApiResponse(
         responseCode = "404",
         content =
@@ -160,8 +172,8 @@ public class WebhookEndpointController {
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
             """
-            code=webhook_endpoint_not_found: 그런 엔드포인트가 없다.
-            code=webhook_delivery_not_found: 그 엔드포인트에 그런 전송이 없다.
+            code=webhook_endpoint_not_found: 그런 웹훅 URL이 없습니다.
+            code=webhook_delivery_not_found: 그 웹훅 URL에 그런 전송이 없습니다.
             """),
     @ApiResponse(
         responseCode = "409",
@@ -169,20 +181,24 @@ public class WebhookEndpointController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=webhook_delivery_not_retryable: 전송이 failed가 아니거나, 엔드포인트가 비활성이거나 삭제됐다.")
+        description =
+            "code=webhook_delivery_not_retryable: 전송이 failed가 아니거나, 웹훅 URL이 꺼져 있거나 보관됐습니다.")
   })
   public void retryWebhookDelivery(
       @CurrentOrganizationId UUID organizationId,
-      @PathVariable UUID id,
-      @PathVariable("delivery_id") UUID deliveryId) {
+      @Parameter(description = ENDPOINT_ID) @PathVariable UUID id,
+      @Parameter(description = "다시 보낼 전송 ID(UUID)") @PathVariable("delivery_id") UUID deliveryId) {
     webhookDeliveryService.retry(organizationId, id, deliveryId);
   }
 
   @PostMapping("/{id}/restorations")
   @AdminAccess
-  @Operation(summary = "웹훅 엔드포인트 복원", description = "비활성 상태로 복원한다. 주소와 등록 한도를 확인하며 과거 전송 기록을 유지한다.")
+  @Operation(
+      summary = "웹훅 URL 복원",
+      description = "꺼진 상태로 복원합니다. 주소와 등록 한도를 다시 확인하며 지난 전송 기록은 남깁니다. 보관하지 않은 웹훅 URL이면 그대로 돌려줍니다.")
   public WebhookEndpointResponse restoreWebhookEndpoint(
-      @CurrentOrganizationId UUID organizationId, @PathVariable UUID id) {
+      @CurrentOrganizationId UUID organizationId,
+      @Parameter(description = ENDPOINT_ID) @PathVariable UUID id) {
     return webhookEndpointService.restore(organizationId, id);
   }
 }

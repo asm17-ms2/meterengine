@@ -95,7 +95,7 @@ run "service_is_protected" {
   }
   variables {
     db_identifier             = "meterengine-staging-db"
-    db_instance_class         = "db.t4g.small"
+    db_instance_class         = "db.t4g.medium"
     db_subnet_group_name      = "meterengine-rds-subnet-private"
     rds_security_group_ids    = ["sg-22222222222222222"]
     rds_initial_database_name = "meterengine_app"
@@ -107,7 +107,7 @@ run "service_is_protected" {
     final_snapshot_identifier = "meterengine-staging-final"
   }
   assert {
-    condition     = aws_db_instance.app.instance_class == "db.t4g.small"
+    condition     = aws_db_instance.app.instance_class == "db.t4g.medium"
     error_message = "Staging database must use the approved t4g class."
   }
   assert {

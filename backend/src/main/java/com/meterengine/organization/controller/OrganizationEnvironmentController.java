@@ -25,7 +25,12 @@ public class OrganizationEnvironmentController {
 
   @GetMapping
   @ReadAccess
-  @Operation(summary = "조직의 테스트와 라이브 환경 조회", description = "기존 미분류 데이터는 두 환경에 복사하거나 귀속시키지 않는다.")
+  @Operation(
+      summary = "조직의 테스트 환경과 라이브 환경 조회",
+      description =
+          "조직의 테스트 환경과 라이브 환경을 id와 mode로 돌려줍니다. 테스트 환경이 먼저입니다. 라이브 환경이 잠겨 있어도 두 환경을"
+              + " 모두 돌려주며, 잠겼는지는 GET /v1/organization의 live_environment_opened_at으로 봅니다. 기존 데이터는 두"
+              + " 환경에 복사하거나 귀속시키지 않습니다.")
   public ListOrganizationEnvironmentsResponse listOrganizationEnvironments(
       @CurrentOrganizationId UUID organizationId) {
     return new ListOrganizationEnvironmentsResponse(

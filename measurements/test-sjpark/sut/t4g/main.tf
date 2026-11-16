@@ -3,7 +3,7 @@ module "sut" {
 
   environment       = "test-sjpark-t4g"
   instance_type     = "t4g.medium"
-  db_instance_class = "db.t4g.small"
+  db_instance_class = "db.t4g.medium"
   # 전환 1단계에서 만든 스냅샷 이름이 다르면 두 루트를 같이 고친다.
   snapshot_identifier = "meterengine-production-to-test-sjpark-261109"
 

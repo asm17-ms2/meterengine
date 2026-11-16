@@ -14,7 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-// 수집 때 DB를 읽지 않도록 기동 때와 매 정시 실행 뒤에 센 값을 낸다. 정시 슬롯을 놓친 인스턴스는 한 시간 늦을 수 있다.
+// 수집 때 DB를 읽지 않도록 기동 때와 매일 04:00 실행 뒤에 센 값을 낸다. 그 실행을 놓친 인스턴스는 하루 늦을 수 있다.
 @Component
 public class InvoiceFinalizationMetrics {
 

@@ -193,6 +193,7 @@ function toBillingUnpricedUsageView(
 function toBillingLineView(line: DraftInvoiceLine): BillingLineView {
   return {
     label: line.line_type === "base_fee" ? "기본료" : line.line_type === "minimum_adjustment" ? "최소 사용료 조정" : line.line_type === "graduated_tier" ? `${line.billable_metric_code} / 구간 ${(line.tier_index ?? 0) + 1}` : line.line_type === "volume" ? `${line.billable_metric_code} / 총량 단가` : line.billable_metric_code ?? "사용료",
+    isCodeLabel: line.line_type !== "base_fee" && line.line_type !== "minimum_adjustment",
     labelTooltip: formatTargetPropertyTooltip(line.target_property),
     dimensionValues: line.dimension_values,
     quantity: formatDecimal(line.quantity),

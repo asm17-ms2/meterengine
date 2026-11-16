@@ -349,6 +349,7 @@ export type BillableMetricResponse = BillableMetricCalculation & {
   code: string; name: string; event_type: string; target_property: string | null;
   dimension_properties: string[]; archived_at: string | null; version?: number;
 };
+export type ListBillableMetricsResponse = { billable_metrics: BillableMetricResponse[] };
 export type CustomerSearchItem = CustomerResponse & { version: number };
 export type CustomerUsageSearchItem = { customer_id: string; customer_name: string; metrics: BillableMetricUsageResponse[] };
 export type InvoiceSearchItem = { invoice: InvoiceResponse; payment: InvoicePaymentResponse };

@@ -3,7 +3,6 @@ import { CsvDownload } from "@/components/screen/CsvDownload";
 import { DataMonths } from "@/components/screen/DataMonths";
 import { Suspense } from "react";
 import { ScopedLink as Link } from "@/components/workspace/ScopedLink";
-import { UsageQuality } from "@/components/workspace/UsageQuality";
 
 import { CutoffStamp } from "@/components/screen/CutoffStamp";
 import { FilterBar } from "@/components/screen/FilterBar";
@@ -11,7 +10,7 @@ import { ListControlsLoader } from "@/components/screen/ListControlsLoader";
 import { QueryStamp } from "@/components/screen/QueryStamp";
 import { ScreenCard } from "@/components/screen/ScreenCard";
 import { ScreenHeader } from "@/components/screen/ScreenHeader";
-import { TableSkeleton } from "@/components/screen/TableSkeleton";
+import { AggregateLoading } from "@/components/screen/AggregateLoading";
 import { CollapseProvider } from "@/components/table/CollapseProvider";
 import { ExpandControls } from "@/components/table/ExpandControls";
 import { UsageMeta } from "@/components/usage/UsageMeta";
@@ -20,6 +19,7 @@ import { CAPABILITIES } from "@/lib/api/capabilities";
 import { aggregateBillableMetricUsages } from "@/lib/api/usage";
 import { formatKoreanMonth, formatKstStamp } from "@/lib/format";
 import { readListQuery } from "@/lib/list-query";
+import { searchKey } from "@/lib/search-key";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -35,6 +35,7 @@ export default async function UsagePage({
   const params = await searchParams;
   const query = readListQuery(params, USAGE_CAPABILITIES, { hasMonth: true });
   const { month, devState } = query;
+  const loadingKey = searchKey(params);
   const now = new Date();
 
   const usage =
@@ -44,12 +45,11 @@ export default async function UsagePage({
     <CollapseProvider>
       <ScreenHeader title={`사용량 집계 - ${formatKoreanMonth(month)}`}>
         {usage ? (
-          <Suspense fallback={null}>
+          <Suspense key={loadingKey} fallback={null}>
             <UsageMeta usage={usage} />
           </Suspense>
         ) : null}
       </ScreenHeader>
-      <Suspense fallback={<p role="status" className="field-hint">수집 진단을 불러오는 중이에요.</p>}><UsageQuality selectedMonth={month} /></Suspense>
 
       <ScreenCard>
         <FilterBar
@@ -76,11 +76,11 @@ export default async function UsagePage({
         <Suspense fallback={null}><DataMonths filterForm="resource-search-usage" resource="usage" pathname="/usage" query={query} /></Suspense>
 
         {usage ? (
-          <Suspense fallback={<TableSkeleton />}>
+          <Suspense key={loadingKey} fallback={<AggregateLoading title="사용량을 집계하는 중이에요" />}>
             <UsageSection usage={usage} query={query} />
           </Suspense>
         ) : (
-          <TableSkeleton />
+          <AggregateLoading title="사용량을 집계하는 중이에요" />
         )}
       </ScreenCard>
       <p className="field-hint">이 달의 청구 금액은 <Link inheritFilters href="/billing">청구 검토</Link>에서 확인하세요.</p>

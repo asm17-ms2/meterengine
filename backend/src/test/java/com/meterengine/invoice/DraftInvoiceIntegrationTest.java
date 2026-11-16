@@ -284,7 +284,7 @@ class DraftInvoiceIntegrationTest {
   }
 
   @Test
-  void 마감이_지난_달은_13시_정각에_받은_그_달_이벤트를_금액에_넣지_않는다() {
+  void 마감이_지난_달은_다음_달_2일_0시_정각에_받은_그_달_이벤트를_금액에_넣지_않는다() {
     UUID organizationId = organizationWithTokenBillableMetric();
     UUID acme = insertCustomer(organizationId, "아크메");
     TestEvents.insertToken(
@@ -294,7 +294,7 @@ class DraftInvoiceIntegrationTest {
         acme,
         500,
         "2026-09-30T10:00:00+09:00",
-        "2026-10-01T12:59:59+09:00");
+        "2026-10-01T23:59:59+09:00");
     TestEvents.insertToken(
         jdbcTemplate,
         organizationId,
@@ -302,7 +302,7 @@ class DraftInvoiceIntegrationTest {
         acme,
         700,
         "2026-09-30T11:00:00+09:00",
-        "2026-10-01T13:00:00+09:00");
+        "2026-10-02T00:00:00+09:00");
 
     MvcTestResult result = get(organizationId, "2026-09");
 

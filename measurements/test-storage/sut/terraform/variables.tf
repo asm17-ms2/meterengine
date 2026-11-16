@@ -28,8 +28,19 @@ variable "asg_min_size" {
   default     = 0
 
   validation {
-    condition     = var.asg_min_size >= 0 && var.asg_min_size <= 3
-    error_message = "asg_min_size는 0에서 3 사이여야 한다. 최대 대수가 3이다."
+    condition     = var.asg_min_size >= 0 && var.asg_min_size <= var.asg_max_size
+    error_message = "asg_min_size는 0에서 asg_max_size 사이여야 한다."
+  }
+}
+
+variable "asg_max_size" {
+  description = "ASG 최대 대수. 한 대가 받는 양을 넘겨 재는 날에만 -var로 올린다(초당 10,000건은 8대쯤)"
+  type        = number
+  default     = 3
+
+  validation {
+    condition     = var.asg_max_size >= 1 && var.asg_max_size <= 20
+    error_message = "asg_max_size는 1에서 20 사이여야 한다."
   }
 }
 
@@ -45,8 +56,14 @@ variable "ami_id" {
   default     = "ami-02b68e7eb6b798d63"
 }
 
+variable "db_allocated_storage" {
+  description = "SUT RDS 디스크(GB). 초당 10,000건이면 시간당 약 17GB가 쌓이고, 자동 확장은 한 번 늘리면 6시간 동안 다시 못 늘려 실험 중에는 믿지 못한다. 많이 넣는 날에는 켜기 전에 -var로 올린다. 줄일 수는 없어서 되돌리려면 DB를 새로 만든다(-replace)"
+  type        = number
+  default     = 20
+}
+
 variable "db_max_allocated_storage" {
-  description = "SUT RDS 스토리지 자동 확장 상한(GB)"
+  description = "SUT RDS 스토리지 자동 확장 상한(GB). 디스크보다 커야 자동 확장이 켜진다"
   type        = number
   default     = 100
 }

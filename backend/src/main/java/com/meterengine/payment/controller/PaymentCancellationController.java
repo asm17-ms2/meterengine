@@ -45,17 +45,20 @@ public class PaymentCancellationController {
       summary = "결제 취소 요청",
       description =
           """
-          done인 결제 시도의 금액 전부나 일부를 토스페이먼츠에 취소 요청한다. amount를 빼면 남은 결제 금액 전부를 취소한다.
-          남은 결제 금액은 시도 금액에서 done인 취소의 합을 뺀 값이다. 시도의 결제 모드 키로 토스페이먼츠를 부른다.
-          취소되면 status=done, 거절되면 status=failed와 failure_code, failure_message가 남고 둘 다 201이다.
-          토스페이먼츠 응답으로 결과를 확인하지 못하면 status=pending인 취소를 201로 돌려준다.
-          시도 하나에 pending인 취소는 하나뿐이다. 있으면 409다. API 키의 모드가 취소 대상과 다르면 409다.
-          Idempotency-Key를 주면 같은 조직과 환경의 같은 요청을 다시 보내도 그 취소를 지금 상태로 201로 돌려준다. 같은 키로 다른 시도, 금액, 사유를 보내면 409다.
-          이 키는 고객과 미터 등록의 Idempotency-Key와 계약이 다르다. UUID만 받고, 충돌 code는 payment_cancellation_idempotency_conflict이며, 다시 돌려준 응답에 Idempotency-Replayed 헤더를 붙이지 않는다.
-          requested_at과 completed_at은 KST(+09:00)로 나온다.
+          done인 결제 시도의 금액 전부나 일부를 토스페이먼츠에 취소 요청합니다. amount를 빼면 남은 결제 금액 전부를 취소합니다.
+          남은 결제 금액은 시도 금액에서 done인 취소의 합을 뺀 값입니다. 시도의 결제 모드에 저장한 토스페이먼츠 키로 토스페이먼츠를 부릅니다.
+          취소되면 status=done, 거절되면 status=failed와 failure_code, failure_message가 남고 둘 다 201입니다.
+          토스페이먼츠 응답으로 결과를 확인하지 못하면 status=pending인 취소를 201로 돌려줍니다.
+          시도 하나에 pending인 취소는 하나뿐입니다. 있으면 409입니다. 테스트 키인지 라이브 키인지가 취소 대상의 결제 모드와 다르면 409입니다.
+          Idempotency-Key를 주면 같은 조직과 업무 환경의 같은 요청을 다시 보내도 그 취소를 지금 상태로 201로 돌려줍니다. 같은 키로 다른 시도, 금액, 사유를 보내면 409입니다.
+          이 키는 고객과 미터 등록의 Idempotency-Key와 규칙이 다릅니다. UUID만 받고, 충돌 code는 payment_cancellation_idempotency_conflict이며, 다시 돌려준 응답에 Idempotency-Replayed 헤더를 붙이지 않습니다.
+          requested_at과 completed_at은 KST(+09:00)로 나옵니다.
+          payments 권한이 필요합니다. admin 권한만으로는 부를 수 없습니다.
           """)
   @ApiResponses({
-    @ApiResponse(responseCode = "201", description = "결제 취소. status는 done, failed, pending 중 하나"),
+    @ApiResponse(
+        responseCode = "201",
+        description = "결제 취소입니다. status는 done, failed, pending 중 하나입니다."),
     @ApiResponse(
         responseCode = "400",
         content =
@@ -64,8 +67,8 @@ public class PaymentCancellationController {
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
             """
-            code=validation_error: 경로의 id나 Idempotency-Key가 UUID가 아니거나, amount가 양수가 아니거나, reason이 비었거나 200자를 넘거나 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있다.
-            code=malformed_request_body: 본문을 JSON으로 읽을 수 없거나 amount가 정수가 아니다.
+            code=validation_error: 경로의 id나 Idempotency-Key가 UUID가 아니거나, amount가 양수가 아니거나, reason이 비었거나 200자를 넘거나 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있습니다.
+            code=malformed_request_body: 본문을 JSON으로 읽을 수 없거나 amount가 정수가 아닙니다.
             """),
     @ApiResponse(
         responseCode = "404",
@@ -73,7 +76,7 @@ public class PaymentCancellationController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=payment_attempt_not_found: 그런 결제 시도가 없다"),
+        description = "code=payment_attempt_not_found: 그런 결제 시도가 없습니다."),
     @ApiResponse(
         responseCode = "409",
         content =
@@ -82,19 +85,19 @@ public class PaymentCancellationController {
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
             """
-            code=payment_mode_mismatch: API 키의 모드가 취소 대상의 모드와 다르다.
-            code=payment_attempt_not_cancelable: 시도가 done이 아니다.
-            code=payment_attempt_fully_canceled: done인 시도를 이미 전액 취소해 남은 결제 금액이 0원이다.
-            code=payment_cancellation_in_progress: 이 시도에 pending인 취소가 있다.
-            code=payment_cancellation_amount_exceeded: amount가 남은 결제 금액보다 크다.
-            code=payment_cancellation_idempotency_conflict: 같은 Idempotency-Key를 다른 취소 요청에 사용했다.
+            code=payment_mode_mismatch: 테스트 키인지 라이브 키인지가 취소 대상의 결제 모드와 다릅니다.
+            code=payment_attempt_not_cancelable: 시도가 done이 아닙니다.
+            code=payment_attempt_fully_canceled: done인 시도를 이미 전액 취소해 남은 결제 금액이 0원입니다.
+            code=payment_cancellation_in_progress: 이 시도에 pending인 취소가 있습니다.
+            code=payment_cancellation_amount_exceeded: amount가 남은 결제 금액보다 큽니다.
+            code=payment_cancellation_idempotency_conflict: 같은 Idempotency-Key를 다른 취소 요청에 썼습니다.
             """)
   })
   public PaymentCancellationResponse createPaymentCancellation(
       @CurrentOrganizationId UUID organizationId,
       @AuthenticationPrincipal AuthenticatedPrincipal principal,
-      @Parameter(description = "취소할 결제 시도의 id.") @PathVariable UUID id,
-      @Parameter(description = "취소 요청마다 발급한 UUID. 응답을 받지 못해 다시 요청할 때는 같은 값을 보낸다.")
+      @Parameter(description = "취소할 결제 시도의 ID") @PathVariable UUID id,
+      @Parameter(description = "취소 요청마다 새로 만든 UUID입니다. 응답을 받지 못해 다시 요청할 때는 같은 값을 보냅니다.")
           @RequestHeader(name = "Idempotency-Key", required = false)
           UUID idempotencyKey,
       @Valid @RequestBody CreatePaymentCancellationRequest request) {
@@ -105,11 +108,11 @@ public class PaymentCancellationController {
   @GetMapping("/v1/payment-attempts/{id}/cancellations")
   @ReadAccess
   @Operation(
-      summary = "결제 취소 목록",
+      summary = "결제 취소 목록 조회",
       description =
           """
-          결제 시도의 취소를 요청 시각이 늦은 것부터 돌려준다.
-          requested_at과 completed_at은 KST(+09:00)로 나온다.
+          결제 시도의 취소를 요청 시각이 늦은 것부터 돌려줍니다.
+          requested_at과 completed_at은 KST(+09:00)로 나옵니다.
           """)
   @ApiResponses({
     @ApiResponse(responseCode = "200", description = "결제 취소 목록"),
@@ -119,18 +122,18 @@ public class PaymentCancellationController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=validation_error: 경로의 id가 UUID가 아니다"),
+        description = "code=validation_error: 경로의 id가 UUID가 아닙니다."),
     @ApiResponse(
         responseCode = "404",
         content =
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=payment_attempt_not_found: 그런 결제 시도가 없다")
+        description = "code=payment_attempt_not_found: 그런 결제 시도가 없습니다.")
   })
   public ListPaymentCancellationsResponse listPaymentCancellations(
       @CurrentOrganizationId UUID organizationId,
-      @Parameter(description = "결제 시도의 id.") @PathVariable UUID id) {
+      @Parameter(description = "취소 내역을 볼 결제 시도의 ID") @PathVariable UUID id) {
     return paymentCancellationService.list(organizationId, id);
   }
 }

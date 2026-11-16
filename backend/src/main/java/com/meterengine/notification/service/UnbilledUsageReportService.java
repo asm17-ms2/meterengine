@@ -2,6 +2,7 @@ package com.meterengine.notification.service;
 
 import com.meterengine.event.dto.UnbilledEventsResponse;
 import com.meterengine.event.service.UnbilledEventService;
+import com.meterengine.global.time.BillingMonth;
 import com.meterengine.metric.service.BillableMetricUsageService;
 import com.meterengine.pricing.dto.CustomerCharge;
 import com.meterengine.pricing.service.ChargeService;
@@ -9,6 +10,10 @@ import com.meterengine.webhook.entity.WebhookEventType;
 import com.meterengine.webhook.repository.WebhookEndpointRepository;
 import com.meterengine.webhook.service.WebhookEventService;
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -16,6 +21,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,18 +33,24 @@ public class UnbilledUsageReportService {
   private final ChargeService chargeService;
   private final WebhookEventService webhookEventService;
   private final WebhookEndpointRepository webhookEndpointRepository;
+  private final LocalTime deliveryTime;
+  private final Clock clock;
 
   UnbilledUsageReportService(
       UnbilledEventService unbilledEventService,
       BillableMetricUsageService billableMetricUsageService,
       ChargeService chargeService,
       WebhookEventService webhookEventService,
-      WebhookEndpointRepository webhookEndpointRepository) {
+      WebhookEndpointRepository webhookEndpointRepository,
+      @Value("${meterengine.notification.unbilled-usage-delivery-time:09:00}") String deliveryTime,
+      Clock clock) {
     this.unbilledEventService = unbilledEventService;
     this.billableMetricUsageService = billableMetricUsageService;
     this.chargeService = chargeService;
     this.webhookEventService = webhookEventService;
     this.webhookEndpointRepository = webhookEndpointRepository;
+    this.deliveryTime = LocalTime.parse(deliveryTime);
+    this.clock = clock;
   }
 
   @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -54,7 +66,13 @@ public class UnbilledUsageReportService {
             .map(summary -> payload(organizationId, summary))
             .flatMap(Optional::stream)
             .toList();
-    payloads.forEach(payload -> webhookEventService.publish(organizationId, type, payload));
+    OffsetDateTime deliverAt =
+        LocalDate.now(clock.withZone(BillingMonth.ZONE))
+            .atTime(deliveryTime)
+            .atZone(BillingMonth.ZONE)
+            .toOffsetDateTime();
+    payloads.forEach(
+        payload -> webhookEventService.publish(organizationId, type, payload, null, deliverAt));
     return !payloads.isEmpty();
   }
 

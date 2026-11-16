@@ -7,6 +7,6 @@
   "site_aliases": ["www.meterengine.com"],
   "compose_profiles": ["agents"],
   "image_repository_prefix": "meterengine",
-  "backend_mem_limit": "768m",
+  "backend_mem_limit": "1536m",
   "backend_max_ram_percentage": 50
 }

@@ -22,7 +22,7 @@ import com.meterengine.scheduling.service.ScheduledJobRunService;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
-import java.time.temporal.ChronoUnit;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -85,7 +85,7 @@ public class DraftInvoiceService {
         draftInvoiceCustomers);
   }
 
-  // 확정 시각 전이면 그 시각이다. 지났으면 요청한 환경에서 그 달을 아직 다 훑지 않았거나 실패가 남았을 때만 다음 정시다.
+  // 확정 시각 전이면 그 시각이다. 지났으면 요청한 환경에서 그 달을 아직 다 훑지 않았거나 실패가 남았을 때만 다음 실행 시각이다.
   private AutoFinalize autoFinalize(UUID organizationId, YearMonth month, OffsetDateTime now) {
     if (!invoiceAutoFinalizeProperties.enabled()) {
       return new AutoFinalize(false, null, false);
@@ -107,19 +107,19 @@ public class DraftInvoiceService {
     if (!coveredMonth) {
       return new AutoFinalize(true, null, false);
     }
-    OffsetDateTime nextHour = now.truncatedTo(ChronoUnit.HOURS).plusHours(1);
+    OffsetDateTime nextRunAt = InvoiceAutoFinalizationService.nextRunAt(now);
     if (!invoiceFinalizationAttemptRepository.existsSweptPeriod(
         organizationId, environmentId, month.toString())) {
       return new AutoFinalize(
           true,
-          nextHour,
+          nextRunAt,
           scheduledJobRunService.isRunning(InvoiceAutoFinalizationService.JOB_NAME));
     }
     return new AutoFinalize(
         true,
         invoiceFinalizationAttemptRepository.existsOpenFailure(
                 organizationId, environmentId, month.toString())
-            ? nextHour
+            ? nextRunAt
             : null,
         false);
   }
@@ -128,6 +128,16 @@ public class DraftInvoiceService {
   @Transactional(readOnly = true)
   public List<DraftInvoiceCustomer> calculate(
       UUID organizationId, YearMonth month, OffsetDateTime receivedBefore) {
+    return calculate(organizationId, month, receivedBefore, null);
+  }
+
+  // customerIds가 있으면 그 고객들의 이벤트만 집계해 그 고객들만 돌려준다.
+  @Transactional(readOnly = true)
+  public List<DraftInvoiceCustomer> calculate(
+      UUID organizationId,
+      YearMonth month,
+      OffsetDateTime receivedBefore,
+      Collection<UUID> customerIds) {
     Set<UUID> finalizedCustomerIds =
         Set.copyOf(
             (BusinessEnvironmentContext.environmentId() == null
@@ -139,14 +149,17 @@ public class DraftInvoiceService {
                 ? customerRepository.findByOrganizationIdOrderByNameAscIdAsc(organizationId)
                 : customerRepository.listScoped(
                     organizationId, BusinessEnvironmentContext.environmentId()))
-            .stream().filter(customer -> !finalizedCustomerIds.contains(customer.getId())).toList();
+            .stream()
+                .filter(customer -> customerIds == null || customerIds.contains(customer.getId()))
+                .filter(customer -> !finalizedCustomerIds.contains(customer.getId()))
+                .toList();
 
     Map<UUID, CustomerCharge> customerChargeByCustomerId =
         chargeService.calculate(
             organizationId,
             month,
             billableMetricUsageService.aggregate(
-                organizationId, month, BillingMonth.now(clock), receivedBefore));
+                organizationId, month, BillingMonth.now(clock), receivedBefore, customerIds));
 
     return organizationCustomers.stream()
         .map(

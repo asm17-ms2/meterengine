@@ -45,22 +45,22 @@ public class OrganizationController {
       summary = "조직 목록 조회",
       description =
           """
-          조직을 만든 순서로 돌려준다. status를 주면 그 상태의 조직만 돌려준다.
-          operator 로그인 세션만 부를 수 있다. 페이지를 나누지 않는다.
+          조직을 만든 순서로 돌려줍니다. status를 주면 그 상태의 조직만 돌려줍니다.
+          MeterEngine 운영자 로그인 세션만 부를 수 있습니다. 페이지를 나누지 않습니다.
           """)
   @ApiResponses({
-    @ApiResponse(responseCode = "200", description = "조직 목록. 없으면 organizations가 빈 배열이다"),
+    @ApiResponse(responseCode = "200", description = "조직 목록입니다. 없으면 organizations가 빈 배열입니다."),
     @ApiResponse(
         responseCode = "400",
         content =
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=validation_error: status가 pending, active, rejected, suspended가 아니다")
+        description = "code=validation_error: status가 pending, active, rejected, suspended가 아닙니다.")
   })
   public ListOrganizationsResponse listOrganizations(
       @Parameter(
-              description = "상태로 좁힌다. 생략하면 모든 상태다.",
+              description = "상태로 좁힙니다. 생략하면 모든 상태입니다.",
               schema =
                   @Schema(
                       allowableValues = {
@@ -81,10 +81,10 @@ public class OrganizationController {
       summary = "조직 상태 변경",
       description =
           """
-          조직의 상태를 바꾸고 바뀐 조직을 돌려준다. 승인은 active, 거절은 rejected, 정지는 suspended, 재개는 active로 보낸다.
-          허용되는 전이는 pending에서 active나 rejected, active에서 suspended, suspended에서 active뿐이다.
-          정지하면 그 조직의 키와 세션으로 조직의 데이터를 다루는 요청이 403(organization_not_active)이다.
-          operator 로그인 세션만 부를 수 있다.
+          조직의 상태를 바꾸고 바뀐 조직을 돌려줍니다. 승인은 active, 거절은 rejected, 정지는 suspended, 재개는 active로 보냅니다.
+          허용되는 전이는 pending에서 active나 rejected, active에서 suspended, suspended에서 active뿐입니다.
+          정지하면 그 조직의 키와 세션으로 조직의 데이터를 다루는 요청이 403(organization_not_active)입니다.
+          MeterEngine 운영자 로그인 세션만 부를 수 있습니다.
           """)
   @ApiResponses({
     @ApiResponse(responseCode = "200", description = "바뀐 조직"),
@@ -95,14 +95,14 @@ public class OrganizationController {
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
-            "code=validation_error: status가 pending, active, rejected, suspended가 아니거나, 경로의 UUID 형식이 틀렸다"),
+            "code=validation_error: status가 pending, active, rejected, suspended가 아니거나, 경로의 UUID 형식이 틀렸습니다."),
     @ApiResponse(
         responseCode = "404",
         content =
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=organization_not_found: 그런 조직이 없다"),
+        description = "code=organization_not_found: 그런 조직이 없습니다."),
     @ApiResponse(
         responseCode = "409",
         content =
@@ -110,7 +110,8 @@ public class OrganizationController {
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
-            "code=organization_status_transition_invalid: 지금 상태에서 그 상태로는 바꿀 수 없다. 지금과 같은 상태도 여기에 든다")
+            "code=organization_status_transition_invalid: 지금 상태에서 그 상태로는 바꿀 수 없습니다. 지금과 같은 상태도 여기에"
+                + " 듭니다.")
   })
   public OrganizationResponse updateOrganizationStatus(
       @AuthenticationPrincipal AuthenticatedPrincipal principal,

@@ -40,8 +40,8 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
 
 - 도메인: https://meterengine.com (Route 53 호스티드 존). apex, www, grafana 레코드는 ALB 별칭이고 Terraform이 관리한다. 아래 "도메인" 참조.
 - 앱 서버: 오토스케일링 그룹 `meterengine-production-app`(t4g.medium, arm64, Amazon Linux 2023, ap-northeast-2). "앱 서버 오토스케일링 그룹" 참조.
-- DB: RDS `meterengine-db` (db.t4g.small, PostgreSQL 18, 단일 AZ).
-- staging은 ALB, 오토스케일링 그룹 `meterengine-staging-app`, DB `meterengine-staging-db`(db.t4g.small)를 따로 쓴다. ALB는 인터넷에 열려 있지 않고 콘솔에서 넣은 IP만 받는다. 아래 "스테이징 접근" 참조.
+- DB: RDS `meterengine-db` (db.t4g.medium, PostgreSQL 18, 단일 AZ).
+- staging은 ALB, 오토스케일링 그룹 `meterengine-staging-app`, DB `meterengine-staging-db`(db.t4g.medium)를 따로 쓴다. ALB는 인터넷에 열려 있지 않고 콘솔에서 넣은 IP만 받는다. 아래 "스테이징 접근" 참조.
 - production과 staging은 실사용자가 없는 흐름 확인용이다. t4g 계열은 CPU 크레딧을 넘겨 쓰면 요금이 붙어, 부하 시험은 측정 환경(test-sjpark-m7g, test-sjpark-t4g, test-storage)에서만 한다.
 - 이미지: ECR `meterengine-backend`, `meterengine-frontend`(staging은 `meterengine-staging-backend`, `meterengine-staging-frontend`). 태그는 배포한 커밋의 git SHA 40자.
   - 레지스트리 `928618307647.dkr.ecr.ap-northeast-2.amazonaws.com`.
@@ -105,6 +105,7 @@ develop 머지는 staging에, main 머지는 production에 배포한다. 서버�
   - `site_aliases`는 지금 배포에서 쓰지 않는다. 별칭 리다이렉트는 ALB 규칙(Terraform)이 정한다.
   - `image_repository_prefix`: ECR 저장소 이름 앞부분. `<값>-backend`, `<값>-frontend`에서 이미지를 받는다.
   - `backend_mem_limit`: 백엔드 컨테이너의 메모리 한도. `backend_max_ram_percentage`: 그 한도 중 JVM 힙의 최대 비율(%).
+    - JVM은 힙 밖에서도 메모리를 쓴다. 한도에서 힙 최대를 뺀 값이 그보다 작으면 힙이 다 차기 전에 커널이 컨테이너를 죽인다. staging 수집 서버에서 힙 밖 사용이 평소 310MB, 요청이 밀렸을 때 410MB였다(2026-11-16).
   - `compose_profiles`: 비우거나 `agents`.
 
 ## 배포
@@ -396,7 +397,7 @@ ALB는 받은 `X-Forwarded-For` 뒤에 접속 주소를 붙이므로 맨 오른�
 | `operator-email` | String | 백엔드가 기동할 때 없으면 만드는 첫 운영자의 이메일 |
 | `operator-password` | SecureString | 첫 운영자 비밀번호. 값을 바꾸고 재배포하면 새 비밀번호가 된다 |
 | `meterengine-auth-rate-limit-login-ip-limit`, `-login-account-limit`, `-login-window`, `-signup-ip-limit`, `-signup-account-limit`, `-signup-window` | String | 선택. 로그인과 가입 한도와 구간. 없으면 compose가 백엔드 기본값(100, 10, 5m, 20, 3, 30m)을 넣는다 |
-| `invoice-auto-finalize-enabled` | String | 선택. `true`면 인보이스 자동 확정이 매시 정각에 돈다. 없으면 compose가 `false`를 넣는다. 켜면 첫 정시가 확정 시각이 지난 과거 달을 모두 확정하므로 켜기 전에 팀에 알린다 |
+| `invoice-auto-finalize-enabled` | String | 선택. `true`면 인보이스 자동 확정이 매일 04:00 KST에 돈다. 없으면 compose가 `false`를 넣는다. 켜면 다음 04:00 실행이 확정 시각이 지난 과거 달을 모두 확정하므로 켜기 전에 팀에 알린다 |
 | `ingest-warmup-api-key` | SecureString | 선택. 백엔드가 기동할 때 수집 경로를 데우는 예열 도입사의 ingest 키 원문. 없으면 예열을 건너뛴다("수집 경로 예열") |
 | `ingest-warmup-organization-id`, `ingest-warmup-customer-id` | String | 선택. 예열 도입사와 예열 고객의 id. 없으면 compose가 빈 값을 넣는다 |
 | `ingest-warmup-requests`, `ingest-warmup-time-limit` | String | 선택. 예열 요청 수와 시간 상한. 없으면 compose가 `1000`, `20s`를 넣는다. 숫자나 기간 형식이 아니면 백엔드가 뜨지 못한다. 시간 상한은 늘리지 않는다. 예열 중에는 readiness가 503이고 ALB는 15초 간격 5번 실패면 빼므로, 컨테이너가 죽고 빠르면 60초 뒤 서버가 교체된다. 스스로 다시 뜨는 데 약 23초, 상한 20초, 마지막 요청 대기 5초를 더하면 약 48초다. 상한은 예열을 시작한 때부터 재므로 다시 뜨는 데 35초를 넘기면 서버가 교체될 수 있다 |
@@ -414,6 +415,7 @@ ALB는 받은 `X-Forwarded-For` 뒤에 접속 주소를 붙이므로 맨 오른�
 | `kafka-security-protocol` | String | 선택. 브로커와 통신하는 방식. MSK는 TLS만 받으므로 `SSL`을 넣는다. 없으면 compose가 `PLAINTEXT`를 넣는다 |
 | `kafka-create-topics` | String | 선택. `true`면 백엔드가 뜰 때 없는 토픽(`event.ingest`, `event.dlq`)을 만든다. 이미 있는 토픽의 설정은 건드리지 않는다. 없으면 compose가 `false`를 넣는다 |
 | `kafka-consumer-threads`, `kafka-consumer-max-poll-records`, `kafka-consumer-session-timeout-ms` | String | 선택. 서버 한 대에서 토픽을 읽는 스레드 수, 한 번에 읽는 묶음의 최대 건수, 컨슈머 서버가 죽었을 때 그 파티션을 다른 서버에 넘기기까지 기다리는 시간(ms). 없으면 compose가 `1`, `500`, `15000`을 넣는다. 스레드는 모든 컨슈머 서버를 합쳐 파티션 수까지만 일한다 |
+| `kafka-consumer-max-records-per-second` | String | 선택. 컨슈머 서버 한 대가 초당 DB에 넣는 건수의 상한. 밀린 이벤트를 비울 때 DB의 CPU 사용률이 80%를 넘지 않게 넣는 속도를 늦춘다. 없으면 compose가 `10000`을 넣는다(컨슈머 서버 2대, db.m7g.large에서 비우는 동안 DB CPU 75%, Discussion #632). `0`이면 늦추지 않는다. 평소 받는 양보다 작으면 밀린 것이 줄지 않으므로, 컨슈머 서버가 한 대만 남아도 받는 양보다 크게 잡는다. 음수면 백엔드가 뜨지 않는다 |
 | `kafka-producer-linger-ms`, `kafka-producer-batch-size`, `kafka-producer-compression-type` | String | 선택. 수집 서버가 발행할 메시지를 모으는 시간(ms), 한 묶음의 최대 크기(바이트), 압축 방식. 없으면 compose가 `25`, `16384`, `lz4`를 넣는다 |
 | `kafka-producer-delivery-timeout-ms`, `kafka-publish-timeout` | String | 선택. 프로듀서가 재시도를 합쳐 발행 하나에 쓰는 전체 시간(ms)과 요청 스레드가 발행을 기다리는 상한. 없으면 compose가 `15000`, `20s`를 넣는다. 발행 대기가 전체 시간보다 길어야 프로듀서가 먼저 결론을 낸다 |
 | `frontend-api-key` | SecureString | 이 버전의 compose는 읽지 않는다. 옛 프론트가 백엔드를 부르던 API 키 원문이고, 옛 버전으로 되돌리는 배포가 요구해 남긴다 |
@@ -616,6 +618,7 @@ aws ssm delete-parameter --name /meterengine/<환경>/ingest-warmup-api-key
   - 대기는 healthy 수가 최소 대수와 같아야 끝난다. 확장으로 대수가 늘어난 동안 최소 대수를 바꾸면 끝나지 않으니, 원하는 대수가 최소일 때 바꾼다.
 - 확장: 서버마다 `deploy/server/cpu-metric.sh`가 10초마다 (CPU 사용률 / 원하는 대수)를 `MeterEngine/Scaling`의 `CPUUtilizationPerDesiredInstance`에 올리고, 확장 정책은 같은 칸의 합을 60%에 맞춘다. 3칸(30초) 연속 넘으면 늘린다. 서버별 평균을 쓰면 부팅 중인 서버가 빠져 대수를 부풀린다. 60은 test-storage 측정(서버 한 대가 초당 900건에 60%에서 65%)으로 잡은 추정값이다.
   - 백엔드 readiness가 200이 아니면 올리지 않고, 200이 된 뒤 1분도 올리지 않는다. 기동 직후 JIT로 튀는 CPU가 평균을 올려 한 대 더 띄우지 않게 하려는 것이다.
+  - 준비됐던 서버의 readiness가 3초 안에 답하지 않으면 그대로 올린다. 요청이 밀리면 readiness도 같은 포트에서 줄을 서는데, 이때 빼면 가장 바쁠 때 지표가 끊겨 확장이 걸리지 않는다. 연결이 거부되면(백엔드가 내려감) 올리지 않는다.
   - EC2의 `CPUUtilization`은 1분 값이라 판단에 3분이 걸려 쓰지 않는다.
 - 배포 역할이 버전 파라미터를 쓰고 롤링을 시작한다. Terraform은 버전 값과 원하는 대수를 되돌리지 않는다.
 - CD가 도는 동안 apply하지 않는다. 시작 템플릿이 바뀌는 apply는 롤링을 시작해, 배포가 시작한 롤링과 겹치면 실패한다.
@@ -738,8 +741,8 @@ staging은 지금 켜 볼 수 있다. production은 아래가 모두 끝난 뒤�
 인보이스 확정이 컨슈머를 기다리게 하는 일은 지금 하지 않고 미룬다(2026-11-14).
 
 - 컨슈머는 받은 시각을 접수 시각으로 적으므로, 마감 전에 받고 확정 뒤에 저장된 이벤트는 어느 인보이스에도 들지 않는다.
-- 자동 확정은 다음 달 1일 14:00에 돈다. 그래서 컨슈머가 월말부터 14시간 넘게 밀려 있어야 이 일이 생긴다.
-- 그보다 훨씬 먼저 이벤트 저장 멈춤, 이벤트 저장 재시도 지속, 이벤트 저장 지연 경보가 울린다("경보"). 월말에 이 경보가 울리고 있으면 1일 14:00 전에 밀린 것을 비운다.
+- 자동 확정은 다음 달 2일 04:00에 돈다. 그래서 컨슈머가 월말부터 28시간 넘게 밀려 있어야 이 일이 생긴다.
+- 그보다 훨씬 먼저 이벤트 저장 멈춤, 이벤트 저장 재시도 지속, 이벤트 저장 지연 경보가 울린다("경보"). 월말에 이 경보가 울리고 있으면 2일 04:00 전에 밀린 것을 비운다.
 
 ### 켜기
 
@@ -894,8 +897,8 @@ GitHub 로그인이 안 되면 공용 모니터링 서버의 9090을 포트 포�
 | CPU 사용률 초과 | 서버마다 5분 평균 > 80%, 10분 지속 | 처리량 한계이거나 폭주 프로세스 |
 | 예약 작업 실패 | 15분 안에 실행이 예외로 끝나거나 대상 일부가 실패 | 작업이 일을 다 끝내지 못했다. 작업 이름별로 울린다 |
 | 예약 작업 미실행 | 마지막 성공 뒤 5분(30초, 1분 주기), 30분(10분 주기), 25시간(하루 주기) | 작업이 멈췄거나 계속 실패한다. 한 번도 실행되지 않은 작업은 잡지 못한다 |
-| 인보이스 자동 확정 미실행 | 자동 확정이 2시간 넘게 성공하지 않음 | 마지막 성공이 끝난 뒤 2시간 안에 다음 성공이 없다. 정시 실행이 빠졌거나 실패했거나, 그 달 첫 훑기가 오래 걸린다. 꺼져 있으면 울리지 않는다 |
-| 인보이스 자동 확정 실패 남음 | 마지막 자동 확정 시도가 실패인 고객과 달 > 0. 기동 때와 매 정시 실행 뒤에 센다. test 환경은 뺀다 | 서버 쪽 오류로 확정하지 못한 인보이스가 남았다. 해결된 뒤에도 다음 정시 한 번은 더 울릴 수 있다. 보류(단가 없는 사용량)는 여기서 울리지 않는다 |
+| 인보이스 자동 확정 미실행 | 자동 확정이 25시간 넘게 성공하지 않음 | 마지막 성공 뒤 25시간 안에 다음 성공이 없다. 매일 04:00 실행이 빠졌거나 실패했다. 꺼져 있으면 울리지 않는다 |
+| 인보이스 자동 확정 실패 남음 | 마지막 자동 확정 시도가 실패인 고객과 달 > 0. 기동 때와 매일 04:00 실행 뒤에 센다. test 환경은 뺀다 | 서버 쪽 오류로 확정하지 못한 인보이스가 남았다. 해결된 뒤에도 다음 04:00 실행까지는 계속 울릴 수 있다. 보류(단가 없는 사용량)는 여기서 울리지 않는다 |
 | 결제 결과 모름 미해결 | 확정 작업 뒤에도 결과를 모르는 live 결제 > 0, 10분 지속 | 고객이 돈을 냈는지 모른다 |
 | 결제 재시도 소진 | 1시간 안에 재시도 상한까지 실패한 live 인보이스 > 0 | 자동 청구가 멈췄다. 고객에게 연락해야 한다 |
 | 결제 대사 불일치 | 1시간 안에 live 대사 불일치 > 0 | 우리 결제 기록과 토스페이먼츠 거래가 다르다 |

@@ -475,6 +475,50 @@ class MetricAggregationIntegrationTest {
         .hasSize(1);
   }
 
+  @Test
+  void 고객_한_명만_집계해도_조직_전체_집계의_그_고객_값과_같다() {
+    UUID second = UUID.randomUUID();
+    jdbc.update(
+        "INSERT INTO customer(id, organization_id, name) VALUES (?, ?, '두번째 고객')",
+        second,
+        organization);
+    create("sum", "sum", List.of("region"), null, null, null, null);
+    create("distinct", "count_distinct", List.of(), null, null, null, null);
+    create("percentile", "percentile", List.of(), null, null, null, new BigDecimal("50"));
+    event("a", "{\"value\":5,\"region\":\"kr\"}", START);
+    event("b", "{\"value\":9,\"region\":\"us\"}", START.plusSeconds(1));
+    TestEvents.withGivenReceivedAt(
+        jdbc,
+        () ->
+            jdbc.update(
+                "INSERT INTO event(organization_id, transaction_id, customer_id, type, properties, occurred_at, received_at) VALUES (?, 'c', ?, 'observed', '{\"value\":100,\"region\":\"kr\"}', ?, ?)",
+                organization,
+                second,
+                START,
+                START));
+
+    var whole = usage.aggregate(organization, MONTH);
+    var single = usage.aggregate(organization, MONTH, customer);
+
+    assertThat(single).hasSize(whole.size());
+    for (int index = 0; index < whole.size(); index++) {
+      assertThat(single.get(index).customers())
+          .as(whole.get(index).billableMetric().getCode())
+          .containsExactlyElementsOf(
+              whole.get(index).customers().stream()
+                  .filter(item -> item.customerId().equals(customer))
+                  .toList());
+    }
+    assertThat(
+            single.stream()
+                .filter(item -> item.billableMetric().getCode().equals("sum"))
+                .findFirst()
+                .orElseThrow()
+                .customers())
+        .singleElement()
+        .satisfies(item -> assertThat(item.quantity()).isEqualByComparingTo("14"));
+  }
+
   private void create(
       String code,
       String aggregation,

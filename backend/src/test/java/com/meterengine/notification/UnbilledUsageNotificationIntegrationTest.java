@@ -2,17 +2,21 @@ package com.meterengine.notification;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.meterengine.TestClock;
 import com.meterengine.TestCredentials;
 import com.meterengine.TestcontainersConfiguration;
 import com.meterengine.global.security.BusinessEnvironment;
 import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.global.security.OrganizationEnvironments;
 import com.meterengine.notification.service.UnbilledUsageReportService;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -28,6 +32,51 @@ class UnbilledUsageNotificationIntegrationTest {
   @Autowired private UnbilledUsageReportService unbilledUsageReportService;
   @Autowired private JsonMapper jsonMapper;
   @Autowired private OrganizationEnvironments environments;
+  @Autowired private TestClock testClock;
+
+  @AfterEach
+  void resetClock() {
+    testClock.reset();
+  }
+
+  @Test
+  void 새벽에_검사한_통보는_그_날_9시_KST부터_보낸다() {
+    ZoneId seoul = ZoneId.of("Asia/Seoul");
+    LocalDate tomorrow = LocalDate.now(seoul).plusDays(1);
+    UUID organizationId = organizationWithUnmatchedEvent(OffsetDateTime.now().minusSeconds(1));
+    testClock.fix(tomorrow.atTime(LocalTime.of(4, 0)).atZone(seoul).toOffsetDateTime());
+
+    assertThat(unbilledUsageReportService.report(organizationId)).isTrue();
+
+    assertThat(nextAttemptAts(organizationId))
+        .isNotEmpty()
+        .allSatisfy(
+            nextAttemptAt ->
+                assertThat(nextAttemptAt)
+                    .isAtSameInstantAs(
+                        tomorrow.atTime(LocalTime.of(9, 0)).atZone(seoul).toOffsetDateTime()));
+  }
+
+  @Test
+  void 그_날_9시가_지난_뒤에_검사한_통보는_바로_보낸다() {
+    ZoneId seoul = ZoneId.of("Asia/Seoul");
+    OffsetDateTime yesterdayAt10 =
+        LocalDate.now(seoul)
+            .minusDays(1)
+            .atTime(LocalTime.of(10, 0))
+            .atZone(seoul)
+            .toOffsetDateTime();
+    UUID organizationId = organizationWithUnmatchedEvent(yesterdayAt10.minusHours(1));
+    testClock.fix(yesterdayAt10);
+    OffsetDateTime before = OffsetDateTime.now().minusSeconds(1);
+
+    assertThat(unbilledUsageReportService.report(organizationId)).isTrue();
+
+    OffsetDateTime after = OffsetDateTime.now().plusSeconds(1);
+    assertThat(nextAttemptAts(organizationId))
+        .isNotEmpty()
+        .allSatisfy(nextAttemptAt -> assertThat(nextAttemptAt).isBetween(before, after));
+  }
 
   @Test
   void 음수_이벤트_건수와_음수_합_잘림_조합을_서로_다른_칸으로_발행한다() {
@@ -213,6 +262,21 @@ class UnbilledUsageNotificationIntegrationTest {
         type,
         properties,
         occurredAt);
+  }
+
+  private UUID organizationWithUnmatchedEvent(OffsetDateTime occurredAt) {
+    UUID organizationId = UUID.randomUUID();
+    TestCredentials.issueApiKey(jdbcTemplate, organizationId, "admin");
+    insertEvent(organizationId, null, "unmapped", "{}", occurredAt);
+    subscribe(organizationId, null);
+    return organizationId;
+  }
+
+  private List<OffsetDateTime> nextAttemptAts(UUID organizationId) {
+    return jdbcTemplate.queryForList(
+        "SELECT next_attempt_at FROM webhook_delivery WHERE organization_id = ?",
+        OffsetDateTime.class,
+        organizationId);
   }
 
   private int webhookEventCount(UUID organizationId) {

@@ -125,7 +125,7 @@ python3 demo/meterdemo.py verify (--log <JSONL> | --csv <CSV>) [옵션]
 
 - Python Decimal로 고객별 사용량과 청구 예정액을 독립 계산해 `GET /v1/usage`, `GET /v1/invoices/draft`와 비교한다. 미터, 월별 공통 단가, 고객별 단가와 요금제는 별도 조회 API에서 받는다.
 - KST 월별로 `sum`, `count`, `count_distinct`, `min`, `max`, `avg`, `first`, `last`, `median`, `percentile`을 계산하고 `unit_size`로 나눈 뒤 반올림한다. COUNT는 전체 이벤트, COUNT DISTINCT는 숫자, 문자열, 불리언의 고유 값을 센다. 나머지는 숫자만 집계한다. 중복, 거절과 청구 계산 시각 이후 이벤트는 제외하고, 원본 집계값이 음수인 조합은 과금하지 않는다.
-- 그 달의 집계 마감 시각(다음 달 1일 13:00 KST) 이후에 받은 이벤트는 서버처럼 제외한다. 로그 소스는 `sent_at`을 받은 시각으로 보고, CSV 소스는 받은 시각을 몰라 제외하지 않는다.
+- 그 달의 집계 마감 시각(다음 달 2일 00:00 KST) 이후에 받은 이벤트는 서버처럼 제외한다. 로그 소스는 `sent_at`을 받은 시각으로 보고, CSV 소스는 받은 시각을 몰라 제외하지 않는다.
 - `per_unit`, `graduated`, `volume`을 계산하며 각 과금 라인의 10원 미만을 절사한다. 고객 단가가 공통 단가보다 우선하고, 양수 사용량이 있으면 최소 과금을 적용한 뒤 기본료를 더한다. 단가 없는 조합은 별도로 표시한다.
 - 고객 전체 집계와 조합별 청구 수량은 따로 검증한다. 평균, 고유 값 수와 반올림 결과는 조합별 합과 다를 수 있다. 표시용 소수와 별개로 정확한 분자와 분모로 금액과 구간 경계를 계산한다. 숫자 차원의 `9`와 `9.0`은 같은 조합이다.
 - `--log`와 `--csv`를 함께 주면 로그를 쓴다. 깨진 `send` 로그는 종료 코드 2, 여러 브리지 헤더와 조직 불일치는 경고로 표시한다. CSV는 서버 판정을 예측하므로 NUL 같은 일부 저장 거절은 재현하지 못한다.
@@ -387,27 +387,35 @@ await client.ingestEvent({
 
 ## cli
 
-자사 서비스 개발자와 코딩 에이전트가 터미널에서 MeterEngine API를 부르는 명령 `meterengine`(`cli/`)이다. 아직 배포하지 않고 이 workspace에서 실행한다. 지금은 키 저장과 청구 예정액 조회만 있다.
+자사 서비스 개발자와 코딩 에이전트가 터미널에서 MeterEngine API를 조회하고 진단하는 명령 `meterengine`(`cli/`)이다. 아직 배포하지 않고 이 workspace에서 실행한다. 쓰기 명령은 두지 않는다.
 
 ```bash
 cd demo && corepack pnpm install
 export METERENGINE_API_BASE_URL=http://localhost:8080   # 생략하면 https://meterengine.com
 node cli/src/main.ts login                              # 키를 화면에 보이지 않게 입력받아 저장
 node cli/src/main.ts invoices draft --month 2026-11
+node cli/src/main.ts diagnose event <transaction_id>
+node cli/src/main.ts --help                             # 명령 목록. 명령마다 --help로 옵션을 본다
 ```
 
+- 명령
+  - 조회: `usage`, `events`, `customers`, `meters`, `prices`, `invoices`.
+  - 진단과 대조: `diagnose`(이벤트 한 건, 한 달), `verify sent`(보낸 `transaction_id` 파일이나 `-`로 받은 표준 입력), `diff`(두 프로필의 미터와 단가).
+  - `api get`: 전용 명령이 없는 `/v1/` 조회 API를 GET으로 부른다.
 - 키
   - `login`은 키를 `~/.config/meterengine/credentials.json`(`XDG_CONFIG_HOME`이 있으면 그 아래)에 권한 600으로 저장한다. 표준 입력이 터미널이 아니면 입력 전체를 키로 읽는다.
-  - `METERENGINE_API_KEY`가 있으면 저장한 키보다 먼저 쓴다.
-- 출력: 성공하면 서버 응답 JSON을 표준 출력에, 실패하면 `{code, message}` JSON을 표준 오류에 낸다.
+  - `login --profile <이름>`으로 test, live 키를 이름 붙여 따로 둔다. 명령은 `--profile`, `METERENGINE_API_KEY`, `default` 프로필 순으로 키를 고른다.
+- 출력: 성공하면 결과 JSON을 표준 출력에, 실패하면 `{code, message}` JSON을 표준 오류에 낸다.
 - 종료 코드
 
 | 코드 | 뜻 | 할 일 |
 |---|---|---|
 | 0 | 성공 | |
 | 1 | 서버가 거절했다 (429를 뺀 4xx) | 입력을 고친다 |
-| 2 | 명령이나 설정이 틀려 보내지 않았다 (모르는 옵션, 키 없음, 키 형식) | 명령이나 키를 고친다 |
+| 2 | 명령이나 설정이 틀려 보내지 않았다 (모르는 옵션, 키 없음, 키 형식, 서버 주소 형식) | 명령이나 설정을 고친다 |
 | 3 | 다시 실행하면 될 수 있다 (연결 오류, 시간 초과, 429, 5xx) | 같은 명령을 다시 실행한다 |
+
+- `diagnose`, `verify sent`, `diff`는 끝까지 했으면 판정과 관계없이 0이다. 판정은 출력 JSON 안에 있다.
 
 ## 테스트 웹
 

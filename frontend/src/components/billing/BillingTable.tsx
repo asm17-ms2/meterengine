@@ -30,6 +30,7 @@ export type BillingGroupView = {
 
 export type BillingLineView = {
   label: string;
+  isCodeLabel?: boolean;
   labelTooltip?: string;
   dimensionValues: DimensionValueMap;
   quantity: string;
@@ -45,6 +46,7 @@ export type BillingUnpricedUsageView = {
 
 export type BillingUnpricedLineView = {
   label: string;
+  isCodeLabel?: boolean;
   labelTooltip?: string;
   dimensionValues: DimensionValueMap;
   quantity: string;
@@ -241,7 +243,7 @@ export function BillingTable({
           );
         }
         if (row.kind === "line" && row.isNested) return null;
-        return <MeterLabel label={row.line.label} labelTooltip={row.line.labelTooltip} />;
+        return <MeterLabel label={row.line.label} labelTooltip={row.line.labelTooltip} isCodeLabel={row.line.isCodeLabel} />;
       },
     },
     {

@@ -31,13 +31,13 @@ ephemeral "random_bytes" "crypto_encryption_key" {
 
 locals {
   # 올리고 apply하면 DB 마스터와 exporter 비밀번호를 새로 만든다. 바꾸는 순서는 README "비밀번호"를 따른다.
-  password_version = 1
+  password_version = 2
 
   # Grafana는 데이터 볼륨이 처음 만들어질 때만 admin 비밀번호를 받으므로 DB 비밀번호와 따로 바꾼다.
   grafana_admin_password_version = 1
 
   # 올리면 새 키가 되어 DB에 이미 저장한 암호문을 풀지 못한다. DB를 새로 만들 때만 올린다.
-  crypto_encryption_key_version = 1
+  crypto_encryption_key_version = 2
 
   # SUT 경보가 팀 Slack으로 가지 않게 아무도 받지 않는 주소를 준다. Grafana가 URL 형식은 요구한다.
   unreachable_slack_webhook_url = "http://127.0.0.1:9/no-slack-in-${var.sut_name}"

@@ -13,7 +13,7 @@ export async function BillingFinalizedLink({
   if (!result.ok || result.data.invoices.length === 0) return null;
 
   return (
-    <LinkButton type="link" href={`/invoices?month=${month}`}>
+    <LinkButton type="link" href={`/invoices?month=${month}`} style={{ paddingInline: 0 }}>
       이 달에 확정된 청구서 {result.data.invoices.length}건 보기
     </LinkButton>
   );

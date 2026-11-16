@@ -1,6 +1,7 @@
 package com.meterengine.customer.service;
 
 import com.meterengine.customer.api.CustomerDirectory;
+import com.meterengine.customer.api.CustomerKey;
 import com.meterengine.customer.entity.Customer;
 import com.meterengine.customer.repository.CustomerRepository;
 import com.meterengine.global.error.ConflictException;
@@ -8,6 +9,7 @@ import com.meterengine.global.error.ErrorCode;
 import com.meterengine.global.error.NotFoundException;
 import com.meterengine.global.security.BusinessEnvironmentContext;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -44,5 +46,24 @@ public class CustomerDirectoryService implements CustomerDirectory {
                 organizationId, BusinessEnvironmentContext.environmentId(), customerIds);
     return customers.stream()
         .collect(Collectors.toMap(Customer::getId, customer -> customer.getArchivedAt() == null));
+  }
+
+  public Map<CustomerKey, Boolean> active(Collection<CustomerKey> customerKeys) {
+    if (customerKeys.isEmpty()) return Map.of();
+    List<CustomerKey> distinctKeys = customerKeys.stream().distinct().toList();
+    return customerRepository
+        .lockAcrossOrganizations(
+            distinctKeys.stream().map(CustomerKey::organizationId).toArray(UUID[]::new),
+            distinctKeys.stream().map(CustomerKey::environmentId).toArray(UUID[]::new),
+            distinctKeys.stream().map(CustomerKey::customerId).toArray(UUID[]::new))
+        .stream()
+        .collect(
+            Collectors.toMap(
+                customer ->
+                    new CustomerKey(
+                        customer.getOrganizationId(),
+                        customer.getEnvironmentId(),
+                        customer.getId()),
+                customer -> customer.getArchivedAt() == null));
   }
 }

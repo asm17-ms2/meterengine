@@ -8,10 +8,11 @@ import java.time.OffsetDateTime;
 
 public record PaymentSettingResponse(
     @Schema(
-            description = "결제에 쓰는 모드. test 또는 live",
+            description = "결제에 쓰는 결제 모드(test 또는 live)",
             allowableValues = {"test", "live"})
         String mode,
-    @Schema(description = "모드를 마지막으로 바꾼 시각. 한 번도 바꾸지 않았으면 null") @JsonProperty("updated_at")
+    @Schema(description = "결제 모드를 마지막으로 바꾼 시각(KST, +09:00)입니다. 한 번도 바꾸지 않았으면 null입니다.")
+        @JsonProperty("updated_at")
         OffsetDateTime updatedAt) {
 
   public static PaymentSettingResponse from(PaymentSetting setting) {

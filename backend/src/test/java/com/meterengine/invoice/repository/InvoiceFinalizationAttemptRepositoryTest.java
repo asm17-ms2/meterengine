@@ -25,11 +25,11 @@ class InvoiceFinalizationAttemptRepositoryTest {
   private static final String AUGUST = "2026-08";
   private static final String SEPTEMBER = "2026-09";
   private static final OffsetDateTime SEPTEMBER_CUTOFF_AT =
-      OffsetDateTime.parse("2026-10-01T13:00:00+09:00");
-  private static final OffsetDateTime OCTOBER_1_AT_14 =
-      OffsetDateTime.parse("2026-10-01T14:00:00+09:00");
-  private static final OffsetDateTime OCTOBER_1_AT_15 =
-      OffsetDateTime.parse("2026-10-01T15:00:00+09:00");
+      OffsetDateTime.parse("2026-10-02T00:00:00+09:00");
+  private static final OffsetDateTime OCTOBER_2_AT_4 =
+      OffsetDateTime.parse("2026-10-02T04:00:00+09:00");
+  private static final OffsetDateTime OCTOBER_3_AT_4 =
+      OffsetDateTime.parse("2026-10-03T04:00:00+09:00");
   private static final String UNPRICED_USAGES =
       """
       [{"billable_metric_code": "tokens", "target_property": "token",\
@@ -53,7 +53,7 @@ class InvoiceFinalizationAttemptRepositoryTest {
             InvoiceFinalizationAttempt.HELD,
             "단가 없는 사용량: tokens {model=new} 500",
             UNPRICED_USAGES,
-            OCTOBER_1_AT_14);
+            OCTOBER_2_AT_4);
     invoiceFinalizationAttemptRepository.saveAndFlush(attempt);
     entityManager.clear();
 
@@ -67,7 +67,7 @@ class InvoiceFinalizationAttemptRepositoryTest {
     assertThat(reloaded.getResult()).isEqualTo(InvoiceFinalizationAttempt.HELD);
     assertThat(reloaded.getReason()).isEqualTo("단가 없는 사용량: tokens {model=new} 500");
     assertThat(reloaded.getUnpricedUsages()).contains("\"model\": \"new\"");
-    assertThat(reloaded.getAttemptedAt()).isAtSameInstantAs(OCTOBER_1_AT_14);
+    assertThat(reloaded.getAttemptedAt()).isAtSameInstantAs(OCTOBER_2_AT_4);
     assertThat(
             jdbcTemplate.queryForObject(
                 "SELECT environment_scope_id FROM invoice_finalization_attempt WHERE id = ?",
@@ -89,7 +89,7 @@ class InvoiceFinalizationAttemptRepositoryTest {
             InvoiceFinalizationAttempt.FAILED,
             "가".repeat(2001),
             null,
-            OCTOBER_1_AT_14);
+            OCTOBER_2_AT_4);
     invoiceFinalizationAttemptRepository.saveAndFlush(attempt);
     entityManager.clear();
 
@@ -143,7 +143,7 @@ class InvoiceFinalizationAttemptRepositoryTest {
         heldThenFailed,
         SEPTEMBER,
         InvoiceFinalizationAttempt.FAILED,
-        OCTOBER_1_AT_15);
+        OCTOBER_3_AT_4);
     save(organizationId, null, failedThenFinalized, SEPTEMBER, InvoiceFinalizationAttempt.FAILED);
     save(
         organizationId,
@@ -151,7 +151,7 @@ class InvoiceFinalizationAttemptRepositoryTest {
         failedThenFinalized,
         SEPTEMBER,
         InvoiceFinalizationAttempt.FINALIZED,
-        OCTOBER_1_AT_15);
+        OCTOBER_3_AT_4);
     save(organizationId, null, failedWithInvoice, SEPTEMBER, InvoiceFinalizationAttempt.FAILED);
     insertInvoice(organizationId, null, failedWithInvoice, SEPTEMBER);
     save(organizationId, null, heldTwoMonths, AUGUST, InvoiceFinalizationAttempt.HELD);
@@ -179,7 +179,7 @@ class InvoiceFinalizationAttemptRepositoryTest {
         failedThenHeld,
         AUGUST,
         InvoiceFinalizationAttempt.HELD,
-        OCTOBER_1_AT_15);
+        OCTOBER_3_AT_4);
     save(organizationId, null, failedThenHeld, SEPTEMBER, InvoiceFinalizationAttempt.FAILED);
 
     assertThat(invoiceFinalizationAttemptRepository.existsOpenFailure(organizationId, null, AUGUST))
@@ -201,7 +201,7 @@ class InvoiceFinalizationAttemptRepositoryTest {
         failedThenSkipped,
         SEPTEMBER,
         InvoiceFinalizationAttempt.SKIPPED,
-        OCTOBER_1_AT_15);
+        OCTOBER_3_AT_4);
     save(organizationId, null, failedWithInvoice, SEPTEMBER, InvoiceFinalizationAttempt.FAILED);
     insertInvoice(organizationId, null, failedWithInvoice, SEPTEMBER);
 
@@ -217,16 +217,16 @@ class InvoiceFinalizationAttemptRepositoryTest {
 
     int first =
         invoiceFinalizationAttemptRepository.insertSweptIfAbsent(
-            organizationId, null, SEPTEMBER, OCTOBER_1_AT_14);
+            organizationId, null, SEPTEMBER, OCTOBER_2_AT_4);
     int again =
         invoiceFinalizationAttemptRepository.insertSweptIfAbsent(
-            organizationId, null, SEPTEMBER, OCTOBER_1_AT_15);
+            organizationId, null, SEPTEMBER, OCTOBER_3_AT_4);
     int otherMonth =
         invoiceFinalizationAttemptRepository.insertSweptIfAbsent(
-            organizationId, null, AUGUST, OCTOBER_1_AT_14);
+            organizationId, null, AUGUST, OCTOBER_2_AT_4);
     int otherEnvironment =
         invoiceFinalizationAttemptRepository.insertSweptIfAbsent(
-            organizationId, testEnvironmentId, SEPTEMBER, OCTOBER_1_AT_14);
+            organizationId, testEnvironmentId, SEPTEMBER, OCTOBER_2_AT_4);
 
     assertThat(List.of(first, again, otherMonth, otherEnvironment)).containsExactly(1, 0, 1, 1);
     assertThat(invoiceFinalizationAttemptRepository.findSweptPeriods(organizationId, null))
@@ -315,7 +315,7 @@ class InvoiceFinalizationAttemptRepositoryTest {
 
   private void save(
       UUID organizationId, UUID environmentId, UUID customerId, String period, String result) {
-    save(organizationId, environmentId, customerId, period, result, OCTOBER_1_AT_14);
+    save(organizationId, environmentId, customerId, period, result, OCTOBER_2_AT_4);
   }
 
   private void save(

@@ -10,14 +10,16 @@ import jakarta.validation.constraints.Size;
 
 public record UpdateLiveEnvironmentApplicationStatusRequest(
     @Schema(
-            description = "검토 결과",
+            description = "검토 결과입니다. approved는 승인, rejected는 거절입니다.",
             allowableValues = {
               LiveEnvironmentApplication.APPROVED,
               LiveEnvironmentApplication.REJECTED
             })
         @NotBlank @Pattern(regexp = LiveEnvironmentApplication.REVIEW_STATUS_PATTERN) @StorableText
         String status,
-    @Schema(description = "거절 사유. rejected일 때만 보내고 신청한 조직이 그대로 읽는다", nullable = true)
+    @Schema(
+            description = "거절 사유입니다. rejected일 때만 보내고 신청한 조직이 그대로 읽습니다. 500자까지입니다.",
+            nullable = true)
         @Size(max = LiveEnvironmentApplication.REJECTION_REASON_MAX_LENGTH) @StorableText
         @JsonProperty("rejection_reason")
         String rejectionReason) {}

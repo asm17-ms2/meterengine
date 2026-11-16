@@ -47,7 +47,7 @@ resource "aws_autoscaling_group" "consumer" {
   max_size         = 6
   desired_capacity = var.consumer_count
   # 수집 서버와 같은 가용 영역에 둔다.
-  vpc_zone_identifier = [data.aws_subnet.public_2a.id]
+  vpc_zone_identifier = [data.aws_subnet.public_2a.id, data.aws_subnet.public_2b.id]
 
   # 요청을 받지 않아 ALB에 붙이지 않는다. 서버가 죽으면 다시 띄우는 것만 맡긴다.
   health_check_type         = "EC2"

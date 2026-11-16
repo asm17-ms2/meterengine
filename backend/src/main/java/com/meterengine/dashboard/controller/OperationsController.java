@@ -22,8 +22,9 @@ public class OperationsController {
   @Operation(
       summary = "운영자 현황 조회",
       description =
-          "운영자 세션으로 전체 조직과 결제, 통보 장애, DB의 예약 작업 마지막 성공 시각을 확인한다. 결제 실패는 최근 24시간이고 웹훅 실패는 현재 failed"
-              + " 상태인 전송 가운데 보관하지 않은 엔드포인트의 것이다. 꺼 둔 엔드포인트의 실패는 센다.")
+          "MeterEngine 운영자 로그인 세션으로 전체 조직의 현황, 라이브 결제와 웹훅 실패, 예약 작업의 마지막 성공 시각을 확인합니다."
+              + " 결제 실패는 최근 24시간 동안 요청한 라이브 결제 시도이고, 웹훅 실패는 지금 failed 상태인 전송 가운데 보관하지 않은 웹훅 URL의 것입니다."
+              + " 꺼 둔 웹훅 URL의 실패는 세고, 테스트 환경의 웹훅 실패는 세지 않습니다.")
   public OperationsResponse getOperations() {
     return operationsService.get();
   }

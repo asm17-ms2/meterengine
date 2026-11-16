@@ -47,22 +47,22 @@ public class UserAccountController {
   @OperatorAccess
   @ResponseStatus(HttpStatus.CREATED)
   @Operation(
-      summary = "플랫폼 운영자 생성",
+      summary = "운영자 계정 생성",
       description =
           """
-          플랫폼 운영자 세션으로 새 운영자 계정을 만든다. 역할은 서버가 operator로 정한다.
-          조직 소속과 대리 동의는 만들지 않는다. 새 계정은 본인이 로그인해 필수 안내에 동의해야 운영할 수 있다.
-          이미 가입한 이메일이면 계정과 비밀번호를 바꾸지 않고 409를 돌려준다. 기존 계정의 승격은 역할 변경 경로를 사용한다.
+          MeterEngine 운영자 로그인 세션으로 새 운영자 계정을 만듭니다. role은 서버가 operator로 정합니다.
+          조직 소속과 대리 동의는 만들지 않습니다. 새 계정은 본인이 로그인해 약관과 개인정보 처리방침에 동의해야 운영할 수 있습니다.
+          이미 가입한 이메일이면 계정과 비밀번호를 바꾸지 않고 409를 돌려줍니다. 기존 계정을 운영자로 바꾸려면 PUT /v1/user-accounts/{id}/role을 씁니다.
           """)
   @ApiResponses({
-    @ApiResponse(responseCode = "201", description = "소속 조직이 없는 새 플랫폼 운영자"),
+    @ApiResponse(responseCode = "201", description = "소속 조직이 없는 새 운영자 계정"),
     @ApiResponse(
         responseCode = "400",
         content =
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=validation_error: 이메일, 이름이나 초기 비밀번호가 형식 또는 길이 규칙을 벗어났다"),
+        description = "code=validation_error: 이메일, 이름, 초기 비밀번호가 형식이나 길이 규칙을 벗어났습니다."),
     @ApiResponse(
         responseCode = "403",
         content =
@@ -70,14 +70,14 @@ public class UserAccountController {
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
-            "code=permission_denied: 플랫폼 운영자 세션이 아니다. code=consent_required: 본인 안내 동의가 필요하다"),
+            "code=permission_denied: MeterEngine 운영자 로그인 세션이 아닙니다. code=consent_required: 본인이 약관과 개인정보 처리방침에 먼저 동의해야 합니다."),
     @ApiResponse(
         responseCode = "409",
         content =
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=email_already_exists: 이미 가입한 이메일이다")
+        description = "code=email_already_exists: 이미 가입한 이메일입니다.")
   })
   public UserAccountResponse createUserAccount(
       @AuthenticationPrincipal AuthenticatedPrincipal principal,
@@ -91,8 +91,8 @@ public class UserAccountController {
       summary = "사용자 목록 조회",
       description =
           """
-          모든 사용자를 만든 순서로 돌려준다. 사용자마다 소속된 조직을 소속된 순서로 담는다.
-          operator 로그인 세션만 부를 수 있다. 페이지를 나누지 않는다.
+          모든 사용자를 만든 순서로 돌려줍니다. 사용자마다 소속된 조직을 소속된 순서로 담습니다.
+          MeterEngine 운영자 로그인 세션만 부를 수 있습니다. 페이지를 나누지 않습니다.
           """)
   @ApiResponses({@ApiResponse(responseCode = "200", description = "사용자 목록")})
   public ListUserAccountsResponse listUserAccounts() {
@@ -105,9 +105,9 @@ public class UserAccountController {
       summary = "사용자 역할 변경",
       description =
           """
-          사용자의 역할을 바꾸고 바뀐 사용자를 돌려준다. 바뀐 역할은 그 사용자의 다음 요청부터 적용된다.
-          조직에 소속된 사용자는 operator로 바꿀 수 없다. 운영자 역할과 조직 소속은 함께 가질 수 없다.
-          operator 로그인 세션만 부를 수 있다.
+          사용자의 role을 바꾸고 바뀐 사용자를 돌려줍니다. 바뀐 role은 그 사용자의 다음 요청부터 적용됩니다.
+          조직에 소속된 사용자는 operator로 바꿀 수 없습니다. 운영자 계정과 조직 소속은 함께 가질 수 없습니다.
+          MeterEngine 운영자 로그인 세션만 부를 수 있습니다.
           """)
   @ApiResponses({
     @ApiResponse(responseCode = "200", description = "바뀐 사용자"),
@@ -117,14 +117,14 @@ public class UserAccountController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=validation_error: role이 member나 operator가 아니거나, 경로의 UUID 형식이 틀렸다"),
+        description = "code=validation_error: role이 member나 operator가 아니거나, 경로의 UUID 형식이 틀렸습니다."),
     @ApiResponse(
         responseCode = "404",
         content =
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=user_account_not_found: 그런 사용자가 없다"),
+        description = "code=user_account_not_found: 그런 사용자가 없습니다."),
     @ApiResponse(
         responseCode = "409",
         content =
@@ -133,13 +133,13 @@ public class UserAccountController {
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
             """
-            code=last_operator_required: 마지막 운영자를 member로 내리려 했다.
-            code=operator_membership_conflict: 조직에 소속된 사용자를 operator로 바꾸려 했다.
+            code=last_operator_required: 마지막 운영자 계정을 member로 바꾸려 했습니다.
+            code=operator_membership_conflict: 조직에 소속된 사용자를 operator로 바꾸려 했습니다.
             """)
   })
   public UserAccountResponse updateUserAccountRole(
       @AuthenticationPrincipal AuthenticatedPrincipal principal,
-      @Parameter(description = "역할을 바꿀 사용자의 ID.") @PathVariable UUID id,
+      @Parameter(description = "role을 바꿀 사용자의 ID") @PathVariable UUID id,
       @Valid @RequestBody UpdateUserAccountRoleRequest request) {
     return UserAccountResponse.from(userAccountService.update(principal, id, request.role()));
   }

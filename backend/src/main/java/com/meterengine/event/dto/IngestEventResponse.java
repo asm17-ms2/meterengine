@@ -6,8 +6,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 public record IngestEventResponse(
-    @JsonProperty("transaction_id") String transactionId,
-    @Schema(description = "이미 저장된 transaction_id였는지. 202 응답에는 없다. 그때는 저장 전이라 아직 모른다")
+    @Schema(description = "요청에 보낸 transaction_id") @JsonProperty("transaction_id")
+        String transactionId,
+    @Schema(
+            description =
+                "200 응답에만 실립니다. false면 이번 요청으로 저장했고, true면 같은 transaction_id의 이벤트가 이미 있어 저장하지 않고 처음 것을 유지했습니다. 202 응답에는 아직 저장 전이라 없습니다.")
         @JsonInclude(JsonInclude.Include.NON_NULL)
         Boolean duplicate) {
 
