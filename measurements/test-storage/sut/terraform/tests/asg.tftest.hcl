@@ -42,6 +42,52 @@ run "servers_boot_from_the_baked_image_with_the_shared_template" {
   }
 }
 
+# 평소에는 3대까지만 늘고, 한 대가 받는 양을 넘겨 재는 날에만 올린다. 04:00 예약이 올린 값을 되돌리지 않아야 한다.
+run "server_count_ceiling_stays_at_three_unless_raised" {
+  command = plan
+
+  assert {
+    condition     = aws_autoscaling_group.sut.max_size == 3 && aws_autoscaling_schedule.stop_asg[0].max_size == 3
+    error_message = "The group must stop at three servers by default."
+  }
+}
+
+run "raised_ceiling_reaches_the_group_and_the_nightly_stop" {
+  command = plan
+
+  variables {
+    asg_max_size = 10
+  }
+
+  assert {
+    condition     = aws_autoscaling_group.sut.max_size == 10 && aws_autoscaling_schedule.stop_asg[0].max_size == 10
+    error_message = "A raised ceiling must reach both the group and the 04:00 schedule."
+  }
+}
+
+run "minimum_above_the_ceiling_is_rejected" {
+  command = plan
+
+  variables {
+    asg_min_size = 4
+  }
+
+  expect_failures = [var.asg_min_size]
+}
+
+# 한 가용 영역이 내려가도 수집과 저장이 이어지는 구성으로 잰다.
+run "servers_spread_over_two_availability_zones" {
+  command = plan
+
+  assert {
+    condition = (
+      length(aws_autoscaling_group.sut.vpc_zone_identifier) == 2
+      && length(aws_autoscaling_group.consumer.vpc_zone_identifier) == 2
+    )
+    error_message = "Ingest and consumer servers must spread over both public subnets."
+  }
+}
+
 run "replacement_keeps_a_healthy_server" {
   command = plan
 

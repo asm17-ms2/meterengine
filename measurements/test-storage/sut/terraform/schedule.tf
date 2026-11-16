@@ -36,6 +36,6 @@ resource "aws_autoscaling_schedule" "stop_asg" {
   recurrence             = "0 4 * * *"
   time_zone              = local.auto_stop_timezone
   min_size               = 0
-  max_size               = 3
+  max_size               = var.asg_max_size
   desired_capacity       = 0
 }
