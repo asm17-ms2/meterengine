@@ -247,6 +247,8 @@ input, textarea { caret-color: var(--blue); }
 .event-range-grid { grid-column: 1 / -1; }
 .event-range-grid > p { grid-column: 1 / -1; margin: 0; }
 .event-filter-fields > .event-filter-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr); }
+/* 고객 선택의 최소 폭 200px가 1000~1100px 화면의 좁은 격자 칸을 넘어 옆 칸을 덮지 않게 칸 폭을 따른다. */
+.event-filter-grid > .workspace-field .ant-select { min-width: 0 !important; }
 .event-advanced { border-top: 1px solid var(--line); padding-top: 12px; }
 .event-advanced summary { cursor: pointer; box-sizing: border-box; min-height: 44px; padding-block: 11px; font-size: 13px; font-weight: 600; }
 .event-advanced[open] summary { margin-bottom: 12px; }
@@ -262,6 +264,9 @@ input, textarea { caret-color: var(--blue); }
 :root { --workspace-header-height: 68px; }
 .ant-table-sticky-holder { top: var(--workspace-header-height) !important; }
 .ant-table-tbody :is(a, button) { scroll-margin-top: 56px; }
+/* 좁은 화면에서 이전/다음 칸이 줄어 두 글자가 두 줄로 갈라지지 않게 한다. */
+.ant-pagination :is(.ant-pagination-prev, .ant-pagination-next) { flex-shrink: 0; white-space: nowrap; }.ant-pagination { flex-wrap: wrap; row-gap: 8px; }
+@media (max-width: 480px) { .ant-pagination.ant-pagination > li { margin-inline-end: 4px; min-width: 34px; }.ant-pagination.ant-pagination > li:last-child { margin-inline-end: 0; }.ant-pagination :is(.ant-pagination-prev, .ant-pagination-next) > :is(a, button) { padding-inline: 4px !important; } }
 /* 펼침 버튼 옆의 말줄임 글자가 버튼 폭만큼 칸 밖으로 밀려 말줄임표 없이 잘리지 않게 남은 폭에 맞춘다. */
 .ant-table-cell-with-append > .ant-typography-ellipsis-single-line { display: block; }
 /* antd는 펼침 버튼을 17px로 보고 위 여백을 잡아 19px 버튼이 한글 고객 이름 줄에서 처진다. 영문 소문자인 미터 코드 줄은 기본값이 맞아 고객 줄만 올린다. */
@@ -278,6 +283,8 @@ input, textarea { caret-color: var(--blue); }
 .audit-entry { background: var(--paper); border-top: 1px solid var(--line); min-width: 0; }.audit-entry:first-child { border-top: 0; }
 .audit-summary { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, .8fr) minmax(0, 1fr); gap: 18px; align-items: start; padding: 12px 16px; row-gap: 4px; cursor: pointer; overflow-wrap: anywhere; }
 .audit-request { grid-column: 1 / -1; color: var(--muted); font-size: 13px; }
+/* 태블릿 너비에서 마지막 칸이 좁아지면 태그가 줄을 못 바꿔 칸 밖으로 나가서, 칸 안에서 줄을 바꾼다. */
+.audit-summary .ant-tag { white-space: normal; max-width: 100%; }
 .audit-entry[open] > .audit-summary { border-bottom: 1px solid var(--line); }
 .audit-meta { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; line-height: 1.6; color: var(--muted); overflow-wrap: anywhere; }
 .audit-detail { display: grid; gap: 18px; padding: 22px 24px; min-width: 0; }
