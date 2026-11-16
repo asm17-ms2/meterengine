@@ -260,7 +260,7 @@ test("diagnose event는 발생 시각의 KST 달로 조회한다", async () => {
 });
 
 test("diagnose event는 집계 마감 뒤에 받은 이벤트를 다른 조회 없이 청구 제외로 판정한다", async () => {
-  const late = { ...EVENT, occurred_at: "2026-10-31T23:00:00+09:00", received_at: "2026-11-01T13:00:00.5+09:00" };
+  const late = { ...EVENT, occurred_at: "2026-10-31T23:00:00+09:00", received_at: "2026-11-02T00:00:00+09:00" };
   const { deps, calls, stdoutJson } = await setup(server({ "/v1/events/lookup": late }), { now: NOW });
 
   assert.equal(await run(["diagnose", "event", "tx-1"], deps), EXIT_OK);
@@ -269,7 +269,7 @@ test("diagnose event는 집계 마감 뒤에 받은 이벤트를 다른 조회 �
   assert.equal(result.billable, false);
   assert.equal(result.month, "2026-10");
   assert.equal(result.findings[0].reason, "received_after_cutoff");
-  assert.equal(result.findings[0].cutoff_at, "2026-11-01T13:00:00+09:00");
+  assert.equal(result.findings[0].cutoff_at, "2026-11-02T00:00:00+09:00");
 });
 
 test("diagnose event는 발생 시각이 아직 오지 않은 이벤트를 판정 보류(null)로 낸다", async () => {
@@ -653,7 +653,7 @@ const DRAFT = {
   month: "2026-11",
   calculated_at: "2026-11-14T12:00:00+09:00",
   auto_finalize_enabled: true,
-  auto_finalize_at: "2026-12-01T14:00:00+09:00",
+  auto_finalize_at: "2026-12-02T04:00:00+09:00",
   auto_finalize_running: false,
   total_amount: 1000,
   customers: [
@@ -700,7 +700,7 @@ test("diagnose month는 이번 달의 청구 제외, 거절, 미터 없는 유�
         ],
         complete: true,
       },
-      received_after_cutoff: { event_count: 0, cutoff_at: "2026-12-01T13:00:00+09:00", complete: true },
+      received_after_cutoff: { event_count: 0, cutoff_at: "2026-12-02T00:00:00+09:00", complete: true },
       after_invoice_cutoff: { event_count: 0, customers: [], complete: true },
       negative_total: { combination_count: 0, combinations: [], complete: true },
     },
@@ -710,9 +710,9 @@ test("diagnose month는 이번 달의 청구 제외, 거절, 미터 없는 유�
     types_without_meter: ["llm_requests", "ping"],
     suspected_typos: [{ event_type: "llm_requests", meter_event_type: "llm_request", billable_metric_codes: ["input-tokens", "output-tokens"] }],
     finalization: {
-      usage_cutoff_at: "2026-12-01T13:00:00+09:00",
+      usage_cutoff_at: "2026-12-02T00:00:00+09:00",
       auto_finalize_enabled: true,
-      auto_finalize_at: "2026-12-01T14:00:00+09:00",
+      auto_finalize_at: "2026-12-02T04:00:00+09:00",
       auto_finalize_running: false,
       held_customers: [{ customer_id: CUSTOMER_ID, customer_name: "OpenAB" }],
     },
@@ -734,7 +734,7 @@ test("diagnose month는 이번 달의 청구 제외, 거절, 미터 없는 유�
 
 test("diagnose month는 마감이 지난 달이면 마감 뒤에 받은 이벤트를 받은 시각 최신순으로 넘겨 센다", async () => {
   const late = (index: number) => ({ ...EVENT, transaction_id: `late-${index}`, occurred_at: "2026-10-31T20:00:00+09:00", received_at: "2026-11-02T10:00:00+09:00" });
-  const onTime = { ...EVENT, transaction_id: "on-time", occurred_at: "2026-10-31T20:00:00+09:00", received_at: "2026-11-01T12:59:59+09:00" };
+  const onTime = { ...EVENT, transaction_id: "on-time", occurred_at: "2026-10-31T20:00:00+09:00", received_at: "2026-11-01T23:59:59+09:00" };
   const { deps, calls, stdoutJson } = await setup(
     monthServer({
       "/v1/event-rejections/search": respond((query) => json(200, rejectionPage(query.get("month") ?? "", [], 0))),
@@ -753,7 +753,7 @@ test("diagnose month는 마감이 지난 달이면 마감 뒤에 받은 이벤�
 
   assert.equal(await run(["diagnose", "month", "--month", "2026-10"], deps), EXIT_OK);
   const result = stdoutJson() as { excluded_from_billing: { received_after_cutoff: unknown }; rejected: unknown };
-  assert.deepEqual(result.excluded_from_billing.received_after_cutoff, { event_count: 101, cutoff_at: "2026-11-01T13:00:00+09:00", complete: true });
+  assert.deepEqual(result.excluded_from_billing.received_after_cutoff, { event_count: 101, cutoff_at: "2026-11-02T00:00:00+09:00", complete: true });
   assert.deepEqual(result.rejected, { count: 0, codes: {}, recording_started_at: "2026-09-01T00:00:00Z" });
   const eventCalls = requests(calls).filter(([path]) => path === "/v1/events");
   assert.deepEqual(
@@ -814,7 +814,7 @@ test("diagnose month는 미터 없는 유형과 오타 후보를 서버가 그 �
 
 test("diagnose month는 마감 전에 확정한 고객의 확정 뒤 이벤트와 음수 합계 조합을 청구 제외로 낸다", async () => {
   const early = { ...INVOICE, month: "2026-11", cutoff_at: "2026-11-10T10:00:00+09:00" };
-  const auto = { ...INVOICE, id: "1f2e3d4c-5b6a-4987-8a6b-5c4d3e2f1a0b", customer_id: "1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f", month: "2026-11", cutoff_at: "2026-12-01T13:00:00+09:00" };
+  const auto = { ...INVOICE, id: "1f2e3d4c-5b6a-4987-8a6b-5c4d3e2f1a0b", customer_id: "1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f", month: "2026-11", cutoff_at: "2026-12-02T00:00:00+09:00" };
   const event = (id: string, receivedAt: string, occurredAt = "2026-11-09T10:00:00+09:00") => ({ ...EVENT, transaction_id: id, occurred_at: occurredAt, received_at: receivedAt });
   const negative = { billable_metric_code: "input-tokens", target_property: "input-tokens", dimension_values: { model: "ab-1" }, quantity: -5 };
   const { deps, calls, stdoutJson } = await setup(

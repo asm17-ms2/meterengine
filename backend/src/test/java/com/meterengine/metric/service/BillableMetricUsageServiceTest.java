@@ -77,11 +77,13 @@ class BillableMetricUsageServiceTest {
   }
 
   @Test
-  void 집계_마감_시각은_다음_달_1일_13시_KST다() {
+  void 집계_마감_시각은_다음_달_2일_0시_KST다() {
     assertThat(BillableMetricUsageService.cutoffAt(AUGUST))
-        .isEqualTo(OffsetDateTime.parse("2026-09-01T13:00:00+09:00"));
+        .isEqualTo(OffsetDateTime.parse("2026-09-02T00:00:00+09:00"));
     assertThat(BillableMetricUsageService.cutoffAt(YearMonth.of(2026, 12)))
-        .isEqualTo(OffsetDateTime.parse("2027-01-01T13:00:00+09:00"));
+        .isEqualTo(OffsetDateTime.parse("2027-01-02T00:00:00+09:00"));
+    assertThat(BillableMetricUsageService.cutoffAt(YearMonth.of(2027, 1)))
+        .isEqualTo(OffsetDateTime.parse("2027-02-02T00:00:00+09:00"));
   }
 
   @Test
@@ -105,7 +107,7 @@ class BillableMetricUsageServiceTest {
             any());
     assertThat(endCaptor.getValue()).isEqualTo(OffsetDateTime.parse("2026-10-26T10:00:00+09:00"));
     assertThat(receivedBeforeCaptor.getValue())
-        .isEqualTo(OffsetDateTime.parse("2026-11-01T13:00:00+09:00"));
+        .isEqualTo(OffsetDateTime.parse("2026-11-02T00:00:00+09:00"));
   }
 
   @Test
@@ -131,7 +133,7 @@ class BillableMetricUsageServiceTest {
     assertThat(startCaptor.getValue()).isEqualTo(OffsetDateTime.parse("2026-08-01T00:00:00+09:00"));
     assertThat(endCaptor.getValue()).isEqualTo(OffsetDateTime.parse("2026-09-01T00:00:00+09:00"));
     assertThat(receivedBeforeCaptor.getValue())
-        .isEqualTo(OffsetDateTime.parse("2026-09-01T13:00:00+09:00"));
+        .isEqualTo(OffsetDateTime.parse("2026-09-02T00:00:00+09:00"));
   }
 
   @Test

@@ -29,6 +29,17 @@ public class WebhookEventService {
   @Transactional(propagation = Propagation.MANDATORY)
   public UUID publish(
       UUID organizationId, WebhookEventType type, Map<String, Object> data, UUID endpointId) {
+    return publish(organizationId, type, data, endpointId, null);
+  }
+
+  // deliverAt이 있으면 그 시각부터 보낸다. 없거나 이미 지났으면 바로 보낸다.
+  @Transactional(propagation = Propagation.MANDATORY)
+  public UUID publish(
+      UUID organizationId,
+      WebhookEventType type,
+      Map<String, Object> data,
+      UUID endpointId,
+      OffsetDateTime deliverAt) {
     UUID id = UUID.randomUUID();
     String payload =
         jsonMapper.writeValueAsString(
@@ -43,7 +54,8 @@ public class WebhookEventService {
                 OffsetDateTime.now().toString(),
                 "data",
                 data));
-    webhookEventRepository.insert(organizationId, id, type.getValue(), payload, endpointId);
+    webhookEventRepository.insert(
+        organizationId, id, type.getValue(), payload, endpointId, deliverAt);
     return id;
   }
 }

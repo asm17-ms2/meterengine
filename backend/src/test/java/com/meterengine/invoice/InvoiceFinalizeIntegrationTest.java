@@ -134,7 +134,7 @@ class InvoiceFinalizeIntegrationTest {
         acme,
         3299,
         "2026-08-31T10:00:00+09:00",
-        "2026-09-01T12:59:59+09:00");
+        "2026-09-01T23:59:59+09:00");
     TestEvents.insertToken(
         jdbcTemplate,
         organizationId,
@@ -142,14 +142,14 @@ class InvoiceFinalizeIntegrationTest {
         acme,
         1000,
         "2026-08-31T11:00:00+09:00",
-        "2026-09-01T13:00:00+09:00");
+        "2026-09-02T00:00:00+09:00");
     long draftAmount = draft(organizationId).totalAmount();
 
     Invoice invoice =
         invoiceFinalizationService.finalize(organizationId, AUGUST).invoices().getFirst();
 
     assertThat(invoice.getSupplyAmount()).isEqualTo(draftAmount).isEqualTo(1640);
-    assertThat(invoice.getCutoffAt()).isEqualTo(OffsetDateTime.parse("2026-09-01T13:00:00+09:00"));
+    assertThat(invoice.getCutoffAt()).isEqualTo(OffsetDateTime.parse("2026-09-02T00:00:00+09:00"));
   }
 
   @Test

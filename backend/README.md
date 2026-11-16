@@ -95,7 +95,7 @@ docker build -t meterengine-backend .
 - 배포할 때는 `deploy/compose.prod.yml`이 위 변수를 필수로 걸어 주입하고 값은 SSM Parameter Store에서 온다. 등록 절차는 `deploy/README.md`.
 - DB 쿼리 응답은 30초까지만 기다린다(`spring.datasource.hikari.data-source-properties.socketTimeout`). DB가 답 없이 끊겨도 커넥션이 묶이지 않고 풀려 앱이 회복한다.
 - actuator는 health와 prometheus만 노출한다 (`management.endpoints.web.exposure.include`).
-- 인보이스 자동 확정은 `INVOICE_AUTO_FINALIZE_ENABLED=true`일 때만 돈다(기본 끔). 배포 서버에서는 SSM 파라미터 `invoice-auto-finalize-enabled`로 켠다. 켜면 첫 정시 실행이 확정 시각(다음 달 1일 14:00 KST)이 지난 과거 달을 모든 환경에서 확정하므로, 켜기 전에 그 달들을 확정해도 되는지 확인한다.
+- 인보이스 자동 확정은 `INVOICE_AUTO_FINALIZE_ENABLED=true`일 때만 돈다(기본 끔). 배포 서버에서는 SSM 파라미터 `invoice-auto-finalize-enabled`로 켠다. 켜면 다음 04:00 KST 실행이 확정 시각(다음 달 2일 04:00 KST)이 지난 과거 달을 모든 환경에서 확정하므로, 켜기 전에 그 달들을 확정해도 되는지 확인한다.
 - `CRYPTO_ENCRYPTION_KEY`는 운영 기본값이 없는 필수 값이다. 토스페이먼츠 시크릿 키, 빌링키, 웹훅 서명 비밀값을 DB에 AES-GCM으로 암호화하는 키로, 32바이트를 base64로 준다. `local` 프로파일만 개발용 값을 쓴다. 값을 바꾸면 이미 저장한 암호문을 풀지 못해 결제와 카드 등록이 실패하고, 웹훅 전송은 `secret_unavailable`로 실패한다. 배포 값은 `deploy/README.md`의 `crypto-encryption-key`다.
 - `meterengine.webhook.enabled`(기본 true)를 false로 두면 웹훅 발송 작업과 그 작업 등록만 멈춘다. 엔드포인트 등록, 시험 통보, 통보 적재는 계속되고, 다시 켜면 쌓인 전송을 차례로 보낸다.
 - `meterengine.webhook.allow-private-network`(기본 false)를 true로 두면 http와 사설망 주소로도 통보를 보낸다. `local` 프로파일과 시험만 켠다.
@@ -347,7 +347,7 @@ unset SESSION
 | `event` | 사용량 이벤트 수집과 조회, 기동 시 수집 경로 예열 | `/v1/events` |
 | `metric` | 미터 등록, 수정, 보관과 복원, 조회, 고객별 월 사용량 집계(속성 값 조합별로 나눔) | `/v1/billable-metrics`, `/v1/usage` |
 | `pricing` | 단가 등록(같은 조합이면 덮어쓰기)과 보관, 복원, 미터별 가격 목록 | `/v1/billable-metrics/{code}/price-rates`, `/v1/billable-metric-prices` |
-| `invoice` | 청구 예정액 조회(속성 값 조합별 사용량에 같은 조합의 단가를 곱함), 인보이스 일괄 확정(집계 마감 시각까지 받은 이벤트로, 고객마다 따로 커밋하고 청구 메일을 남김), 확정 인보이스 목록 조회(금액 구성과 라인 포함), 매시 정각 자동 확정(확정 시각이 지난 달의 끝나지 않은 고객과 달을 환경 범위마다 시도하고, 단가 없는 사용량이 있으면 보류하며(0원이면 보류하지 않고 끝냄), 고객과 달마다 시도 결과를 남김. 실패는 매 정시 다시 시도하고 보류는 수동 확정으로 끝냄) | `/v1/invoices`, `/v1/invoices/draft` |
+| `invoice` | 청구 예정액 조회(속성 값 조합별 사용량에 같은 조합의 단가를 곱함), 인보이스 일괄 확정(집계 마감 시각까지 받은 이벤트로, 고객마다 따로 커밋하고 청구 메일을 남김), 확정 인보이스 목록 조회(금액 구성과 라인 포함), 매일 04:00 KST 자동 확정(확정 시각이 지난 달의 끝나지 않은 고객과 달을 환경 범위마다 시도하고, 단가 없는 사용량이 있으면 보류하며(0원이면 보류하지 않고 끝냄), 고객과 달마다 시도 결과를 남김. 실패는 다음 날 04:00에 실패한 고객의 사용량만 다시 집계해 시도하고 보류는 수동 확정으로 끝냄) | `/v1/invoices`, `/v1/invoices/draft` |
 | `invoiceview` | 고객 인보이스 링크 발급, 조회와 폐기, 별도 허용한 링크의 실패 결제 재시도 | `/v1/invoices/{id}/view-links`, `/v1/public/invoice-links/lookup`, `/v1/public/invoice-links/payment-retries` |
 | `customer` | 고객 등록, 수정, 보관과 복원, 조회 | `/v1/customers` |
 | `payment` | 도입사별 토스 키, 카드 등록, 승인과 취소, 결과 확정, 재시도와 대사 | `/v1/invoices/{id}/payment-attempts` |
@@ -439,10 +439,11 @@ unset SESSION
 | `payment.retry-max-attempts`, `payment.retry-interval` | 3회, 24시간 |
 | `payment.confirmation-delay`, `payment.not-found-failure-delay` | 2분, 10분. 결과가 불명확한 시도는 재조회한다 |
 | `payment.reconciliation-lag` | 10분 |
-| `meterengine.notification.unbilled-usage-cron` | 매일 09:00 KST. `UNBILLED_USAGE_REPORT_CRON`으로 변경 가능 |
+| `meterengine.notification.unbilled-usage-cron` | 매일 04:00 KST에 미청구 사용량을 검사한다. `UNBILLED_USAGE_REPORT_CRON`으로 변경 가능 |
+| `meterengine.notification.unbilled-usage-delivery-time` | 09:00(KST). 검사한 날 이 시각부터 통보 웹훅을 보내고, 이미 지났으면 바로 보낸다. `UNBILLED_USAGE_DELIVERY_TIME`으로 변경 가능 |
 
 - 토스 키와 빌링키를 암호화하는 `CRYPTO_ENCRYPTION_KEY`와 사설망 웹훅 허용은 [설정](#설정)에 있다.
-- 예약 작업은 결제 결과 확인 1분, 재시도 10분, 대사 매일 04:00 KST다. 인보이스 자동 확정은 켜면 매시 정각이다. 웹훅 발송 주기와 재전송은 [웹훅](#웹훅)에 있다. `meterengine.scheduling.enabled=false`로 전체를 끈다.
+- 예약 작업은 결제 결과 확인 1분, 재시도 10분, 대사 매일 04:00 KST다. 인보이스 자동 확정은 켜면 매일 04:00 KST다. 웹훅 발송 주기와 재전송은 [웹훅](#웹훅)에 있다. `meterengine.scheduling.enabled=false`로 전체를 끈다.
 - 대사는 보통 직전 하루를 맞춘다. 실패하거나 항목이 실패했거나 빠진 날이 있으면 마지막으로 실패 없이 끝난 대사 슬롯부터 이어서 맞추고(그런 슬롯이 없으면 가장 이른 대사 실행의 창부터), 최대 7일 전까지 본다. 같은 불일치는 다시 돌려도 한 줄만 남는다.
 - 부분과 전액 취소는 `Idempotency-Key` UUID를 반복 요청에 유지한다. 같은 키의 같은 요청은 그 취소를 지금 상태로 반환하고 다른 내용이면 409 `payment_cancellation_idempotency_conflict`다. 고객과 미터 등록의 키와 달리 UUID만 받고 `Idempotency-Replayed` 헤더를 붙이지 않는다.
 - 결제 결과가 미확인인 상태를 실패로 단정하지 않는다. 7일을 넘긴 불확실한 이전 주문은 새 주문으로 자동 청구하지 않는다.

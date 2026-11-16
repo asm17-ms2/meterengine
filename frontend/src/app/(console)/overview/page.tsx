@@ -1,15 +1,23 @@
 import { ScopedLink as Link } from "@/components/workspace/ScopedLink";
 import { getDashboard } from "@/lib/api/workspace";
 import { readMonth } from "@/lib/month";
+import { searchKey } from "@/lib/search-key";
 import { formatKoreanMonth, formatKstDateTime } from "@/lib/format";
 import { WorkspaceHeader, MonthFilter } from "@/components/workspace/WorkspaceHeader";
 import { WorkspaceError, WorkspaceTable } from "@/components/workspace/WorkspaceView";
+import { Suspense } from "react";
+import { AggregateLoading } from "@/components/screen/AggregateLoading";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "개요" };
 
 export default async function OverviewPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
-  const month = readMonth((await searchParams).month);
+  const params = await searchParams;
+  const month = readMonth(params.month);
+  return <Suspense key={searchKey(params)} fallback={<><WorkspaceHeader title={`${formatKoreanMonth(month)} 개요`} description="설정과 확인할 항목을 먼저 보고, 청구와 수납으로 넘어가세요."><MonthFilter month={month} /></WorkspaceHeader><section className="workspace-panel"><AggregateLoading title="이 달 금액과 확인할 항목을 계산하는 중이에요" /></section></>}><Overview month={month} /></Suspense>;
+}
+
+async function Overview({ month }: { month: string }) {
   const result = await getDashboard(month);
   if (!result.ok) return <><WorkspaceHeader title="개요" description="사용량부터 수납까지, 선택한 달의 진행 상태를 확인하세요." /><WorkspaceError message={result.error.message} /></>;
   const data = result.data;

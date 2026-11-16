@@ -249,7 +249,7 @@ groups:
               conditions:
                 - evaluator: { type: gt, params: [1800] }
 
-      # 인보이스 자동 확정은 매시 정각에 돌아 마지막 성공이 끝난 뒤 2시간 안에 다음 성공이 없으면 울린다. 꺼져 있어 한 번도 돌지 않았으면 시계열이 없어 울리지 않는다.
+      # 인보이스 자동 확정은 매일 04:00에 돌아 마지막 성공 뒤 25시간 안에 다음 성공이 없으면 울린다. 꺼져 있어 한 번도 돌지 않았으면 시계열이 없어 울리지 않는다.
       - uid: invoice-auto-finalize-missed
         title: 인보이스 자동 확정 미실행
         condition: C
@@ -257,7 +257,7 @@ groups:
         noDataState: OK
         execErrState: Error
         annotations:
-          summary: 환경 {{ $labels.env }}의 예약 작업 {{ $labels.job_name }} 이 2시간 넘게 성공하지 않았다. 작업이 멈췄거나 계속 실패하고 있다.
+          summary: 환경 {{ $labels.env }}의 예약 작업 {{ $labels.job_name }} 이 25시간 넘게 성공하지 않았다. 오늘 실행이 빠졌거나 실패했다.
         data:
           - refId: A
             relativeTimeRange: { from: 900, to: 0 }
@@ -265,7 +265,7 @@ groups:
             model:
               refId: A
               expr: >-
-                (time() - max by (env, job_name) (meterengine_scheduled_job_last_success_seconds{env!~"test-.*", job_name="invoice_auto_finalize"}))
+                (time() - max by (env, job_name) (max_over_time(meterengine_scheduled_job_last_success_seconds{env!~"test-.*", job_name="invoice_auto_finalize"}[26h])))
                 or on (env, job_name) (count by (env, job_name) (meterengine_scheduled_job_run_total{env!~"test-.*", job_name="invoice_auto_finalize"}) * 0
                 + on (env) group_left () (time() - max by (env) (process_start_time_seconds{env!~"test-.*", job="backend"})))
               instant: true
@@ -277,7 +277,7 @@ groups:
               type: threshold
               expression: A
               conditions:
-                - evaluator: { type: gt, params: [7200] }
+                - evaluator: { type: gt, params: [90000] }
 
       # 하루 한 번 도는 작업은 정해진 시각에서 1시간이 지나도록 그날 성공이 없으면 울린다.
       # 슬롯을 이긴 색이 배포로 멈춰 그 시리즈가 사라져도 26시간 안의 가장 최근 성공을 본다.
@@ -399,7 +399,7 @@ groups:
               conditions:
                 - evaluator: { type: gt, params: [0] }
 
-      # 자동 확정이 서버 쪽 오류로 확정하지 못한 고객과 달이 남았다. 다음 정시가 다시 시도하지만 같은 오류면 계속 남는다.
+      # 자동 확정이 서버 쪽 오류로 확정하지 못한 고객과 달이 남았다. 다음 날 04:00 실행이 다시 시도하지만 같은 오류면 계속 남는다.
       # 보류는 도입사가 수동 확정으로 끝낼 일이라 청구 예정액 화면이 알리고 여기서는 울리지 않는다. test 환경도 뺀다.
       - uid: invoice-unfinalized-failed
         title: 인보이스 자동 확정 실패 남음

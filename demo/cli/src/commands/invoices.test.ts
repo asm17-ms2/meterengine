@@ -15,8 +15,8 @@ const INVOICE = {
   supply_amount: 1000,
   tax_amount: 100,
   total_amount: 1100,
-  cutoff_at: "2026-11-01T13:00:00+09:00",
-  finalized_at: "2026-11-01T13:05:00+09:00",
+  cutoff_at: "2026-11-02T00:00:00+09:00",
+  finalized_at: "2026-11-02T04:05:00+09:00",
   lines: [],
 };
 

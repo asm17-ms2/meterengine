@@ -157,9 +157,17 @@ class BillableMetricUsageIntegrationTest {
   // ---------------------------------------------------------------------------
 
   @Test
-  void 마감이_지난_달은_마감_시각_전에_받은_이벤트만_집계하고_13시_정각에_받은_것은_빠진다() {
+  void 마감이_지난_달은_다음_달_1일이_끝날_때까지_받은_이벤트를_집계하고_2일_0시_정각에_받은_것은_빠진다() {
     UUID organizationId = organizationWithTokenBillableMetric();
     UUID customerId = insertCustomer(organizationId, "아크메");
+    TestEvents.insertToken(
+        jdbcTemplate,
+        organizationId,
+        "tx-afternoon",
+        customerId,
+        300,
+        "2026-09-30T09:00:00+09:00",
+        "2026-10-01T13:00:00+09:00");
     TestEvents.insertToken(
         jdbcTemplate,
         organizationId,
@@ -167,7 +175,7 @@ class BillableMetricUsageIntegrationTest {
         customerId,
         500,
         "2026-09-30T10:00:00+09:00",
-        "2026-10-01T12:59:59+09:00");
+        "2026-10-01T23:59:59+09:00");
     TestEvents.insertToken(
         jdbcTemplate,
         organizationId,
@@ -175,9 +183,9 @@ class BillableMetricUsageIntegrationTest {
         customerId,
         700,
         "2026-09-30T11:00:00+09:00",
-        "2026-10-01T13:00:00+09:00");
+        "2026-10-02T00:00:00+09:00");
 
-    assertThat(quantityOf(organizationId, SEPTEMBER, customerId)).isEqualByComparingTo("500");
+    assertThat(quantityOf(organizationId, SEPTEMBER, customerId)).isEqualByComparingTo("800");
   }
 
   @Test

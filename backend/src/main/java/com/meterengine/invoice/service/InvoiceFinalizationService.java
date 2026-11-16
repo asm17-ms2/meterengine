@@ -19,6 +19,7 @@ import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -84,7 +85,7 @@ public class InvoiceFinalizationService {
     OffsetDateTime cutoffAt = now.isBefore(monthCutoffAt) ? now : monthCutoffAt;
 
     Targets targets =
-        transactionTemplate.execute(status -> targets(organizationId, month, cutoffAt));
+        transactionTemplate.execute(status -> targets(organizationId, month, cutoffAt, null));
     List<Invoice> invoices = new ArrayList<>();
     int skippedCount = 0;
     int failedCount = 0;
@@ -125,13 +126,14 @@ public class InvoiceFinalizationService {
   }
 
   // 환경이 있으면 도입사 행을 잠근 채 계산해, 같은 행을 잠그는 확정과 단가, 미터 변경이 계산 도중에 끼지 않는다.
-  // 0원 고객도 담는다. 호출한 쪽의 트랜잭션에서 쓴다.
-  Targets targets(UUID organizationId, YearMonth month, OffsetDateTime cutoffAt) {
+  // 0원 고객도 담는다. customerIds가 있으면 그 고객들만 계산한다. 호출한 쪽의 트랜잭션에서 쓴다.
+  Targets targets(
+      UUID organizationId, YearMonth month, OffsetDateTime cutoffAt, Collection<UUID> customerIds) {
     UUID environmentId = BusinessEnvironmentContext.environmentId();
     if (environmentId != null)
       organizationRepository.findForUpdateById(organizationId).orElseThrow();
     List<DraftInvoiceCustomer> draftInvoiceCustomers =
-        draftInvoiceService.calculate(organizationId, month, cutoffAt);
+        draftInvoiceService.calculate(organizationId, month, cutoffAt, customerIds);
     if (draftInvoiceCustomers.stream()
         .allMatch(draftInvoiceCustomer -> draftInvoiceCustomer.amount() == 0)) {
       return new Targets(null, draftInvoiceCustomers, Map.of(), Map.of());
