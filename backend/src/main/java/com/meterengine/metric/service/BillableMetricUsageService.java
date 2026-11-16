@@ -76,10 +76,26 @@ public class BillableMetricUsageService {
     return aggregate(organizationId, month, cutoff, cutoffAt(month));
   }
 
+  // 고객 한 명의 사용량만 집계한다. 결과의 고객 목록에도 그 고객만 있다.
+  @Transactional(readOnly = true)
+  public List<BillableMetricUsage> aggregate(
+      UUID organizationId, YearMonth month, UUID customerId) {
+    return aggregate(organizationId, month, BillingMonth.now(clock), cutoffAt(month), customerId);
+  }
+
   // 그 달에 cutoff 전에 발생했고 receivedBefore 전에 받은 이벤트를 집계한다.
   @Transactional(readOnly = true)
   public List<BillableMetricUsage> aggregate(
       UUID organizationId, YearMonth month, OffsetDateTime cutoff, OffsetDateTime receivedBefore) {
+    return aggregate(organizationId, month, cutoff, receivedBefore, null);
+  }
+
+  private List<BillableMetricUsage> aggregate(
+      UUID organizationId,
+      YearMonth month,
+      OffsetDateTime cutoff,
+      OffsetDateTime receivedBefore,
+      UUID customerId) {
     List<BillableMetric> billableMetrics =
         (BusinessEnvironmentContext.environmentId() == null
             ? billableMetricRepository.findByOrganizationIdOrderByCodeAsc(organizationId)
@@ -94,9 +110,12 @@ public class BillableMetricUsageService {
 
     List<Customer> customers =
         (BusinessEnvironmentContext.environmentId() == null
-            ? customerRepository.findByOrganizationIdOrderByNameAscIdAsc(organizationId)
-            : customerRepository.listScoped(
-                organizationId, BusinessEnvironmentContext.environmentId()));
+                ? customerRepository.findByOrganizationIdOrderByNameAscIdAsc(organizationId)
+                : customerRepository.listScoped(
+                    organizationId, BusinessEnvironmentContext.environmentId()))
+            .stream()
+                .filter(customer -> customerId == null || customerId.equals(customer.getId()))
+                .toList();
 
     var periods =
         (BusinessEnvironmentContext.environmentId() == null
@@ -113,7 +132,9 @@ public class BillableMetricUsageService {
                             interval ->
                                 interval.getBillableMetricCode().equals(metric.getCode())
                                     && interval.includes(period)))
-        .map(billableMetric -> aggregate(billableMetric, customers, start, end, receivedBefore))
+        .map(
+            billableMetric ->
+                aggregate(billableMetric, customers, start, end, receivedBefore, customerId))
         .toList();
   }
 
@@ -122,11 +143,13 @@ public class BillableMetricUsageService {
       List<Customer> customers,
       OffsetDateTime start,
       OffsetDateTime end,
-      OffsetDateTime receivedBefore) {
+      OffsetDateTime receivedBefore,
+      UUID customerId) {
     requireSupported(billableMetric);
 
     var quantities =
-        billableMetricUsageRepository.aggregate(billableMetric, start, end, receivedBefore);
+        billableMetricUsageRepository.aggregate(
+            billableMetric, start, end, receivedBefore, customerId);
     List<CustomerUsage> customerUsages =
         customers.stream()
             .map(

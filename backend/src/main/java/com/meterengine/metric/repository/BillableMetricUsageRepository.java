@@ -35,12 +35,13 @@ public class BillableMetricUsageRepository {
       Map<UUID, DimensionUsage> totalByCustomerId,
       Map<UUID, List<DimensionUsage>> dimensionUsagesByCustomerId) {}
 
-  // 그 달에 발생했고 receivedBefore 전에 받은 이벤트를 집계한다.
+  // 그 달에 발생했고 receivedBefore 전에 받은 이벤트를 집계한다. customerId가 있으면 그 고객만 집계한다.
   public AggregatedQuantities aggregate(
       BillableMetric metric,
       OffsetDateTime start,
       OffsetDateTime end,
-      OffsetDateTime receivedBefore) {
+      OffsetDateTime receivedBefore,
+      UUID customerId) {
     if (!MetricAggregation.SUPPORTED.contains(metric.getAggregation()))
       throw new IllegalStateException("Unsupported metric aggregation");
     String filter =
@@ -74,7 +75,7 @@ public class BillableMetricUsageRepository {
                  properties -> ?::text AS value,
                  COALESCE((SELECT jsonb_object_agg(dimension_property, properties -> dimension_property)
                            FROM unnest(?::text[]) AS dimension_property), '{}'::jsonb) AS dimension_values
-          FROM event WHERE organization_id = ? AND environment_scope_id = ? AND type = ? AND occurred_at >= ? AND occurred_at < ? AND received_at < ?
+          FROM event WHERE organization_id = ? AND environment_scope_id = ? AND type = ? AND occurred_at >= ? AND occurred_at < ? AND received_at < ?%s
         ), eligible AS (
           SELECT *, CASE WHEN jsonb_typeof(value) = 'number' THEN value::text::numeric END AS numeric_value
           FROM candidates WHERE %s
@@ -87,6 +88,7 @@ public class BillableMetricUsageRepository {
         ORDER BY customer_id, is_total, dimension_values
         """
             .formatted(
+                customerId == null ? "" : " AND customer_id = ?",
                 filter,
                 expression,
                 percentile ? "ordered_values" : "quantity",
@@ -127,9 +129,10 @@ public class BillableMetricUsageRepository {
           statement.setObject(6, start);
           statement.setObject(7, end);
           statement.setObject(8, receivedBefore);
+          if (customerId != null) statement.setObject(9, customerId);
           if (percentile)
             statement.setBigDecimal(
-                9,
+                customerId == null ? 9 : 10,
                 "median".equals(metric.getAggregation())
                     ? new BigDecimal("50")
                     : metric.getPercentile());

@@ -131,11 +131,15 @@ public class WorkspaceQueryService {
     if (search.customerId() != null) customerService.get(organizationId, search.customerId());
     YearMonth month = search.monthOrCurrent();
     List<BillableMetricUsageResponse> metrics =
-        billableMetricUsageService.aggregate(organizationId, month).stream()
-            .map(BillableMetricUsageResponse::from)
-            .filter(
-                metric -> search.metricCode() == null || search.metricCode().equals(metric.code()))
-            .toList();
+        (search.customerId() == null
+                ? billableMetricUsageService.aggregate(organizationId, month)
+                : billableMetricUsageService.aggregate(organizationId, month, search.customerId()))
+            .stream()
+                .map(BillableMetricUsageResponse::from)
+                .filter(
+                    metric ->
+                        search.metricCode() == null || search.metricCode().equals(metric.code()))
+                .toList();
     List<CustomerResponse> customers =
         customerService.list(organizationId, "all").stream().map(CustomerResponse::from).toList();
     Map<UUID, Map<String, BillableMetricUsageCustomer>> quantities = new LinkedHashMap<>();
