@@ -40,7 +40,7 @@ public class EventIssueController {
   @GetMapping("/v1/event-issues/search")
   @ReadAccess
   @Operation(
-      summary = "과금에서 빠진 이벤트 검색",
+      summary = "과금에서 빠진 이벤트 조회",
       description =
           "저장된 이벤트를 지금 미터 정의와 단가로 다시 검사해, 연결할 미터가 없거나, 수량을 읽을 수 없거나, 적용 단가가 없어 과금에서 빠진 이벤트를 돌려줍니다."
               + " 대상은 조회한 달에 발생했고 occurred_at이 cutoff_at보다 이른 이벤트이며, cutoff_at은 지금 시각과 그 달의 끝 가운데 이른 쪽입니다."

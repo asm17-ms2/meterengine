@@ -26,13 +26,14 @@
 - docs.json에 있는 페이지 경로만 링크한다. 앞에 / 를 붙인 절대 경로로 쓴다(예: `/concepts/environments`). 확장자 `.mdx`를 붙이지 않는다.
 - 없는 페이지를 링크하지 않는다. 아직 "작성 중"인 자리 페이지는 링크해도 된다(docs.json에 있으므로).
 - API 참조는 `/api-reference/introduction`만 링크한다. 개별 엔드포인트 페이지 경로는 추측해 쓰지 않는다. 엔드포인트는 본문에 메서드와 경로로 쓴다(예: `POST /v1/events`).
-- 문서 사이트 도메인(mintlify.site, docs.meterengine.com)을 본문에 쓰지 않는다.
+- 문서 사이트 도메인(mintlify.site, docs.meterengine.com)을 본문에 쓰지 않는다. 빠른 시작의 코딩 어시스턴트 프롬프트에서 `llms.txt` 주소를 쓰는 것만 예외다.
+- 다른 페이지를 가리킬 때는 "~을 참고하세요"로 쓴다("~을 보세요", "~을 봅니다"는 쓰지 않는다).
 - 외부 링크는 토스페이먼츠 공식 문서, Standard Webhooks 사양처럼 1차 출처만 쓴다.
 
 ## [4] 예시 코드
 
 - 주소는 `https://meterengine.com/v1/...`를 쓴다. staging 주소를 쓰지 않는다.
-- API 키 자리표시자는 테스트 키 `me_test_xxxxxxxx`를 쓴다. 라이브 키 예시(me_live_)는 쓰지 않는다.
+- API 키 자리표시자는 `{API_KEY}`를 쓴다(예: `Authorization: Bearer {API_KEY}`). MDX가 중괄호를 식으로 읽으므로 코드 블록이나 인라인 코드 안에만 쓴다. 라이브 키 예시(me_live_)는 쓰지 않는다.
 - curl을 기본으로 쓴다. 필요하면 Node(fetch) 예시를 CodeGroup으로 붙인다. 다른 언어 예시는 쓰지 않는다.
 - 요청 본문과 응답 예시의 필드 이름과 값의 형식은 DTO와 `backend/openapi.yaml`에서 확인한 그대로 쓴다. 필드를 만들어 넣지 않는다.
 - UUID 예시는 형식이 맞는 값을 쓰고 페이지 안에서 같은 자원에는 같은 값을 쓴다.
@@ -42,8 +43,8 @@
 ## [5] MDX 형식
 
 - frontmatter에 `title`, `description`을 둔다. description은 한 문장이다.
-- 쓰는 컴포넌트: Steps/Step, CodeGroup, Tabs/Tab, Note, Tip, Warning, Info, Check, Card/CardGroup, AccordionGroup/Accordion, ResponseField, Expandable, mermaid 코드 블록. 사용법이 불확실하면 https://www.mintlify.com/docs 를 확인한다.
-- 되돌릴 수 없는 동작(이벤트 전송, 확정, 결제, 폐기)은 그 단계 바로 앞에 Warning을 둔다. Warning을 한 페이지에 남발하지 않는다.
+- 쓰는 컴포넌트: Steps/Step, CodeGroup, Tabs/Tab, Note, Tip, Danger, Info, Check, Card/CardGroup, AccordionGroup/Accordion, ResponseField, Expandable, mermaid 코드 블록. 사용법이 불확실하면 https://www.mintlify.com/docs 를 확인한다.
+- 되돌릴 수 없는 동작(이벤트 전송, 확정, 결제, 폐기)은 그 단계 바로 앞에 Danger(빨간색)를 둔다. Warning(노란색)은 쓰지 않는다. Danger를 한 페이지에 남발하지 않는다.
 - 팀이 아직 정하지 않은 것에 기대는 문장 바로 앞에 `{/* 확인 필요: 내용 */}`을 단다. 공개 화면에는 보이지 않는다. 정해지면 문장을 맞추고 주석을 지운다.
 - 단계마다 하는 곳을 밝힌다: 콘솔 화면에서 하는지, API로 하는지. 빠른 시작은 [화면], [API] 표시를 쓴다.
 - 콘솔 로그인으로만 되는 기능 페이지는 상단에 Note "이 기능은 콘솔에 로그인한 상태에서만 됩니다. API 키로 부르면 거절됩니다."를 둔다.
@@ -195,3 +196,11 @@
 | 라이브 환경, 라이브 키 | 실제 환경, 운영 환경, 운영 키 | 화면 표기와 같다 |
 | 구분 키, 구분 값 | 차원 키, 차원 값, 조합 | 화면 표기와 같다. API의 `dimension_properties`, `dimension_values`는 그대로 둔다 |
 | KST | Asia/Seoul | 시각은 "2026-11-02 04:00 KST"처럼 쓴다 |
+| batch | 묶음, 묶어 보내기, 배치 | `POST /v1/event-batches`로 여러 이벤트를 한 요청에 보내는 것. "batch로 보내기", "batch 요청", "batch 결과"처럼 쓴다. 콘솔 열 이름 '묶음 안 순서'는 화면 표기라 그대로 둔다 |
+| 테스트 화면 | 시험 화면 | API 참조 엔드포인트 페이지의 '시도하기'로 여는 요청 화면. 테스트 환경, 테스트 키와 같은 '테스트'로 맞춘다 |
+| 기본료, 최소 사용료 | 월 기본료, 월 최소 사용료(본문) | 화면 입력란 '월 기본료 (원)', '월 최소 사용료 (원)'을 인용할 때만 '월'을 붙인다 |
+| 영문 표기 | API 값 | 용어 대응표와 표의 열 이름. API의 필드 이름, 값, 경로 이름을 적는다 |
+
+## [8] 문의
+
+- 문의처는 메일 support@meterengine.com 하나다(콘솔의 문의 주소와 같다). `[support@meterengine.com](mailto:support@meterengine.com)`으로 링크하고 GitHub 이슈를 안내하지 않는다.

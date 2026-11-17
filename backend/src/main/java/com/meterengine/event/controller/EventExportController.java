@@ -40,7 +40,7 @@ public class EventExportController {
   @GetMapping("/v1/events/export")
   @ReadAccess
   @Operation(
-      summary = "수집 이벤트 CSV 내보내기",
+      summary = "수집 이벤트 내보내기",
       description =
           "이벤트 목록과 같은 월 또는 자유 기간, 고객, 유형, 검색어, 속성 조건과 정렬을 적용합니다. page와 size는 받지만 내보내기에는 쓰지 않습니다."
               + " 조건 전체가 10,000행을 넘거나, include_properties=true일 때 원본 properties 합계가 32MB를 넘으면 400 validation_error로 거절합니다."

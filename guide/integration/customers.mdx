@@ -20,13 +20,13 @@ description: "고객을 등록하고, 자사 시스템의 ID와 MeterEngine 고�
 | 고객 목록과 조회 `GET /v1/customers`, `GET /v1/customers/{id}` | read |
 | 고객 수정, 보관, 복원 | admin |
 
-권한의 뜻과 포함 관계는 [API 권한](/authentication/scopes)을 보세요.
+권한의 뜻과 포함 관계는 [API 권한](/authentication/scopes)을 참고하세요.
 
 ## 고객 등록하기
 
 <Steps>
 <Step title="업무 환경과 키를 확인합니다">
-연동을 시험할 때는 테스트 환경에서 발급한 키(`me_test_`로 시작)를 씁니다. 고객은 업무 환경마다 따로 등록되므로 테스트 환경에 등록한 고객은 라이브 환경에 없습니다. 라이브 환경으로 넘어갈 때 고객을 다시 등록합니다. 자세한 내용은 [업무 환경](/concepts/environments)을 보세요.
+연동을 테스트할 때는 테스트 환경에서 발급한 키(`me_test_`로 시작)를 씁니다. 고객은 업무 환경마다 따로 등록되므로 테스트 환경에 등록한 고객은 라이브 환경에 없습니다. 라이브 환경으로 넘어갈 때 고객을 다시 등록합니다. 자세한 내용은 [업무 환경](/concepts/environments)을 참고하세요.
 </Step>
 <Step title="external_id를 넣어 등록합니다">
 자사 시스템에서 그 고객을 가리키는 고유한 값을 `external_id`에 넣어 보냅니다.
@@ -34,7 +34,7 @@ description: "고객을 등록하고, 자사 시스템의 ID와 MeterEngine 고�
 <CodeGroup>
 ```bash curl
 curl -X POST https://meterengine.com/v1/customers \
-  -H "Authorization: Bearer me_test_xxxxxxxx" \
+  -H "Authorization: Bearer {API_KEY}" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "에이콘 주식회사",
@@ -79,7 +79,7 @@ const customer = await response.json();
 `id`를 자사 시스템에 `external_id`와 함께 저장합니다. 이 값이 이벤트의 `customer_id`가 됩니다.
 </Step>
 <Step title="이벤트에 id를 씁니다">
-저장한 `id`를 `customer_id`에 넣어 이벤트를 보냅니다. 방법은 [사용량 이벤트 보내기](/integration/events)를 보세요.
+저장한 `id`를 `customer_id`에 넣어 이벤트를 보냅니다. 방법은 [사용량 이벤트 보내기](/integration/events)를 참고하세요.
 </Step>
 </Steps>
 
@@ -93,7 +93,7 @@ const customer = await response.json();
 | `external_id` | 아니오 | 1자에서 255자. 업무 환경 안에서 고유합니다 |
 | `billing_email` | 아니오 | 이메일 형식(`@` 뒤 도메인에 점이 있어야 합니다), 254자까지. 없으면 빼거나 `null`로 보냅니다 |
 
-`billing_email`은 저장만 됩니다. MeterEngine은 이 주소로 메일을 보내지 않으니 청구 안내는 직접 전달합니다. [소개](/index)를 보세요.
+`billing_email`은 저장만 됩니다. MeterEngine은 이 주소로 메일을 보내지 않으니 청구 안내는 직접 전달합니다. [소개](/index)를 참고하세요.
 
 ### 응답
 
@@ -147,9 +147,9 @@ MeterEngine 고객 id. 이벤트의 `customer_id`에 넣는 값입니다.
 }
 ```
 
-<Warning>
-`external_id`를 빼고 등록하면 보낼 때마다 새 고객이 만들어집니다. 응답을 받지 못해 같은 요청을 다시 보내면 같은 고객이 두 명 생깁니다. `external_id`를 넣을 수 없다면 `Idempotency-Key` 헤더를 붙여 보내세요. 같은 키와 같은 본문을 다시 보내면 처음 응답을 그대로 돌려줍니다. 자세한 규칙은 [멱등 규칙](/api-basics/idempotency)을 보세요.
-</Warning>
+<Danger>
+`external_id`를 빼고 등록하면 보낼 때마다 새 고객이 만들어집니다. 응답을 받지 못해 같은 요청을 다시 보내면 같은 고객이 두 명 생깁니다. `external_id`를 넣을 수 없다면 `Idempotency-Key` 헤더를 붙여 보내세요. 같은 키와 같은 본문을 다시 보내면 처음 응답을 그대로 돌려줍니다. 자세한 규칙은 [멱등 규칙](/api-basics/idempotency)을 참고하세요.
+</Danger>
 
 ## 고객 id를 잃었을 때
 
@@ -162,7 +162,7 @@ MeterEngine 고객 id. 이벤트의 `customer_id`에 넣는 값입니다.
 <Accordion title="external_id로 조회합니다 (read 권한)">
 ```bash
 curl "https://meterengine.com/v1/customers?external_id=acct_1024" \
-  -H "Authorization: Bearer me_test_xxxxxxxx"
+  -H "Authorization: Bearer {API_KEY}"
 ```
 
 ```json 200 OK
@@ -190,4 +190,4 @@ curl "https://meterengine.com/v1/customers?external_id=acct_1024" \
 
 ## 보관한 고객
 
-고객을 보관하면 그 고객의 새 이벤트와 같은 `external_id`의 등록이 `409 customer_archived`로 거절됩니다. 지난 이벤트와 청구, 결제 기록은 남습니다. 다시 쓰려면 admin 권한 키로 `POST /v1/customers/{id}/restorations`를 부르거나 콘솔 고객 상세 화면의 '고객 복원'을 누릅니다. 보관과 복원 규칙은 [바꾸기, 보관, 복원](/pricing/changes-and-archiving)을 보세요.
+고객을 보관하면 그 고객의 새 이벤트와 같은 `external_id`의 등록이 `409 customer_archived`로 거절됩니다. 지난 이벤트와 청구, 결제 기록은 남습니다. 다시 쓰려면 admin 권한 키로 `POST /v1/customers/{id}/restorations`를 부르거나 콘솔 고객 상세 화면의 '고객 복원'을 누릅니다. 보관과 복원 규칙은 [바꾸기, 보관, 복원](/pricing/changes-and-archiving)을 참고하세요.

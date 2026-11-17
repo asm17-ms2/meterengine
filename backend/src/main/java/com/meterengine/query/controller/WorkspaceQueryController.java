@@ -359,7 +359,7 @@ public class WorkspaceQueryController {
   @GetMapping("/v1/usage/search")
   @ReadAccess
   @Operation(
-      summary = "고객별 사용량 검색",
+      summary = "사용량 검색",
       description =
           "검색어와 여러 조건으로 고객별 사용량을 거르고 정렬해 한 페이지씩 돌려줍니다. month만 정해 모든 고객을 받으려면"
               + " GET /v1/usage가 간단합니다. 한 고객의 모든 미터를 같은 페이지에 담습니다. total_unfiltered는 보관한"
@@ -859,7 +859,7 @@ public class WorkspaceQueryController {
   @ReadAccess
   @EnvironmentReady
   @Operation(
-      summary = "고객 검색 결과 CSV 내보내기",
+      summary = "고객 내보내기",
       description =
           "GET /v1/customers/search와 같은 조건에 맞는 결과를 페이지를 나누지 않고 모두 내보냅니다. 최대 10,000행이며 넘으면"
               + " 400입니다.")
@@ -924,7 +924,7 @@ public class WorkspaceQueryController {
   @GetMapping(value = "/v1/billable-metrics/export", produces = "text/csv")
   @ReadAccess
   @Operation(
-      summary = "미터 검색 결과 CSV 내보내기",
+      summary = "미터 내보내기",
       description =
           "GET /v1/billable-metrics/search와 같은 조건에 맞는 결과를 페이지를 나누지 않고 모두 내보냅니다. 최대 10,000행이며"
               + " 넘으면 400입니다.")
@@ -984,7 +984,7 @@ public class WorkspaceQueryController {
   @GetMapping(value = "/v1/billable-metric-prices/export", produces = "text/csv")
   @ReadAccess
   @Operation(
-      summary = "단가 검색 결과 CSV 내보내기",
+      summary = "단가 내보내기",
       description =
           "GET /v1/billable-metric-prices/search와 같은 조건에 맞는 결과를 페이지를 나누지 않고 모두 내보냅니다. 최대"
               + " 10,000행이며 넘으면 400입니다.")
@@ -1062,7 +1062,7 @@ public class WorkspaceQueryController {
   @GetMapping(value = "/v1/usage/export", produces = "text/csv")
   @ReadAccess
   @Operation(
-      summary = "고객별 사용량 검색 결과 CSV 내보내기",
+      summary = "사용량 내보내기",
       description =
           "GET /v1/usage/search와 같은 조건에 맞는 결과를 페이지를 나누지 않고 모두 내보냅니다. 최대 10,000행이며 넘으면 400입니다.")
   @Parameters({
@@ -1139,7 +1139,7 @@ public class WorkspaceQueryController {
   @GetMapping(value = "/v1/invoices/draft/export", produces = "text/csv")
   @ReadAccess
   @Operation(
-      summary = "청구 예정액 검색 결과 CSV 내보내기",
+      summary = "청구 예정액 내보내기",
       description =
           "GET /v1/invoices/draft/search와 같은 조건에 맞는 결과를 페이지를 나누지 않고 모두 내보냅니다. 최대 10,000행이며"
               + " 넘으면 400입니다.")
@@ -1222,7 +1222,7 @@ public class WorkspaceQueryController {
   @GetMapping(value = "/v1/invoices/export", produces = "text/csv")
   @ReadAccess
   @Operation(
-      summary = "청구서 검색 결과 CSV 내보내기",
+      summary = "청구서 내보내기",
       description =
           "GET /v1/invoices/search와 같은 조건에 맞는 결과를 페이지를 나누지 않고 모두 내보냅니다. 정렬 방향은 생략하면"
               + " desc입니다. 최대 10,000행이며 넘으면 400입니다.")
