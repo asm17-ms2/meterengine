@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import styles from "./HomePage.module.css";
 import { BrandMark } from "@/components/shell/BrandMark";
+import { DOCS_URL } from "@/lib/docs";
 
 // 소개 화면 워드마크(24px)가 콘솔 헤더(21px)보다 큰 만큼 마크도 키운다.
 const HOME_MARK_SCALE = 24 / 21;
@@ -22,7 +23,7 @@ export default function Home() {
   return <div className={styles.page}>
     <header className={styles.header}>
       <Link href="/" className={styles.brand} aria-label="MeterEngine 소개"><BrandMark scale={HOME_MARK_SCALE} />MeterEngine</Link>
-      <nav className={styles.navigation} aria-label="서비스 소개"><a href="#flow">첫 청구까지</a><a href="#integration">고객 화면과 연동</a><Link href="/login">로그인</Link><Link className={styles.navAction} href="/signup">가입</Link></nav>
+      <nav className={styles.navigation} aria-label="서비스 소개"><a href="#flow">첫 청구까지</a><a href="#integration">고객 화면과 연동</a><a href={DOCS_URL}>문서</a><Link href="/login">로그인</Link><Link className={styles.navAction} href="/signup">가입</Link></nav>
     </header>
     <main id="main-content">
       <section className={styles.hero} aria-labelledby="home-title">
@@ -66,6 +67,6 @@ export default function Home() {
       </section>
       <section className={styles.startSection} aria-labelledby="start-title"><div><h2 id="start-title">테스트 환경에서 첫 청구서를 발행해 보세요.</h2><p>요금표를 만들고 테스트 사용량을 보내 보세요. 고객이 받을 청구서를 미리 확인할 수 있어요.</p></div><Link className={styles.primaryAction} href="/signup">가입하기</Link></section>
     </main>
-    <footer className={styles.footer}><Link href="/" className={styles.footerBrand}>MeterEngine</Link><span>사용량 기반 과금 서비스</span><div><Link href="/terms">이용약관</Link><Link href="/privacy" className={styles.footerPolicy}>개인정보 처리방침</Link><Link href="/login">로그인</Link><Link href="/signup">가입</Link></div></footer>
+    <footer className={styles.footer}><Link href="/" className={styles.footerBrand}>MeterEngine</Link><span>사용량 기반 과금 서비스</span><div><Link href="/terms">이용약관</Link><Link href="/privacy" className={styles.footerPolicy}>개인정보 처리방침</Link><a href={DOCS_URL}>문서</a><Link href="/login">로그인</Link><Link href="/signup">가입</Link></div></footer>
   </div>;
 }

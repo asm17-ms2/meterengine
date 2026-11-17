@@ -7,6 +7,7 @@ import { ScopedLink as Link } from "@/components/workspace/ScopedLink";
 import { usePathname } from "next/navigation";
 import { workspaceHref } from "@/lib/workspace-href";
 import { useTenantScope } from "@/components/auth/TenantAccess";
+import { DOCS_URL } from "@/lib/docs";
 
 // 맨 위 묶음(개요, 고객)은 제목 없이 둔다.
 const NAV_GROUPS: { label?: string; items: { href: string; label: string }[] }[] = [
@@ -22,7 +23,8 @@ export function NavMenu({ onNavigate }: { onNavigate?: () => void }) {
   const canRead = useTenantScope("read");
   const search = useWorkspaceSearch().toString();
   const selected = NAV_GROUPS.flatMap(group => group.items).find(item => pathname === item.href || pathname.startsWith(item.href + "/"))?.href;
-  if (!canRead) return <nav aria-label="주 메뉴"><Link href="/organizations" onClick={onNavigate}>조직 선택</Link></nav>;
+  const docsLink = <a className="nav-link nav-docs-link" href={DOCS_URL} target="_blank" rel="noopener noreferrer">가이드와 API 문서</a>;
+  if (!canRead) return <nav aria-label="주 메뉴"><Link href="/organizations" onClick={onNavigate}>조직 선택</Link>{docsLink}</nav>;
   // 페이지 이동 링크라 menu 역할 없이 그룹 제목과 링크 목록으로 둔다.
-  return <nav aria-label="주 메뉴">{NAV_GROUPS.map((group, index) => <div key={group.label ?? index} className="nav-group">{group.label && <div className="nav-group-title" id={`${id}-group-${index}`}>{group.label}</div>}<ul className="nav-list" aria-labelledby={group.label ? `${id}-group-${index}` : undefined}>{group.items.map(item => <li key={item.href}><Link className="nav-link" href={workspaceHref(item.href, search)} aria-current={selected === item.href ? "page" : undefined} onClick={onNavigate}>{item.label}</Link></li>)}</ul></div>)}</nav>;
+  return <nav aria-label="주 메뉴">{NAV_GROUPS.map((group, index) => <div key={group.label ?? index} className="nav-group">{group.label && <div className="nav-group-title" id={`${id}-group-${index}`}>{group.label}</div>}<ul className="nav-list" aria-labelledby={group.label ? `${id}-group-${index}` : undefined}>{group.items.map(item => <li key={item.href}><Link className="nav-link" href={workspaceHref(item.href, search)} aria-current={selected === item.href ? "page" : undefined} onClick={onNavigate}>{item.label}</Link></li>)}</ul></div>)}<div className="nav-group nav-docs">{docsLink}</div></nav>;
 }

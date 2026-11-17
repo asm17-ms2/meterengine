@@ -106,6 +106,8 @@ p { line-height: 1.7; }
 .nav-link:hover { background: rgba(0, 0, 0, .06); color: var(--ink); }
 .nav-link[aria-current=page] { background: #eeeafb; color: #48339a; }
 .nav-link:focus-visible { outline-offset: -3px; }
+.nav-docs { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.nav-docs-link::after { content: " \2197"; color: var(--muted); }
 .workspace-sidebar .nav-group-title { padding-inline-start: 24px; font-size: 11px; margin-top: 10px; }
 .workspace-main { min-width: 0; }
 .workspace-content { max-width: 1450px; padding: 32px 38px 70px; display: flex; flex-direction: column; gap: 28px; }
