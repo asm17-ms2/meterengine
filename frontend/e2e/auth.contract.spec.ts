@@ -37,6 +37,9 @@ test("overview keeps the selected month and shows unresolved invoices from every
   await expect(page.getByLabel("청구 월", { exact: true })).toHaveValue(currentMonth);
   const unresolved = page.locator("section.workspace-panel").filter({ has: page.getByRole("heading", { name: "처리할 결제", exact: true }) });
   await expect(unresolved).toBeVisible();
+  // 처리할 결제는 접혀 있고 제목 옆에 건수만 보인다.
+  await expect(unresolved.locator("summary")).toContainText("1건");
+  await unresolved.locator("summary").click();
   await expect(unresolved).toContainText("2026-09");
   const href = await unresolved.getByRole("link", { name: "지난달 실패 고객", exact: true }).getAttribute("href");
   const target = new URL(href!, FRONTEND_ORIGIN);
@@ -49,9 +52,11 @@ test("overview keeps the selected month and shows unresolved invoices from every
   await expect(unresolved).toContainText("지난달 실패 고객");
   await expect(page.getByText("선택한 달에 확인할 항목이 없어요.", { exact: true })).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
+  await unresolved.locator("summary").click();
   await expect(unresolved.getByRole("link", { name: "지난달 실패 고객", exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  // Enter만 눌러 제출해도 직접 쓴 월로 조회한다.
+  // Enter만 눌러 제출해도 직접 쓴 월로 조회한다. 접힌 목록을 누른 마우스가 달력 패널 위에 남으면 그 칸의 달이 골라지므로 먼저 치운다.
+  await page.mouse.move(0, 0);
   await page.getByLabel("청구 월", { exact: true }).fill("2026-04");
   await page.getByLabel("청구 월", { exact: true }).press("Enter");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("홈 - 2026년 4월");
@@ -61,6 +66,8 @@ test("the overview setup step says which supplier and payment settings are missi
   await login(page, "member@contract.local", "/overview");
   const step = page.locator(".setup-list li").filter({ has: page.getByText("공급자와 결제 설정", { exact: true }) });
   await expect(step.getByText("공급자 정보 미입력, 토스페이먼츠 테스트 키 미등록. 현재 업무 환경: 테스트 환경", { exact: true })).toBeVisible();
+  // 설정하기는 글자 링크가 아니라 버튼 모양이다.
+  await expect(step.getByRole("link", { name: "설정하기", exact: true })).toHaveClass(/ant-btn/);
 });
 
 test("public health, gated routes, expired session and return URL", async ({ page, request }) => {

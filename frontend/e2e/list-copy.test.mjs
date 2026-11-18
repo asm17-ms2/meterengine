@@ -97,11 +97,17 @@ test("mobile usage cards label each dimension row with its dimension values unde
 test("the event issue summary uses the same reason names as the filter and the problem column", () => {
   const issues = appSource("(console)/event-issues/page.tsx");
   assert.ok(!issues.includes("미터 없음 {result.data.summary"));
-  assert.ok(issues.includes("{REASONS.unknown_event_type} {result.data.summary.unknown_event_type}건"));
-  assert.ok(issues.includes("{REASONS.unpriced_usage} {result.data.summary.unpriced_usage}건"));
+  assert.ok(issues.includes("<strong>{REASONS[issueReason]} {COUNT.format(summary[issueReason])}건</strong>"));
 });
 
-test("the overview unpriced usage item also links to events filtered to a missing price", () => {
+test("the home unpriced usage item also links to events filtered to a missing price", () => {
   const overview = appSource("(console)/overview/page.tsx");
-  assert.ok(overview.includes("<Link href={`/event-issues?month=${month}&reason=unpriced_usage`}>이벤트 보기</Link>"));
+  assert.ok(overview.includes("<LinkButton href={`/event-issues?month=${month}&reason=unpriced_usage`}>이벤트 보기</LinkButton>"));
+});
+
+// 홈의 할 일은 글자 링크가 아니라 버튼 모양으로 보인다.
+test("the home setup and check items lead somewhere with buttons, not bare text links", () => {
+  const overview = appSource("(console)/overview/page.tsx");
+  assert.ok(overview.includes("<LinkButton href={step.href}>설정하기</LinkButton>"));
+  assert.ok(!overview.includes("<Link "));
 });
