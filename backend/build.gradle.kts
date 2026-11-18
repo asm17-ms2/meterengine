@@ -34,6 +34,7 @@ dependencies {
 	implementation(platform(libs.aws.sdk.bom))
 	// 동기 클라이언트만 쓰므로 비동기 HTTP 클라이언트(netty)는 넣지 않는다.
 	implementation(libs.aws.sdk.sesv2) { exclude(group = "software.amazon.awssdk", module = "netty-nio-client") }
+	implementation(libs.aws.sdk.s3) { exclude(group = "software.amazon.awssdk", module = "netty-nio-client") }
 	implementation("org.flywaydb:flyway-database-postgresql")
 	developmentOnly("org.springframework.boot:spring-boot-docker-compose")
 	// 우리 코드가 부르는 API가 없어 runtimeOnly다. actuator가 클래스패스에서 감지해
