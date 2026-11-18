@@ -66,16 +66,16 @@ description: "이벤트에서 청구할 수량을 뽑는 미터를 정의하고,
 
 | `aggregation` | 콘솔 표기 | 계산 | 집계에 드는 값 |
 | --- | --- | --- | --- |
-| `sum` | 합계 (SUM) | 값을 모두 더합니다 | JSON number |
-| `count` | 이벤트 수 (COUNT) | 이벤트 건수를 셉니다 | 속성과 관계없이 모든 이벤트 |
-| `count_distinct` | 고유 값 수 (COUNT DISTINCT) | 중복을 뺀 값의 수를 셉니다 | JSON 문자열, number, 불리언 |
-| `min` | 최솟값 (MIN) | 가장 작은 값 | JSON number |
-| `max` | 최댓값 (MAX) | 가장 큰 값 | JSON number |
-| `avg` | 평균 (AVG) | 산술평균 | JSON number |
-| `first` | 첫 값 (FIRST) | `timestamp`가 가장 이른 이벤트의 값. 시각이 같으면 `transaction_id` 순서 | JSON number |
-| `last` | 마지막 값 (LAST) | `timestamp`가 가장 늦은 이벤트의 값. 시각이 같으면 `transaction_id` 순서 | JSON number |
-| `median` | 중앙값 (MEDIAN) | 50백분위 값 | JSON number |
-| `percentile` | 백분위수 (PERCENTILE) | 지정한 백분위의 값. 두 값 사이면 선형 보간 | JSON number |
+| `sum` | 합계 | 값을 모두 더합니다 | JSON number |
+| `count` | 이벤트 수 | 이벤트 건수를 셉니다 | 속성과 관계없이 모든 이벤트 |
+| `count_distinct` | 고유 값 수 | 중복을 뺀 값의 수를 셉니다 | JSON 문자열, number, 불리언 |
+| `min` | 최솟값 | 가장 작은 값 | JSON number |
+| `max` | 최댓값 | 가장 큰 값 | JSON number |
+| `avg` | 평균 | 산술평균 | JSON number |
+| `first` | 첫 값 | `timestamp`가 가장 이른 이벤트의 값. 시각이 같으면 `transaction_id` 순서 | JSON number |
+| `last` | 마지막 값 | `timestamp`가 가장 늦은 이벤트의 값. 시각이 같으면 `transaction_id` 순서 | JSON number |
+| `median` | 중앙값 | 50백분위 값 | JSON number |
+| `percentile` | 백분위수 | 지정한 백분위의 값. 두 값 사이면 선형 보간 | JSON number |
 
 <Danger>
 숫자로 집계하는 미터는 값이 JSON number일 때만 셉니다. `"input_tokens": "1200"`처럼 문자열로 보내거나 키를 빠뜨린 이벤트는 저장은 되지만 집계에서 빠지고 오류 응답도 오지 않습니다. 이런 이벤트는 `GET /v1/unbilled-events`의 `non_numeric_value`와 콘솔 '과금에서 빠진 이벤트' 화면의 '수량을 읽을 수 없음'에 나타납니다. 연동 코드에서 숫자 값을 number로 고정해 보내세요.
@@ -107,7 +107,7 @@ description: "이벤트에서 청구할 수량을 뽑는 미터를 정의하고,
 <Tab title="콘솔">
 1. 화면 위 '업무 환경'이 원하는 환경(예: '테스트 환경')인지 확인합니다.
 2. 왼쪽 메뉴 '미터' 화면에서 '미터 등록'을 누릅니다.
-3. '코드', '이름', '이벤트 유형', '집계 함수'를 넣고, 집계 함수가 '이벤트 수 (COUNT)'가 아니면 '집계 대상 속성'을 넣습니다.
+3. '코드', '이름', '이벤트 유형', '집계 함수'를 넣고, 집계 함수가 '이벤트 수'가 아니면 '집계 대상 속성'을 넣습니다.
 4. 단가를 속성 값마다 다르게 매길 거라면 '구분 키'에 키를 쉼표로 나눠 넣습니다.
 5. '결과 변환'에서 '과금 단위 크기'와 '끝수 처리'를 정합니다. 창 아래 '계산 미리보기'로 식을 확인합니다.
 6. '저장'을 누릅니다.

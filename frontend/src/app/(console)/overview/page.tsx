@@ -9,17 +9,17 @@ import { Suspense } from "react";
 import { AggregateLoading } from "@/components/screen/AggregateLoading";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "개요" };
+export const metadata: Metadata = { title: "홈" };
 
 export default async function OverviewPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const params = await searchParams;
   const month = readMonth(params.month);
-  return <Suspense key={searchKey(params)} fallback={<><WorkspaceHeader title={`${formatKoreanMonth(month)} 개요`} description="설정과 확인할 항목을 먼저 보고, 청구와 수납으로 넘어가세요."><MonthFilter month={month} /></WorkspaceHeader><section className="workspace-panel"><AggregateLoading title="이 달 금액과 확인할 항목을 계산하는 중이에요" /></section></>}><Overview month={month} /></Suspense>;
+  return <Suspense key={searchKey(params)} fallback={<><WorkspaceHeader title={`홈 - ${formatKoreanMonth(month)}`} description="설정과 확인할 항목을 먼저 보고, 청구와 수납으로 넘어가세요."><MonthFilter month={month} /></WorkspaceHeader><section className="workspace-panel"><AggregateLoading title="이 달 금액과 확인할 항목을 계산하는 중이에요" /></section></>}><Overview month={month} /></Suspense>;
 }
 
 async function Overview({ month }: { month: string }) {
   const result = await getDashboard(month);
-  if (!result.ok) return <><WorkspaceHeader title="개요" description="사용량부터 수납까지, 선택한 달의 진행 상태를 확인하세요." /><WorkspaceError message={result.error.message} /></>;
+  if (!result.ok) return <><WorkspaceHeader title="홈" description="사용량부터 수납까지, 선택한 달의 진행 상태를 확인하세요." /><WorkspaceError message={result.error.message} /></>;
   const data = result.data;
   const unresolved = data.unresolved_invoice_payments;
   const paymentModeName = data.payment_mode === "test" ? "테스트" : "라이브";
@@ -33,7 +33,7 @@ async function Overview({ month }: { month: string }) {
   ];
   const formatMoney = (value: number) => `${new Intl.NumberFormat("ko-KR").format(value)}원`;
   return <>
-    <WorkspaceHeader title={(steps.every(step => step.isComplete) || data.invoice_payments.length > 0 || data.event_count > 0 || unresolved?.length > 0) ? `${formatKoreanMonth(month)} 개요` : "첫 청구를 준비하세요"} description="설정과 확인할 항목을 먼저 보고, 청구와 수납으로 넘어가세요."><MonthFilter month={month} /></WorkspaceHeader>
+    <WorkspaceHeader title={(steps.every(step => step.isComplete) || data.invoice_payments.length > 0 || data.event_count > 0 || unresolved?.length > 0) ? `홈 - ${formatKoreanMonth(month)}` : "첫 청구를 준비하세요"} description="설정과 확인할 항목을 먼저 보고, 청구와 수납으로 넘어가세요."><MonthFilter month={month} /></WorkspaceHeader>
     <section className="finance-flow" aria-label="월별 금액 흐름"><div><span>청구 예정액</span><strong>{formatMoney(data.draft_supply_amount)}</strong><small>아직 확정하지 않은 고객, 공급가액 기준</small></div><div><span>확정 청구액</span><strong>{formatMoney(data.finalized_total_amount)}</strong><small>부가세 포함</small></div><div><span>받을 금액</span><strong>{formatMoney(data.outstanding_amount)}</strong><small>결제 전, 실패, 결과 확인 중인 금액, 취소액 제외</small></div><div><span>받은 금액</span><strong>{formatMoney(data.collected_amount)}</strong><small>취소한 {formatMoney(data.canceled_amount)}을 뺀 금액</small></div></section>
     <section className="workspace-panel" aria-labelledby="overview-unresolved-title">
       <div className="workspace-heading"><h2 id="overview-unresolved-title">처리할 결제</h2><span className="muted">{paymentModeLabel}</span></div>

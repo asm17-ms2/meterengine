@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { CsvDownload } from "@/components/screen/CsvDownload";
 import { DataMonths } from "@/components/screen/DataMonths";
 import { Suspense } from "react";
-import { ScopedLink as Link } from "@/components/workspace/ScopedLink";
+import { LinkButton } from "@/components/screen/LinkButton";
 
 import { CutoffStamp } from "@/components/screen/CutoffStamp";
 import { FilterBar } from "@/components/screen/FilterBar";
@@ -17,7 +17,7 @@ import { UsageMeta } from "@/components/usage/UsageMeta";
 import { UsageSection } from "@/components/usage/UsageSection";
 import { CAPABILITIES } from "@/lib/api/capabilities";
 import { aggregateBillableMetricUsages } from "@/lib/api/usage";
-import { formatKoreanMonth, formatKstStamp } from "@/lib/format";
+import { formatKoreanMonth, formatKstShortStamp } from "@/lib/format";
 import { readListQuery } from "@/lib/list-query";
 import { searchKey } from "@/lib/search-key";
 
@@ -56,7 +56,7 @@ export default async function UsagePage({
           end={
             <>
               <CutoffStamp month={month} now={now} />
-              <QueryStamp text={formatKstStamp(now)} />
+              <QueryStamp text={formatKstShortStamp(now)} />
               <ExpandControls />
             </>
           }
@@ -83,7 +83,7 @@ export default async function UsagePage({
           <AggregateLoading title="사용량을 집계하는 중이에요" />
         )}
       </ScreenCard>
-      <p className="field-hint">이 달의 청구 금액은 <Link inheritFilters href="/billing">청구 검토</Link>에서 확인하세요.</p>
+      <div><LinkButton inheritFilters href="/billing">이 달 청구 금액 보기</LinkButton></div>
     </CollapseProvider>
   );
 }

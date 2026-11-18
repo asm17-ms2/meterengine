@@ -42,13 +42,12 @@ test("the usage quantity header does not sort and the line count sort stays in t
   assert.ok(filters.includes('{ value: "line_count", label: "집계 항목 수" }'));
 });
 
-test("the meter search empty state counts all meters and the sort note follows the applied sort", () => {
+test("the meter search empty state counts all meters and the screen leaves the sort to the filter row", () => {
   const screen = source("billable-metrics/BillableMetricsScreen.tsx");
   const section = source("billable-metrics/BillableMetricsSection.tsx");
   assert.ok(section.includes("totalUnfiltered={result.data.total_unfiltered}"));
   assert.ok(screen.includes("등록된 미터는 ${totalUnfiltered ?? rows.length}개예요."));
-  assert.ok(!screen.includes("<ScreenNote>정렬: 코드 오름차순</ScreenNote>"));
-  assert.ok(screen.includes('query.sort ?? "code"'));
+  assert.ok(!screen.includes("<ScreenNote>"));
 });
 
 test("the meter screen shows the same submit-based archive filter while loading or failing", () => {
@@ -84,7 +83,7 @@ test("usage and event screens drop the mismatched sub-tab rows and keep their cr
   const usage = readFileSync(new URL("../src/app/(console)/usage/page.tsx", import.meta.url), "utf8");
   const events = readFileSync(new URL("../src/app/(console)/events/page.tsx", import.meta.url), "utf8");
   for (const page of [usage, events]) assert.ok(!page.includes('className="workspace-tabs"'));
-  assert.ok(usage.includes('<Link inheritFilters href="/billing">청구 검토</Link>'));
+  assert.ok(usage.includes('<LinkButton inheritFilters href="/billing">이 달 청구 금액 보기</LinkButton>'));
   assert.ok(events.includes('<ScopedLink href="/integrations">API 키와 웹훅</ScopedLink>'));
 });
 

@@ -25,7 +25,7 @@ export function EmptyState({
       description={
         <Flex vertical gap={4}>
           <Typography.Text strong>{title}</Typography.Text>
-          {body ? <Typography.Text type="secondary">{body}</Typography.Text> : null}
+          {body ? <Typography.Text>{body}</Typography.Text> : null}
         </Flex>
       }
     >

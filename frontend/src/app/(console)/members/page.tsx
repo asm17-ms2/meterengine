@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ScopedLink as Link } from "@/components/workspace/ScopedLink";
+import { LinkButton } from "@/components/screen/LinkButton";
 import { ArchiveFilter } from "@/components/workspace/ArchiveFilter";
 import { ActionPanel } from "@/components/workspace/ActionPanel";
 import { WorkspaceHeader } from "@/components/workspace/WorkspaceHeader";
@@ -33,8 +33,8 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
     invitationActions[invitation.id] = [{ title: "초대 취소", operation: "revokeOrganizationInvitation", description: `${invitation.email}의 초대 링크를 더 이상 쓸 수 없게 해요.`, fields: [{ name: "id", label: "", type: "hidden", value: invitation.id }], isDanger: true }];
   }
   return <>
-    <WorkspaceHeader title="사용자 관리" description="함께 일할 사용자를 추가하고, 사용자별 업무 권한과 접근을 관리하세요."><Link href="/audit?q=organization_">변경 이력 보기</Link></WorkspaceHeader>
-    <section className="workspace-panel"><h2>함께 일할 사용자 추가</h2><p className="muted">사용자마다 조회, 수집, 전체 관리, 결제 권한을 정해요. 새 사용자의 기본 권한은 조회예요. 사용자와 초대는 대표관리자가 관리해요.</p>
+    <WorkspaceHeader title="사용자 관리" description="함께 일할 사용자를 추가하고, 사용자별 업무 권한과 접근을 관리하세요."><LinkButton href="/audit?q=organization_">변경 이력 보기</LinkButton></WorkspaceHeader>
+    <section className="workspace-panel"><h2>함께 일할 사용자 추가</h2><p>새 사용자의 기본 권한은 조회예요.</p>
       {isOwner ? <div className="workspace-actions">
         <ActionPanel title="계정 직접 생성" operation="createMember" description="새 사용자 계정을 만들고 업무 권한을 정해요. 만든 사용자는 처음 로그인할 때 약관과 개인정보 처리방침에 동의해야 업무를 시작할 수 있어요. 이미 가입한 이메일이면 초대 링크를 만드세요." label="사용자 계정 생성" fields={[{ name: "email", label: "사용자 이메일", type: "email", maxLength: 254 }, { name: "name", label: "이름", maxLength: 255 }, { name: "password", label: "초기 비밀번호", type: "password", hint: "8자 이상 72자 이하예요. 한글은 1자를 3자로 계산해요. 로그인 정보는 그 사용자에게 안전하게 전달하세요.", maxLength: 72 }, scopeField()]} />
         <ActionPanel title="초대 링크 만들기" operation="createOrganizationInvitation" description="메일은 보내지 않아요. 링크를 복사해 직접 전달하세요. 지정한 이메일로 48시간 안에 한 번 수락할 수 있어요. 같은 이메일로 다시 발급해도 이전 링크는 취소하기 전까지 쓸 수 있으니, 링크를 잃어버렸다면 초대 이력에서 이전 초대를 먼저 취소하세요. 링크를 받은 사람이 새 계정을 설정하므로 초대할 사람에게만 전달하세요." label="초대 링크 발급" fields={[{ name: "email", label: "초대할 이메일", type: "email", maxLength: 254 }, scopeField()]} />

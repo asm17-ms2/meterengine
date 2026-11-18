@@ -1,7 +1,7 @@
 import { QueryStamp } from "@/components/screen/QueryStamp";
 import type { DraftInvoiceResponse } from "@/lib/api/billing";
 import type { Result } from "@/lib/api/client";
-import { formatKstStamp } from "@/lib/format";
+import { formatKstShortStamp } from "@/lib/format";
 
 export async function BillingCalculatedStamp({
   draftInvoice,
@@ -11,5 +11,5 @@ export async function BillingCalculatedStamp({
   const result = await draftInvoice;
   if (!result.ok) return null;
 
-  return <QueryStamp label="계산 시각" text={formatKstStamp(new Date(result.data.calculated_at))} />;
+  return <QueryStamp label="계산 시각" text={formatKstShortStamp(new Date(result.data.calculated_at))} />;
 }

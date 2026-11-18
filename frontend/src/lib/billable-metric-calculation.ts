@@ -1,14 +1,14 @@
 export const METRIC_AGGREGATIONS = [
-  { value: "sum", label: "합계 (SUM)", description: "숫자 속성의 값을 모두 더해요." },
-  { value: "count", label: "이벤트 수 (COUNT)", description: "속성 값과 관계없이 이 이벤트 유형의 이벤트 수를 집계해요." },
-  { value: "count_distinct", label: "고유 값 수 (COUNT DISTINCT)", description: "문자열, 숫자, 불리언 속성에서 중복을 뺀 값의 수예요. 없는 값과 null, 객체, 배열은 세지 않아요." },
-  { value: "min", label: "최솟값 (MIN)", description: "숫자 속성 중 가장 작은 값이에요." },
-  { value: "max", label: "최댓값 (MAX)", description: "숫자 속성 중 가장 큰 값이에요." },
-  { value: "avg", label: "평균 (AVG)", description: "숫자 속성 값의 산술평균이에요." },
-  { value: "first", label: "첫 값 (FIRST)", description: "발생 시각이 가장 이른 이벤트의 숫자 값이에요. 시각이 같으면 전송 ID 순서로 정해요." },
-  { value: "last", label: "마지막 값 (LAST)", description: "발생 시각이 가장 늦은 이벤트의 숫자 값이에요. 시각이 같으면 전송 ID 순서로 정해요." },
-  { value: "median", label: "중앙값 (MEDIAN)", description: "숫자 속성을 정렬했을 때 가운데 값이에요. 개수가 짝수면 가운데 두 값의 평균이에요." },
-  { value: "percentile", label: "백분위수 (PERCENTILE)", description: "숫자 속성을 정렬해 지정한 백분위의 값을 구해요. 두 값 사이에 걸리면 선형 보간해요." },
+  { value: "sum", label: "합계", description: "숫자 속성의 값을 모두 더해요." },
+  { value: "count", label: "이벤트 수", description: "속성 값과 관계없이 이 이벤트 유형의 이벤트 수를 집계해요." },
+  { value: "count_distinct", label: "고유 값 수", description: "문자열, 숫자, 불리언 속성에서 중복을 뺀 값의 수예요. 없는 값과 null, 객체, 배열은 세지 않아요." },
+  { value: "min", label: "최솟값", description: "숫자 속성 중 가장 작은 값이에요." },
+  { value: "max", label: "최댓값", description: "숫자 속성 중 가장 큰 값이에요." },
+  { value: "avg", label: "평균", description: "숫자 속성 값의 산술평균이에요." },
+  { value: "first", label: "첫 값", description: "발생 시각이 가장 이른 이벤트의 숫자 값이에요. 시각이 같으면 전송 ID 순서로 정해요." },
+  { value: "last", label: "마지막 값", description: "발생 시각이 가장 늦은 이벤트의 숫자 값이에요. 시각이 같으면 전송 ID 순서로 정해요." },
+  { value: "median", label: "중앙값", description: "숫자 속성을 정렬했을 때 가운데 값이에요. 개수가 짝수면 가운데 두 값의 평균이에요." },
+  { value: "percentile", label: "백분위수", description: "숫자 속성을 정렬해 지정한 백분위의 값을 구해요. 두 값 사이에 걸리면 선형 보간해요." },
 ] as const;
 
 export type MetricAggregation = (typeof METRIC_AGGREGATIONS)[number]["value"];
@@ -25,9 +25,9 @@ export type MetricCalculation = {
 
 export const METRIC_ROUNDING_OPTIONS = [
   { value: "none", label: "추가 반올림 없음" },
-  { value: "ceil", label: "올림 (CEIL)" },
-  { value: "floor", label: "내림 (FLOOR)" },
-  { value: "round", label: "반올림 (ROUND)" },
+  { value: "ceil", label: "올림" },
+  { value: "floor", label: "내림" },
+  { value: "round", label: "반올림" },
 ] satisfies { value: MetricRoundingMode; label: string }[];
 
 export function isMetricAggregation(value: string): value is MetricAggregation {

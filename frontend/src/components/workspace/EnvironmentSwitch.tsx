@@ -8,7 +8,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useTenantAccess } from "@/components/auth/TenantAccess";
 import { ENVIRONMENT_LABELS, ENVIRONMENT_SWITCH_TITLES, environmentOptions, environmentQueryValue, environmentSwitchPath, isLockedEnvironment, LIVE_ENVIRONMENT_PATH, readEnvironment } from "@/lib/environment";
 
-// 머리의 환경 선택과 환경 띠의 "환경 바꾸기"가 같은 확인 창을 쓴다.
 export function useEnvironmentSwitch(isLiveEnvironmentOpen: boolean) {
   const pathname = usePathname();
   const params = useWorkspaceSearch();
@@ -52,7 +51,6 @@ export function useEnvironmentSwitch(isLiveEnvironmentOpen: boolean) {
 export function EnvironmentSwitch({ showLegacy, isLiveEnvironmentOpen }: { showLegacy: boolean; isLiveEnvironmentOpen: boolean }) {
   const { environment, confirmSwitch } = useEnvironmentSwitch(isLiveEnvironmentOpen);
   return <div className={`workspace-environment workspace-environment-${environment}`}>
-    <span aria-hidden="true">업무 환경</span>
     <Select<string>
       aria-label="업무 환경"
       value={environment}

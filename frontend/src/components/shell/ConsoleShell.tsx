@@ -13,18 +13,17 @@ import { BrandMark } from "@/components/shell/BrandMark";
 import { StatusTag } from "@/components/screen/StatusTag";
 import { workspaceHref } from "@/lib/workspace-href";
 import { TenantAccessProvider } from "@/components/auth/TenantAccess";
-import { hasScope, ORGANIZATION_ROLE_LABELS, scopeSummary, type OrganizationRole } from "@/lib/auth/permissions";
+import { hasScope, ORGANIZATION_ROLE_LABELS, type OrganizationRole } from "@/lib/auth/permissions";
 
-import { EnvironmentSwitch, useEnvironmentSwitch } from "@/components/workspace/EnvironmentSwitch";
-import { ENVIRONMENT_BAND_MESSAGES, environmentBandClass, nextEnvironment, readEnvironment } from "@/lib/environment";
+import { EnvironmentSwitch } from "@/components/workspace/EnvironmentSwitch";
+import { ENVIRONMENT_BAND_MESSAGES, environmentBandClass, readEnvironment, type WorkspaceEnvironment } from "@/lib/environment";
 
 // 넓은 화면도 빈틈없이 채우게 문구를 두 묶음으로 되풀이하고, 한 묶음 너비만큼 흘린다.
 const BAND_REPEAT = 6;
 
-function EnvironmentBand({ isLiveEnvironmentOpen }: { isLiveEnvironmentOpen: boolean }) {
-  const { environment, confirmSwitch } = useEnvironmentSwitch(isLiveEnvironmentOpen);
+function EnvironmentBand({ environment }: { environment: WorkspaceEnvironment }) {
   const message = ENVIRONMENT_BAND_MESSAGES[environment];
-  return <div className={environmentBandClass(environment)} role="region" aria-label="현재 업무 환경"><div className="environment-band-track"><p className="environment-band-message" style={{ "--environment-band-duration": `${Math.round(message.length * 1.25)}s` } as React.CSSProperties}>{Array.from({ length: BAND_REPEAT * 2 }, (_, index) => <span key={index} aria-hidden={index > 0 || undefined}>{message}</span>)}</p></div><Button size="small" onClick={() => confirmSwitch(nextEnvironment(environment))}>환경 바꾸기</Button></div>;
+  return <div className={environmentBandClass(environment)} role="region" aria-label="현재 업무 환경"><div className="environment-band-track"><p className="environment-band-message" style={{ "--environment-band-duration": `${Math.round(message.length * 1.25)}s` } as React.CSSProperties}>{Array.from({ length: BAND_REPEAT * 2 }, (_, index) => <span key={index} aria-hidden={index > 0 || undefined}>{message}</span>)}</p></div></div>;
 }
 
 type Props = { organizationId: string; organizationLabel: string; canSwitchOrganization: boolean; userLabel: string; isOperator: boolean; organizationRole?: OrganizationRole | null; scopes: string[]; showLegacyEnvironment: boolean; isLiveEnvironmentOpen: boolean; children: React.ReactNode };
@@ -51,13 +50,11 @@ function ShellContent({ organizationId, organizationLabel, canSwitchOrganization
     return () => { observer.disconnect(); root.style.removeProperty("--workspace-header-height"); };
   }, []);
   const canRead = hasScope(scopes, "read");
-  const canManage = hasScope(scopes, "admin");
-  const scopeLabel = `${scopeSummary(scopes)}${!canManage && canRead && !hasScope(scopes, "ingest") ? " 전용" : ""}`;
   // 폰에서는 헤더에 업무 환경만 남기고 이 묶음을 메뉴 서랍에서 보인다.
-  const accountControls = <>{isOperator && <Link href="/admin">플랫폼 운영</Link>}<span className="workspace-user-name">{userLabel}{organizationRole ? ` / ${ORGANIZATION_ROLE_LABELS[organizationRole]}` : ""}</span><span className="workspace-scope"><StatusTag>{scopeLabel}</StatusTag></span><LogoutButton type="text" size="small" /></>;
+  const accountControls = <>{isOperator && <Link href="/admin">플랫폼 운영</Link>}<span className="workspace-user-name">{userLabel}</span>{organizationRole && <span className="workspace-role"><StatusTag>{ORGANIZATION_ROLE_LABELS[organizationRole]}</StatusTag></span>}<LogoutButton type="text" size="small" /></>;
   return <div className="workspace-shell">
     <div ref={headerRef} className="workspace-top">
-    <EnvironmentBand isLiveEnvironmentOpen={isLiveEnvironmentOpen} />
+    <EnvironmentBand environment={environment} />
     <header className="workspace-header">
       <div className="workspace-brand">
         <Button className="mobile-menu" type="text" icon={<MenuOutlined />} aria-label="메뉴 열기" aria-expanded={isNavOpen} onClick={() => setIsNavOpen(true)} />

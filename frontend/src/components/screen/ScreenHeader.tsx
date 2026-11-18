@@ -25,12 +25,12 @@ export function ScreenHeader({
           {tags}
         </Flex>
         {description ? (
-          <Typography.Paragraph type="secondary" style={{ margin: 0, maxWidth: 650 }}>
+          <Typography.Paragraph style={{ margin: 0, maxWidth: 650 }}>
             {description}
           </Typography.Paragraph>
         ) : null}
         {children ? (
-          <Typography.Paragraph type="secondary" style={{ margin: 0 }}>
+          <Typography.Paragraph style={{ margin: 0 }}>
             {children}
           </Typography.Paragraph>
         ) : null}

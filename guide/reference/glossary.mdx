@@ -15,7 +15,7 @@ description: "가이드 용어의 뜻과 영문 표기, 콘솔 화면 표기를 
 | 필수 동의 | 가입, 초대 수락, 첫 로그인 때 체크해야 하는 약관 | `terms_of_service`, `privacy_policy` | 이용약관, 개인정보 처리방침 | [가입과 이메일 인증](/account/signup) |
 | 이메일 인증 | 가입한 이메일로 온 인증 메일의 링크를 열어 주소를 확인하는 것. 인증 메일을 받았다면 인증해야 로그인할 수 있습니다 | `email_not_verified` | 메일함을 확인하세요, 이메일 인증, 인증 메일 다시 받기 | [가입과 이메일 인증](/account/signup) |
 | 조직 id | | `GET /v1/organization` 응답의 `id` | 조직마다 하나인 UUID. 업무 환경과 관계없이 같고 토스페이먼츠 웹훅 주소에 넣습니다 | [토스페이먼츠 상점 준비와 키 저장](/payments/toss-setup) |
-| 공급자 정보 | 조직의 사업자 정보. 업무 환경마다 저장하며 개요 화면의 준비 목록 표시에만 쓰입니다 | `business_registration_number`, `representative_name`, `business_address` | 공급자 정보: 사업자등록번호, 대표자명, 사업장 주소 | [공급자 정보](/account/supplier) |
+| 공급자 정보 | 조직의 사업자 정보. 업무 환경마다 저장하며 홈 화면의 준비 목록 표시에만 쓰입니다 | `business_registration_number`, `representative_name`, `business_address` | 공급자 정보: 사업자등록번호, 대표자명, 사업장 주소 | [공급자 정보](/account/supplier) |
 | 대표관리자 | 모든 업무와 사용자, 초대를 관리하는 역할. 가입한 사람이 처음 대표관리자가 됩니다 | `owner` | 대표관리자 | [구성원과 권한](/account/members) |
 | 관리자 | 전체 관리 (admin) 권한으로 모든 업무를 하지만 사용자와 초대는 관리하지 못하는 역할 | `admin` | 관리자 | [구성원과 권한](/account/members) |
 | 일반 사용자 | 조회 (read), 수집 (ingest) 가운데 받은 권한 안의 업무만 하는 구성원 | `member` | 일반 사용자 | [구성원과 권한](/account/members) |

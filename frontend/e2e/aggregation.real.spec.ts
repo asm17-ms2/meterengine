@@ -34,16 +34,16 @@ type MetricCase = {
 };
 
 const METRICS: MetricCase[] = [
-  { aggregation: "sum", label: "합계 (SUM)", raw: 93, quantity: 93 },
-  { aggregation: "count", label: "이벤트 수 (COUNT)", raw: 8, quantity: 8, ui: true },
-  { aggregation: "count_distinct", label: "고유 값 수 (COUNT DISTINCT)", raw: 5, quantity: 5 },
-  { aggregation: "min", label: "최솟값 (MIN)", raw: 11, quantity: 11 },
-  { aggregation: "max", label: "최댓값 (MAX)", raw: 40, quantity: 13, unit: 3, rounding: "floor", roundingLabel: "내림 (FLOOR)", ui: true },
-  { aggregation: "avg", label: "평균 (AVG)", raw: 23.25, quantity: 3, unit: 10, rounding: "ceil", roundingLabel: "올림 (CEIL)", ui: true },
-  { aggregation: "first", label: "첫 값 (FIRST)", raw: 11, quantity: 11 },
-  { aggregation: "last", label: "마지막 값 (LAST)", raw: 40, quantity: 40 },
-  { aggregation: "median", label: "중앙값 (MEDIAN)", raw: 21, quantity: 21 },
-  { aggregation: "percentile", label: "백분위수 (PERCENTILE)", raw: 37.15, quantity: 37.15, percentile: 95, ui: true },
+  { aggregation: "sum", label: "합계", raw: 93, quantity: 93 },
+  { aggregation: "count", label: "이벤트 수", raw: 8, quantity: 8, ui: true },
+  { aggregation: "count_distinct", label: "고유 값 수", raw: 5, quantity: 5 },
+  { aggregation: "min", label: "최솟값", raw: 11, quantity: 11 },
+  { aggregation: "max", label: "최댓값", raw: 40, quantity: 13, unit: 3, rounding: "floor", roundingLabel: "내림", ui: true },
+  { aggregation: "avg", label: "평균", raw: 23.25, quantity: 3, unit: 10, rounding: "ceil", roundingLabel: "올림", ui: true },
+  { aggregation: "first", label: "첫 값", raw: 11, quantity: 11 },
+  { aggregation: "last", label: "마지막 값", raw: 40, quantity: 40 },
+  { aggregation: "median", label: "중앙값", raw: 21, quantity: 21 },
+  { aggregation: "percentile", label: "백분위수", raw: 37.15, quantity: 37.15, percentile: 95, ui: true },
 ];
 
 async function choose(page: Page, scope: Locator, label: string, option: string) {
@@ -227,8 +227,8 @@ test("집계 10종과 단위 변환을 수집부터 사용량, 청구 예정액,
       await page.setViewportSize({ width: 390, height: 844 });
       await page.getByRole("button", { name: "미터 등록", exact: true }).first().click();
       const dialog = page.getByRole("dialog", { name: "미터 등록", exact: true });
-      await choose(page, dialog, "집계 함수", "백분위수 (PERCENTILE)");
-      await choose(page, dialog, "끝수 처리", "반올림 (ROUND)");
+      await choose(page, dialog, "집계 함수", "백분위수");
+      await choose(page, dialog, "끝수 처리", "반올림");
       for (const label of ["백분위 (0-100)", "과금 단위 크기", "소수 자릿수"]) {
         const bounds = await dialog.getByLabel(label, { exact: true }).boundingBox();
         expect(bounds).not.toBeNull();
