@@ -171,12 +171,12 @@ groups:
             model:
               refId: A
               expr: >-
-                (sum by (env, job_name) (meterengine_scheduled_job_run_total{env!~"test-.*", result="failed",job_name=~"payment_attempt_confirmation|payment_retry|payment_reconciliation|webhook_delivery|unbilled_usage_report"}
+                (sum by (env, job_name) (meterengine_scheduled_job_run_total{env!~"test-.*", result="failed",job_name=~"payment_attempt_confirmation|payment_retry|payment_reconciliation|webhook_delivery|unbilled_usage_report|dashboard_insights_refresh"}
                 unless meterengine_scheduled_job_run_total{env!~"test-.*", result="failed"} offset 15m) > 0)
-                or (sum by (env, job_name) (increase(meterengine_scheduled_job_run_total{env!~"test-.*", result="failed",job_name=~"payment_attempt_confirmation|payment_retry|payment_reconciliation|webhook_delivery|unbilled_usage_report"}[15m])) > 0)
-                or (sum by (env, job_name) (meterengine_scheduled_job_items_total{env!~"test-.*", result="failed",job_name=~"payment_attempt_confirmation|payment_retry|payment_reconciliation|webhook_delivery|unbilled_usage_report"}
+                or (sum by (env, job_name) (increase(meterengine_scheduled_job_run_total{env!~"test-.*", result="failed",job_name=~"payment_attempt_confirmation|payment_retry|payment_reconciliation|webhook_delivery|unbilled_usage_report|dashboard_insights_refresh"}[15m])) > 0)
+                or (sum by (env, job_name) (meterengine_scheduled_job_items_total{env!~"test-.*", result="failed",job_name=~"payment_attempt_confirmation|payment_retry|payment_reconciliation|webhook_delivery|unbilled_usage_report|dashboard_insights_refresh"}
                 unless meterengine_scheduled_job_items_total{env!~"test-.*", result="failed"} offset 15m) > 0)
-                or (sum by (env, job_name) (increase(meterengine_scheduled_job_items_total{env!~"test-.*", result="failed",job_name=~"payment_attempt_confirmation|payment_retry|payment_reconciliation|webhook_delivery|unbilled_usage_report"}[15m])) > 0)
+                or (sum by (env, job_name) (increase(meterengine_scheduled_job_items_total{env!~"test-.*", result="failed",job_name=~"payment_attempt_confirmation|payment_retry|payment_reconciliation|webhook_delivery|unbilled_usage_report|dashboard_insights_refresh"}[15m])) > 0)
               instant: true
           - refId: C
             relativeTimeRange: { from: 0, to: 0 }
@@ -296,8 +296,8 @@ groups:
             model:
               refId: A
               expr: >-
-                (time() - max by (env, job_name) (max_over_time(meterengine_scheduled_job_last_success_seconds{env!~"test-.*", job_name=~"payment_reconciliation|unbilled_usage_report"}[26h])))
-                or on (env, job_name) (count by (env, job_name) (meterengine_scheduled_job_run_total{env!~"test-.*", job_name=~"payment_reconciliation|unbilled_usage_report"}) * 0
+                (time() - max by (env, job_name) (max_over_time(meterengine_scheduled_job_last_success_seconds{env!~"test-.*", job_name=~"payment_reconciliation|unbilled_usage_report|dashboard_insights_refresh"}[26h])))
+                or on (env, job_name) (count by (env, job_name) (meterengine_scheduled_job_run_total{env!~"test-.*", job_name=~"payment_reconciliation|unbilled_usage_report|dashboard_insights_refresh"}) * 0
                 + on (env) group_left () (time() - max by (env) (process_start_time_seconds{env!~"test-.*", job="backend"})))
               instant: true
           - refId: C

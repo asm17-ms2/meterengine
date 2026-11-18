@@ -11544,8 +11544,8 @@ components:
         job_name:
           type: string
           description: "예약 작업 이름입니다. payment_attempt_confirmation, payment_retry,\
-            \ payment_reconciliation, webhook_delivery, unbilled_usage_report, invoice_auto_finalize\
-            \ 가운데 하나입니다."
+            \ payment_reconciliation, webhook_delivery, unbilled_usage_report, invoice_auto_finalize,\
+            \ dashboard_insights_refresh 가운데 하나입니다."
         last_started_at:
           type: string
           format: date-time

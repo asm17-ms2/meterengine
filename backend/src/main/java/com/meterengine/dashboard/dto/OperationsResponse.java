@@ -26,7 +26,7 @@ public record OperationsResponse(
   public record OperationsJob(
       @Schema(
               description =
-                  "예약 작업 이름입니다. payment_attempt_confirmation, payment_retry, payment_reconciliation, webhook_delivery, unbilled_usage_report, invoice_auto_finalize 가운데 하나입니다.")
+                  "예약 작업 이름입니다. payment_attempt_confirmation, payment_retry, payment_reconciliation, webhook_delivery, unbilled_usage_report, invoice_auto_finalize, dashboard_insights_refresh 가운데 하나입니다.")
           @JsonProperty("job_name")
           String jobName,
       @Schema(description = "마지막으로 성공한 실행이 끝난 시각(ISO 8601)입니다. 성공한 적이 없으면 null입니다.")

@@ -93,6 +93,7 @@ docker build -t meterengine-backend .
 
 - `./gradlew bootRun`은 spring-boot-docker-compose가 커넥션을 만들어 주므로 datasource 변수를 주지 않아도 된다.
 - 배포할 때는 `deploy/compose.prod.yml`이 위 변수를 필수로 걸어 주입하고 값은 SSM Parameter Store에서 온다. 등록 절차는 `deploy/README.md`.
+- 홈 인사이트는 매일 05:00(KST)에 모든 조직 것을 계산해 저장소에 올린다. 저장소는 `INSIGHTS_STORE`로 고르며 `file`(기본, `INSIGHTS_DIRECTORY` 아래 파일. 로컬 개발용)과 `s3`(`INSIGHTS_BUCKET` 버킷, 리전은 `INSIGHTS_S3_REGION`)가 있다. 서버는 조회가 온 조직 것만 저장소에서 읽어 메모리에 들고 있다가 다음 계산 시각에 버린다. 저장소에 오늘 값이 없으면 그 자리에서 DB로 계산해 올린다.
 - DB 쿼리 응답은 30초까지만 기다린다(`spring.datasource.hikari.data-source-properties.socketTimeout`). DB가 답 없이 끊겨도 커넥션이 묶이지 않고 풀려 앱이 회복한다.
 - actuator는 health와 prometheus만 노출한다 (`management.endpoints.web.exposure.include`).
 - 인보이스 자동 확정은 `INVOICE_AUTO_FINALIZE_ENABLED=true`일 때만 돈다(기본 끔). 배포 서버에서는 SSM 파라미터 `invoice-auto-finalize-enabled`로 켠다. 켜면 다음 04:00 KST 실행이 확정 시각(다음 달 2일 04:00 KST)이 지난 과거 달을 모든 환경에서 확정하므로, 켜기 전에 그 달들을 확정해도 되는지 확인한다.
