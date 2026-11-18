@@ -352,7 +352,7 @@ unset SESSION
 | `customer` | 고객 등록, 수정, 보관과 복원, 조회 | `/v1/customers` |
 | `payment` | 도입사별 토스 키, 카드 등록, 승인과 취소, 결과 확정, 재시도와 대사 | `/v1/invoices/{id}/payment-attempts` |
 | `webhook`, `notification` | 서명된 아웃박스 통보, 발송 이력과 제외 사용량 정기 통보 | `/v1/webhook-endpoints`, `/v1/unbilled-events` |
-| `dashboard` | 도입사 과금과 수납, 전체 월의 미해결 결제, 운영자 상태 조회 | `/v1/dashboard`, `/v1/operations` |
+| `dashboard` | 도입사 과금과 수납, 전체 월의 미해결 결제, 최근 석 달 금액 추이와 날짜별 이벤트 수, 운영자 상태 조회 | `/v1/dashboard`, `/v1/dashboard/insights`, `/v1/operations` |
 | `mail` | 보낼 메일 기록과 메일 발송 포트(`EmailSender`, 로그와 SES 구현). 남긴 메일의 본문과 받는 주소는 고치지 않는다 | 없음 |
 | `organization` | 현재 도입사 조회, 도입사 목록과 상태 변경(정지, 재개), 실제 환경 잠금 | `/v1/organization`, `/v1/organizations` |
 | `liveenvironment` | 실제 환경 이용 신청과 운영자 검토, 국세청 사업자 상태조회 포트(`BusinessRegistrationLookup`, 실제 호출과 조회하지 않는 구현), 승인 뒤 상점아이디 확인 | `/v1/organization/live-environment-applications`, `/v1/live-environment-applications` |

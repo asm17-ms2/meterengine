@@ -2967,6 +2967,60 @@ paths:
       summary: 월별 과금과 수납 현황 조회
       tags:
       - dashboard-controller
+  /v1/dashboard/insights:
+    get:
+      description: "로그인 세션이나 read 권한 API 키로 현재 업무 환경의 최근 석 달 확정 청구액과 받은 금액, 조회한 달의\
+        \ 날짜별 이벤트 수를 돌려줍니다. 매일 05:00(KST)에 계산해 둔 값이라 그 뒤에 생긴 변화는 다음 날 반영됩니다. 금액은 부\
+        가세 포함이고 확정한 청구서만 셉니다."
+      operationId: getDashboardInsights
+      parameters:
+      - description: "조회할 달(yyyy-MM, KST)입니다. 생략하면 이번 달입니다."
+        in: query
+        name: month
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DashboardInsightsResponse"
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없습니다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 등록되지 않은 값이거나, 폐기되거나 만료됐습니다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 권한이나 계정의 역할로는 할 수 없는 요청이거나, 조직이 정해지지 않은 로그인 세션입니다.
+            code=organization_not_active: 조직의 이용이 정지됐습니다.
+            code=consent_required: 로그인 세션의 사용자가 약관과 개인정보 처리방침에 아직 동의하지 않았습니다. POST /v1/sessions/current/consents로 동의합니다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었습니다. Retry-After\
+            \ 헤더의 초만큼 기다린 뒤 다시 보냅니다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 시간(초)
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 월별 금액 추이와 날짜별 이벤트 수 조회
+      tags:
+      - dashboard-controller
   /v1/email-verification-confirmations:
     post:
       description: |
@@ -9992,6 +10046,39 @@ components:
           type: integer
           format: int64
           description: 고객 정보의 버전입니다. 고칠 때 큰따옴표로 감싸 If-Match에 보냅니다.
+    DailyEventCount:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+          description: "날짜(yyyy-MM-dd, KST)"
+        event_count:
+          type: integer
+          format: int64
+          description: 그 날 발생한 이벤트 수(occurred_at 기준)
+    DashboardInsightsResponse:
+      type: object
+      properties:
+        calculated_at:
+          type: string
+          format: date-time
+          description: "인사이트를 계산한 시각(ISO 8601)입니다. 매일 05:00(KST)에 다시 계산하고, 그 뒤 처음\
+            \ 조회할 때 저장된 값이 없으면 그 자리에서 계산합니다."
+        daily_event_counts:
+          type: array
+          description: 조회한 달의 1일부터 계산한 날의 전날(KST)까지 날짜별 이벤트 수입니다. 계산한 날과 그 뒤의 날짜는
+            주지 않습니다.
+          items:
+            $ref: "#/components/schemas/DailyEventCount"
+        month:
+          type: string
+          description: "조회한 달(yyyy-MM, KST)"
+        monthly_amounts:
+          type: array
+          description: 조회한 달까지 최근 석 달의 금액입니다. 오래된 달부터 줍니다.
+          items:
+            $ref: "#/components/schemas/MonthlyAmount"
     DashboardInvoice:
       type: object
       properties:
@@ -11343,6 +11430,20 @@ components:
           type: integer
           format: int64
           description: 이 항목에 든 이벤트 수입니다. 여러 미터에 걸린 이벤트도 한 번만 셉니다.
+    MonthlyAmount:
+      type: object
+      properties:
+        collected_amount:
+          type: integer
+          format: int64
+          description: 받은 금액(원)입니다. 결제를 마친 청구서의 청구액에서 취소한 금액을 뺀 합계입니다.
+        finalized_total_amount:
+          type: integer
+          format: int64
+          description: 확정 청구액(원)입니다. 그 달 청구서의 부가세 포함 금액 합계입니다.
+        month:
+          type: string
+          description: "달(yyyy-MM, KST)"
     OperationsJob:
       type: object
       properties:
