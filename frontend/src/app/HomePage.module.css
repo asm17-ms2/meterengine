@@ -47,6 +47,11 @@
 .roles > div { display: grid; grid-template-columns: minmax(160px, .55fr) minmax(0, 1.8fr); gap: 48px; padding: 24px 0; border-bottom: 1px solid var(--home-line); }
 .roles dt { font-size: 15px; font-weight: 650; line-height: 1.8; }
 .roles dd { margin: 0; font-size: 14px; line-height: 1.9; color: var(--home-muted); max-width: 74ch; word-break: keep-all; overflow-wrap: anywhere; }
+.screens { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; align-items: start; margin-bottom: 56px; }
+.screens figure { margin: 0; }
+.screens img { display: block; width: 100%; height: auto; border: 1px solid var(--home-line); border-radius: 10px; box-shadow: 0 12px 32px rgba(32, 43, 64, .08); }
+.screens figcaption { margin-top: 14px; font-size: 14px; font-weight: 600; }
+@media(max-width: 767px) { .screens { grid-template-columns: 1fr; } }
 .startSection { max-width: 1160px; margin: 0 auto 72px; padding: 36px 40px; background: #eeeaf8; border: 1px solid #d8d0ed; border-radius: 10px; display: flex; align-items: center; justify-content: space-between; gap: 32px; }
 .startSection h2 { font-size: 25px; }
 .startSection p { color: #655786; font-size: 14px; line-height: 1.8; margin: 12px 0 0; }

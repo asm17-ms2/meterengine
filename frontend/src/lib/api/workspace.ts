@@ -19,6 +19,16 @@ export type DashboardResponse = {
   unresolved_invoice_payments: (InvoicePaymentResponse & { customer_id: string; customer_name: string; month: string })[];
 };
 
+export type DashboardInsightsResponse = {
+  month: string; calculated_at: string;
+  monthly_amounts: { month: string; finalized_total_amount: number; collected_amount: number }[];
+  daily_event_counts: { date: string; event_count: number }[];
+};
+
+export function getDashboardInsights(month: string) {
+  return serverFetch<DashboardInsightsResponse>(config.apiBaseUrl, "/v1/dashboard/insights", { month }, AGGREGATE_REQUEST);
+}
+
 export function getDashboard(month: string) {
   return serverFetch<DashboardResponse>(config.apiBaseUrl, "/v1/dashboard", { month }, AGGREGATE_REQUEST);
 }

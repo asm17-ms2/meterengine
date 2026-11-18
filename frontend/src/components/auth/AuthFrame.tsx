@@ -14,8 +14,9 @@ export function AuthFrame({ title, description, children, variant = "signup", cu
   return <div className="auth-layout">
     <aside className="auth-context" aria-label={isLogin ? "로그인 안내" : isOperator ? "플랫폼 운영자 계정 확인" : isJoin ? "참여 절차" : "가입 절차"}>
       <Link className="wordmark" href="/">MeterEngine</Link>
-      <div className="auth-intro"><p className="auth-intro-title">{isLogin ? "로그인하고 고객별 사용량과 청구를 확인하세요." : isOperator ? "플랫폼 운영을 함께 맡아요." : isJoin ? "팀과 같은 콘솔에서 일을 시작하세요." : "고객이 쓴 만큼 청구하고 결제까지 받으세요."}</p>{!isLogin && <p>{isOperator ? "계정을 확인하고 약관에 동의한 뒤 MeterEngine 운영을 시작하세요." : isJoin ? "계정을 확인하고 약관에 동의하면 소속 조직의 콘솔로 이동해요." : "사용량을 보내면 고객별 요금 계산부터 청구와 결제까지 이어져요."}</p>}</div>
+      <div className="auth-intro"><p className="auth-intro-title">{isLogin ? "로그인하고 고객별 사용량과 청구를 확인하세요." : isOperator ? "플랫폼 운영을 함께 맡아요." : isJoin ? "팀과 같은 콘솔에서 일을 시작하세요." : "쓴 만큼 청구하는 일, 이제 맡겨 주세요."}</p>{!isLogin && <p>{isOperator ? "계정을 확인하고 약관에 동의한 뒤 MeterEngine 운영을 시작하세요." : isJoin ? "계정을 확인하고 약관에 동의하면 소속 조직의 콘솔로 이동해요." : "사용량만 보내 주세요. 요금 계산부터 청구서와 카드 결제까지 이어서 처리해요."}</p>}</div>
       {steps.length > 0 && <ol className="onboarding-steps">{steps.map(([stepTitle, stepDetail], index) => <li key={stepTitle} aria-current={index + 1 === currentStep ? "step" : undefined} className={currentStep ? index + 1 < currentStep ? "is-done" : index + 1 === currentStep ? "is-current" : undefined : undefined}><strong>{stepTitle}</strong><span>{stepDetail}</span></li>)}</ol>}
+      {(isLogin || variant === "signup") && <p className="auth-catchphrase">서비스에만 집중하세요.<br />집계, 청구, 결제는 MeterEngine이 맡을게요.</p>}
     </aside>
     <main id="main-content" className="auth-main"><div className="auth-panel"><header><h1>{title}</h1><p className="muted">{description}</p></header>{children}</div></main>
   </div>;

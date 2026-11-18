@@ -1,0 +1,22 @@
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px 40px; }
+.chart { --series-1: var(--blue); --series-2: #1baf7a; min-width: 0; margin: 0; }
+.chart h3 { margin: 0 0 4px; font-size: 14px; }
+.chart > p { margin: 0 0 16px; font-size: 13px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; list-style: none; margin: 0 0 12px; padding: 0; font-size: 12px; }
+.swatch { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 2px; background: var(--series); }
+.plot { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); column-gap: 2px; align-items: end; height: 160px; margin: 0; padding: 0; list-style: none; border-bottom: 1px solid var(--line); }
+.group { display: flex; align-items: flex-end; justify-content: center; gap: 2px; height: 100%; }
+.column { flex: 0 1 24px; min-width: 2px; border-radius: 4px 4px 0 0; background: var(--series); }
+.group:hover .column { filter: brightness(.88); }
+.axis, .values { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); margin: 0; padding: 0; list-style: none; text-align: center; font-size: 11px; font-variant-numeric: tabular-nums; }
+.axis { padding-top: 6px; }
+.values { padding-top: 2px; }
+.values li { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.rank li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; font-size: 13px; }
+.rankLabel { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rankValue { font-variant-numeric: tabular-nums; }
+.rankTrack { grid-column: 1 / -1; height: 10px; border-radius: 0 4px 4px 0; background: var(--canvas); }
+.rankBar { height: 100%; min-width: 2px; border-radius: 0 4px 4px 0; background: var(--series-1); }
+.hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
