@@ -39,3 +39,18 @@ resource "aws_ssm_parameter" "signup" {
   type     = "String"
   value    = each.value
 }
+
+# 홈 인사이트를 서버의 파일이 아니라 버킷에 두게 한다. 이름은 서버 그룹 모듈이 만든 버킷에서 받는다.
+locals {
+  insights_parameters = {
+    insights-store  = "s3"
+    insights-bucket = module.app_fleet.insights_bucket_name
+  }
+}
+
+resource "aws_ssm_parameter" "insights" {
+  for_each = local.insights_parameters
+  name     = "${local.parameter_path}/${each.key}"
+  type     = "String"
+  value    = each.value
+}
