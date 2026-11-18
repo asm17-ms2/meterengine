@@ -349,6 +349,26 @@ class DashboardIntegrationTest {
   }
 
   @Test
+  void 같은_날_다시_조회하면_계산해_둔_값을_주고_다음_날_다시_계산한다() {
+    testClock.fix(OffsetDateTime.parse("2026-10-15T03:00:00Z"));
+    UUID organizationId = UUID.randomUUID();
+    String readKey = TestCredentials.issueApiKey(jdbcTemplate, organizationId, "read");
+    UUID customerId = insertCustomer(organizationId);
+    insertEvent(organizationId, customerId, "2026-10-10T01:00:00Z");
+    assertThat(dailyEventCount(insights(readKey, "2026-10"), 10)).isEqualTo(1);
+
+    insertEvent(organizationId, customerId, "2026-10-10T02:00:00Z");
+    testClock.fix(OffsetDateTime.parse("2026-10-15T10:00:00Z"));
+    assertThat(dailyEventCount(insights(readKey, "2026-10"), 10)).isEqualTo(1);
+
+    // 다음 날 05:00(KST)이 지나면 앞의 값은 어제 것이라 다시 계산한다
+    testClock.fix(OffsetDateTime.parse("2026-10-15T20:10:00Z"));
+    String next = insights(readKey, "2026-10");
+    assertThat(dailyEventCount(next, 10)).isEqualTo(2);
+    assertThat((List<?>) JsonPath.read(next, "$.daily_event_counts")).hasSize(15);
+  }
+
+  @Test
   void 인사이트는_다른_조직의_금액과_이벤트를_섞지_않고_수집_키로는_볼_수_없다() {
     testClock.fix(OffsetDateTime.parse("2026-10-15T03:00:00Z"));
     UUID organizationId = UUID.randomUUID();
@@ -380,6 +400,11 @@ class DashboardIntegrationTest {
             .exchange();
     assertThat(result).hasStatusOk();
     return new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8);
+  }
+
+  private static int dailyEventCount(String json, int dayOfMonth) {
+    return JsonPath.<Number>read(json, "$.daily_event_counts[" + (dayOfMonth - 1) + "].event_count")
+        .intValue();
   }
 
   private UUID insertCustomer(UUID organizationId) {
