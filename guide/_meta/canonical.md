@@ -12,10 +12,10 @@
 | --- | --- | --- | --- | --- |
 | 가입하면 승인 없이 테스트 환경을 쓰고, 라이브 환경은 이용 신청이 승인되면 열린다 | /index | 가입하면 바로 테스트 환경을 쓸 수 있고, 라이브 환경은 이용 신청이 승인되면 열립니다. | /quickstart, /account/signup, /api-reference/introduction, /concepts/environments, /payments/test-and-live |  |
 | 콘솔은 https://meterengine.com, API는 같은 도메인의 /v1/ 아래. 테스트와 라이브 환경도 주소가 같고 키가 환경을 정한다 | /api-reference/introduction | API는 https://meterengine.com/v1/ 아래에 있고, 어느 환경에 기록될지는 API 키가 정합니다. | /index, /quickstart, /authentication/api-keys, /payments/toss-setup | 공개 API 주소 |
-| SDK를 배포하지 않는다. 예시는 curl과 짧은 코드 조각이다 | /index | MeterEngine은 SDK를 배포하지 않으므로 예시는 HTTP 요청과 코드 조각으로 보여 줍니다. | /quickstart, /integration/events, /integration/retries, /webhooks/verify-signatures |  |
+| SDK를 배포하지 않는다. 예시는 curl과 짧은 코드 조각이다 | /index | MeterEngine은 SDK를 배포하지 않으므로 예시는 HTTP 요청과 코드 조각입니다. | /quickstart, /integration/events, /integration/retries, /webhooks/verify-signatures |  |
 | MeterEngine이 보내는 메일은 가입 이메일 인증 메일뿐이다(초대, 청구, 링크, 라이브 환경 이용 신청 결과는 보내지 않는다) | /index | MeterEngine은 링크와 안내를 메일로 보내지 않으니 직접 전달합니다. | /account/signup, /account/members, /billing/finalize-invoices, /billing/after-finalization, /payments/overview, /payments/invoice-links, /payments/card-registration, /integration/customers, /concepts/environments |  |
 | 전자세금계산서를 발행하지 않는다. invoice_number는 세금계산서 번호가 아니다 | /account/supplier | MeterEngine은 전자세금계산서를 발행하지 않습니다. | /index, /concepts/amounts | 공급자 정보 사용처 |
-| 문의 경로(GitHub 이슈, 적으면 안 되는 정보, 제목 형식) | /index | 문의 방법은 소개 페이지의 문의 절을 보세요. | /troubleshooting/events-not-billed | 문의 경로(GitHub 이슈) |
+| 문의는 메일 support@meterengine.com, 적을 값과 적으면 안 되는 정보 | /index | 문의는 support@meterengine.com으로 보내 주세요. | /api-basics/errors, /troubleshooting/events-not-billed, /webhooks/delivery-and-retries, /payments/charging |  |
 
 ## [2] 계정, 인증, 권한
 
@@ -42,7 +42,7 @@
 | 라이브 환경은 잠긴 채 시작하고 '라이브 환경 이용 신청'(사업자등록번호, 상점아이디, 실결제 키)이 승인되면 열린다. 승인되면 신청한 실결제 키가 라이브 환경의 토스페이먼츠 키로 저장된다. 잠긴 동안 콘솔의 라이브 환경 요청은 403 live_environment_locked | /concepts/environments | 라이브 환경은 '라이브 환경 이용 신청'이 승인되어야 열립니다. | /index, /account/signup, /authentication/api-keys, /authentication/scopes, /api-basics/errors, /payments/overview, /payments/test-and-live, /payments/toss-setup, /reference/glossary | 배포 서버의 국세청 사업자 상태 조회 사용 여부 |
 | 라이브 환경으로 옮기기 전 점검표(키, 웹훅 URL, 토스페이먼츠 키, 미터와 단가를 라이브 환경에 따로 준비) | /concepts/environments | 라이브 환경으로 옮길 때의 점검표는 [업무 환경](/concepts/environments)에 있습니다. | /payments/test-and-live |  |
 | 테스트 환경의 정의: 데이터가 분리되고 실결제가 없지만 이벤트, 확정, 웹훅은 실제로 일어나고 되돌릴 수 없다. "샌드박스"라고 부르지 않는다 | /concepts/environments | 테스트 환경도 보낸 이벤트와 확정한 청구서는 되돌릴 수 없습니다. | /quickstart, /payments/test-and-live, /api-reference/introduction | 테스트 키 정의와 mode 설명 |
-| 테스트, 라이브 키는 발급 환경에 고정되고 X-MeterEngine-Environment 헤더를 생략해도 된다. 다른 환경을 명시하면 403 environment_mismatch | /concepts/environments | 키는 발급한 환경에 고정되어 환경 헤더를 따로 넣지 않아도 됩니다. | /authentication/api-keys, /api-basics/errors, /api-reference/introduction | 시험 화면 proxy와 테스트 키 안내 |
+| 테스트, 라이브 키는 발급 환경에 고정되고 X-MeterEngine-Environment 헤더를 생략해도 된다. 다른 환경을 명시하면 403 environment_mismatch | /concepts/environments | 키는 발급한 환경에 고정되어 환경 헤더를 따로 넣지 않아도 됩니다. | /authentication/api-keys, /api-basics/errors, /api-reference/introduction | 테스트 화면 proxy와 테스트 키 안내 |
 | 환경마다 따로인 것(고객, 미터, 단가, 키, 토스페이먼츠 키, 웹훅, 확정)과 공통인 것(계정, 구성원 권한). 환경을 옮겨도 데이터는 복사되지 않는다 | /concepts/environments | 고객, 미터, 단가는 업무 환경마다 따로 만들어야 합니다. | /integration/customers, /pricing/meters, /payments/toss-setup, /webhooks/overview, /billing/auto-finalization | 없음 |
 
 ## [4] 시간 규칙
@@ -75,7 +75,7 @@
 | 단가 dimension_values의 키 집합은 미터의 구분 키와 정확히 같아야 하고 구분 값 사이 대체가 없다 | /pricing/dimensions | 단가가 없는 구분 값의 사용량은 청구되지 않습니다. | /pricing/price-models, /troubleshooting/events-not-billed | 없음 |
 | 보낸 이벤트는 고치거나 지울 수 없다. sum 미터만 확정 전 상계 이벤트로 바로잡을 수 있다 | /integration/events | 보낸 이벤트는 고치거나 지울 수 없습니다. | /quickstart, /pricing/changes-and-archiving, /troubleshooting/events-not-billed, /billing/after-finalization, /pricing/meters | 음수 상계 이벤트로 정정 |
 | 확정한 청구서는 고치거나 취소, 재발행할 수 없다 | /billing/after-finalization | 확정한 청구서는 되돌릴 수 없습니다. | /billing/finalize-invoices, /billing/auto-finalization, /payments/cancellations | 없음 |
-| 보관과 복원 규칙(고객 보관은 즉시, 미터 보관은 다음 달부터 등) | /pricing/changes-and-archiving | 보관과 복원 규칙은 바꾸기, 보관, 복원 페이지를 보세요. | /integration/customers, /pricing/meters | 없음 |
+| 보관과 복원 규칙(고객 보관은 즉시, 미터 보관은 다음 달부터 등) | /pricing/changes-and-archiving | 보관과 복원 규칙은 바꾸기, 보관, 복원 페이지를 참고하세요. | /integration/customers, /pricing/meters | 없음 |
 
 ## [7] 연동과 API 사용
 
@@ -85,14 +85,14 @@
 | 멱등 규칙 표(이벤트 transaction_id, 고객 external_id 또는 Idempotency-Key, 미터 Idempotency-Key, 단가와 요금제 덮어쓰기, 결제 취소 키) | /api-basics/idempotency | 같은 transaction_id로 다시 보내면 처음 것이 남습니다. | /integration/events, /integration/retries, /integration/customers, /pricing/meters | 없음 |
 | 결제 요청에는 Idempotency-Key가 없다. 다시 요청하기 전에 결제 시도를 조회한다 | /payments/charging | 결제 요청은 재시도 키가 없으니 다시 요청하기 전에 결과를 먼저 조회합니다. | /api-basics/idempotency, /payments/retries | 없음 |
 | 오류 응답 형식 {code, message, errors}와 code로 분기하는 규칙, 상태별 다시 보낼지 판단 | /api-basics/errors | 오류는 code로 분기하세요. | /integration/retries, /payments/charging | 없음 |
-| 감사 기록에 남는 것과 찾는 법(업무 변경, API 요청 결과, X-Request-ID 검색, 업무 환경별 범위) | /account/audit-logs | 감사 기록에서 X-Request-ID로 요청을 찾습니다. 자세한 내용은 [감사 기록](/account/audit-logs)을 보세요. | /api-basics/errors, /authentication/key-rotation, /concepts/environments, /reference/glossary |  |
+| 감사 기록에 남는 것과 찾는 법(업무 변경, API 요청 결과, X-Request-ID 검색, 업무 환경별 범위) | /account/audit-logs | 감사 기록에서 X-Request-ID로 요청을 찾습니다. 자세한 내용은 [감사 기록](/account/audit-logs)을 참고하세요. | /api-basics/errors, /authentication/key-rotation, /concepts/environments, /reference/glossary |  |
 | 수집 요청은 감사 기록에 남지 않는다. 저장된 이벤트와 수집 거절 기록의 request_id, transaction_id로 찾는다 | /api-basics/errors | 이벤트 수집 요청은 감사 기록에 나오지 않으니 request_id와 transaction_id로 찾습니다. | /integration/verify-usage, /troubleshooting/events-not-billed |  |
 | 이벤트를 다시 보낼 것과 멈출 것(영구 거절 code), 아웃박스 | /integration/retries | 영구 거절 code는 다시 보내지 마세요. | /integration/events, /api-basics/errors | 없음 |
 | 배치는 한 요청에 1건에서 100건, 원소별 결과, HTTP 상태는 200 | /integration/events | 이벤트는 한 요청에 100건까지 묶어 보낼 수 있습니다. | /integration/retries, /api-basics/rate-limits | 없음 |
 | 라이브 키의 분당 요청 한도는 키에 정한 경우에만 걸린다. 테스트 키에는 테스트 환경 한도가 늘 걸려 키에 적은 값과 그 한도 가운데 작은 쪽이 적용된다. 넘으면 429 rate_limit_exceeded와 Retry-After | /api-basics/rate-limits | 한도를 넘으면 429를 받으니 Retry-After만큼 기다렸다가 다시 보냅니다. | /api-basics/errors, /authentication/api-keys, /authentication/scopes, /authentication/key-rotation, /quickstart, /integration/retries, /reference/glossary | 배포 서버의 테스트 환경 한도(기본값 300) |
 | 개요 화면 체크리스트 순서와 가이드 순서가 다르다. 체크리스트는 진행 표시다 | /quickstart | 개요 화면의 목록은 진행 표시이며 순서를 따를 필요는 없습니다. | /concepts/how-it-works | 개요 체크리스트 완료 조건 |
 | 청구 예정액 조회의 전체 응답 예시 | /quickstart | 다른 페이지의 예시 응답은 필요한 필드만 보입니다. | /integration/verify-usage, /pricing/dimensions, /pricing/calculation-example, /billing/finalize-invoices |  |
-| API 참조 시험 화면에는 테스트 키만 넣는다(Mintlify 서버 경유) | /api-reference/introduction | 시험 화면에는 테스트 키(me_test_)만 넣으세요. | /authentication/api-keys | 시험 화면 proxy와 테스트 키 안내 |
+| API 참조 테스트 화면에는 테스트 키만 넣는다(Mintlify 서버 경유) | /api-reference/introduction | 테스트 화면에는 테스트 키(me_test_)만 넣으세요. | /authentication/api-keys | 테스트 화면 proxy와 테스트 키 안내 |
 
 ## [8] 청구와 결제
 
@@ -127,5 +127,5 @@
 | CSV는 같은 조건 전체 결과를 최대 10,000행까지, UTF-8 BOM과 CRLF, 수식 문자열 앞 작은따옴표. 이벤트 원본 속성 포함 시 32MB 상한 | /reference/search-and-export | CSV는 같은 조건 전체를 최대 10,000행까지 내려받습니다. | /integration/verify-usage, /payments/reconciliation | 없음 |
 | 이벤트의 request_id는 처음 저장한 요청의 응답 헤더 X-Request-ID 값이다 | /integration/verify-usage | 이벤트의 request_id는 그 요청 응답의 X-Request-ID 값입니다. | /api-basics/errors, /troubleshooting/events-not-billed | 없음 |
 | 보낸 이벤트가 청구 예정액에 들어갔는지 확인하는 진단 순서 | /integration/verify-usage | 진단 순서는 [보낸 데이터 확인하기](/integration/verify-usage)를 따릅니다. | /troubleshooting/events-not-billed |  |
-| 증상별 원인과 조치 표(수집 거절, 저장 뒤 미집계, 단가 없음, 마감 뒤 수신, 확정 뒤 이벤트) | /troubleshooting/events-not-billed | 증상별 원인과 조치는 이벤트가 청구에 안 보일 때를 보세요. | /integration/verify-usage, /integration/events, /integration/retries | 음수 상계 이벤트로 정정 |
+| 증상별 원인과 조치 표(수집 거절, 저장 뒤 미집계, 단가 없음, 마감 뒤 수신, 확정 뒤 이벤트) | /troubleshooting/events-not-billed | 증상별 원인과 조치는 이벤트가 청구에 안 보일 때를 참고하세요. | /integration/verify-usage, /integration/events, /integration/retries | 음수 상계 이벤트로 정정 |
 | 마감 뒤에 받은 지난달 이벤트는 과금에서 빠진 이벤트와 과금 제외 사용량 집계(unbilled-events)에 잡히지 않는다. received_at으로 확인한다 | /troubleshooting/events-not-billed | 마감 뒤에 받은 이벤트는 진단 화면에 잡히지 않으니 received_at으로 확인합니다. | /concepts/time-rules, /integration/retries | 없음 |

@@ -19,7 +19,7 @@ description: "per_unit, graduated, volume 단가를 등록하는 방법과 월 �
 | `dimension_values` | 예 | 구분 값입니다. 키 집합이 미터의 `dimension_properties`와 같아야 하고, 구분 키가 없는 미터는 `{}`입니다. 값은 문자열, 숫자, 불리언만 됩니다. |
 | `model` | 아니요 | `per_unit`, `graduated`, `volume` 가운데 하나입니다. 생략하면 `per_unit`입니다. |
 | `unit_price` | `per_unit`만 예 | 과금 수량 1당 원 단가입니다. 0 이상이고 소수도 됩니다. `graduated`, `volume`에는 넣지 않습니다. |
-| `tiers` | `graduated`, `volume`만 예 | 구간 배열입니다. 아래 구간 규칙을 보세요. `per_unit`에는 넣지 않습니다. |
+| `tiers` | `graduated`, `volume`만 예 | 구간 배열입니다. 아래 구간 규칙을 참고하세요. `per_unit`에는 넣지 않습니다. |
 | `effective_from` | 아니요 | 적용 시작 월(`YYYY-MM`, KST)입니다. 생략하면 이번 달입니다. |
 | `effective_until` | 아니요 | 적용 종료 월(`YYYY-MM`)입니다. 이 달은 포함하지 않습니다. 생략하면 끝없이 적용합니다. |
 | `customer_id` | 아니요 | 넣으면 그 고객에게만 쓰는 고객 단가입니다. 생략하면 공통 단가입니다. |
@@ -42,7 +42,7 @@ description: "per_unit, graduated, volume 단가를 등록하는 방법과 월 �
 <CodeGroup>
 ```bash curl
 curl -X POST https://meterengine.com/v1/billable-metrics/llm-input-tokens/price-rates \
-  -H "Authorization: Bearer me_test_xxxxxxxx" \
+  -H "Authorization: Bearer {API_KEY}" \
   -H "Content-Type: application/json" \
   -d '{
     "dimension_values": { "model": "lumen-fast" },
@@ -58,7 +58,7 @@ const response = await fetch(
   {
     method: "POST",
     headers: {
-      Authorization: "Bearer me_test_xxxxxxxx",
+      Authorization: "Bearer {API_KEY}",
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -182,9 +182,9 @@ const priceRate = await response.json();
 
 청구 항목 하나가 `line_type` `volume`으로 나옵니다.
 
-<Warning>
+<Danger>
 volume은 구간 경계를 넘는 순간 수량 전체의 단가가 바뀌므로, 수량이 늘었는데 금액이 줄 수 있습니다. 위 예에서 100은 1,000원, 101은 800원입니다. 고객에게 이 방식을 설명할 수 있는지 확인하고 고르세요.
-</Warning>
+</Danger>
 </Tab>
 </Tabs>
 
@@ -198,7 +198,7 @@ volume은 구간 경계를 넘는 순간 수량 전체의 단가가 바뀌므로
 
 구간의 순서나 마지막 구간 규칙이 맞지 않거나, 모델과 단가 필드가 맞지 않으면(예: `graduated`에 `unit_price`를 넣음) 400 `validation_error`이고 `errors`의 `field`는 `model`입니다. 구간 수, `up_to`, 구간 단가의 값 범위가 틀려도 400 `validation_error`이며 `errors`에 틀린 필드가 나옵니다.
 
-숫자로 끝까지 따라가는 예시(구간 단가, 최소 사용료, 기본료, 세액)는 [금액 계산 따라가기](/pricing/calculation-example)에 있습니다. 월 기본료와 최소 사용료는 [기본료와 최소 사용료](/pricing/price-plans)에서 다룹니다.
+숫자로 끝까지 따라가는 예시(구간 단가, 최소 사용료, 기본료, 세액)는 [금액 계산 따라가기](/pricing/calculation-example)에 있습니다. 기본료와 최소 사용료는 [기본료와 최소 사용료](/pricing/price-plans)에서 다룹니다.
 
 ## 월 단위 버전
 
@@ -213,19 +213,19 @@ volume은 구간 경계를 넘는 순간 수량 전체의 단가가 바뀌므로
 </Step>
 </Steps>
 
-예를 들어 `2026-11`부터 500원 버전과 `2026-12`부터 400원 버전이 있으면 2026-11은 500원, 2026-12부터는 400원입니다. `effective_until`을 둔 버전은 종료 월부터 쓰지 않고, 그 달에 적용되는 다른 버전이 있으면 그 가운데 시작 월이 가장 늦은 것을 씁니다. 보관은 다릅니다. 이미 적용 중인 가장 늦은 버전을 보관하면 다음 달부터 이전 버전으로 돌아가지 않습니다. 단가 적용을 멈추는 방법과 보관한 뒤 쓰이는 단가는 [바꾸기, 보관, 복원](/pricing/changes-and-archiving)을 보세요.
+예를 들어 `2026-11`부터 500원 버전과 `2026-12`부터 400원 버전이 있으면 2026-11은 500원, 2026-12부터는 400원입니다. `effective_until`을 둔 버전은 종료 월부터 쓰지 않고, 그 달에 적용되는 다른 버전이 있으면 그 가운데 시작 월이 가장 늦은 것을 씁니다. 보관은 다릅니다. 이미 적용 중인 가장 늦은 버전을 보관하면 다음 달부터 이전 버전으로 돌아가지 않습니다. 단가 적용을 멈추는 방법과 보관한 뒤 쓰이는 단가는 [바꾸기, 보관, 복원](/pricing/changes-and-archiving)을 참고하세요.
 
 ### 같은 자리에 다시 등록하면 덮어쓴다
 
 미터, 구분 값, 적용 대상, `effective_from`이 모두 같은 버전을 다시 등록하면 새 버전을 만들지 않고 기존 버전을 덮어씁니다. 응답은 여전히 201입니다. `model`, `unit_price`, `tiers`, `effective_until`이 모두 요청 값으로 바뀌므로, 기존 버전에 종료 월이 있었는데 이번 요청에서 `effective_until`을 빼면 종료 월이 사라집니다.
 
-<Warning>
+<Danger>
 이번 달을 시작 월로 하는 버전을 덮어쓰면 이번 달 전체의 금액이 바뀝니다. 청구 예정액은 조회할 때마다 계산하므로 이번 달 초부터 이미 받은 사용량에도 새 단가가 적용됩니다. 달 중간부터만 단가를 바꾸는 방법은 없으니 바꾼 단가를 다음 달부터 쓰려면 `effective_from`을 다음 달로 둔 새 버전을 등록하세요.
-</Warning>
+</Danger>
 
 ### 지난달은 바꿀 수 없다
 
-`effective_from`이 이번 달(KST)보다 앞이면 409 `price_rate_history_immutable`입니다. 단가는 이번 달 이후에만 넣을 수 있으므로, 달이 바뀐 뒤에는 지난달 단가를 새로 넣거나 고칠 수 없습니다. 기준 시각은 [시간 규칙](/concepts/time-rules)을 보세요.
+`effective_from`이 이번 달(KST)보다 앞이면 409 `price_rate_history_immutable`입니다. 단가는 이번 달 이후에만 넣을 수 있으므로, 달이 바뀐 뒤에는 지난달 단가를 새로 넣거나 고칠 수 없습니다. 기준 시각은 [시간 규칙](/concepts/time-rules)을 참고하세요.
 
 ## 고객 단가
 
@@ -233,7 +233,7 @@ volume은 구간 경계를 넘는 순간 수량 전체의 단가가 바뀌므로
 
 ```bash curl
 curl -X POST https://meterengine.com/v1/billable-metrics/llm-input-tokens/price-rates \
-  -H "Authorization: Bearer me_test_xxxxxxxx" \
+  -H "Authorization: Bearer {API_KEY}" \
   -H "Content-Type: application/json" \
   -d '{
     "dimension_values": { "model": "lumen-fast" },
@@ -258,7 +258,7 @@ curl -X POST https://meterengine.com/v1/billable-metrics/llm-input-tokens/price-
 
 ```bash curl
 curl "https://meterengine.com/v1/billable-metrics/llm-input-tokens/price-rates?status=all" \
-  -H "Authorization: Bearer me_test_xxxxxxxx"
+  -H "Authorization: Bearer {API_KEY}"
 ```
 
 ```json 200 응답
@@ -313,7 +313,7 @@ curl "https://meterengine.com/v1/billable-metrics/llm-input-tokens/price-rates?s
 
 <CardGroup cols={2}>
 <Card title="기본료와 최소 사용료" href="/pricing/price-plans">
-월 기본료와 최소 사용료를 더하는 방법
+기본료와 최소 사용료를 더하는 방법
 </Card>
 <Card title="금액 계산 따라가기" href="/pricing/calculation-example">
 구간 단가부터 세액까지 숫자로 따라가기

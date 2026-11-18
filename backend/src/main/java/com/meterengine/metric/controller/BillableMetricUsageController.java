@@ -39,7 +39,7 @@ public class BillableMetricUsageController {
   @GetMapping
   @ReadAccess
   @Operation(
-      summary = "고객별 월 사용량 조회",
+      summary = "사용량 조회",
       description =
           """
           미터마다 event_type이 같은 이벤트를 미터의 집계 함수로 계산합니다.
