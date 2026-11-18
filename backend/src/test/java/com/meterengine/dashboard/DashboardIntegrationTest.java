@@ -8,8 +8,13 @@ import com.meterengine.TestClock;
 import com.meterengine.TestCredentials;
 import com.meterengine.TestEvents;
 import com.meterengine.TestcontainersConfiguration;
+import com.meterengine.dashboard.client.DashboardInsightsStore;
+import com.meterengine.dashboard.dto.DashboardInsightsKey;
+import com.meterengine.dashboard.service.DashboardInsightsRefreshService;
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
@@ -30,6 +35,8 @@ class DashboardIntegrationTest {
   @Autowired private WebApplicationContext webApplicationContext;
   @Autowired private JdbcTemplate jdbcTemplate;
   @Autowired private TestClock testClock;
+  @Autowired private DashboardInsightsRefreshService dashboardInsightsRefreshService;
+  @Autowired private DashboardInsightsStore dashboardInsightsStore;
   private MockMvcTester mvc;
 
   @AfterEach
@@ -369,6 +376,28 @@ class DashboardIntegrationTest {
   }
 
   @Test
+  void 하루_한_번_도는_작업은_조회한_적_없는_조직의_인사이트도_저장소에_올린다() {
+    testClock.fix(OffsetDateTime.parse("2026-10-15T20:00:00Z"));
+    UUID organizationId = UUID.randomUUID();
+    String readKey = TestCredentials.issueApiKey(jdbcTemplate, organizationId, "read");
+    UUID customerId = insertCustomer(organizationId);
+    insertEvent(organizationId, customerId, "2026-10-10T01:00:00Z");
+
+    dashboardInsightsRefreshService.refresh();
+
+    DashboardInsightsKey key =
+        new DashboardInsightsKey(
+            organizationId, BusinessEnvironmentContext.scopeId(null), YearMonth.of(2026, 10));
+    assertThat(dashboardInsightsStore.find(key))
+        .hasValueSatisfying(
+            stored -> assertThat(stored.dailyEventCounts().get(9).eventCount()).isEqualTo(1));
+    // 조회는 저장소의 값을 그대로 준다. 그 뒤에 들어온 이벤트는 다음 계산 때 들어간다
+    insertEvent(organizationId, customerId, "2026-10-10T02:00:00Z");
+    testClock.fix(OffsetDateTime.parse("2026-10-15T21:00:00Z"));
+    assertThat(dailyEventCount(insights(readKey, "2026-10"), 10)).isEqualTo(1);
+  }
+
+  @Test
   void 인사이트는_다른_조직의_금액과_이벤트를_섞지_않고_수집_키로는_볼_수_없다() {
     testClock.fix(OffsetDateTime.parse("2026-10-15T03:00:00Z"));
     UUID organizationId = UUID.randomUUID();
@@ -436,7 +465,7 @@ class DashboardIntegrationTest {
         .bodyJson()
         .extractingPath("$.jobs")
         .asArray()
-        .hasSize(6);
+        .hasSize(7);
   }
 
   @Test
