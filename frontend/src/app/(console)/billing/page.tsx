@@ -87,17 +87,17 @@ export default async function BillingPage({
           end={
             draftInvoice ? (
               <>
-                <Suspense key={loadingKey} fallback={null}>
+                <Suspense key={`${loadingKey}:finalized-link`} fallback={null}>
                   <BillingFinalizedLink invoices={monthInvoices} month={month} />
                 </Suspense>
                 <CutoffStamp month={month} now={new Date()} />
-                <Suspense key={loadingKey} fallback={null}>
+                <Suspense key={`${loadingKey}:auto-finalize`} fallback={null}>
                   <BillingAutoFinalizeStamp draftInvoice={draftInvoice} />
                 </Suspense>
-                <Suspense key={loadingKey} fallback={null}>
+                <Suspense key={`${loadingKey}:calculated`} fallback={null}>
                   <BillingCalculatedStamp draftInvoice={draftInvoice} />
                 </Suspense>
-                <Suspense key={loadingKey} fallback={null}>
+                <Suspense key={`${loadingKey}:expand`} fallback={null}>
                   <BillingExpandControls draftInvoice={draftInvoice} isMonthFinalized={isMonthFinalized} />
                 </Suspense>
               </>
