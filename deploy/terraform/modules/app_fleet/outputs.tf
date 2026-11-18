@@ -66,3 +66,6 @@ output "kafka_group_roles" {
     group.name => one([for tag in group.tag : tag.value if tag.key == "ServerRole"])
   }
 }
+output "insights_bucket_name" {
+  value = local.insights_bucket_name
+}

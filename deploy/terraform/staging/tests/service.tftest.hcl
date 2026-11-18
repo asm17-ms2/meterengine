@@ -362,6 +362,7 @@ run "alb_domain_needs_a_server" {
       alb_dns_name               = "meterengine-staging-alb-1.ap-northeast-2.elb.amazonaws.com"
       alb_zone_id                = "ZWKZPGTI48KDX"
       autoscaling_group_name     = "meterengine-staging-app"
+      insights_bucket_name       = "meterengine-staging-insights-928618307647"
       autoscaling_group_arn      = "arn:aws:autoscaling:ap-northeast-2:928618307647:autoScalingGroup:00000000-0000-0000-0000-000000000000:autoScalingGroupName/meterengine-staging-app"
       app_version_parameter_name = "/meterengine/staging/app-version"
     }
@@ -424,5 +425,22 @@ run "staging_signup_uses_its_own_hostname" {
   assert {
     condition     = toset(keys(aws_ssm_parameter.signup)) == toset(["mail-sender", "mail-from", "turnstile-allowed-hostnames"])
     error_message = "Keys and on/off values are registered by hand, not by Terraform."
+  }
+}
+
+run "staging_insights_bucket_is_private_and_only_the_app_role_uses_it" {
+  command = plan
+
+  assert {
+    condition     = module.app_fleet.insights_bucket_name == "meterengine-staging-insights-928618307647"
+    error_message = "Each environment keeps its insights in its own bucket."
+  }
+  assert {
+    condition     = aws_ssm_parameter.insights["insights-store"].value == "s3" && aws_ssm_parameter.insights["insights-bucket"].value == module.app_fleet.insights_bucket_name
+    error_message = "The servers read the bucket name Terraform created, not a hand-typed one."
+  }
+  assert {
+    condition     = toset(keys(aws_ssm_parameter.insights)) == toset(["insights-store", "insights-bucket"])
+    error_message = "Insights need the store kind and the bucket name, nothing else."
   }
 }

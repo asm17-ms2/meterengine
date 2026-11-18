@@ -403,6 +403,7 @@ ALB는 받은 `X-Forwarded-For` 뒤에 접속 주소를 붙이므로 맨 오른�
 | `ingest-warmup-requests`, `ingest-warmup-time-limit` | String | 선택. 예열 요청 수와 시간 상한. 없으면 compose가 `1000`, `20s`를 넣는다. 숫자나 기간 형식이 아니면 백엔드가 뜨지 못한다. 시간 상한은 늘리지 않는다. 예열 중에는 readiness가 503이고 ALB는 15초 간격 5번 실패면 빼므로, 컨테이너가 죽고 빠르면 60초 뒤 서버가 교체된다. 스스로 다시 뜨는 데 약 23초, 상한 20초, 마지막 요청 대기 5초를 더하면 약 48초다. 상한은 예열을 시작한 때부터 재므로 다시 뜨는 데 35초를 넘기면 서버가 교체될 수 있다 |
 | `email-verification-enabled` | String | 선택. `true`면 가입한 계정은 메일 인증을 마쳐야 로그인한다. 없으면 compose가 `false`를 넣는다("가입 메일 인증과 캡차 켜기") |
 | `mail-sender`, `mail-from` | String | 코드가 만든다. 메일을 SES로 보내고 보내는 사람을 `MeterEngine <no-reply@meterengine.com>`으로 둔다. 메일은 가입 인증에만 쓴다 |
+| `insights-store`, `insights-bucket` | String | 코드가 만든다. 홈 인사이트를 버킷 `meterengine-<환경>-insights-<계정 번호>`에 둔다. 버킷은 공개를 모두 막았고 그 환경의 앱 서버 역할만 `insights/` 아래를 읽고 쓴다. 값이 없으면 서버마다 파일에 따로 둔다 |
 | `turnstile-enabled` | String | 선택. `true`면 가입과 인증 메일 다시 받기에 Cloudflare Turnstile 통과가 필요하다. 없으면 compose가 `false`를 넣는다 |
 | `turnstile-secret-key` | SecureString | 선택. Turnstile 위젯의 비밀 키. 백엔드만 읽는다. `turnstile-enabled`가 `true`인데 비어 있으면 백엔드가 뜨지 못한다 |
 | `turnstile-site-key` | String | 선택. Turnstile 위젯의 사이트 키. 프론트가 가입 화면과 인증 메일 다시 받기 화면에 위젯을 띄울 때 쓴다. 없으면 위젯을 띄우지 않는다 |
