@@ -144,7 +144,7 @@ test("한 조직의 test와 live가 같은 고객 외부 ID와 미터 코드로 
     for (const scope of scopes) {
       for (const screen of ["overview", "settings", "events", "payments"]) {
         await page.goto(href(`/${screen}`, scope.environment));
-        const heading = { overview: `${formatKoreanMonth(month)} 개요`, settings: "조직 설정", events: "수집 이벤트", payments: "수납과 취소" }[screen];
+        const heading = { overview: `홈 - ${formatKoreanMonth(month)}`, settings: "조직 설정", events: "수집 이벤트", payments: "수납과 취소" }[screen];
         await expect(page.getByRole("heading", { level: 1, name: heading, exact: true })).toBeVisible();
         await expect(page.locator(".workspace-environment")).toContainText(ENVIRONMENT_LABELS[scope.environment]);
         await expect(page.getByText("불러오는 중이에요.", { exact: true })).toHaveCount(0);

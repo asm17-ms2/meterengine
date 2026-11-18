@@ -296,7 +296,7 @@ test("대표관리자가 화면에서 사용자와 키 권한을 정하고 조�
     const reader = await browserPage(browser, session); contexts.push(reader.context);
     for (const path of ["/overview", "/customers", `/customers/${data.customerId}?month=${data.month}`, "/billable-metrics", "/pricing", "/events", "/usage", "/billing", "/invoices", "/payments", `/payments/${data.invoiceId}`, "/integrations", "/settings", "/members", "/audit"]) {
       await reader.page.goto(path);
-      await expect(reader.page.locator(".workspace-scope")).toHaveText("조회 전용");
+      await expect(reader.page.locator(".workspace-role")).toHaveText("일반 사용자");
       for (const name of ["고객 등록", "고객 정보 수정", "고객 보관", "API 키 발급", "키 권한 변경", "청구서 조회 링크 발급", "등록 카드로 결제", "결제 다시 시도", "계정 직접 생성", "초대 링크 만들기"]) await expect(reader.page.getByRole("button", { name, exact: true })).toHaveCount(0);
       await expect(reader.page).not.toHaveURL(/\/login/);
     }

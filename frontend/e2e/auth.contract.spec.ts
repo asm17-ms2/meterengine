@@ -13,6 +13,11 @@ async function expectTenantUrl(page: Page, pathname: string) {
   await expect(page).toHaveURL(url => url.origin === FRONTEND_ORIGIN && url.pathname === pathname && url.searchParams.size === 1 && url.searchParams.get("organization_id") === ORGANIZATION_ID);
 }
 
+async function chooseEnvironment(page: Page, label: string) {
+  await page.getByRole("combobox", { name: "업무 환경", exact: true }).click();
+  await page.locator(".ant-select-item-option", { hasText: label }).click();
+}
+
 async function login(page: Page, email = "member@contract.local", returnTo = "/customers") {
   await page.goto(`/login?returnTo=${encodeURIComponent(returnTo)}`);
   await page.getByLabel("이메일", { exact: true }).fill(email);
@@ -40,7 +45,7 @@ test("overview keeps the selected month and shows unresolved invoices from every
   // 직접 쓴 월은 Enter 없이 조회를 눌러도 반영한다.
   await page.getByLabel("청구 월", { exact: true }).fill("2026-05");
   await page.getByRole("button", { name: "조건 적용", exact: true }).click();
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("2026년 5월 개요");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("홈 - 2026년 5월");
   await expect(unresolved).toContainText("지난달 실패 고객");
   await expect(page.getByText("선택한 달에 확인할 항목이 없어요.", { exact: true })).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
@@ -49,7 +54,7 @@ test("overview keeps the selected month and shows unresolved invoices from every
   // Enter만 눌러 제출해도 직접 쓴 월로 조회한다.
   await page.getByLabel("청구 월", { exact: true }).fill("2026-04");
   await page.getByLabel("청구 월", { exact: true }).press("Enter");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("2026년 4월 개요");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("홈 - 2026년 4월");
 });
 
 test("the overview setup step says which supplier and payment settings are missing", async ({ page }) => {
@@ -335,8 +340,16 @@ test("the sidebar lists page links in plain lists without menu roles", async ({ 
   const nav = page.getByRole("navigation", { name: "주 메뉴" });
   await expect(nav.getByRole("menu")).toHaveCount(0);
   await expect(nav.getByRole("menuitem")).toHaveCount(0);
+  await expect(nav.getByRole("list", { name: "요금과 연동", exact: true }).getByRole("link")).toHaveCount(3);
+  // 이벤트 화면 셋은 '이벤트'를 눌러야 펼쳐지고, 다시 누르면 접힌다.
+  const events = nav.getByRole("button", { name: "이벤트", exact: true });
+  await expect(events).toHaveAttribute("aria-expanded", "false");
   await expect(nav.getByRole("list")).toHaveCount(4);
-  await expect(nav.getByRole("list", { name: "과금과 연동", exact: true }).getByRole("link")).toHaveCount(4);
+  await events.click();
+  await expect(events).toHaveAttribute("aria-expanded", "true");
+  await expect(nav.getByRole("list", { name: "이벤트", exact: true }).getByRole("link")).toHaveText(["수집 이벤트", "과금에서 빠진 이벤트", "수집 거절"]);
+  await events.click();
+  await expect(nav.getByRole("list")).toHaveCount(4);
 });
 
 test("the sidebar lists the meter screen and marks it as the current place", async ({ page }) => {
@@ -428,13 +441,13 @@ test("meter number inputs do not expose English stepper buttons", async ({ page 
   await expect(dialog.getByRole("button", { name: /Increase Value|Decrease Value/ })).toHaveCount(0);
 });
 
-test("list screens keep the disclosure marker on the advanced filter summary", async ({ page }) => {
+test("list screens show sort and page size in the filter row without an advanced fold", async ({ page }) => {
   await login(page, "member@contract.local", "/customers");
   await expectTenantUrl(page, "/customers");
-  const summary = page.locator(".resource-advanced > summary");
-  await expect(summary).toHaveCSS("display", "list-item");
-  const box = await summary.boundingBox();
-  expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+  await expect(page.locator(".resource-advanced")).toHaveCount(0);
+  const form = page.locator('form[aria-label="조회 조건"]');
+  await expect(form.getByRole("combobox", { name: "정렬", exact: true })).toBeVisible();
+  await expect(form.getByRole("combobox", { name: "표시 건수", exact: true })).toBeVisible();
 });
 
 test("filter row controls on a list screen share one height", async ({ page }) => {
@@ -1021,7 +1034,7 @@ test("on a phone the sticky header keeps only the brand and environment and the 
   expect((await header.boundingBox())!.height).toBeLessThan(130);
   await page.getByRole("button", { name: "메뉴 열기" }).click();
   const drawer = page.getByRole("dialog");
-  await expect(drawer.getByText("전체 관리, 결제", { exact: true })).toBeVisible();
+  await expect(drawer.locator(".workspace-role .ant-tag")).toBeVisible();
   await expect(drawer.getByRole("button", { name: "로그아웃", exact: true })).toBeVisible();
 });
 
@@ -1034,10 +1047,11 @@ test("between phone and desktop widths the header still leaves out the user name
 });
 
 // 권한은 새로고침하면 다시 읽으므로 따로 다시 조회하는 버튼을 두지 않는다(결정 17).
-test("the header shows the access scope beside a text logout button and no permission refresh button", async ({ page }) => {
+test("the header shows the role as a tag beside a text logout button and no permission refresh button", async ({ page }) => {
   await login(page);
   await expectTenantUrl(page, "/customers");
-  await expect(page.locator(".workspace-scope .ant-tag")).toHaveText("전체 관리, 결제");
+  await expect(page.locator(".workspace-role .ant-tag")).toHaveText(/^(대표관리자|관리자|일반 사용자)$/);
+  await expect(page.locator(".workspace-scope")).toHaveCount(0);
   await expect(page.locator(".workspace-header").getByRole("button", { name: "로그아웃", exact: true })).toHaveClass(/ant-btn-text/);
   await expect(page.getByRole("button", { name: "권한 새로 조회", exact: true })).toHaveCount(0);
 });
@@ -1083,7 +1097,8 @@ test("sidebar group titles line up with the sidebar edge", async ({ page }) => {
   await expectTenantUrl(page, "/customers");
   const title = page.locator(".workspace-sidebar .nav-group-title").first();
   await expect(title).toHaveCSS("padding-inline-start", "24px");
-  await expect(title).toHaveCSS("font-size", "11px");
+  await expect(title).toHaveCSS("font-size", "13px");
+  await expect(title).toHaveCSS("font-weight", "700");
 });
 
 test("the console no longer carries a demo guide", async ({ page }) => {
@@ -1094,7 +1109,7 @@ test("the console no longer carries a demo guide", async ({ page }) => {
 });
 
 // 본문 안내 문단 대신 콘솔 맨 위 띠가 지금 환경을 말하고, 띠의 버튼은 머리의 환경 선택과 같은 확인 창을 연다.
-test("the environment band names the current environment, offers a switch, and turns red only in the live environment", async ({ page }) => {
+test("the environment band names the current environment and turns red only in the live environment", async ({ page }) => {
   await login(page);
   await expectTenantUrl(page, "/customers");
   await expect(page.locator(".environment-notice")).toHaveCount(0);
@@ -1103,12 +1118,12 @@ test("the environment band names the current environment, offers a switch, and t
   await expect(band).toMatchAriaSnapshot(`
     - region "현재 업무 환경":
       - paragraph: 테스트 환경이에요. 실제 결제와 청구가 일어나지 않아요.
-      - button "환경 바꾸기"
   `);
   await expect(band).toHaveClass(/environment-band-test/);
   await expect(page.locator(".workspace-environment .ant-select")).toContainText("테스트 환경");
   await expect(page).toHaveURL(url => !url.searchParams.has("environment"));
-  await band.getByRole("button", { name: "환경 바꾸기", exact: true }).click();
+  await expect(band.getByRole("button")).toHaveCount(0);
+  await chooseEnvironment(page, "라이브 환경");
   const confirm = page.getByRole("dialog");
   await expect(confirm).toContainText("라이브 환경으로 전환할까요?");
   await confirm.getByRole("button", { name: "전환", exact: true }).click();
@@ -1116,7 +1131,6 @@ test("the environment band names the current environment, offers a switch, and t
   await expect(band).toMatchAriaSnapshot(`
     - region "현재 업무 환경":
       - paragraph: 라이브 환경이에요. 고객에게 실제로 청구하고 결제해요.
-      - button "환경 바꾸기"
   `);
   await expect(band).toHaveClass(/environment-band-live/);
   await expect(band).not.toHaveClass(/environment-band-test/);
@@ -1214,8 +1228,7 @@ test("a new organization works in the test environment and is sent to the applic
   await expect(dialog).toContainText("라이브 환경은 이용 신청이 승인되면 쓸 수 있어요. 이 화면에서 입력하거나 고른 내용은 지워져요.");
   await dialog.getByRole("button", { name: "취소", exact: true }).click();
   await expect(page).toHaveURL(url => url.pathname === "/customers");
-  // 띠의 환경 바꾸기도 잠긴 라이브 환경 대신 같은 신청 확인 창을 연다.
-  await page.getByRole("region", { name: "현재 업무 환경" }).getByRole("button", { name: "환경 바꾸기", exact: true }).click();
+  await chooseEnvironment(page, "라이브 환경");
   await expect(page.getByRole("dialog")).toContainText("라이브 환경 이용 신청 화면으로 갈까요?");
   await page.getByRole("dialog").getByRole("button", { name: "이동", exact: true }).click();
   await expect(page).toHaveURL(url => url.pathname === "/live-environment" && !url.searchParams.has("environment"));
@@ -1294,13 +1307,13 @@ test("the operator rejects with a reason the organization reads, then approves t
   await expect(page.getByRole("article").filter({ hasText: "새로 가입한 조직" })).toContainText("실제 결제가 아직 없어요. 첫 실제 결제 때 확인해요.");
 
   // 새로 고치지 않고 화면만 옮겨도 틀이 열린 것을 알아 라이브 환경으로 바꿀 수 있다.
-  await member.getByRole("region", { name: "현재 업무 환경" }).getByRole("button", { name: "환경 바꾸기", exact: true }).click();
+  await chooseEnvironment(member, "라이브 환경");
   await member.getByRole("dialog").getByRole("button", { name: "이동", exact: true }).click();
   await expect(member.getByRole("heading", { level: 2, name: "라이브 환경을 쓰고 있어요", exact: true })).toBeVisible();
   await member.getByRole("combobox", { name: "업무 환경", exact: true }).click();
   await expect(member.locator(".ant-select-item-option")).toHaveText(["테스트 환경", "라이브 환경"]);
   await member.keyboard.press("Escape");
-  await member.getByRole("region", { name: "현재 업무 환경" }).getByRole("button", { name: "환경 바꾸기", exact: true }).click();
+  await chooseEnvironment(member, "라이브 환경");
   await expect(member.getByRole("dialog")).toContainText("라이브 환경으로 전환할까요?");
   await memberContext.close();
 });

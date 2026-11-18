@@ -89,7 +89,7 @@ export async function UsageSection({
       <UsageTable groups={usageGroupViews} query={query} capabilities={capabilities} />
       <ListPagination query={query} capabilities={capabilities} total={result.data.total} />
       <ScreenNote>
-        사용량이 없는 미터와 고객도 줄을 지우지 않고 0으로 보여요. 청구에는 구분 값별 수량을 써요. 구분 값마다 따로 계산해서 평균, 최댓값, 고유 값 수와 반올림 결과는 더해도 전체 집계값과 다를 수 있어요.
+        청구에는 구분 값별 수량을 써요. 구분 값별 수량을 더한 값은 전체 집계값과 다를 수 있어요.
       </ScreenNote>
     </>
   );

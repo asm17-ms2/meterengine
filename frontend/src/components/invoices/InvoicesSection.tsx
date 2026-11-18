@@ -91,9 +91,7 @@ export async function InvoicesSection({
       />
       <ListPagination query={query} capabilities={capabilities} total={result.data.total} />
       <ScreenNote>
-        금액과 청구 항목은 확정할 때 저장한 값이라 나중에 단가나 고객 이름을 고쳐도 바뀌지
-        않아요. 합계는 공급가액에 세액을 더한 값이에요.
-        반복소수는 줄여 표시하지만 금액은 줄이기 전 정확한 값으로 계산해요.
+        금액과 청구 항목은 확정할 때 저장한 값이라 나중에 단가나 고객 이름을 고쳐도 바뀌지 않아요.
       </ScreenNote>
     </>
   );

@@ -90,7 +90,7 @@
 | 이벤트를 다시 보낼 것과 멈출 것(영구 거절 code), 아웃박스 | /integration/retries | 영구 거절 code는 다시 보내지 마세요. | /integration/events, /api-basics/errors | 없음 |
 | 배치는 한 요청에 1건에서 100건, 원소별 결과, HTTP 상태는 200 | /integration/events | 이벤트는 한 요청에 100건까지 묶어 보낼 수 있습니다. | /integration/retries, /api-basics/rate-limits | 없음 |
 | 라이브 키의 분당 요청 한도는 키에 정한 경우에만 걸린다. 테스트 키에는 테스트 환경 한도가 늘 걸려 키에 적은 값과 그 한도 가운데 작은 쪽이 적용된다. 넘으면 429 rate_limit_exceeded와 Retry-After | /api-basics/rate-limits | 한도를 넘으면 429를 받으니 Retry-After만큼 기다렸다가 다시 보냅니다. | /api-basics/errors, /authentication/api-keys, /authentication/scopes, /authentication/key-rotation, /quickstart, /integration/retries, /reference/glossary | 배포 서버의 테스트 환경 한도(기본값 300) |
-| 개요 화면 체크리스트 순서와 가이드 순서가 다르다. 체크리스트는 진행 표시다 | /quickstart | 개요 화면의 목록은 진행 표시이며 순서를 따를 필요는 없습니다. | /concepts/how-it-works | 개요 체크리스트 완료 조건 |
+| 홈 화면 체크리스트 순서와 가이드 순서가 다르다. 체크리스트는 진행 표시다 | /quickstart | 홈 화면의 목록은 진행 표시이며 순서를 따를 필요는 없습니다. | /concepts/how-it-works | 홈 체크리스트 완료 조건 |
 | 청구 예정액 조회의 전체 응답 예시 | /quickstart | 다른 페이지의 예시 응답은 필요한 필드만 보입니다. | /integration/verify-usage, /pricing/dimensions, /pricing/calculation-example, /billing/finalize-invoices |  |
 | API 참조 테스트 화면에는 테스트 키만 넣는다(Mintlify 서버 경유) | /api-reference/introduction | 테스트 화면에는 테스트 키(me_test_)만 넣으세요. | /authentication/api-keys | 테스트 화면 proxy와 테스트 키 안내 |
 

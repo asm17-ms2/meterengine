@@ -13,7 +13,7 @@ import { EnvironmentInput } from "@/components/workspace/EnvironmentSwitch";
 import type { ListCapabilities } from "@/lib/api/capabilities";
 import type { QueryOption } from "@/lib/api/search";
 import { INVOICE_PAYMENT_STATUS_LABELS } from "@/lib/invoice-payment-status";
-import { PAGE_SIZE_OPTIONS, type ListQuery, type ListQueryOverrides } from "@/lib/list-query";
+import { PAGE_SIZE_OPTIONS, type ListQuery, type ListQueryOverrides, type SortDirection } from "@/lib/list-query";
 import { resourceRangeErrors, submittedResourceParameters, type ResourceRangeError } from "@/lib/resource-query";
 
 
@@ -41,6 +41,9 @@ const SORTS: Record<SearchResource, { value: string; label: string }[]> = {
   invoices: [{ value: "month", label: "청구 월" }, { value: "customer_name", label: "고객명" }, { value: "total_amount", label: "청구 금액" }, { value: "finalized_at", label: "확정 시각" }, { value: "invoice_number", label: "청구서 번호" }, { value: "status", label: "수납 상태" }],
 };
 
+const SORT_SEPARATOR = ":";
+const SORT_ORDERS: { value: SortDirection; label: string }[] = [{ value: "asc", label: "오름차순" }, { value: "desc", label: "내림차순" }];
+
 export function ResourceSearchControls(props: Props) {
   const { query } = useListNavigation(props.query, props.capabilities);
   return <ResourceSearchForm key={JSON.stringify(props.query)} {...props} query={query} />;
@@ -58,30 +61,20 @@ function ResourceSearchForm({ query, capabilities, resource, month, customers = 
   const metricSearchText = useRef("");
   const formId = resourceSearchFormId(resource);
   const monthLabel = resource === "billable-metric-prices" ? "적용 월" : resource === "invoices" ? "조회 기간" : "조회 월";
-  const appliedAdvancedCount = [
-    Boolean(query.sort && (query.sort !== SORTS[resource][0].value || query.order && query.order !== (resource === "invoices" ? "desc" : "asc"))),
-    query.size !== PAGE_SIZE_OPTIONS[0],
-    Boolean(query.minAmount || query.maxAmount),
-    Boolean(query.mode),
-    Boolean(query.from || query.to),
-  ].filter(Boolean).length;
-  const [isAdvancedOpen, setIsAdvancedOpen] = useState(appliedAdvancedCount > 0);
-
   const [rangeErrors, setRangeErrors] = useState<ResourceRangeError[]>([]);
+  const hasRangeConditions = Boolean(capabilities.amount) || resource === "invoices";
+  const appliedRangeCount = [query.minAmount, query.maxAmount, query.from, query.to].filter(Boolean).length;
+  const [isRangeOpen, setIsRangeOpen] = useState(false);
+  const sort = draft.sort ?? SORTS[resource][0].value;
+  const order: SortDirection = draft.order ?? (resource === "invoices" ? "desc" : "asc");
 
   function change(overrides: ListQueryOverrides) {
     setDraft(current => ({ ...current, ...overrides }));
   }
 
-  function revealInvalid(event: FormEvent<HTMLFormElement>) {
-    const target = event.target;
-    if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) return;
-    const disclosure = target.closest("details");
-    if (disclosure) {
-      disclosure.open = true;
-      setIsAdvancedOpen(true);
-      target.focus();
-    }
+  function changeSort(value: string) {
+    const [nextSort, nextOrder] = value.split(SORT_SEPARATOR);
+    change({ sort: nextSort, order: nextOrder === "desc" ? "desc" : "asc" });
   }
 
   function apply(event: FormEvent<HTMLFormElement>) {
@@ -93,15 +86,25 @@ function ResourceSearchForm({ query, capabilities, resource, month, customers = 
     setRangeErrors(errors);
     if (errors.length) {
       const field = event.currentTarget.elements.namedItem(errors[0].field);
-      if (field instanceof HTMLInputElement) {
-        const disclosure = field.closest("details");
-        if (disclosure) disclosure.open = true;
-        setIsAdvancedOpen(true);
-        field.focus();
-      }
+      if (field instanceof HTMLInputElement) revealField(field);
       return;
     }
     router.push(`${pathname}${parameters.size ? `?${parameters}` : ""}`);
+  }
+
+  // 접힌 상자 안의 입력칸은 초점을 받지 못하므로 먼저 펼친다.
+  function revealField(field: HTMLInputElement | HTMLSelectElement) {
+    const dropdown = field.closest("details");
+    if (dropdown) {
+      dropdown.open = true;
+      setIsRangeOpen(true);
+    }
+    field.focus();
+  }
+
+  function revealInvalid(event: FormEvent<HTMLFormElement>) {
+    const target = event.target;
+    if (target instanceof HTMLInputElement || target instanceof HTMLSelectElement) revealField(target);
   }
 
   function rangeErrorProps(field: ResourceRangeError["field"]) {
@@ -132,8 +135,7 @@ function ResourceSearchForm({ query, capabilities, resource, month, customers = 
   }
 
   return <div className="resource-search">
-    <p className="field-hint" id={`${formId}-hint`}>조건을 함께 고른 뒤 조건 적용을 누르세요.</p>
-    <form id={formId} method="get" className="workspace-actions" aria-label="조회 조건" aria-describedby={`${formId}-hint`} onSubmit={apply} onInvalidCapture={revealInvalid}>
+    <form id={formId} method="get" className="workspace-actions" aria-label="조회 조건" onSubmit={apply} onInvalidCapture={revealInvalid}>
       <EnvironmentInput />
       {Object.entries(draft.preservedParameters ?? {}).map(([name, value]) => <input key={name} type="hidden" name={name} value={value} />)}
       {!month && search.get("month") && <input type="hidden" name="month" value={search.get("month")!} />}
@@ -143,18 +145,17 @@ function ResourceSearchForm({ query, capabilities, resource, month, customers = 
       {capabilities.metric && <div className="workspace-field"><label htmlFor={`${resource}-metric`}>과금 미터</label><Select id={`${resource}-metric`} aria-label="과금 미터" style={{ minWidth: 180 }} allowClear placeholder="모든 미터" value={draft.metricCode} options={options.map(option => ({ value: option.value, label: `${option.label}${option.archived ? " (보관됨)" : ""}` }))} loading={isLoading} showSearch={{ filterOption: false, onSearch: loadMetrics }} onOpenChange={open => { if (open) void loadMetrics(); }} onChange={metricCode => change({ metricCode })} notFoundContent={isLoading ? "조회 중" : optionError || "일치하는 미터가 없어요"} /><input type="hidden" name="billable_metric_code" value={draft.metricCode ?? ""} /></div>}
       {capabilities.q && <label className="workspace-field resource-search-text"><span>{resource === "customers" ? "이름, 외부 ID, 청구 이메일로 찾기" : "검색"}</span><input type="search" name="q" maxLength={255} value={draft.q} onChange={event => change({ q: event.target.value })} placeholder={resource === "customers" ? "이름, 외부 ID, 청구 이메일" : "이름 또는 코드"} /></label>}
       {capabilities.paymentStatus && <label className="workspace-field"><span>수납 상태</span><select name="payment_status" value={draft.paymentStatus ?? ""} onChange={event => change({ paymentStatus: event.target.value })}><option value="">전체</option>{["unpaid", "pending", "paid", "failed", "partially_canceled", "canceled"].map(status => <option key={status} value={status}>{INVOICE_PAYMENT_STATUS_LABELS[status]}</option>)}</select></label>}
-      <Button type="primary" htmlType="submit">조건 적용</Button>
-      <details className="event-advanced resource-advanced" open={isAdvancedOpen} onToggle={event => setIsAdvancedOpen(event.currentTarget.open)} style={{ width: "100%" }}>
-        <summary className="disclosure-summary">상세 조건{appliedAdvancedCount > 0 ? ` (적용 ${appliedAdvancedCount}개)` : ""}</summary>
-        <div className="workspace-actions" style={{ marginTop: 12 }}>
-          <label className="workspace-field"><span>정렬 기준</span><select name="sort" value={draft.sort ?? SORTS[resource][0].value} onChange={event => change({ sort: event.target.value })}>{SORTS[resource].map(sort => <option key={sort.value} value={sort.value}>{sort.label}</option>)}</select></label>
-          <label className="workspace-field"><span>정렬 방향</span><select name="order" value={draft.order ?? (resource === "invoices" ? "desc" : "asc")} onChange={event => change({ order: event.target.value as ListQuery["order"] })}><option value="asc">오름차순</option><option value="desc">내림차순</option></select></label>
+      <label className="workspace-field resource-search-sort"><span>정렬</span><select aria-label="정렬" value={`${sort}${SORT_SEPARATOR}${order}`} onChange={event => changeSort(event.target.value)}>{SORTS[resource].flatMap(option => SORT_ORDERS.map(direction => <option key={`${option.value}${SORT_SEPARATOR}${direction.value}`} value={`${option.value}${SORT_SEPARATOR}${direction.value}`}>{option.label} {direction.label}</option>))}</select><input type="hidden" name="sort" value={sort} /><input type="hidden" name="order" value={order} /></label>
+      {capabilities.mode && query.environment === "legacy" && <label className="workspace-field"><span>업무 환경</span><select name="mode" value={draft.mode ?? ""} onChange={event => change({ mode: event.target.value === "live" ? "live" : event.target.value === "test" ? "test" : undefined })}><option value="">현재 업무 환경</option><option value="test">테스트 환경</option><option value="live">라이브 환경</option></select></label>}
+      {capabilities.size && <label className="workspace-field"><span>표시 건수</span><select aria-label="표시 건수" name="size" value={draft.size} onChange={event => change({ size: Number(event.target.value) })}>{PAGE_SIZE_OPTIONS.map(size => <option key={size} value={size}>{size}건</option>)}</select></label>}
+      {hasRangeConditions && <div className="workspace-field"><span>{resource === "invoices" ? "금액, 확정 시각" : "금액 범위"}</span><details className="range-dropdown" open={isRangeOpen} onToggle={event => setIsRangeOpen(event.currentTarget.open)}>
+        <summary>{appliedRangeCount > 0 ? `적용 ${appliedRangeCount}개` : "설정"}</summary>
+        <div className="range-dropdown-panel">
           {capabilities.amount && <><label className="workspace-field"><span>최소 금액 (원)</span><input type="number" name="min_amount" min="0" step="1" value={draft.minAmount ?? ""} onChange={event => change({ minAmount: event.target.value })} /></label><div className="workspace-field"><label htmlFor={`${formId}-max-amount`}>최대 금액 (원)</label><input id={`${formId}-max-amount`} type="number" name="max_amount" min="0" step="1" value={draft.maxAmount ?? ""} onChange={event => change({ maxAmount: event.target.value })} {...rangeErrorProps("max_amount")} />{rangeErrorText("max_amount")}</div></>}
-          {capabilities.mode && query.environment === "legacy" && <label className="workspace-field"><span>업무 환경</span><select name="mode" value={draft.mode ?? ""} onChange={event => change({ mode: event.target.value === "live" ? "live" : event.target.value === "test" ? "test" : undefined })}><option value="">현재 업무 환경</option><option value="test">테스트 환경</option><option value="live">라이브 환경</option></select></label>}
           {resource === "invoices" && <><label className="workspace-field"><span>확정 시각 시작 (KST)</span><input type="datetime-local" step="1" name="from" value={draft.from ?? ""} onChange={event => change({ from: event.target.value })} /></label><div className="workspace-field"><label htmlFor={`${formId}-to`}>확정 시각 종료 전 (KST)</label><input id={`${formId}-to`} type="datetime-local" step="1" name="to" value={draft.to ?? ""} onChange={event => change({ to: event.target.value })} {...rangeErrorProps("to")} />{rangeErrorText("to")}</div></>}
-          {capabilities.size && <label className="workspace-field"><span>표시 건수</span><select aria-label="표시 건수" name="size" value={draft.size} onChange={event => change({ size: Number(event.target.value) })}>{PAGE_SIZE_OPTIONS.map(size => <option key={size} value={size}>{size}건</option>)}</select></label>}
         </div>
-      </details>
+      </details></div>}
+      <Button type="primary" htmlType="submit">조건 적용</Button>
     </form>
     {optionError && <Alert type="warning" showIcon title="미터 목록을 불러오지 못했어요" description="과금 미터 선택 칸을 다시 열어 주세요." />}
   </div>;
