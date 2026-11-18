@@ -4,11 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
 import com.jayway.jsonpath.JsonPath;
+import com.meterengine.TestClock;
 import com.meterengine.TestCredentials;
+import com.meterengine.TestEvents;
 import com.meterengine.TestcontainersConfiguration;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,7 +29,13 @@ import org.springframework.web.context.WebApplicationContext;
 class DashboardIntegrationTest {
   @Autowired private WebApplicationContext webApplicationContext;
   @Autowired private JdbcTemplate jdbcTemplate;
+  @Autowired private TestClock testClock;
   private MockMvcTester mvc;
+
+  @AfterEach
+  void resetClock() {
+    testClock.reset();
+  }
 
   @BeforeEach
   void setUp() {
@@ -296,6 +306,95 @@ class DashboardIntegrationTest {
     assertThat(mvc.get().uri("/v1/dashboard").header("Authorization", ingestKey).exchange())
         .hasStatus(403);
     assertThat(mvc.get().uri("/v1/dashboard").exchange()).hasStatus(401);
+  }
+
+  @Test
+  void 인사이트는_최근_석_달의_확정_청구액과_받은_금액을_오래된_달부터_준다() {
+    testClock.fix(OffsetDateTime.parse("2026-10-15T03:00:00Z"));
+    UUID organizationId = UUID.randomUUID();
+    String readKey = TestCredentials.issueApiKey(jdbcTemplate, organizationId, "read");
+    UUID paid = insertInvoice(organizationId, "2026-10", 1000);
+    insertAttempt(organizationId, paid, "test", "done");
+    insertInvoice(organizationId, "2026-08", 2000);
+    insertInvoice(organizationId, "2026-07", 5000);
+    String json = insights(readKey, "2026-10");
+    assertThat((List<String>) JsonPath.read(json, "$.monthly_amounts[*].month"))
+        .containsExactly("2026-08", "2026-09", "2026-10");
+    assertThat((List<Integer>) JsonPath.read(json, "$.monthly_amounts[*].finalized_total_amount"))
+        .containsExactly(2200, 0, 1100);
+    assertThat((List<Integer>) JsonPath.read(json, "$.monthly_amounts[*].collected_amount"))
+        .containsExactly(0, 0, 1100);
+  }
+
+  @Test
+  void 인사이트의_일별_이벤트_수는_KST_날짜로_세고_어제까지만_준다() {
+    testClock.fix(OffsetDateTime.parse("2026-10-15T03:00:00Z"));
+    UUID organizationId = UUID.randomUUID();
+    String readKey = TestCredentials.issueApiKey(jdbcTemplate, organizationId, "read");
+    UUID customerId = insertCustomer(organizationId);
+    insertEvent(organizationId, customerId, "2026-09-30T14:59:59Z");
+    insertEvent(organizationId, customerId, "2026-09-30T15:00:00Z");
+    insertEvent(organizationId, customerId, "2026-10-10T01:00:00Z");
+    insertEvent(organizationId, customerId, "2026-10-10T02:00:00Z");
+    insertEvent(organizationId, customerId, "2026-10-15T01:00:00Z");
+    String json = insights(readKey, "2026-10");
+    assertThat((List<String>) JsonPath.read(json, "$.daily_event_counts[*].date"))
+        .hasSize(14)
+        .startsWith("2026-10-01")
+        .endsWith("2026-10-14");
+    assertThat((List<Integer>) JsonPath.read(json, "$.daily_event_counts[*].event_count"))
+        .containsExactly(1, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0);
+    assertThat((List<?>) JsonPath.read(insights(readKey, "2026-09"), "$.daily_event_counts"))
+        .hasSize(30);
+  }
+
+  @Test
+  void 인사이트는_다른_조직의_금액과_이벤트를_섞지_않고_수집_키로는_볼_수_없다() {
+    testClock.fix(OffsetDateTime.parse("2026-10-15T03:00:00Z"));
+    UUID organizationId = UUID.randomUUID();
+    UUID otherOrganizationId = UUID.randomUUID();
+    String readKey = TestCredentials.issueApiKey(jdbcTemplate, organizationId, "read");
+    TestCredentials.issueApiKey(jdbcTemplate, otherOrganizationId, "read");
+    insertInvoice(otherOrganizationId, "2026-10", 1000);
+    insertEvent(otherOrganizationId, insertCustomer(otherOrganizationId), "2026-10-10T01:00:00Z");
+    String json = insights(readKey, "2026-10");
+    assertThat((List<Integer>) JsonPath.read(json, "$.monthly_amounts[*].finalized_total_amount"))
+        .containsOnly(0);
+    assertThat((List<Integer>) JsonPath.read(json, "$.daily_event_counts[*].event_count"))
+        .containsOnly(0);
+    assertThat(
+            mvc.get()
+                .uri("/v1/dashboard/insights?month=2026-10")
+                .header(
+                    "Authorization",
+                    TestCredentials.issueApiKey(jdbcTemplate, organizationId, "ingest"))
+                .exchange())
+        .hasStatus(403);
+  }
+
+  private String insights(String authorization, String month) {
+    var result =
+        mvc.get()
+            .uri("/v1/dashboard/insights?month=" + month)
+            .header("Authorization", authorization)
+            .exchange();
+    assertThat(result).hasStatusOk();
+    return new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8);
+  }
+
+  private UUID insertCustomer(UUID organizationId) {
+    UUID customerId = UUID.randomUUID();
+    jdbcTemplate.update(
+        "insert into customer (id, organization_id, name) values (?, ?, '인사이트 시험 고객')",
+        customerId,
+        organizationId);
+    return customerId;
+  }
+
+  private void insertEvent(UUID organizationId, UUID customerId, String occurredAt) {
+    OffsetDateTime at = OffsetDateTime.parse(occurredAt);
+    TestEvents.insert(
+        jdbcTemplate, organizationId, "tx-" + UUID.randomUUID(), customerId, "usage", "{}", at, at);
   }
 
   @Test

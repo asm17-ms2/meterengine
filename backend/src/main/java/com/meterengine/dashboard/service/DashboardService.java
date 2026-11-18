@@ -15,7 +15,6 @@ import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -25,8 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class DashboardService {
 
-  private static final Set<String> COLLECTED = Set.of("paid", "partially_canceled", "canceled");
-  private static final Set<String> OUTSTANDING = Set.of("unpaid", "pending", "failed");
   private final JdbcTemplate jdbcTemplate;
   private final DraftInvoiceService draftInvoiceService;
   private final InvoicePaymentService invoicePaymentService;
@@ -62,22 +59,9 @@ public class DashboardService {
         dashboardInvoices(organizationId, payments, month.toString());
     List<InvoicePaymentResponse> unresolved =
         invoicePaymentService.list(organizationId, null, null, mode).invoicePayments().stream()
-            .filter(payment -> OUTSTANDING.contains(payment.status()))
+            .filter(payment -> PaymentTotals.OUTSTANDING.contains(payment.status()))
             .toList();
-    long collected =
-        payments.stream()
-            .filter(p -> COLLECTED.contains(p.status()))
-            .mapToLong(p -> p.amount() - p.canceledAmount())
-            .reduce(0L, Math::addExact);
-    long canceled =
-        payments.stream()
-            .mapToLong(InvoicePaymentResponse::canceledAmount)
-            .reduce(0L, Math::addExact);
-    long outstanding =
-        payments.stream()
-            .filter(p -> OUTSTANDING.contains(p.status()))
-            .mapToLong(InvoicePaymentResponse::amount)
-            .reduce(0L, Math::addExact);
+    PaymentTotals totals = PaymentTotals.from(payments);
     return new DashboardResponse(
         month.toString(),
         OffsetDateTime.now(clock),
@@ -132,10 +116,10 @@ public class DashboardService {
             > 0,
         mode,
         draft.totalAmount(),
-        payments.stream().mapToLong(InvoicePaymentResponse::amount).reduce(0L, Math::addExact),
-        collected,
-        canceled,
-        outstanding,
+        totals.finalizedTotalAmount(),
+        totals.collectedAmount(),
+        totals.canceledAmount(),
+        totals.outstandingAmount(),
         payments.stream().filter(p -> "failed".equals(p.status())).count(),
         draft.customers().stream().mapToLong(c -> c.unpricedUsages().size()).sum(),
         draft.customers().stream().mapToLong(c -> c.negativeUsages().size()).sum(),
