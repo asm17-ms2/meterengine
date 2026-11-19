@@ -118,7 +118,7 @@ test("자유 기간과 초 단위 경계, 실제 유형과 검색, 페이지와 
     const preserved = { customer_id: customerId, type: eventType, q: queryText, properties, sort: "transaction_id", order: "asc", size: "50" };
     const dateQuery = { ...preserved, from: previousDate, to: firstDate, range_mode: "date", month: null };
 
-    await test.step("미터 없이 수집된 유형으로 날짜 범위 조회", async () => {
+    await test.step("과금 미터 없이 수집된 유형으로 날짜 범위 조회", async () => {
       await page.goto(`/login?returnTo=${encodeURIComponent(`/events?month=${previousMonth}`)}`);
       await page.getByLabel("이메일", { exact: true }).fill(email);
       await page.getByLabel("비밀번호", { exact: true }).fill(PASSWORD);

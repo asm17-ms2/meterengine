@@ -565,7 +565,7 @@ test("격리 계약: 자동 발행이 켜진 이번 달은 다음 자동 발행 
   expect(destination.searchParams.get("environment")).toBeNull();
 });
 
-test("격리 계약: 미터 조건으로 다른 미터의 단가 없는 사용량이 가려져도 서버가 정한 자동 발행 보류를 보인다", async ({ page, request }) => {
+test("격리 계약: 과금 미터 조건으로 다른 과금 미터의 단가 없는 사용량이 가려져도 서버가 정한 자동 발행 보류를 보인다", async ({ page, request }) => {
   await control(request, "auto-finalize");
   await page.goto(`/billing?month=${formatKstMonth()}&billable_metric_code=tokens`);
   await expect(page.getByRole("row").filter({ hasText: "단가 없는 사용량 고객" })).toBeVisible();

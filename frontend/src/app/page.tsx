@@ -29,7 +29,7 @@ const EVIDENCE = [
 // 로컬 테스트 환경의 실제 화면을 찍은 것이다. 화면을 바꾸면 다시 찍는다.
 const SCREENS = [
   { src: "/home/invoice-view.png", width: 944, height: 982, alt: "고객이 링크로 여는 청구서 화면. 항목별 수량, 단가, 공급가액과 부가세, 청구 금액이 보여요.", caption: "고객이 링크로 여는 청구서" },
-  { src: "/home/console-insights.png", width: 896, height: 763, alt: "콘솔 홈의 인사이트 화면. 월별 청구액과 받은 금액, 날짜별 이벤트 수, 고객별과 미터별 청구 예정액 그래프가 보여요.", caption: "콘솔 홈의 인사이트" },
+  { src: "/home/console-insights.png", width: 896, height: 763, alt: "콘솔 홈의 인사이트 화면. 월별 청구액과 받은 금액, 날짜별 이벤트 수, 고객별과 과금 미터별 청구 예정액 그래프가 보여요.", caption: "콘솔 홈의 인사이트" },
 ];
 
 const ROLES = [
@@ -55,7 +55,7 @@ export default function Home() {
         <div className={styles.trace} role="group" aria-labelledby="home-trace-title">
           <div className={styles.traceHeader}><strong id="home-trace-title">고객이 받는 청구서</strong><span>링크로 전달</span></div>
           <dl>
-            <div><dt>항목</dt><dd>과금 기준, 구간, 기본료처럼 금액이 생긴 이유마다 한 줄</dd></div>
+            <div><dt>항목</dt><dd>과금 미터, 구간, 기본료처럼 금액이 생긴 이유마다 한 줄</dd></div>
             <div><dt>수량과 단가</dt><dd>그 달 사용량과 적용한 단가</dd></div>
             <div><dt>금액</dt><dd>항목별 금액, 부가세와 청구 금액</dd></div>
             <div><dt>결제</dt><dd>결제한 금액, 취소한 금액, 남은 금액</dd></div>

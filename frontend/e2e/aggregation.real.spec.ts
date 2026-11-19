@@ -121,8 +121,8 @@ test("집계 10종과 단위 변환을 수집부터 사용량, 청구 예정액,
 
     await test.step("COUNT의 속성 생략과 조건부 백분위, 단위 변환을 화면에서 등록", async () => {
       for (const metric of METRICS.filter(metric => metric.ui)) {
-        await page.getByRole("button", { name: "미터 등록", exact: true }).first().click();
-        const dialog = page.getByRole("dialog", { name: "미터 등록", exact: true });
+        await page.getByRole("button", { name: "과금 미터 등록", exact: true }).first().click();
+        const dialog = page.getByRole("dialog", { name: "과금 미터 등록", exact: true });
         await dialog.getByLabel("코드", { exact: true }).fill(metricCode(metric));
         await dialog.getByLabel("이름", { exact: true }).fill(metricName(metric));
         await dialog.getByLabel("이벤트 유형", { exact: true }).fill(eventType);
@@ -216,17 +216,17 @@ test("집계 10종과 단위 변환을 수집부터 사용량, 청구 예정액,
       expect((await blocked.json()).code).toBe("billable_metric_has_events");
       await page.goto("/billable-metrics");
       await page.getByRole("button", { name: `${metricName(average)} 수정`, exact: true }).click();
-      const dialog = page.getByRole("dialog", { name: "미터 수정", exact: true });
-      await dialog.getByLabel("이름", { exact: true }).fill("이름을 바꾼 평균 미터");
+      const dialog = page.getByRole("dialog", { name: "과금 미터 수정", exact: true });
+      await dialog.getByLabel("이름", { exact: true }).fill("이름을 바꾼 평균 과금 미터");
       await dialog.getByRole("button", { name: "저장", exact: true }).click();
       await expect(dialog).toHaveCount(0);
-      await expect(page.getByRole("row").filter({ hasText: metricCode(average) })).toContainText("이름을 바꾼 평균 미터");
+      await expect(page.getByRole("row").filter({ hasText: metricCode(average) })).toContainText("이름을 바꾼 평균 과금 미터");
     });
 
     await test.step("390px에서 백분위와 단위 변환 필드가 화면 안에 배치", async () => {
       await page.setViewportSize({ width: 390, height: 844 });
-      await page.getByRole("button", { name: "미터 등록", exact: true }).first().click();
-      const dialog = page.getByRole("dialog", { name: "미터 등록", exact: true });
+      await page.getByRole("button", { name: "과금 미터 등록", exact: true }).first().click();
+      const dialog = page.getByRole("dialog", { name: "과금 미터 등록", exact: true });
       await choose(page, dialog, "집계 함수", "백분위수");
       await choose(page, dialog, "끝수 처리", "반올림");
       for (const label of ["백분위 (0-100)", "과금 단위 크기", "소수 자릿수"]) {
@@ -253,7 +253,7 @@ test("집계 10종과 단위 변환을 수집부터 사용량, 청구 예정액,
       });
       console.info("집계 모바일 레이아웃", JSON.stringify(layout));
       expect(layout.documentWidth, "390px 문서의 가로 너비").toBeLessThanOrEqual(layout.viewport);
-      expect(layout.dialogScrollWidth, "390px 미터 폼의 내부 가로 너비").toBeLessThanOrEqual(layout.dialogWidth);
+      expect(layout.dialogScrollWidth, "390px 과금 미터 폼의 내부 가로 너비").toBeLessThanOrEqual(layout.dialogWidth);
       const combobox = dialog.getByLabel("끝수 처리", { exact: true });
       await combobox.press("ArrowDown");
       await expect(combobox).toHaveAttribute("aria-expanded", "true");

@@ -379,9 +379,9 @@ test("the sidebar lists the meter screen and marks it as the current place", asy
   await login(page);
   await expectTenantUrl(page, "/customers");
   const nav = page.getByRole("navigation", { name: "주 메뉴" });
-  await nav.getByRole("link", { name: "미터", exact: true }).click();
+  await nav.getByRole("link", { name: "과금 미터", exact: true }).click();
   await expectTenantUrl(page, "/billable-metrics");
-  await expect(nav.getByRole("link", { name: "미터", exact: true })).toHaveAttribute("aria-current", "page");
+  await expect(nav.getByRole("link", { name: "과금 미터", exact: true })).toHaveAttribute("aria-current", "page");
   await expect(nav.locator("[aria-current=page]")).toHaveCount(1);
 });
 
@@ -393,8 +393,8 @@ test("each screen has its own document title", async ({ page }) => {
   await login(page);
   await expectTenantUrl(page, "/customers");
   await expect(page).toHaveTitle("고객 | MeterEngine");
-  await page.getByRole("navigation", { name: "주 메뉴" }).getByRole("link", { name: "미터", exact: true }).click();
-  await expect(page).toHaveTitle("미터 | MeterEngine");
+  await page.getByRole("navigation", { name: "주 메뉴" }).getByRole("link", { name: "과금 미터", exact: true }).click();
+  await expect(page).toHaveTitle("과금 미터 | MeterEngine");
 });
 
 test("a workspace load failure offers an in-place retry button", async ({ page, request }) => {
@@ -446,20 +446,20 @@ test("the audit list marks rejected requests and keeps entries compact", async (
 
 test("a meter form with input asks before Escape throws it away", async ({ page }) => {
   await login(page, "member@contract.local", "/billable-metrics");
-  await page.getByRole("button", { name: "미터 등록", exact: true }).first().click();
-  const dialog = page.getByRole("dialog", { name: "미터 등록" });
-  await dialog.getByLabel("이름", { exact: true }).fill("작성 중인 미터");
+  await page.getByRole("button", { name: "과금 미터 등록", exact: true }).first().click();
+  const dialog = page.getByRole("dialog", { name: "과금 미터 등록" });
+  await dialog.getByLabel("이름", { exact: true }).fill("작성 중인 과금 미터");
   let asked = "";
   page.once("dialog", prompt => { asked = prompt.message(); void prompt.dismiss(); });
   await page.keyboard.press("Escape");
-  await expect.poll(() => asked).toBe("작성 중인 미터를 버리고 닫을까요?");
+  await expect.poll(() => asked).toBe("작성 중인 과금 미터를 버리고 닫을까요?");
   await expect(dialog).toBeVisible();
 });
 
 test("meter number inputs do not expose English stepper buttons", async ({ page }) => {
   await login(page, "member@contract.local", "/billable-metrics");
-  await page.getByRole("button", { name: "미터 등록", exact: true }).first().click();
-  const dialog = page.getByRole("dialog", { name: "미터 등록" });
+  await page.getByRole("button", { name: "과금 미터 등록", exact: true }).first().click();
+  const dialog = page.getByRole("dialog", { name: "과금 미터 등록" });
   await expect(dialog.getByLabel("과금 단위 크기")).toBeVisible();
   await expect(dialog.getByRole("button", { name: /Increase Value|Decrease Value/ })).toHaveCount(0);
 });
@@ -947,7 +947,7 @@ test("375px forms and tenant header fit, keyboard focus and menu work", async ({
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "메뉴 열기" })).toBeFocused();
   await page.getByRole("button", { name: "메뉴 열기" }).click();
-  await page.getByRole("dialog").getByRole("link", { name: "미터", exact: true }).click();
+  await page.getByRole("dialog").getByRole("link", { name: "과금 미터", exact: true }).click();
   await expectTenantUrl(page, "/billable-metrics");
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });

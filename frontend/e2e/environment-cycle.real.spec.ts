@@ -31,7 +31,7 @@ async function confirmAction(page: Page, name: string) {
   await expect(dialog).toHaveCount(0);
 }
 
-test("한 조직의 test와 live가 같은 고객 외부 ID와 미터 코드로 각각 청구, 결제, 취소하고 서로 영향을 주지 않는다", async ({ page, browser, request }) => {
+test("한 조직의 test와 live가 같은 고객 외부 ID와 과금 미터 코드로 각각 청구, 결제, 취소하고 서로 영향을 주지 않는다", async ({ page, browser, request }) => {
   test.setTimeout(180_000);
   expect(await json(await request.get(`${PG_URL}/health`))).toEqual({ provider: "controlled-local-fixture" });
   const suffix = randomUUID();
@@ -54,7 +54,7 @@ test("한 조직의 test와 live가 같은 고객 외부 ID와 미터 코드로 
     for (const environment of ["test", "live"] as const) {
       const headers = { ...memberHeaders, "X-MeterEngine-Environment": environment };
       const customer = await json<{ id: string }>(await request.post(`${API_URL}/v1/customers`, { headers, data: { name: `${environment} 고객 ${suffix}`, external_id: `same-external-${suffix}`, billing_email: `${environment}-${suffix}@example.test` } }), 201);
-      await json(await request.post(`${API_URL}/v1/billable-metrics`, { headers, data: { code: metricCode, name: `${environment} 미터`, event_type: metricCode, aggregation: "sum", target_property: "units", dimension_properties: [] } }), 201);
+      await json(await request.post(`${API_URL}/v1/billable-metrics`, { headers, data: { code: metricCode, name: `${environment} 과금 미터`, event_type: metricCode, aggregation: "sum", target_property: "units", dimension_properties: [] } }), 201);
       const unitPrice = environment === "test" ? 100 : 200;
       const units = environment === "test" ? 2 : 5;
       await json(await request.post(`${API_URL}/v1/billable-metrics/${metricCode}/price-rates`, { headers, data: { model: "per_unit", dimension_values: {}, effective_from: month, unit_price: unitPrice } }), 201);

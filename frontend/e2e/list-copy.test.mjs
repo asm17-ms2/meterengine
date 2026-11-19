@@ -46,7 +46,7 @@ test("the meter search empty state counts all meters and the screen leaves the s
   const screen = source("billable-metrics/BillableMetricsScreen.tsx");
   const section = source("billable-metrics/BillableMetricsSection.tsx");
   assert.ok(section.includes("totalUnfiltered={result.data.total_unfiltered}"));
-  assert.ok(screen.includes("등록된 미터는 ${totalUnfiltered ?? rows.length}개예요."));
+  assert.ok(screen.includes("등록된 과금 미터는 ${totalUnfiltered ?? rows.length}개예요."));
   assert.ok(!screen.includes("<ScreenNote>"));
 });
 
@@ -96,7 +96,7 @@ test("mobile usage cards label each dimension row with its dimension values unde
 
 test("the event issue summary uses the same reason names as the filter and the problem column", () => {
   const issues = appSource("(console)/event-issues/page.tsx");
-  assert.ok(!issues.includes("미터 없음 {result.data.summary"));
+  assert.ok(!issues.includes("과금 미터 없음 {result.data.summary"));
   assert.ok(issues.includes("<strong>{REASONS[issueReason]} {COUNT.format(summary[issueReason])}건</strong>"));
 });
 
