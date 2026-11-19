@@ -1,4 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./console-browser";
 
 import { fixtureUrl, frontendOrigin } from "./contract-stack";
 
@@ -189,7 +190,7 @@ test("closing a workspace dialog returns focus to its trigger", async ({ page })
   await expect(trigger).toBeFocused();
 });
 
-test("issuing a key shows the secret first and updates the list after closing", async ({ page }) => {
+test("issuing a key shows the secret first and updates the list after closing", { tag: "@slow-browser" }, async ({ page }) => {
   await login(page, "member@contract.local", "/integrations");
   await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
   const dialog = page.getByRole("dialog");
@@ -313,7 +314,7 @@ test("a customer edit that lost a version race offers to load the latest values 
   await expect(page.getByRole("heading", { name: "다시 고친 이름", level: 1 })).toBeVisible();
 });
 
-test("restoring a customer returns focus to the same button, now offering to archive", async ({ page, request }) => {
+test("restoring a customer returns focus to the same button, now offering to archive", { tag: "@slow-browser" }, async ({ page, request }) => {
   await login(page);
   await page.getByRole("button", { name: "고객 등록", exact: true }).click();
   const dialog = page.getByRole("dialog");
@@ -679,7 +680,7 @@ test("logging in to a return path of another member organization opens that orga
   await expect(page.getByRole("heading", { name: "선택한 조직이 바뀌었어요" })).toHaveCount(0);
 });
 
-test("a required choice group error reads without a broken particle", async ({ page }) => {
+test("a required choice group error reads without a broken particle", { tag: "@slow-browser" }, async ({ page }) => {
   await login(page, "member@contract.local", "/integrations");
   await expectTenantUrl(page, "/integrations");
   await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
@@ -1261,7 +1262,7 @@ test("a new organization works in the test environment and is sent to the applic
   await expect(page.getByText("운영자", { exact: false })).toHaveCount(0);
 });
 
-test("the application is rejected beside the field at once and waits for review after it passes", async ({ page, request }) => {
+test("the application is rejected beside the field at once and waits for review after it passes", { tag: "@slow-browser" }, async ({ page, request }) => {
   await login(page, "locked@contract.local", "/live-environment");
   await expect(page.getByRole("heading", { level: 2, name: "라이브 환경은 이용 신청이 승인되면 쓸 수 있어요", exact: true })).toBeVisible();
   const form = page.locator("form.workspace-form");

@@ -1,4 +1,5 @@
-import { test, expect, type APIRequestContext, type Locator, type Page } from "@playwright/test";
+import { expect, type APIRequestContext, type Locator, type Page } from "@playwright/test";
+import { test } from "./console-browser";
 
 import { formatKstMonth, shiftMonth } from "../src/lib/month";
 import { fixtureUrl, frontendOrigin } from "./contract-stack";
@@ -239,6 +240,25 @@ test("격리 계약: 기존 데이터를 켜지 않은 서버는 환경 목록�
   expect((await request.get("/customers?environment=unknown", { maxRedirects: 0 })).status()).toBe(400);
 });
 
+async function fillBeforeHydration(page: Page, path: string, field: Locator, value: string) {
+  let resume!: () => void;
+  const ready = new Promise<void>(resolve => { resume = resolve; });
+  await page.route("**/_next/static/**/*.js", async route => { await ready; await route.continue(); });
+  try {
+    await page.goto(path, { waitUntil: "commit" });
+    await field.fill(value);
+  } finally { resume(); }
+  await expect(page).toHaveURL(url => url.searchParams.has("organization_id"));
+}
+
+test("콘솔이 조직 주소를 채우기 전에 입력한 고객 검색어도 제출한다", { tag: "@slow-browser" }, async ({ page, request }) => {
+  await control(request, "customer-pages");
+  const form = page.getByRole("form", { name: "조회 조건" });
+  await fillBeforeHydration(page, "/customers?environment=live", form.locator('input[name="q"]'), "페이지");
+  await form.locator('button[type="submit"]').click();
+  await expect(page).toHaveURL(url => url.searchParams.get("q") === "페이지" && url.searchParams.get("environment") === "live");
+});
+
 test("격리 계약: 라이브 환경은 조회 조건 적용과 페이지 넘김 뒤에도 주소에 남고 기본 환경은 조건 적용 뒤에도 주소에 적지 않는다", async ({ page, request }) => {
   await control(request, "customer-pages");
   const form = page.locator('form[aria-label="조회 조건"]');
@@ -424,6 +444,13 @@ test("changing the month on the payments list keeps the customer carried in from
   await expect(page).toHaveURL(url => url.searchParams.get("month") === "2026-09" && url.searchParams.get("customer_id") === "77777777-7777-4777-8777-777777777777");
 });
 
+test("콘솔이 조직 주소를 채우기 전에 입력한 수납 조회 월도 제출한다", { tag: "@slow-browser" }, async ({ page, request }) => {
+  await control(request, "failed-payments");
+  await fillBeforeHydration(page, "/payments?month=2026-10", page.getByLabel("조회 월", { exact: true }), "2026-09");
+  await page.getByRole("button", { name: "조건 적용", exact: true }).click();
+  await expect(page).toHaveURL(url => url.searchParams.get("month") === "2026-09");
+});
+
 test("격리 계약: 거꾸로 된 금액 범위는 요청하지 않고 입력칸 옆에 고칠 곳을 보여 준다", async ({ page }) => {
   await page.goto("/invoices");
   const form = page.locator('form[aria-label="조회 조건"]');
@@ -551,7 +578,7 @@ test("격리 계약: 미터 조건으로 다른 미터의 단가 없는 사용�
 test("격리 계약: 발행 시각이 지난 달을 자동 발행하는 중이면 다음 시각 대신 진행 중을 보인다", async ({ page, request }) => {
   await control(request, "auto-finalize");
   await page.goto(`/billing?month=${shiftMonth(formatKstMonth(), -1)}`);
-  await expect(page.getByText("자동 발행 진행 중", { exact: true })).toBeVisible();
+  await expect(page.getByRole("main").getByText("자동 발행 진행 중", { exact: true }).filter({ visible: true })).toHaveCount(1);
   await expect(page.getByText(/^다음 자동 발행/)).toHaveCount(0);
 });
 

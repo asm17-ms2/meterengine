@@ -220,9 +220,12 @@ docker run -p 3000:3000 \
 pnpm exec playwright install chromium
 pnpm build
 pnpm test:e2e:contract
+pnpm test:e2e:slow
 ```
 
 계약 테스트는 임시 HTTP 대역과 standalone FE를 실행마다 다른 빈 포트에서 실행하고 종료한다. 실제 Spring 검증과 구분한다.
+
+`pnpm test:e2e:slow`는 `@slow-browser`가 붙은 콘솔 계약 테스트를 Chromium CPU 4배 감속, 지연 150ms, 다운로드 4Mbps, 업로드 1Mbps로 돌린다.
 
 카드 등록과 업무 화면의 계약 테스트는 설정 파일을 지정해 돌린다. 둘 다 `pnpm build` 뒤 대역과 FE를 스스로 띄우고 끝내며 백엔드가 필요 없다.
 
