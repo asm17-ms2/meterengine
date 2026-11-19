@@ -42,13 +42,12 @@ test("the usage quantity header does not sort and the line count sort stays in t
   assert.ok(filters.includes('{ value: "line_count", label: "집계 항목 수" }'));
 });
 
-test("the meter search empty state counts all meters and the sort note follows the applied sort", () => {
+test("the meter search empty state counts all meters and the screen leaves the sort to the filter row", () => {
   const screen = source("billable-metrics/BillableMetricsScreen.tsx");
   const section = source("billable-metrics/BillableMetricsSection.tsx");
   assert.ok(section.includes("totalUnfiltered={result.data.total_unfiltered}"));
   assert.ok(screen.includes("등록된 미터는 ${totalUnfiltered ?? rows.length}개예요."));
-  assert.ok(!screen.includes("<ScreenNote>정렬: 코드 오름차순</ScreenNote>"));
-  assert.ok(screen.includes('query.sort ?? "code"'));
+  assert.ok(!screen.includes("<ScreenNote>"));
 });
 
 test("the meter screen shows the same submit-based archive filter while loading or failing", () => {
@@ -84,7 +83,7 @@ test("usage and event screens drop the mismatched sub-tab rows and keep their cr
   const usage = readFileSync(new URL("../src/app/(console)/usage/page.tsx", import.meta.url), "utf8");
   const events = readFileSync(new URL("../src/app/(console)/events/page.tsx", import.meta.url), "utf8");
   for (const page of [usage, events]) assert.ok(!page.includes('className="workspace-tabs"'));
-  assert.ok(usage.includes('<Link inheritFilters href="/billing">청구 검토</Link>'));
+  assert.ok(usage.includes('<LinkButton inheritFilters href="/billing">이 달 청구 금액 보기</LinkButton>'));
   assert.ok(events.includes('<ScopedLink href="/integrations">API 키와 웹훅</ScopedLink>'));
 });
 
@@ -98,11 +97,17 @@ test("mobile usage cards label each dimension row with its dimension values unde
 test("the event issue summary uses the same reason names as the filter and the problem column", () => {
   const issues = appSource("(console)/event-issues/page.tsx");
   assert.ok(!issues.includes("미터 없음 {result.data.summary"));
-  assert.ok(issues.includes("{REASONS.unknown_event_type} {result.data.summary.unknown_event_type}건"));
-  assert.ok(issues.includes("{REASONS.unpriced_usage} {result.data.summary.unpriced_usage}건"));
+  assert.ok(issues.includes("<strong>{REASONS[issueReason]} {COUNT.format(summary[issueReason])}건</strong>"));
 });
 
-test("the overview unpriced usage item also links to events filtered to a missing price", () => {
+test("the home unpriced usage item also links to events filtered to a missing price", () => {
   const overview = appSource("(console)/overview/page.tsx");
-  assert.ok(overview.includes("<Link href={`/event-issues?month=${month}&reason=unpriced_usage`}>이벤트 보기</Link>"));
+  assert.ok(overview.includes("<LinkButton href={`/event-issues?month=${month}&reason=unpriced_usage`}>이벤트 보기</LinkButton>"));
+});
+
+// 홈의 할 일은 글자 링크가 아니라 버튼 모양으로 보인다.
+test("the home setup and check items lead somewhere with buttons, not bare text links", () => {
+  const overview = appSource("(console)/overview/page.tsx");
+  assert.ok(overview.includes("<LinkButton href={step.href}>설정하기</LinkButton>"));
+  assert.ok(!overview.includes("<Link "));
 });

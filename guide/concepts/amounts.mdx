@@ -21,13 +21,13 @@ MeterEngine 응답의 금액 필드는 원 단위 정수입니다(단가 `unit_p
 
 | 콘솔 표기 | 부가세 | 뜻 | API |
 | --- | --- | --- | --- |
-| '개요' 화면의 '청구 예정액' | 빼고 | 선택한 달의 미확정 고객 공급가액 합 | `GET /v1/dashboard`의 `draft_supply_amount` |
+| '홈' 화면의 '청구 예정액' | 빼고 | 선택한 달의 미확정 고객 공급가액 합 | `GET /v1/dashboard`의 `draft_supply_amount` |
 | '청구 검토' 화면의 금액 | 빼고 | 미확정 고객별 공급가액과 청구 항목 금액 | `GET /v1/invoices/draft`의 `total_amount`, `customers[].amount`, `lines[].amount` |
-| '개요' 화면의 '확정 청구액' | 포함 | 선택한 달에 확정한 청구서 합계의 합 | `GET /v1/dashboard`의 `finalized_total_amount` |
+| '홈' 화면의 '확정 청구액' | 포함 | 선택한 달에 확정한 청구서 합계의 합 | `GET /v1/dashboard`의 `finalized_total_amount` |
 | '확정 청구서' 화면의 고객별 '금액'과 그 아래 '공급가액', '세액' | 나눠서 | 고객 줄의 '금액'은 합계(부가세 포함), 아래 줄은 확정할 때 저장한 공급가액과 세액 | `GET /v1/invoices`의 `supply_amount`, `tax_amount`, `total_amount` |
 | '수납과 취소' 화면의 '청구 금액', '취소액' | 포함 | 청구서 합계와 그중 결제를 취소한 금액 | `GET /v1/invoice-payments`의 `amount`, `canceled_amount` |
-| '개요' 화면의 '받을 금액' | 포함 | 결제 전, 결과 확인 중, 실패인 청구서의 청구액 합 | `GET /v1/dashboard`의 `outstanding_amount` |
-| '개요' 화면의 '받은 금액' | 포함 | 결제가 끝난 청구서의 청구액에서 취소액을 뺀 합 | `GET /v1/dashboard`의 `collected_amount` |
+| '홈' 화면의 '받을 금액' | 포함 | 결제 전, 결과 확인 중, 실패인 청구서의 청구액 합 | `GET /v1/dashboard`의 `outstanding_amount` |
+| '홈' 화면의 '받은 금액' | 포함 | 결제가 끝난 청구서의 청구액에서 취소액을 뺀 합 | `GET /v1/dashboard`의 `collected_amount` |
 
 <Note>
 청구 예정액은 부가세를 뺀 공급가액이고, 결제는 부가세를 포함한 확정 금액(`total_amount`)으로 합니다. 같은 고객인데 '청구 검토' 화면과 '수납과 취소' 화면의 금액이 다르면 세액만큼 차이 나는 것이 정상입니다.
@@ -74,9 +74,9 @@ MeterEngine 응답의 금액 필드는 원 단위 정수입니다(단가 `unit_p
 
 C와 D가 같은 고객의 청구 항목이면 그 고객의 합계는 30원이 아니라 20원입니다.
 
-<Warning>
-단가가 작은 미터는 청구 항목 금액이 10원이 안 되어 0원이 되기 쉽습니다. 사용량이 적은 고객에게 금액이 생기지 않으면 단가와 과금 단위 크기를 함께 보세요. [미터 설계](/pricing/meters), [단가 모델과 버전](/pricing/price-models)
-</Warning>
+<Danger>
+단가가 작은 미터는 청구 항목 금액이 10원이 안 되어 0원이 되기 쉽습니다. 사용량이 적은 고객에게 금액이 생기지 않으면 단가와 과금 단위 크기를 함께 참고하세요. [미터 설계](/pricing/meters), [단가 모델과 버전](/pricing/price-models)
+</Danger>
 
 구간 단가, 기본료, 최소 사용료가 섞인 숫자 예시는 [금액 계산 따라가기](/pricing/calculation-example)에 있습니다.
 
@@ -109,7 +109,7 @@ C와 D가 같은 고객의 청구 항목이면 그 고객의 합계는 30원이 
 
 ## 금액에 들지 않는 사용량
 
-아래 사용량은 청구 예정액과 청구서의 금액에 들지 않습니다. 각각 원인과 확인 방법은 [이벤트가 청구에 안 보일 때](/troubleshooting/events-not-billed)를 보세요.
+아래 사용량은 청구 예정액과 청구서의 금액에 들지 않습니다. 각각 원인과 확인 방법은 [이벤트가 청구에 안 보일 때](/troubleshooting/events-not-billed)를 참고하세요.
 
 - 단가가 없는 구분 값의 사용량(`unpriced_usages`). 단가가 없는 구분 값의 사용량은 청구되지 않습니다. [구분 키와 구분 값](/pricing/dimensions)
 - 한 구분 값의 합계가 음수인 사용량(`negative_usages`). 그 구분 값은 0원으로 보고 청구 항목에서 뺍니다.

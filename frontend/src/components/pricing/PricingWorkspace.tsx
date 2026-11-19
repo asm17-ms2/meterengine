@@ -14,6 +14,7 @@ import { useMutationScope } from "@/components/auth/use-mutation-scope";
 import { useTenantScope } from "@/components/auth/TenantAccess";
 
 import { Alert, App, Button, Empty, Modal, Table, Tag } from "antd";
+import { LinkButton } from "@/components/screen/LinkButton";
 import { ScopedLink as Link } from "@/components/workspace/ScopedLink";
 
 import { startTransition, useActionState, useEffect, useId, useRef, useState } from "react";
@@ -64,7 +65,7 @@ export function PricingWorkspace(props: Props) {
   return <>
     <ResourceSearchControls query={props.query} capabilities={CAPABILITIES.listBillableMetricPrices} resource="billable-metric-prices" month={{ value: props.month }} customers={props.customers.map(customer => ({ value: customer.id, label: customer.name + (customer.archived_at || customer.is_archived ? " (보관됨)" : "") }))} />
     <input type="hidden" form={resourceSearchFormId("billable-metric-prices")} name="metric" value={props.query.preservedParameters?.metric ?? selectedCode} />
-    <p className="field-hint">고객별 단가가 있으면 공통 단가보다 먼저 적용해요. 미터를 고르면 입력해 둔 조회 조건도 함께 적용돼요.</p>
+    <p className="field-hint">고객별 단가가 있으면 공통 단가보다 먼저 적용해요.</p>
     <CsvDownload resource="billable-metric-prices" />
     {props.dataMonths}
     <p role="status">조건 전체 미터 {props.summary.metric_count}개, 단가가 없는 미터 {props.summary.no_rate_count}개</p>
@@ -84,7 +85,7 @@ export function PricingWorkspace(props: Props) {
       {name:"minimum_amount",type:"number",label:"월 최소 사용료 (원)",value:"0",hint:"사용료가 이 금액보다 작으면 차액을 더해요. 기본료는 따로 더해요. 청구할 때 10원 미만은 버려요."},
     ]} />}</div>
       {plan ? <><div className={styles.planAmounts}><div><span>기본료</span><strong>{planAmount(plan.base_fee)}</strong></div><div><span>최소 사용료</span><strong>{planAmount(plan.minimum_amount)}</strong></div><div><span>적용 기간</span><strong>{dateRange(plan)}</strong>{isInheritedPlan && <Tag>공통 요금제 적용</Tag>}{plan.archived_at && <span className="field-hint">보관, {plan.archived_from ?? "다음 달"}부터 중단</span>}</div></div></> : <p className="muted">이 달에는 기본료와 최소 사용료가 없어요. 등록한 사용량 단가로만 계산해요.</p>}
-      <p className="field-hint">이력의 상태 필터는 위 가격을 바꾸지 않아요. 위 가격은 선택한 달에 실제로 적용되는 기준이에요.</p><PricingHistoryFilter parameterName="plan_status" value={props.planHistoryStatus} label="요금제 상태" /><details className={styles.history} open><summary className="disclosure-summary">요금제 변경 이력 ({historyPlans.length})</summary><Table<PricePlanResponse> size="small" rowKey="id" scroll={{x:650}} pagination={false} dataSource={historyPlans} locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={props.planHistoryStatus === "archived" ? "보관된 요금제 이력이 없어요" : props.planHistoryStatus === "all" ? "등록한 요금제 이력이 없어요" : "사용 중인 요금제 이력이 없어요. 보관됨이나 전체에서 이전 요금제를 확인하세요."} /> }} columns={[
+      <PricingHistoryFilter parameterName="plan_status" value={props.planHistoryStatus} label="요금제 상태" /><details className={styles.history} open><summary className="disclosure-summary">요금제 변경 이력 ({historyPlans.length})</summary><Table<PricePlanResponse> size="small" rowKey="id" scroll={{x:650}} pagination={false} dataSource={historyPlans} locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={props.planHistoryStatus === "archived" ? "보관된 요금제 이력이 없어요" : props.planHistoryStatus === "all" ? "등록한 요금제 이력이 없어요" : "사용 중인 요금제 이력이 없어요. 보관됨이나 전체에서 이전 요금제를 확인하세요."} /> }} columns={[
         {title:"적용 기간",key:"period",render:(_,row)=>dateRange(row)},
         {title:"기본료",dataIndex:"base_fee",align:"right",render:(value:number)=><span className="numeric">{planAmount(value)}</span>},
         {title:"최소 사용료",dataIndex:"minimum_amount",align:"right",render:(value:number)=><span className="numeric">{planAmount(value)}</span>},
@@ -100,7 +101,7 @@ export function PricingWorkspace(props: Props) {
       {title:"상태",key:"state",render:(_,rate)=><><Tag color={rate.archived_at ? "default" : "success"}>{rate.archived_at ? "보관됨" : "사용 중"}</Tag>{rate.archived_at && <p className="field-hint">{rate.archived_from ? formatKoreanMonth(rate.archived_from) : "다음 달"}부터 중단</p>}</>},
       ...(canManage ? [{title:"작업",key:"actions",render:(_: unknown, rate: PriceRateResponse)=>rate.archived_at && !canRestoreRate(rate) ? <span className="field-hint">복원할 수 없어요. 이미 적용이 멈췄거나 이 버전을 대신하는 버전이 있어요. 새 버전을 등록하세요.</span> : <ActionPanel title={rate.archived_at ? "단가 버전 복원" : "단가 버전 보관"} triggerType="link" operation={rate.archived_at ? "restorePriceRate" : "deletePriceRate"} description={rate.archived_at ? "이 단가 버전을 다시 사용해요. 적용 기간과 같은 구분 값의 다른 버전을 확인하세요." : "다음 달부터 이 단가 버전을 적용하지 않아요. 이번 달과 지난 청구, 확정 청구서는 그대로 남고 보관 목록에서 복원할 수 있어요."} isDanger={!rate.archived_at} fields={[{name:"id",label:"단가",type:"hidden",value:rate.id},{name:"code",label:"미터",type:"hidden",value:selectedCode}]} />}] : []),
     ]} /></section>}
-    <div className={styles.next}><div><strong>요금 설정을 마쳤나요?</strong><p>이벤트를 수집한 뒤 청구 검토에서 실제 적용 금액과 단가가 없는 구분 값을 확인하세요.</p></div><Link href={`/billing?month=${encodeURIComponent(props.month)}${props.customerId ? `&customer_id=${encodeURIComponent(props.customerId)}` : ""}`}>청구 검토로 이동</Link></div>
+    <div className={styles.next}><div><strong>요금 설정을 마쳤나요?</strong><p>이벤트를 수집한 뒤 청구 검토에서 실제 적용 금액과 단가가 없는 구분 값을 확인하세요.</p></div><LinkButton href={`/billing?month=${encodeURIComponent(props.month)}${props.customerId ? `&customer_id=${encodeURIComponent(props.customerId)}` : ""}`}>청구 검토로 이동</LinkButton></div>
   </>;
 }
 

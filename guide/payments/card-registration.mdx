@@ -37,14 +37,14 @@ description: "고객이 결제 카드를 등록하는 링크를 만들어 전달
     <CodeGroup>
     ```bash curl
     curl -X POST https://meterengine.com/v1/customers/3f2b8c1e-5d4a-4e6f-9a7b-1c2d3e4f5a6b/payment-method-registrations \
-      -H "Authorization: Bearer me_test_xxxxxxxx"
+      -H "Authorization: Bearer {API_KEY}"
     ```
 
     ```javascript Node
     const customerId = "3f2b8c1e-5d4a-4e6f-9a7b-1c2d3e4f5a6b";
     const response = await fetch(
       `https://meterengine.com/v1/customers/${customerId}/payment-method-registrations`,
-      { method: "POST", headers: { Authorization: "Bearer me_test_xxxxxxxx" } },
+      { method: "POST", headers: { Authorization: "Bearer {API_KEY}" } },
     );
     const registration = await response.json();
     const link = `https://meterengine.com/payment-method-registrations/${registration.token}`;
@@ -82,9 +82,9 @@ description: "고객이 결제 카드를 등록하는 링크를 만들어 전달
   </Tab>
 </Tabs>
 
-<Warning>
+<Danger>
 `token`은 링크를 만든 응답에만 실리고 MeterEngine은 원문을 저장하지 않습니다. 응답을 잃으면 같은 링크를 다시 얻을 수 없으니 새 링크를 만드세요. 링크를 가진 사람은 누구나 그 고객의 카드를 등록할 수 있으므로 그 고객에게만 전달하세요.
-</Warning>
+</Danger>
 
 MeterEngine은 이 링크를 메일로 보내지 않으니 메일이나 메신저로 고객에게 직접 전달합니다.
 
@@ -131,7 +131,7 @@ read 권한 API 키로 `GET /v1/customers/{id}/payment-method`를 부르면 지�
 
 ```bash
 curl https://meterengine.com/v1/customers/3f2b8c1e-5d4a-4e6f-9a7b-1c2d3e4f5a6b/payment-method \
-  -H "Authorization: Bearer me_test_xxxxxxxx"
+  -H "Authorization: Bearer {API_KEY}"
 ```
 
 ```json 응답 200

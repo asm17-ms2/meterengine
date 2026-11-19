@@ -280,3 +280,24 @@ run "production_alb_stays_open_to_the_internet" {
     error_message = "Production serves the public site, so Terraform keeps 80 and 443 open."
   }
 }
+
+run "production_insights_bucket_is_private_and_only_the_app_role_uses_it" {
+  command = plan
+  override_resource {
+    target = module.service.aws_db_instance.app
+    values = { id = "db-72GJNZYUHSQRXAKNQGC7ECV7UI" }
+  }
+
+  assert {
+    condition     = module.app_fleet.insights_bucket_name == "meterengine-production-insights-928618307647"
+    error_message = "Each environment keeps its insights in its own bucket."
+  }
+  assert {
+    condition     = aws_ssm_parameter.insights["insights-store"].value == "s3" && aws_ssm_parameter.insights["insights-bucket"].value == module.app_fleet.insights_bucket_name
+    error_message = "The servers read the bucket name Terraform created, not a hand-typed one."
+  }
+  assert {
+    condition     = toset(keys(aws_ssm_parameter.insights)) == toset(["insights-store", "insights-bucket"])
+    error_message = "Insights need the store kind and the bucket name, nothing else."
+  }
+}

@@ -31,7 +31,7 @@ public record EventRejectionResponse(
         UUID requestId,
     @Schema(
             description =
-                "묶음 요청이면 events 배열에서의 위치(0부터)입니다. 단건 요청이거나, 이벤트 수집이 202로 답한 뒤 저장할 때 거절했으면 null입니다.")
+                "batch 요청이면 events 배열에서의 위치(0부터)입니다. 단건 요청이거나, 이벤트 수집이 202로 답한 뒤 저장할 때 거절했으면 null입니다.")
         @JsonProperty("batch_index")
         Integer batchIndex,
     @Schema(description = "거절을 기록한 시각(ISO 8601)입니다. 이벤트 수집이 202로 답한 뒤 저장할 때 거절했으면 그 이벤트의 수신 시각입니다.")

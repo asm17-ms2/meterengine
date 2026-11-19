@@ -24,6 +24,7 @@ npx mint dev --port 3333
 | `*.mdx`, `*/` | 가이드 페이지. 경로는 docs.json의 pages와 같다 |
 | `openapi/overlays/meterengine.yaml` | API 참조에만 필요한 변경(OpenAPI Overlay 1.0). 생성 파일 |
 | `scripts/` | overlay 생성과 MDX 검사 스크립트 |
+| `logo/` | 사이트 로고(라이트, 다크)와 파비콘. 로고는 콘솔 워드마크 글꼴(Nunito Sans 750)의 글자를 경로로 바꾼 SVG다 |
 | `_meta/canonical.md` | 여러 페이지에 걸치는 사실의 정본 페이지 표 |
 | `_meta/style.md` | 문체 규칙과 화면 표기 대응 |
 | `.mintignore` | `_meta/`와 `scripts/`를 게시에서 뺀다 |

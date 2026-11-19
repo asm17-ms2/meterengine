@@ -4,11 +4,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
 import com.jayway.jsonpath.JsonPath;
+import com.meterengine.TestClock;
 import com.meterengine.TestCredentials;
+import com.meterengine.TestEvents;
 import com.meterengine.TestcontainersConfiguration;
+import com.meterengine.dashboard.client.DashboardInsightsStore;
+import com.meterengine.dashboard.dto.DashboardInsightsKey;
+import com.meterengine.dashboard.service.DashboardInsightsRefreshService;
+import com.meterengine.global.security.BusinessEnvironmentContext;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
+import java.time.YearMonth;
+import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,7 +34,15 @@ import org.springframework.web.context.WebApplicationContext;
 class DashboardIntegrationTest {
   @Autowired private WebApplicationContext webApplicationContext;
   @Autowired private JdbcTemplate jdbcTemplate;
+  @Autowired private TestClock testClock;
+  @Autowired private DashboardInsightsRefreshService dashboardInsightsRefreshService;
+  @Autowired private DashboardInsightsStore dashboardInsightsStore;
   private MockMvcTester mvc;
+
+  @AfterEach
+  void resetClock() {
+    testClock.reset();
+  }
 
   @BeforeEach
   void setUp() {
@@ -299,6 +316,142 @@ class DashboardIntegrationTest {
   }
 
   @Test
+  void 인사이트는_최근_석_달의_확정_청구액과_받은_금액을_오래된_달부터_준다() {
+    testClock.fix(OffsetDateTime.parse("2026-10-15T03:00:00Z"));
+    UUID organizationId = UUID.randomUUID();
+    String readKey = TestCredentials.issueApiKey(jdbcTemplate, organizationId, "read");
+    UUID paid = insertInvoice(organizationId, "2026-10", 1000);
+    insertAttempt(organizationId, paid, "test", "done");
+    insertInvoice(organizationId, "2026-08", 2000);
+    insertInvoice(organizationId, "2026-07", 5000);
+    String json = insights(readKey, "2026-10");
+    assertThat((List<String>) JsonPath.read(json, "$.monthly_amounts[*].month"))
+        .containsExactly("2026-08", "2026-09", "2026-10");
+    assertThat((List<Integer>) JsonPath.read(json, "$.monthly_amounts[*].finalized_total_amount"))
+        .containsExactly(2200, 0, 1100);
+    assertThat((List<Integer>) JsonPath.read(json, "$.monthly_amounts[*].collected_amount"))
+        .containsExactly(0, 0, 1100);
+  }
+
+  @Test
+  void 인사이트의_일별_이벤트_수는_KST_날짜로_세고_어제까지만_준다() {
+    testClock.fix(OffsetDateTime.parse("2026-10-15T03:00:00Z"));
+    UUID organizationId = UUID.randomUUID();
+    String readKey = TestCredentials.issueApiKey(jdbcTemplate, organizationId, "read");
+    UUID customerId = insertCustomer(organizationId);
+    insertEvent(organizationId, customerId, "2026-09-30T14:59:59Z");
+    insertEvent(organizationId, customerId, "2026-09-30T15:00:00Z");
+    insertEvent(organizationId, customerId, "2026-10-10T01:00:00Z");
+    insertEvent(organizationId, customerId, "2026-10-10T02:00:00Z");
+    insertEvent(organizationId, customerId, "2026-10-15T01:00:00Z");
+    String json = insights(readKey, "2026-10");
+    assertThat((List<String>) JsonPath.read(json, "$.daily_event_counts[*].date"))
+        .hasSize(14)
+        .startsWith("2026-10-01")
+        .endsWith("2026-10-14");
+    assertThat((List<Integer>) JsonPath.read(json, "$.daily_event_counts[*].event_count"))
+        .containsExactly(1, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0);
+    assertThat((List<?>) JsonPath.read(insights(readKey, "2026-09"), "$.daily_event_counts"))
+        .hasSize(30);
+  }
+
+  @Test
+  void 같은_날_다시_조회하면_계산해_둔_값을_주고_다음_날_다시_계산한다() {
+    testClock.fix(OffsetDateTime.parse("2026-10-15T03:00:00Z"));
+    UUID organizationId = UUID.randomUUID();
+    String readKey = TestCredentials.issueApiKey(jdbcTemplate, organizationId, "read");
+    UUID customerId = insertCustomer(organizationId);
+    insertEvent(organizationId, customerId, "2026-10-10T01:00:00Z");
+    assertThat(dailyEventCount(insights(readKey, "2026-10"), 10)).isEqualTo(1);
+
+    insertEvent(organizationId, customerId, "2026-10-10T02:00:00Z");
+    testClock.fix(OffsetDateTime.parse("2026-10-15T10:00:00Z"));
+    assertThat(dailyEventCount(insights(readKey, "2026-10"), 10)).isEqualTo(1);
+
+    // 다음 날 05:00(KST)이 지나면 앞의 값은 어제 것이라 다시 계산한다
+    testClock.fix(OffsetDateTime.parse("2026-10-15T20:10:00Z"));
+    String next = insights(readKey, "2026-10");
+    assertThat(dailyEventCount(next, 10)).isEqualTo(2);
+    assertThat((List<?>) JsonPath.read(next, "$.daily_event_counts")).hasSize(15);
+  }
+
+  @Test
+  void 하루_한_번_도는_작업은_조회한_적_없는_조직의_인사이트도_저장소에_올린다() {
+    testClock.fix(OffsetDateTime.parse("2026-10-15T20:00:00Z"));
+    UUID organizationId = UUID.randomUUID();
+    String readKey = TestCredentials.issueApiKey(jdbcTemplate, organizationId, "read");
+    UUID customerId = insertCustomer(organizationId);
+    insertEvent(organizationId, customerId, "2026-10-10T01:00:00Z");
+
+    dashboardInsightsRefreshService.refresh();
+
+    DashboardInsightsKey key =
+        new DashboardInsightsKey(
+            organizationId, BusinessEnvironmentContext.scopeId(null), YearMonth.of(2026, 10));
+    assertThat(dashboardInsightsStore.find(key))
+        .hasValueSatisfying(
+            stored -> assertThat(stored.dailyEventCounts().get(9).eventCount()).isEqualTo(1));
+    // 조회는 저장소의 값을 그대로 준다. 그 뒤에 들어온 이벤트는 다음 계산 때 들어간다
+    insertEvent(organizationId, customerId, "2026-10-10T02:00:00Z");
+    testClock.fix(OffsetDateTime.parse("2026-10-15T21:00:00Z"));
+    assertThat(dailyEventCount(insights(readKey, "2026-10"), 10)).isEqualTo(1);
+  }
+
+  @Test
+  void 인사이트는_다른_조직의_금액과_이벤트를_섞지_않고_수집_키로는_볼_수_없다() {
+    testClock.fix(OffsetDateTime.parse("2026-10-15T03:00:00Z"));
+    UUID organizationId = UUID.randomUUID();
+    UUID otherOrganizationId = UUID.randomUUID();
+    String readKey = TestCredentials.issueApiKey(jdbcTemplate, organizationId, "read");
+    TestCredentials.issueApiKey(jdbcTemplate, otherOrganizationId, "read");
+    insertInvoice(otherOrganizationId, "2026-10", 1000);
+    insertEvent(otherOrganizationId, insertCustomer(otherOrganizationId), "2026-10-10T01:00:00Z");
+    String json = insights(readKey, "2026-10");
+    assertThat((List<Integer>) JsonPath.read(json, "$.monthly_amounts[*].finalized_total_amount"))
+        .containsOnly(0);
+    assertThat((List<Integer>) JsonPath.read(json, "$.daily_event_counts[*].event_count"))
+        .containsOnly(0);
+    assertThat(
+            mvc.get()
+                .uri("/v1/dashboard/insights?month=2026-10")
+                .header(
+                    "Authorization",
+                    TestCredentials.issueApiKey(jdbcTemplate, organizationId, "ingest"))
+                .exchange())
+        .hasStatus(403);
+  }
+
+  private String insights(String authorization, String month) {
+    var result =
+        mvc.get()
+            .uri("/v1/dashboard/insights?month=" + month)
+            .header("Authorization", authorization)
+            .exchange();
+    assertThat(result).hasStatusOk();
+    return new String(result.getResponse().getContentAsByteArray(), StandardCharsets.UTF_8);
+  }
+
+  private static int dailyEventCount(String json, int dayOfMonth) {
+    return JsonPath.<Number>read(json, "$.daily_event_counts[" + (dayOfMonth - 1) + "].event_count")
+        .intValue();
+  }
+
+  private UUID insertCustomer(UUID organizationId) {
+    UUID customerId = UUID.randomUUID();
+    jdbcTemplate.update(
+        "insert into customer (id, organization_id, name) values (?, ?, '인사이트 시험 고객')",
+        customerId,
+        organizationId);
+    return customerId;
+  }
+
+  private void insertEvent(UUID organizationId, UUID customerId, String occurredAt) {
+    OffsetDateTime at = OffsetDateTime.parse(occurredAt);
+    TestEvents.insert(
+        jdbcTemplate, organizationId, "tx-" + UUID.randomUUID(), customerId, "usage", "{}", at, at);
+  }
+
+  @Test
   void 전체_운영_현황은_운영자만_조회하고_첫_실행_전_작업도_표시한다() {
     String member = TestCredentials.issueMemberSession(jdbcTemplate, UUID.randomUUID());
     assertThat(mvc.get().uri("/v1/operations").header("Authorization", member).exchange())
@@ -312,7 +465,7 @@ class DashboardIntegrationTest {
         .bodyJson()
         .extractingPath("$.jobs")
         .asArray()
-        .hasSize(6);
+        .hasSize(7);
   }
 
   @Test

@@ -427,7 +427,7 @@ test("changing the month on the payments list keeps the customer carried in from
 test("격리 계약: 거꾸로 된 금액 범위는 요청하지 않고 입력칸 옆에 고칠 곳을 보여 준다", async ({ page }) => {
   await page.goto("/invoices");
   const form = page.locator('form[aria-label="조회 조건"]');
-  await form.locator("summary").click();
+  await form.locator(".range-dropdown > summary").click();
   await form.getByLabel("최소 금액 (원)").fill("5000");
   await form.getByLabel("최대 금액 (원)").fill("100");
   await form.getByRole("button", { name: "조건 적용", exact: true }).click();
@@ -524,7 +524,7 @@ test("격리 계약: 자동 확정이 켜진 이번 달은 다음 자동 확정 
   await control(request, "auto-finalize");
   const month = formatKstMonth();
   await page.goto(`/billing?month=${month}`);
-  await expect(page.getByText(`다음 자동 확정 ${shiftMonth(month, 1)}-02 04:00 KST`, { exact: true })).toBeVisible();
+  await expect(page.getByText(`다음 자동 확정 ${Number(shiftMonth(month, 1).slice(5))}월 2일 04:00`, { exact: true })).toBeVisible();
   const held = page.getByRole("link", { name: "자동 확정 보류: 단가 없는 사용량", exact: true }).filter({ visible: true });
   await expect(held).toHaveCount(1);
   await expect(page.getByRole("row").filter({ has: held })).toContainText("단가 없는 사용량 고객");

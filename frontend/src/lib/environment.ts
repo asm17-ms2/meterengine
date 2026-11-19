@@ -64,11 +64,6 @@ export function environmentBandClass(environment: WorkspaceEnvironment): string 
   return `environment-band environment-band-${environment}`;
 }
 
-/** 환경 띠의 "환경 바꾸기"가 고르는 환경. 테스트와 라이브를 오가고 기존 데이터에서는 테스트로 간다. */
-export function nextEnvironment(environment: WorkspaceEnvironment): WorkspaceEnvironment {
-  return environment === "test" ? "live" : "test";
-}
-
 export function environmentReadyPath(path: string): boolean {
   return ["/overview", "/customers", "/billable-metrics", "/billable-metric-prices", "/pricing", "/usage", "/events", "/event-issues", "/event-rejections", "/billing", "/invoices", "/payments", "/integrations", "/settings", LIVE_ENVIRONMENT_PATH, "/members", "/audit"].some(prefix => path === prefix || path.startsWith(`${prefix}/`));
 }

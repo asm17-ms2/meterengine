@@ -16,7 +16,6 @@ import { EmptyState } from "@/components/screen/EmptyState";
 import { ListPagination } from "@/components/screen/ListPagination";
 import { ScreenCard } from "@/components/screen/ScreenCard";
 import { ScreenHeader } from "@/components/screen/ScreenHeader";
-import { ScreenNote } from "@/components/screen/ScreenNote";
 import { useSearchText } from "@/components/screen/use-search-text";
 import type { ClientSortSelection } from "@/components/table/table-sort";
 import type { ListCapabilities } from "@/lib/api/capabilities";
@@ -28,8 +27,6 @@ function filterByName(rows: BillableMetricRowView[], searchText: string): Billab
   return rows.filter((row) => row.name.toLowerCase().includes(needle));
 }
 
-
-const METRIC_SORT_LABELS: Record<string, string> = { code: "코드", name: "이름", event_type: "이벤트 유형", aggregation: "집계 함수", archived_at: "보관 시각" };
 export function BillableMetricsScreen({
   rows,
   total,
@@ -101,7 +98,6 @@ export function BillableMetricsScreen({
               clientSortSelection={{ selection: sortSelection, onSelectionChange: setSortSelection }}
             />
             <ListPagination query={query} capabilities={capabilities} total={total} />
-            <ScreenNote>{`정렬: ${METRIC_SORT_LABELS[query.sort ?? "code"] ?? METRIC_SORT_LABELS.code} ${query.order === "desc" ? "내림차순" : "오름차순"}`}</ScreenNote>
           </>
         )}
       </ScreenCard>

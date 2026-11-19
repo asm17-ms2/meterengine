@@ -8,5 +8,5 @@ export const metadata: Metadata = { title: "가입" };
 export const dynamic = "force-dynamic";
 
 export default function SignupPage() {
-  return <AuthFrame currentStep={1} title="가입" description="가입할 조직과 담당자 정보를 입력하세요. 이메일을 인증하면 바로 테스트 환경을 쓸 수 있어요."><AuthForm mode="signup" turnstileSiteKey={config.turnstileSiteKey} /></AuthFrame>;
+  return <AuthFrame currentStep={1} title="가입" description="이메일을 인증하면 바로 테스트할 수 있어요."><AuthForm mode="signup" turnstileSiteKey={config.turnstileSiteKey} /></AuthFrame>;
 }

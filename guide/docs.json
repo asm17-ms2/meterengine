@@ -6,6 +6,14 @@
   "colors": {
     "primary": "#5746ad"
   },
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "favicon": "/logo/favicon.svg",
+  "contextual": {
+    "options": ["copy", "view", "chatgpt", "claude", "cursor", "vscode"]
+  },
   "navbar": {
     "primary": {
       "type": "button",

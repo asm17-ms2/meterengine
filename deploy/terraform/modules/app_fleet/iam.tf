@@ -42,7 +42,16 @@ resource "aws_iam_role_policy" "app" {
       Resource  = "*"
       Condition = { StringEquals = { "cloudwatch:namespace" = "MeterEngine/Scaling" } }
     },
-    { Effect = "Allow", Action = ["autoscaling:DescribeAutoScalingGroups"], Resource = "*" }
+    { Effect = "Allow", Action = ["autoscaling:DescribeAutoScalingGroups"], Resource = "*" },
+    # 홈 인사이트 객체만 읽고 쓴다. 지우는 권한은 주지 않는다.
+    { Effect = "Allow", Action = ["s3:GetObject", "s3:PutObject"], Resource = "${local.insights_bucket_arn}/insights/*" },
+    # 목록 권한이 없으면 S3가 없는 객체에 404가 아니라 403을 줘, 앱이 "아직 계산 전"과 "권한 없음"을 가르지 못한다.
+    {
+      Effect    = "Allow"
+      Action    = ["s3:ListBucket"]
+      Resource  = local.insights_bucket_arn
+      Condition = { StringLike = { "s3:prefix" = "insights/*" } }
+    }
     ],
     # 가입 인증 메일만 보낸다. 다른 보내는 주소로는 보내지 못하게 주소로 묶는다.
     var.email_sender == null ? [] : [{

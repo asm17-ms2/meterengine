@@ -1,17 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { environmentBandClass, environmentOptions, environmentQueryValue, isAllowedEnvironment, isClosedLegacyEnvironment, isLockedEnvironment, nextEnvironment, readEnvironment, showsLegacyEnvironment, withoutClosedLegacyEnvironment } from "../src/lib/environment.ts";
+import { environmentBandClass, environmentOptions, environmentQueryValue, isAllowedEnvironment, isClosedLegacyEnvironment, isLockedEnvironment, readEnvironment, showsLegacyEnvironment, withoutClosedLegacyEnvironment } from "../src/lib/environment.ts";
 
 test("each environment band has its own color class", () => {
   for (const environment of ["legacy", "test", "live"]) {
     assert.equal(environmentBandClass(environment), `environment-band environment-band-${environment}`);
   }
-});
-
-test("the band switch moves between the test and live environments", () => {
-  assert.equal(nextEnvironment("test"), "live");
-  assert.equal(nextEnvironment("live"), "test");
-  assert.equal(nextEnvironment("legacy"), "test");
 });
 
 test("a missing or unknown environment is the test environment", () => {

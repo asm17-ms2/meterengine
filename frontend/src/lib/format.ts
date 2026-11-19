@@ -29,15 +29,10 @@ export function formatKstDate(iso: string): string {
   return `${parts.year}-${parts.month}-${parts.day}`;
 }
 
-/** `2026-08-09 14:12:04 KST` - 필터 행의 조회 시각. */
-export function formatKstStamp(value: Date): string {
-  return `${formatKstDateTime(value.toISOString())} KST`;
-}
-
-/** `2026-11-02 04:00 KST` - 분 단위로 충분한 시각. */
-export function formatKstMinuteStamp(value: Date): string {
+/** `11월 17일 15:30` - 화면 위쪽 요약 줄처럼 사람이 바로 읽는 시각. 해는 조회 월이 알려 준다. */
+export function formatKstShortStamp(value: Date): string {
   const parts = toDateTimeParts(value);
-  return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute} KST`;
+  return `${Number(parts.month)}월 ${Number(parts.day)}일 ${parts.hour}:${parts.minute}`;
 }
 
 export function formatKoreanMonth(month: string): string {

@@ -134,6 +134,7 @@ run "alb_domains_need_a_server" {
       alb_dns_name               = "meterengine-production-alb-1.ap-northeast-2.elb.amazonaws.com"
       alb_zone_id                = "ZWKZPGTI48KDX"
       autoscaling_group_name     = "meterengine-production-app"
+      insights_bucket_name       = "meterengine-production-insights-928618307647"
       autoscaling_group_arn      = "arn:aws:autoscaling:ap-northeast-2:928618307647:autoScalingGroup:00000000-0000-0000-0000-000000000000:autoScalingGroupName/meterengine-production-app"
       app_version_parameter_name = "/meterengine/production/app-version"
       https_listener_arn         = "arn:aws:elasticloadbalancing:ap-northeast-2:928618307647:listener/app/meterengine-production-alb/0000000000000000/0000000000000000"

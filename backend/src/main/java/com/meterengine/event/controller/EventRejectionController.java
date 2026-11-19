@@ -43,9 +43,9 @@ public class EventRejectionController {
       summary = "수집 거절 검색",
       description =
           "수집을 거절한 이벤트의 기록을 최신 기록부터 돌려줍니다. month는 거절을 기록한 달(KST)입니다."
-              + " 기록을 시작한 뒤(recording_started_at)에 거절한 단건 요청의 customer_not_found, customer_archived, event_too_old와 묶음 요청의 rejected 이벤트가 들어 있습니다."
-              + " 본문을 JSON으로 읽지 못했거나 형식 검증에서 거절한 단건 요청, 요청 전체를 400으로 거절한 묶음 요청, 인증과 요청 한도 거절, 기록을 시작하기 전의 거절은 들지 않습니다."
-              + " 이벤트 수집이 202로 답할 때는 요청에서 바로 거절한 event_too_old와 묶음 요청의 rejected 원소가 수집 거절에 기록되지 않고, 저장할 때 찾은 customer_not_found, customer_archived만 기록됩니다."
+              + " 기록을 시작한 뒤(recording_started_at)에 거절한 단건 요청의 customer_not_found, customer_archived, event_too_old와 batch 요청의 rejected 이벤트가 들어 있습니다."
+              + " 본문을 JSON으로 읽지 못했거나 형식 검증에서 거절한 단건 요청, 요청 전체를 400으로 거절한 batch 요청, 인증과 요청 한도 거절, 기록을 시작하기 전의 거절은 들지 않습니다."
+              + " 이벤트 수집이 202로 답할 때는 요청에서 바로 거절한 event_too_old와 batch 요청의 rejected 원소가 수집 거절에 기록되지 않고, 저장할 때 찾은 customer_not_found, customer_archived만 기록됩니다."
               + " 원본 properties, 오류 원문과 요청 주체 ID는 돌려주지 않습니다. 페이지는 0부터 셉니다. 모르는 조회 조건은 400 validation_error로 거절합니다.")
   @ApiResponses({
     @ApiResponse(responseCode = "200", description = "한 페이지 분량의 수집 거절 기록입니다."),

@@ -25,7 +25,7 @@ export default async function EventRejectionsPage({ searchParams }: { searchPara
   const source = new URLSearchParams(Object.entries(params).filter((entry): entry is [string, string] => typeof entry[1] === "string"));
   const rows = result.ok ? result.data.rejections.map(rejection => ({ ...rejection, error_label: ERRORS[rejection.error_code] ?? rejection.error_code, batch_row: rejection.batch_index === null ? null : rejection.batch_index + 1 })) : [];
   return <>
-    <WorkspaceHeader title="수집 거절" description="고객 연결이나 수집 조건 때문에 거절한 이벤트를 확인하세요. 받은 뒤 미터나 단가 문제로 빠진 이벤트는 과금에서 빠진 이벤트 화면에서 확인하세요." />
+    <WorkspaceHeader title="수집 거절" description="받을 때 거절해서 저장하지 않은 이벤트예요. 거절 사유를 확인하세요." />
     <section className="workspace-panel">
       <form method="get" className="workspace-actions query-row">
         <Suspense><EnvironmentInput /></Suspense>
@@ -43,7 +43,7 @@ export default async function EventRejectionsPage({ searchParams }: { searchPara
         <WorkspaceTable serverPaged rows={rows} columns={[{ key: "transaction_id", label: "전송 ID" }, { key: "error_label", label: "거절 사유" }, { key: "error_fields", label: "확인할 항목" }, { key: "customer_id", label: "요청 고객 ID", isId: true }, { key: "type", label: "이벤트 유형" }, { key: "batch_row", label: "묶음 안 순서", isNumber: true }, { key: "occurred_at", label: "이벤트 발생 시각", isDate: true }, { key: "recorded_at", label: "거절 기록 시각", isDate: true }, { key: "request_id", label: "요청 ID", isId: true }]} empty="선택한 조건의 수집 거절 기록이 없어요." />
         <PageLinks label="수집 거절 페이지" pathname="/event-rejections" params={Object.fromEntries(source)} page={page} size={size} total={result.data.total} />
       </> : <WorkspaceError message={result.error.message} />}
-      <p className="field-hint">거절된 이벤트의 원문과 속성은 저장하지 않아요. 조회 월은 이벤트가 발생한 달이 아니라 거절을 기록한 달이에요. 요청 본문을 JSON으로 읽지 못했거나 기본 요청 검증에서 막힌 요청은 감사 기록에서 확인하세요.</p>
+      <p className="field-hint">거절된 이벤트의 원문과 속성은 저장하지 않아요. 조회 월은 거절을 기록한 달이에요.</p>
     </section>
   </>;
 }

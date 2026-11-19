@@ -18,7 +18,7 @@ description: "테스트 환경의 테스트 결제와 라이브 환경의 실결
 
 ```bash
 curl https://meterengine.com/v1/payment-setting \
-  -H "Authorization: Bearer me_test_xxxxxxxx"
+  -H "Authorization: Bearer {API_KEY}"
 ```
 
 ```json 응답 200
@@ -58,7 +58,7 @@ curl https://meterengine.com/v1/payment-setting \
 <CodeGroup>
 ```bash curl
 curl -X POST https://meterengine.com/v1/invoices/9b1d7f3a-2c4e-4a6b-8d0f-1e3a5c7b9d2f/payment-attempts \
-  -H "Authorization: Bearer me_test_xxxxxxxx" \
+  -H "Authorization: Bearer {API_KEY}" \
   -H "TossPayments-Test-Code: INVALID_REJECT_CARD"
 ```
 
@@ -69,7 +69,7 @@ const response = await fetch(
   {
     method: "POST",
     headers: {
-      Authorization: "Bearer me_test_xxxxxxxx",
+      Authorization: "Bearer {API_KEY}",
       "TossPayments-Test-Code": "INVALID_REJECT_CARD",
     },
   },
@@ -85,9 +85,9 @@ console.log(response.status, attempt.status, attempt.failure_code);
 `INVALID_REJECT_CARD`처럼 카드 자체의 오류는 고객이 카드를 다시 등록하기 전에는 MeterEngine이 자동으로 다시 시도하지 않는 실패입니다. 자동 재시도를 확인하려면 다시 시도하는 실패 코드를 넣으세요. 어떤 실패를 다시 시도하는지는 [결제 실패와 재시도](/payments/retries)에 있습니다.
 </Note>
 
-<Warning>
+<Danger>
 라이브 환경에서 `TossPayments-Test-Code` 헤더를 보내면 MeterEngine이 `400 toss_payments_test_code_in_live_mode`로 거절하고 결제 시도를 만들지 않습니다. 라이브 환경으로 옮길 때 연동 코드에서 이 헤더를 빼세요.
-</Warning>
+</Danger>
 
 ## 라이브 환경으로 옮기기
 

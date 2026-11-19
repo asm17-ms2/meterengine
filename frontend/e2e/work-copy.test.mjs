@@ -56,9 +56,9 @@ test("customer detail and overview write months and times in the shared Korean f
   assert.ok(!overview.includes("new Date(data.calculated_at).toLocaleString("));
 });
 
-test("the overview failed payment item opens the payments list filtered to failures", () => {
+test("the home failed payment item opens the payments list filtered to failures", () => {
   const overview = source("app/(console)/overview/page.tsx");
-  assert.ok(overview.includes("<Link href={`/payments?month=${month}&payment_status=failed`}>수납 확인</Link>"));
+  assert.ok(overview.includes("<LinkButton href={`/payments?month=${month}&payment_status=failed`}>수납 확인</LinkButton>"));
 });
 
 test("customer detail asks the server for only that customer's cards and still drops cards of other customers", () => {

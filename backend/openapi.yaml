@@ -520,7 +520,7 @@ paths:
               schema:
                 type: integer
                 format: int32
-      summary: 단가 검색 결과 CSV 내보내기
+      summary: 단가 내보내기
       tags:
       - workspace-query-controller
   /v1/billable-metric-prices/months:
@@ -943,7 +943,7 @@ paths:
               schema:
                 type: integer
                 format: int32
-      summary: 미터 검색 결과 CSV 내보내기
+      summary: 미터 내보내기
       tags:
       - workspace-query-controller
   /v1/billable-metrics/options:
@@ -2124,7 +2124,7 @@ paths:
               schema:
                 type: integer
                 format: int32
-      summary: 고객 검색 결과 CSV 내보내기
+      summary: 고객 내보내기
       tags:
       - workspace-query-controller
   /v1/customers/options:
@@ -2967,6 +2967,60 @@ paths:
       summary: 월별 과금과 수납 현황 조회
       tags:
       - dashboard-controller
+  /v1/dashboard/insights:
+    get:
+      description: "로그인 세션이나 read 권한 API 키로 현재 업무 환경의 최근 석 달 확정 청구액과 받은 금액, 조회한 달의\
+        \ 날짜별 이벤트 수를 돌려줍니다. 매일 05:00(KST)에 계산해 둔 값이라 그 뒤에 생긴 변화는 다음 날 반영됩니다. 금액은 부\
+        가세 포함이고 확정한 청구서만 셉니다."
+      operationId: getDashboardInsights
+      parameters:
+      - description: "조회할 달(yyyy-MM, KST)입니다. 생략하면 이번 달입니다."
+        in: query
+        name: month
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/DashboardInsightsResponse"
+          description: OK
+        "401":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=authentication_required: Authorization 헤더가 없습니다.
+            code=invalid_credentials: 키나 토큰의 형식이 틀렸거나, 등록되지 않은 값이거나, 폐기되거나 만료됐습니다.
+        "403":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: |
+            code=permission_denied: 키의 권한이나 계정의 역할로는 할 수 없는 요청이거나, 조직이 정해지지 않은 로그인 세션입니다.
+            code=organization_not_active: 조직의 이용이 정지됐습니다.
+            code=consent_required: 로그인 세션의 사용자가 약관과 개인정보 처리방침에 아직 동의하지 않았습니다. POST /v1/sessions/current/consents로 동의합니다.
+        "429":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=rate_limit_exceeded: 키의 분당 요청 한도를 넘었습니다. Retry-After\
+            \ 헤더의 초만큼 기다린 뒤 다시 보냅니다."
+          headers:
+            Retry-After:
+              description: 다시 보내기 전에 기다릴 시간(초)
+              required: true
+              schema:
+                type: integer
+                format: int32
+      summary: 월별 금액 추이와 날짜별 이벤트 수 조회
+      tags:
+      - dashboard-controller
   /v1/email-verification-confirmations:
     post:
       description: |
@@ -3050,11 +3104,39 @@ paths:
   /v1/event-batches:
     post:
       description: |
-        1건부터 100건까지 받아 보낸 순서대로 이벤트마다 결과를 돌려줍니다. 이벤트 하나의 형식 오류는 다른 이벤트의 저장을 막지 않습니다. events가 없거나 비었거나 100건을 넘어 요청 전체의 형식이 틀리면 400입니다.
-        받은 이벤트가 하나라도 있으면 202로 답하고 저장은 뒤에서 합니다. 이때 결과는 accepted, rejected, failed입니다. accepted는 받았고 저장은 뒤에서 한다는 뜻이고, failed는 받지 못했으니 같은 transaction_id로 다시 보내라는 뜻입니다. accepted 이벤트의 고객 확인과 중복 판정은 저장할 때 합니다.
-        모든 이벤트를 요청 안에서 처리하면 200으로 답하기도 하며, 이 경우도 정상입니다. 이때 결과는 stored, duplicate, rejected입니다.
-        200과 202를 모두 성공으로 처리하고, 이벤트마다 result를 확인하세요.
-        이벤트 수집이 202로 답할 때는 rejected 이벤트가 수집 거절에 기록되지 않습니다.
+        이벤트를 1건부터 100건까지 한 요청에 담아 보냅니다. 응답의 results에 보낸 순서대로 이벤트마다 결과가 하나씩 나오고, 이벤트 하나가 거절돼도 나머지 이벤트는 그대로 처리합니다.
+
+        | HTTP 상태 | 뜻 | 나올 수 있는 result |
+        | --- | --- | --- |
+        | 200 | 모든 이벤트를 요청 안에서 처리했습니다. | stored, duplicate, rejected |
+        | 202 | 받은 이벤트가 하나 이상 있습니다. 저장은 응답 뒤에 합니다. | accepted, rejected, failed |
+        | 400 | 요청 전체를 거절했습니다. 본문을 JSON으로 읽을 수 없거나, events가 없거나 비었거나 100건을 넘습니다. | 없음(results 대신 오류 응답) |
+
+        200과 202는 둘 다 성공입니다. 어느 쪽으로 답할지는 서버 구성에 따라 다르므로 상태 코드로 분기하지 말고 이벤트마다 result를 확인합니다.
+
+        | result | 뜻 | 다시 보내기 |
+        | --- | --- | --- |
+        | stored | 이번 요청으로 저장했습니다. | 보내지 않습니다. |
+        | duplicate | 같은 transaction_id의 이벤트가 이미 저장돼 있어 저장하지 않았습니다. 처음 저장한 이벤트를 유지합니다. | 보내지 않습니다. |
+        | accepted | 받기만 했고 아직 저장하지 않았습니다. 고객 확인과 중복 판정을 포함한 저장은 응답 뒤에 합니다. | 보내지 않습니다. |
+        | rejected | 거절했습니다. 이유는 error.code에 있습니다. | 그대로 보내면 같은 이유로 거절됩니다. 값을 고친 뒤 보냅니다. |
+        | failed | 받지 못했습니다. | 같은 transaction_id로 다시 보냅니다. |
+
+        ### accepted와 stored의 차이
+
+        stored는 저장까지 끝났다는 뜻이고, accepted는 받았다는 뜻일 뿐 저장을 약속하지 않습니다. accepted 이벤트는 저장할 때 다음과 같이 처리합니다.
+
+        - 고객이 없거나(customer_not_found) 보관한 고객이면(customer_archived) 저장하지 않고 수집 거절 기록(GET /v1/event-rejections/search)에 남깁니다.
+        - 같은 transaction_id의 이벤트가 이미 저장돼 있으면 저장하지 않고 처음 이벤트를 유지합니다. 따로 기록하거나 알리지 않습니다.
+        - 나머지는 저장합니다.
+
+        이벤트 수집이 202로 답할 때는 요청에서 바로 rejected로 돌려준 이벤트가 수집 거절 기록에 남지 않습니다. 응답의 error를 로그에 남겨 확인합니다.
+
+        ### 다시 보내야 하는 경우
+
+        - result가 failed인 이벤트: 그 이벤트를 같은 transaction_id로 다시 보냅니다. 같은 transaction_id는 한 번만 저장되므로, 실제로는 받았던 이벤트를 다시 보내도 두 번 저장되지 않습니다.
+        - 503 event_ingest_unavailable: 이벤트를 하나도 받지 못했습니다. 같은 요청을 그대로 다시 보냅니다.
+        - 429 rate_limit_exceeded: 키의 분당 요청 한도를 넘었습니다. Retry-After 헤더의 초만큼 기다린 뒤 같은 요청을 다시 보냅니다.
       operationId: ingestEventBatch
       requestBody:
         content:
@@ -3065,16 +3147,64 @@ paths:
       responses:
         "200":
           content:
-            '*/*':
+            application/json:
+              examples:
+                stored_duplicate_rejected:
+                  description: "0번은 저장했고, 1번은 이미 저장된 transaction_id라 저장하지 않았고, 2번은\
+                    \ timestamp에 오프셋이 없어 거절한 경우입니다."
+                  summary: "저장, 중복, 형식 오류"
+                  value:
+                    results:
+                    - index: 0
+                      transaction_id: tx-20261105-0001
+                      result: stored
+                    - index: 1
+                      transaction_id: tx-20261105-0002
+                      result: duplicate
+                    - index: 2
+                      transaction_id: tx-20261105-0003
+                      result: rejected
+                      error:
+                        code: validation_error
+                        message: 요청 값이 올바르지 않습니다
+                        errors:
+                        - field: "events[2].timestamp"
+                          message: 이벤트 필드의 형식이 올바르지 않습니다
               schema:
                 $ref: "#/components/schemas/IngestEventBatchResponse"
-          description: 모든 이벤트를 요청 안에서 처리했습니다. 이벤트마다 저장 결과를 돌려줍니다.
+          description: 모든 이벤트를 요청 안에서 처리했습니다. 이 응답에는 accepted와 failed가 없습니다.
         "202":
           content:
-            '*/*':
+            application/json:
+              examples:
+                accepted_rejected_failed:
+                  description: "0번은 받았고, 1번은 받는 기간이 지나 거절했고, 2번은 받지 못해 다시 보내야 하는 경\
+                    우입니다."
+                  summary: "받음, 기간 지남, 받지 못함"
+                  value:
+                    results:
+                    - index: 0
+                      transaction_id: tx-20261105-0001
+                      result: accepted
+                    - index: 1
+                      transaction_id: tx-20261105-0002
+                      result: rejected
+                      error:
+                        code: event_too_old
+                        message: 받는 기간이 지난 이벤트입니다
+                        errors:
+                        - field: "events[1].timestamp"
+                          message: 수신 시각보다 35일 넘게 지난 시각입니다
+                    - index: 2
+                      transaction_id: tx-20261105-0003
+                      result: failed
+                      error:
+                        code: event_ingest_unavailable
+                        message: 이벤트를 받지 못했습니다. 같은 transaction_id로 다시 보내세요
               schema:
                 $ref: "#/components/schemas/IngestEventBatchResponse"
-          description: 받은 이벤트가 하나 이상 있습니다. 저장은 뒤에서 합니다.
+          description: 받은 이벤트가 하나 이상 있습니다. 저장은 응답 뒤에 합니다. 이 응답에는 stored와 duplicate가
+            없습니다.
         "400":
           content:
             application/json:
@@ -3127,7 +3257,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
           description: "code=event_ingest_unavailable: 이벤트를 하나도 받지 못했습니다. 그대로 다시 보\
             내면 됩니다."
-      summary: 사용량 이벤트 묶음 수집
+      summary: 사용량 이벤트 batch 수집
       tags:
       - event-batch-controller
   /v1/event-issues/search:
@@ -3241,19 +3371,19 @@ paths:
               schema:
                 type: integer
                 format: int32
-      summary: 과금에서 빠진 이벤트 검색
+      summary: 과금에서 빠진 이벤트 조회
       tags:
       - event-issue-controller
   /v1/event-rejections/search:
     get:
       description: "수집을 거절한 이벤트의 기록을 최신 기록부터 돌려줍니다. month는 거절을 기록한 달(KST)입니다. 기록을\
         \ 시작한 뒤(recording_started_at)에 거절한 단건 요청의 customer_not_found, customer_archived,\
-        \ event_too_old와 묶음 요청의 rejected 이벤트가 들어 있습니다. 본문을 JSON으로 읽지 못했거나 형식 검증에서\
-        \ 거절한 단건 요청, 요청 전체를 400으로 거절한 묶음 요청, 인증과 요청 한도 거절, 기록을 시작하기 전의 거절은 들지 않습니다\
-        . 이벤트 수집이 202로 답할 때는 요청에서 바로 거절한 event_too_old와 묶음 요청의 rejected 원소가 수집 거절에\
-        \ 기록되지 않고, 저장할 때 찾은 customer_not_found, customer_archived만 기록됩니다. 원본 properties,\
-        \ 오류 원문과 요청 주체 ID는 돌려주지 않습니다. 페이지는 0부터 셉니다. 모르는 조회 조건은 400 validation_error로\
-        \ 거절합니다."
+        \ event_too_old와 batch 요청의 rejected 이벤트가 들어 있습니다. 본문을 JSON으로 읽지 못했거나 형식 검증\
+        에서 거절한 단건 요청, 요청 전체를 400으로 거절한 batch 요청, 인증과 요청 한도 거절, 기록을 시작하기 전의 거절은 들지\
+        \ 않습니다. 이벤트 수집이 202로 답할 때는 요청에서 바로 거절한 event_too_old와 batch 요청의 rejected 원\
+        소가 수집 거절에 기록되지 않고, 저장할 때 찾은 customer_not_found, customer_archived만 기록됩니다.\
+        \ 원본 properties, 오류 원문과 요청 주체 ID는 돌려주지 않습니다. 페이지는 0부터 셉니다. 모르는 조회 조건은 400\
+        \ validation_error로 거절합니다."
       operationId: searchEventRejections
       parameters:
       - description: "거절을 기록한 달(yyyy-MM, KST)입니다. 생략하면 이번 달입니다."
@@ -3780,7 +3910,7 @@ paths:
               schema:
                 type: integer
                 format: int32
-      summary: 수집 이벤트 CSV 내보내기
+      summary: 수집 이벤트 내보내기
       tags:
       - event-export-controller
   /v1/events/lookup:
@@ -4300,7 +4430,7 @@ paths:
                 format: int32
       summary: 청구 예정액 조회
       tags:
-      - draft-invoice-controller
+      - invoice-controller
   /v1/invoices/draft/export:
     get:
       description: "GET /v1/invoices/draft/search와 같은 조건에 맞는 결과를 페이지를 나누지 않고 모두 내보\
@@ -4416,7 +4546,7 @@ paths:
               schema:
                 type: integer
                 format: int32
-      summary: 청구 예정액 검색 결과 CSV 내보내기
+      summary: 청구 예정액 내보내기
       tags:
       - workspace-query-controller
   /v1/invoices/draft/search:
@@ -4702,7 +4832,7 @@ paths:
               schema:
                 type: integer
                 format: int32
-      summary: 청구서 검색 결과 CSV 내보내기
+      summary: 청구서 내보내기
       tags:
       - workspace-query-controller
   /v1/invoices/months:
@@ -8052,7 +8182,7 @@ paths:
               schema:
                 type: integer
                 format: int32
-      summary: 고객별 월 사용량 조회
+      summary: 사용량 조회
       tags:
       - billable-metric-usage-controller
   /v1/usage/export:
@@ -8162,7 +8292,7 @@ paths:
               schema:
                 type: integer
                 format: int32
-      summary: 고객별 사용량 검색 결과 CSV 내보내기
+      summary: 사용량 내보내기
       tags:
       - workspace-query-controller
   /v1/usage/months:
@@ -8346,7 +8476,7 @@ paths:
               schema:
                 type: integer
                 format: int32
-      summary: 고객별 사용량 검색
+      summary: 사용량 검색
       tags:
       - workspace-query-controller
   /v1/user-accounts:
@@ -9992,6 +10122,39 @@ components:
           type: integer
           format: int64
           description: 고객 정보의 버전입니다. 고칠 때 큰따옴표로 감싸 If-Match에 보냅니다.
+    DailyEventCount:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+          description: "날짜(yyyy-MM-dd, KST)"
+        event_count:
+          type: integer
+          format: int64
+          description: 그 날 발생한 이벤트 수(occurred_at 기준)
+    DashboardInsightsResponse:
+      type: object
+      properties:
+        calculated_at:
+          type: string
+          format: date-time
+          description: "인사이트를 계산한 시각(ISO 8601)입니다. 매일 05:00(KST)에 다시 계산하고, 그 뒤 처음\
+            \ 조회할 때 저장된 값이 없으면 그 자리에서 계산합니다."
+        daily_event_counts:
+          type: array
+          description: 조회한 달의 1일부터 계산한 날의 전날(KST)까지 날짜별 이벤트 수입니다. 계산한 날과 그 뒤의 날짜는
+            주지 않습니다.
+          items:
+            $ref: "#/components/schemas/DailyEventCount"
+        month:
+          type: string
+          description: "조회한 달(yyyy-MM, KST)"
+        monthly_amounts:
+          type: array
+          description: 조회한 달까지 최근 석 달의 금액입니다. 오래된 달부터 줍니다.
+          items:
+            $ref: "#/components/schemas/MonthlyAmount"
     DashboardInvoice:
       type: object
       properties:
@@ -10471,8 +10634,8 @@ components:
         batch_index:
           type: integer
           format: int32
-          description: "묶음 요청이면 events 배열에서의 위치(0부터)입니다. 단건 요청이거나, 이벤트 수집이 202로 답한\
-            \ 뒤 저장할 때 거절했으면 null입니다."
+          description: "batch 요청이면 events 배열에서의 위치(0부터)입니다. 단건 요청이거나, 이벤트 수집이 202로\
+            \ 답한 뒤 저장할 때 거절했으면 null입니다."
         customer_id:
           type: string
           format: uuid
@@ -10584,27 +10747,39 @@ components:
       properties:
         error:
           $ref: "#/components/schemas/ErrorResponse"
-          description: "rejected와 failed일 때만 실립니다. 단건 오류 응답과 같은 형태이고, errors의 field는\
-            \ events[2].timestamp처럼 이벤트 위치를 붙여 씁니다. failed의 code는 event_ingest_unavailable입\
-            니다."
+          description: |
+            rejected와 failed일 때만 실립니다. 단건 오류 응답과 같은 형태입니다. 분기는 code로 합니다. message는 사람이 읽는 한국어 문구라 로그에 남기는 데만 쓰고, 바뀔 수 있으니 분기에 쓰지 않습니다.
+
+            rejected의 code는 다음 가운데 하나입니다.
+
+            - validation_error: 이벤트의 필드 값이 형식 검사를 통과하지 못했습니다. 필드가 빠졌거나, 빈 문자열이거나, customer_id가 UUID가 아니거나, timestamp에 오프셋이 없는 경우입니다. errors에 틀린 필드와 이유가 실리고, field는 events[2].timestamp처럼 이벤트 위치를 붙여 씁니다. 값의 타입이 맞지 않아 이벤트를 읽지 못했거나 원소가 JSON 객체가 아니면 field가 events[2]처럼 이벤트 위치만 가리킵니다.
+            - event_too_old: timestamp가 받은 시각보다 35일 넘게 지났습니다.
+            - customer_not_found: customer_id의 고객이 이 업무 환경에 없습니다. 200 응답에서만 나옵니다.
+            - customer_archived: 보관한 고객입니다. 200 응답에서만 나옵니다.
+
+            malformed_request_body는 이벤트 결과에 나오지 않습니다. 본문 전체를 JSON으로 읽을 수 없을 때 요청 전체를 400으로 거절하면서 씁니다.
+
+            failed의 code는 event_ingest_unavailable입니다.
         index:
           type: integer
           format: int32
           description: 요청 events 배열에서의 위치(0부터)
         result:
           type: string
-          description: "accepted(받음, 저장은 뒤에서 함), failed(받지 못함, 같은 transaction_id로\
-            \ 다시 보내야 함), stored(저장함), duplicate(이미 저장돼 있음), rejected(거절함) 가운데 하나입니\
-            다."
+          description: "stored(저장함), duplicate(이미 저장돼 있어 저장하지 않음), accepted(받기만 함\
+            , 저장은 응답 뒤에 함), rejected(거절함), failed(받지 못함, 같은 transaction_id로 다시 보내야\
+            \ 함) 가운데 하나입니다."
           enum:
           - stored
           - duplicate
           - rejected
           - accepted
           - failed
+          example: stored
         transaction_id:
           type: string
           description: 그 이벤트의 transaction_id입니다. 문자열 transaction_id가 없는 이벤트면 null입니다.
+          example: tx-20261105-0001
     FieldError:
       type: object
       description: 틀린 필드 하나
@@ -10698,24 +10873,30 @@ components:
           type: string
           format: uuid
           description: 고객 등록 응답의 id(UUID)입니다. 같은 업무 환경에 등록한 고객이어야 합니다.
+          example: 3f2b8c1e-7a4d-4e6b-9c0a-5d1f2e3a4b5c
         properties:
           type: object
           additionalProperties: {}
           description: "JSON 객체입니다. 비어 있어도({}) 됩니다. 미터의 집계 속성과 구분 키를 여기에 담습니다."
+          example:
+            units: 12
         timestamp:
           type: string
           format: date-time
           description: "이벤트가 발생한 시각입니다. 오프셋을 붙인 ISO 8601로 보냅니다(예: 2026-11-05T10:00:00+09:00).\
             \ 조회 응답에서는 occurred_at으로 나옵니다."
+          example: 2026-11-05T10:00:00+09:00
         transaction_id:
           type: string
           description: 이벤트마다 고유한 값으로 1자에서 255자입니다. 같은 값으로 다시 보내면 저장하지 않고 처음 저장한 이벤트를
             유지합니다.
+          example: tx-20261105-0001
           maxLength: 255
           minLength: 0
         type:
           type: string
           description: 이벤트 유형입니다. 미터의 event_type과 같은 값이어야 그 미터에 집계됩니다.
+          example: api_call
           minLength: 1
       required:
       - customer_id
@@ -11343,14 +11524,28 @@ components:
           type: integer
           format: int64
           description: 이 항목에 든 이벤트 수입니다. 여러 미터에 걸린 이벤트도 한 번만 셉니다.
+    MonthlyAmount:
+      type: object
+      properties:
+        collected_amount:
+          type: integer
+          format: int64
+          description: 받은 금액(원)입니다. 결제를 마친 청구서의 청구액에서 취소한 금액을 뺀 합계입니다.
+        finalized_total_amount:
+          type: integer
+          format: int64
+          description: 확정 청구액(원)입니다. 그 달 청구서의 부가세 포함 금액 합계입니다.
+        month:
+          type: string
+          description: "달(yyyy-MM, KST)"
     OperationsJob:
       type: object
       properties:
         job_name:
           type: string
           description: "예약 작업 이름입니다. payment_attempt_confirmation, payment_retry,\
-            \ payment_reconciliation, webhook_delivery, unbilled_usage_report, invoice_auto_finalize\
-            \ 가운데 하나입니다."
+            \ payment_reconciliation, webhook_delivery, unbilled_usage_report, invoice_auto_finalize,\
+            \ dashboard_insights_refresh 가운데 하나입니다."
         last_started_at:
           type: string
           format: date-time

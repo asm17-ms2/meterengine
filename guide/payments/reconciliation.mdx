@@ -20,13 +20,13 @@ API로는 `GET /v1/invoice-payments`를 부릅니다.
 
 ```bash cURL
 curl "https://meterengine.com/v1/invoice-payments?month=2026-10" \
-  -H "Authorization: Bearer me_test_xxxxxxxx"
+  -H "Authorization: Bearer {API_KEY}"
 ```
 
 ```javascript Node
 const res = await fetch(
   "https://meterengine.com/v1/invoice-payments?month=2026-10",
-  { headers: { Authorization: "Bearer me_test_xxxxxxxx" } },
+  { headers: { Authorization: "Bearer {API_KEY}" } },
 );
 const { invoice_payments } = await res.json();
 ```
@@ -113,14 +113,14 @@ const { invoice_payments } = await res.json();
 
 ```bash cURL
 curl "https://meterengine.com/v1/payment-reconciliation-mismatches?from=2026-11-01&to=2026-11-05" \
-  -H "Authorization: Bearer me_test_xxxxxxxx"
+  -H "Authorization: Bearer {API_KEY}"
 ```
 
 ```javascript Node
 const params = new URLSearchParams({ from: "2026-11-01", to: "2026-11-05" });
 const res = await fetch(
   `https://meterengine.com/v1/payment-reconciliation-mismatches?${params}`,
-  { headers: { Authorization: "Bearer me_test_xxxxxxxx" } },
+  { headers: { Authorization: "Bearer {API_KEY}" } },
 );
 const { payment_reconciliation_mismatches } = await res.json();
 ```
@@ -181,9 +181,9 @@ const { payment_reconciliation_mismatches } = await res.json();
   대사가 불일치를 찾은 시각입니다.
 </ResponseField>
 
-<Warning>
+<Danger>
 MeterEngine에 저장한 토스페이먼츠 키로 MeterEngine 밖에서 받은 결제와 취소도 토스페이먼츠 거래 목록에 함께 나오므로 `missing_in_meterengine`으로 기록됩니다. 같은 키로 다른 결제를 받는다면 `order_id`가 MeterEngine 결제 시도 id가 아닌 불일치는 MeterEngine 밖 거래인지 먼저 확인하세요.
-</Warning>
+</Danger>
 
 ### 불일치를 처리하는 순서
 

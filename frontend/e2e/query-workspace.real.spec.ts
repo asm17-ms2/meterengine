@@ -41,12 +41,6 @@ async function chooseCustomer(page: Page, label: string, name: string) {
   await page.locator(".ant-select-dropdown:visible .ant-select-item-option").filter({ hasText: name }).click();
 }
 
-async function expandAdvanced(page: Page) {
-  const details = page.getByRole("form", { name: "조회 조건", exact: true }).locator("details");
-  if (await details.getAttribute("open") === null) await details.locator("summary").click();
-  return details;
-}
-
 test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경계를 보존한다", async ({ browser, request }) => {
   test.setTimeout(180_000);
   const suffix = randomUUID();
@@ -92,7 +86,6 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
     await expectScope(page, { ...preserved, page: "1" });
     await expect(rail.getByRole("button", { name: /보관 미터/ })).toHaveCount(1);
     const beforeFilterChange = page.url();
-    await expandAdvanced(page);
     await page.getByRole("combobox", { name: "표시 건수", exact: true }).selectOption("50");
     expect(page.url(), "페이지 크기는 다른 조건과 함께 적용").toBe(beforeFilterChange);
     await page.getByRole("button", { name: "조건 적용", exact: true }).click();
@@ -120,10 +113,11 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
       for (const route of ["usage", "billing", "invoices"]) {
         await page.goto(`/${route}?${new URLSearchParams({ organization_id: tenantA.organizationId, month: currentMonth })}`);
         const originalUrl = page.url();
-        const advanced = await expandAdvanced(page);
         const form = page.getByRole("form", { name: "조회 조건", exact: true });
         await form.getByRole("searchbox", { name: "검색", exact: true }).fill(suffix);
         if (route !== "usage") {
+          // 금액과 확정 시각 조건은 버튼을 눌러 여는 상자 안에 있다.
+          await form.locator(".range-dropdown > summary").click();
           await form.getByLabel("최소 금액 (원)", { exact: true }).fill("0");
           await form.getByLabel("최대 금액 (원)", { exact: true }).fill("10000");
         }
@@ -133,15 +127,12 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
         }
         if (route === "billing") {
           await form.getByLabel("최소 금액 (원)", { exact: true }).fill("-1");
-          await advanced.locator("summary").click();
           await form.getByRole("button", { name: "조건 적용", exact: true }).click();
-          await expect(advanced).toHaveJSProperty("open", true);
           await expect(form.getByLabel("최소 금액 (원)", { exact: true })).toBeFocused();
           expect(page.url()).toBe(originalUrl);
           await form.getByLabel("최소 금액 (원)", { exact: true }).fill("0");
         }
         await form.getByRole("combobox", { name: "표시 건수", exact: true }).selectOption("50");
-        await advanced.locator("summary").click();
         await form.getByRole("combobox", { name: "과금 미터", exact: true }).scrollIntoViewIfNeeded();
         await form.getByRole("combobox", { name: "과금 미터", exact: true }).fill(activeCode);
         const metricOptions = page.locator(".ant-select-dropdown:visible .ant-select-item-option");
@@ -167,11 +158,9 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
       }
       await page.goto(`/customers?${new URLSearchParams({ organization_id: tenantA.organizationId })}`);
       const form = page.getByRole("form", { name: "조회 조건", exact: true });
-      const advanced = await expandAdvanced(page);
       await form.getByRole("searchbox", { name: "이름, 외부 ID, 청구 이메일로 찾기", exact: true }).fill(needle);
       await form.getByRole("combobox", { name: "상태", exact: true }).selectOption("all");
       await form.getByRole("combobox", { name: "표시 건수", exact: true }).selectOption("50");
-      await advanced.locator("summary").click();
       await expect(form.getByRole("searchbox", { name: "이름, 외부 ID, 청구 이메일로 찾기", exact: true })).toHaveValue(needle);
       await form.getByRole("button", { name: "조건 적용", exact: true }).click();
       await expectScope(page, { q: needle, size: "50", status: "all" });

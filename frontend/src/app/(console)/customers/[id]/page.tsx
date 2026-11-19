@@ -2,6 +2,7 @@ import { aggregateBillableMetricUsages } from "@/lib/api/usage";
 import { CAPABILITIES } from "@/lib/api/capabilities";
 import { readListQuery } from "@/lib/list-query";
 import { ScopedLink as Link } from "@/components/workspace/ScopedLink";
+import { LinkButton } from "@/components/screen/LinkButton";
 import { workspaceFetch, type InvoicePaymentResponse } from "@/lib/api/workspace";
 import { listAllInvoices } from "@/lib/api/invoices";
 import { readMonth } from "@/lib/month";
@@ -52,7 +53,7 @@ export default async function CustomerPage({ params, searchParams }: { params: P
   // customer_id를 모르는 백엔드는 모든 고객의 카드를 돌려주므로 화면에서도 거른다. 카드 보관은 이 고객 id로 나간다.
   const cardRows = cards.ok ? cards.data.payment_methods.filter(method => method.customer_id === id).map(method => ({ ...method, id: `${method.customer_id}-${method.mode}-${method.authenticated_at}-${method.archived_at ?? "active"}`, status: method.archived_at ? "archived" : "active" })) : [];
   return <>
-    <WorkspaceHeader title={detail.name} description="이 고객의 사용량, 청구, 카드, 수납을 한곳에서 확인하세요."><MonthFilter month={month} preserve={["card_status"]} />{!detail.archived_at && <Link href={`/pricing?month=${month}&customer_id=${encodeURIComponent(id)}`}>고객별 요금 설정</Link>}<Link href={`/events?month=${month}&customer_id=${encodeURIComponent(id)}`}>수집 이벤트 확인</Link><Link href={`/customers?month=${month}${detail.archived_at ? "&status=archived" : ""}`}>고객 목록으로</Link></WorkspaceHeader>
+    <WorkspaceHeader title={detail.name} description="이 고객의 사용량, 청구, 카드, 수납을 한곳에서 확인하세요."><MonthFilter month={month} preserve={["card_status"]} />{!detail.archived_at && <LinkButton href={`/pricing?month=${month}&customer_id=${encodeURIComponent(id)}`}>고객별 요금 설정</LinkButton>}<LinkButton href={`/events?month=${month}&customer_id=${encodeURIComponent(id)}`}>수집 이벤트 확인</LinkButton><LinkButton href={`/customers?month=${month}${detail.archived_at ? "&status=archived" : ""}`}>고객 목록으로</LinkButton></WorkspaceHeader>
     <section className="workspace-panel">
       {detail.archived_at && <p role="status">보관된 고객이에요. 복원하기 전에는 사용량 이벤트를 받지 않고, 고객 정보 수정과 카드 등록 링크, 고객별 요금 등록도 할 수 없어요. 지난 내역은 그대로 남아 있어요. 보관하기 전에 받은 사용량은 그달 청구에 그대로 들어가요.</p>}
       <dl className="detail-strip"><div><dt>외부 고객 ID</dt><dd>{detail.external_id ?? "연결하지 않음"}</dd></div><div><dt>청구 이메일</dt><dd>{detail.billing_email ?? "미등록"}</dd></div><div><dt>현재 등록 카드</dt><dd>{card.ok ? `${card.data.card_number} (${card.data.mode === "test" ? "테스트 환경" : "라이브 환경"}${card.data.archived_at ? ", 보관" : ""})` : card.error.status === 404 ? "등록 카드 없음" : "조회 실패"}</dd></div></dl>

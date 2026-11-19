@@ -5,11 +5,11 @@ description: "이벤트에서 청구할 수량을 뽑는 미터를 정의하고,
 
 미터는 "어떤 이벤트의 어떤 값을 어떻게 모아 한 달 과금 수량으로 만들지"를 정한 규칙입니다. 미터만으로는 금액이 생기지 않습니다. 미터에 단가를 등록해야 청구 예정액에 금액이 잡힙니다. 단가는 [단가 모델과 버전](/pricing/price-models)에서 다룹니다.
 
-고객, 미터, 단가는 업무 환경마다 따로 만들어야 합니다. 테스트 환경에서 만든 미터는 라이브 환경에 없습니다. 자세한 내용은 [업무 환경](/concepts/environments)을 보세요.
+고객, 미터, 단가는 업무 환경마다 따로 만들어야 합니다. 테스트 환경에서 만든 미터는 라이브 환경에 없습니다. 자세한 내용은 [업무 환경](/concepts/environments)을 참고하세요.
 
-<Warning>
-이벤트가 한 건이라도 들어온 미터는 이름만 바꿀 수 있습니다. 보낸 이벤트는 지울 수 없으므로 시험 삼아 보낸 이벤트 한 건으로도 계산 기준이 굳습니다. 이 페이지의 설계 순서대로 정의를 확정한 뒤 이벤트를 보내세요.
-</Warning>
+<Danger>
+이벤트가 한 건이라도 들어온 미터는 이름만 바꿀 수 있습니다. 보낸 이벤트는 지울 수 없으므로 테스트 삼아 보낸 이벤트 한 건으로도 계산 기준이 굳습니다. 이 페이지의 설계 순서대로 정의를 확정한 뒤 이벤트를 보내세요.
+</Danger>
 
 ## 이벤트와 미터의 대응
 
@@ -48,7 +48,7 @@ description: "이벤트에서 청구할 수량을 뽑는 미터를 정의하고,
 | `code` | 예 | 미터를 가리키는 값입니다. API 경로에 들어가며 등록한 뒤 바꿀 수 없습니다. 같은 업무 환경 안에서 유일해야 하고, `search`, `options`, `export`는 쓸 수 없습니다. |
 | `name` | 예 | 콘솔과 청구서에 보이는 이름입니다. 언제든 바꿀 수 있습니다. |
 | `event_type` | 예 | 집계할 이벤트의 `type` 값입니다. |
-| `aggregation` | 예 | 집계 함수입니다. 아래 표를 보세요. 대소문자를 구분하지 않습니다. |
+| `aggregation` | 예 | 집계 함수입니다. 아래 표를 참고하세요. 대소문자를 구분하지 않습니다. |
 | `target_property` | `count` 외에는 예 | 이벤트 `properties`에서 집계할 키입니다. `count`에는 넣지 않습니다. |
 | `dimension_properties` | 아니요 | 단가를 가르는 `properties` 키의 배열입니다. 생략하면 빈 배열입니다. 같은 키를 두 번 넣거나 빈 키를 넣을 수 없습니다. |
 | `unit_size` | 아니요 | 집계량을 나눌 양수입니다. 기본값은 1입니다. |
@@ -66,20 +66,20 @@ description: "이벤트에서 청구할 수량을 뽑는 미터를 정의하고,
 
 | `aggregation` | 콘솔 표기 | 계산 | 집계에 드는 값 |
 | --- | --- | --- | --- |
-| `sum` | 합계 (SUM) | 값을 모두 더합니다 | JSON number |
-| `count` | 이벤트 수 (COUNT) | 이벤트 건수를 셉니다 | 속성과 관계없이 모든 이벤트 |
-| `count_distinct` | 고유 값 수 (COUNT DISTINCT) | 중복을 뺀 값의 수를 셉니다 | JSON 문자열, number, 불리언 |
-| `min` | 최솟값 (MIN) | 가장 작은 값 | JSON number |
-| `max` | 최댓값 (MAX) | 가장 큰 값 | JSON number |
-| `avg` | 평균 (AVG) | 산술평균 | JSON number |
-| `first` | 첫 값 (FIRST) | `timestamp`가 가장 이른 이벤트의 값. 시각이 같으면 `transaction_id` 순서 | JSON number |
-| `last` | 마지막 값 (LAST) | `timestamp`가 가장 늦은 이벤트의 값. 시각이 같으면 `transaction_id` 순서 | JSON number |
-| `median` | 중앙값 (MEDIAN) | 50백분위 값 | JSON number |
-| `percentile` | 백분위수 (PERCENTILE) | 지정한 백분위의 값. 두 값 사이면 선형 보간 | JSON number |
+| `sum` | 합계 | 값을 모두 더합니다 | JSON number |
+| `count` | 이벤트 수 | 이벤트 건수를 셉니다 | 속성과 관계없이 모든 이벤트 |
+| `count_distinct` | 고유 값 수 | 중복을 뺀 값의 수를 셉니다 | JSON 문자열, number, 불리언 |
+| `min` | 최솟값 | 가장 작은 값 | JSON number |
+| `max` | 최댓값 | 가장 큰 값 | JSON number |
+| `avg` | 평균 | 산술평균 | JSON number |
+| `first` | 첫 값 | `timestamp`가 가장 이른 이벤트의 값. 시각이 같으면 `transaction_id` 순서 | JSON number |
+| `last` | 마지막 값 | `timestamp`가 가장 늦은 이벤트의 값. 시각이 같으면 `transaction_id` 순서 | JSON number |
+| `median` | 중앙값 | 50백분위 값 | JSON number |
+| `percentile` | 백분위수 | 지정한 백분위의 값. 두 값 사이면 선형 보간 | JSON number |
 
-<Warning>
+<Danger>
 숫자로 집계하는 미터는 값이 JSON number일 때만 셉니다. `"input_tokens": "1200"`처럼 문자열로 보내거나 키를 빠뜨린 이벤트는 저장은 되지만 집계에서 빠지고 오류 응답도 오지 않습니다. 이런 이벤트는 `GET /v1/unbilled-events`의 `non_numeric_value`와 콘솔 '과금에서 빠진 이벤트' 화면의 '수량을 읽을 수 없음'에 나타납니다. 연동 코드에서 숫자 값을 number로 고정해 보내세요.
-</Warning>
+</Danger>
 
 ## 단위 크기와 끝수 처리
 
@@ -107,7 +107,7 @@ description: "이벤트에서 청구할 수량을 뽑는 미터를 정의하고,
 <Tab title="콘솔">
 1. 화면 위 '업무 환경'이 원하는 환경(예: '테스트 환경')인지 확인합니다.
 2. 왼쪽 메뉴 '미터' 화면에서 '미터 등록'을 누릅니다.
-3. '코드', '이름', '이벤트 유형', '집계 함수'를 넣고, 집계 함수가 '이벤트 수 (COUNT)'가 아니면 '집계 대상 속성'을 넣습니다.
+3. '코드', '이름', '이벤트 유형', '집계 함수'를 넣고, 집계 함수가 '이벤트 수'가 아니면 '집계 대상 속성'을 넣습니다.
 4. 단가를 속성 값마다 다르게 매길 거라면 '구분 키'에 키를 쉼표로 나눠 넣습니다.
 5. '결과 변환'에서 '과금 단위 크기'와 '끝수 처리'를 정합니다. 창 아래 '계산 미리보기'로 식을 확인합니다.
 6. '저장'을 누릅니다.
@@ -116,7 +116,7 @@ description: "이벤트에서 청구할 수량을 뽑는 미터를 정의하고,
 <CodeGroup>
 ```bash curl
 curl -X POST https://meterengine.com/v1/billable-metrics \
-  -H "Authorization: Bearer me_test_xxxxxxxx" \
+  -H "Authorization: Bearer {API_KEY}" \
   -H "Content-Type: application/json" \
   -H "Idempotency-Key: create-metric-llm-input-tokens" \
   -d '{
@@ -136,7 +136,7 @@ curl -X POST https://meterengine.com/v1/billable-metrics \
 const response = await fetch("https://meterengine.com/v1/billable-metrics", {
   method: "POST",
   headers: {
-    Authorization: "Bearer me_test_xxxxxxxx",
+    Authorization: "Bearer {API_KEY}",
     "Content-Type": "application/json",
     "Idempotency-Key": "create-metric-llm-input-tokens",
   },
@@ -177,7 +177,7 @@ const metric = await response.json();
 }
 ```
 
-`Idempotency-Key`는 선택입니다. 네트워크 오류로 다시 보낼 때 같은 키와 같은 본문을 쓰면 처음 응답을 그대로 돌려받습니다. 규칙은 [멱등 규칙](/api-basics/idempotency)을 보세요.
+`Idempotency-Key`는 선택입니다. 네트워크 오류로 다시 보낼 때 같은 키와 같은 본문을 쓰면 처음 응답을 그대로 돌려받습니다. 규칙은 [멱등 규칙](/api-basics/idempotency)을 참고하세요.
 </Tab>
 </Tabs>
 </Step>
@@ -185,7 +185,7 @@ const metric = await response.json();
 미터만 있고 단가가 없으면 청구 예정액이 0원입니다. [단가 모델과 버전](/pricing/price-models)에서 이번 달 단가를 등록합니다.
 </Step>
 <Step title="테스트 환경에 보낸 이벤트로 수량을 확인합니다">
-테스트 환경에 이벤트를 보내고 `GET /v1/usage?month=YYYY-MM`나 콘솔 '사용량' 화면에서 미터별 수량을 확인합니다. 확인 방법은 [보낸 데이터 확인하기](/integration/verify-usage)를 보세요. 이 이벤트를 받은 뒤부터 그 업무 환경에서 이 미터는 이름만 바꿀 수 있습니다.
+테스트 환경에 이벤트를 보내고 `GET /v1/usage?month=YYYY-MM`나 콘솔 '사용량' 화면에서 미터별 수량을 확인합니다. 확인 방법은 [보낸 데이터 확인하기](/integration/verify-usage)를 참고하세요. 이 이벤트를 받은 뒤부터 그 업무 환경에서 이 미터는 이름만 바꿀 수 있습니다.
 </Step>
 </Steps>
 
@@ -204,7 +204,7 @@ const metric = await response.json();
 | 409 | `resource_version_conflict` | `If-Match`의 version이 지금 version과 다릅니다. 다시 조회한 뒤 고칩니다. |
 | 404 | `billable_metric_not_found` | 그런 `code`의 미터가 이 업무 환경에 없습니다. |
 
-오류 응답 형식과 다시 보낼지 판단하는 기준은 [오류 응답과 X-Request-ID](/api-basics/errors)를 보세요.
+오류 응답 형식과 다시 보낼지 판단하는 기준은 [오류 응답과 X-Request-ID](/api-basics/errors)를 참고하세요.
 
 ## 이벤트가 들어온 뒤의 수정
 
@@ -214,7 +214,7 @@ const metric = await response.json();
 
 이름만 바꿀 때도 나머지 필드를 지금 값 그대로 함께 보내세요. 예를 들어 `dimension_properties`를 빠뜨리면 빈 배열로 바꾸는 요청이 되어, 이벤트가 있는 미터에서는 409 `billable_metric_has_events`로 거절됩니다.
 
-보낸 이벤트는 고치거나 지울 수 없습니다. 잘못 보낸 값을 바로잡는 방법은 [사용량 이벤트 보내기](/integration/events)를 보세요.
+보낸 이벤트는 고치거나 지울 수 없습니다. 잘못 보낸 값을 바로잡는 방법은 [사용량 이벤트 보내기](/integration/events)를 참고하세요.
 
 ## 계산 기준을 바꿔야 할 때
 
@@ -235,7 +235,7 @@ const metric = await response.json();
 </Step>
 </Steps>
 
-보관과 복원의 세부 규칙은 [바꾸기, 보관, 복원](/pricing/changes-and-archiving)을 보세요.
+보관과 복원의 세부 규칙은 [바꾸기, 보관, 복원](/pricing/changes-and-archiving)을 참고하세요.
 
 ## 다음 단계
 

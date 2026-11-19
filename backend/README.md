@@ -93,6 +93,7 @@ docker build -t meterengine-backend .
 
 - `./gradlew bootRun`은 spring-boot-docker-compose가 커넥션을 만들어 주므로 datasource 변수를 주지 않아도 된다.
 - 배포할 때는 `deploy/compose.prod.yml`이 위 변수를 필수로 걸어 주입하고 값은 SSM Parameter Store에서 온다. 등록 절차는 `deploy/README.md`.
+- 홈 인사이트는 매일 05:00(KST)에 모든 조직 것을 계산해 저장소에 올린다. 저장소는 `INSIGHTS_STORE`로 고르며 `file`(기본, `INSIGHTS_DIRECTORY` 아래 파일. 로컬 개발용)과 `s3`(`INSIGHTS_BUCKET` 버킷, 리전은 `INSIGHTS_S3_REGION`)가 있다. 서버는 조회가 온 조직 것만 저장소에서 읽어 메모리에 들고 있다가 다음 계산 시각에 버린다. 저장소에 오늘 값이 없으면 그 자리에서 DB로 계산해 올린다.
 - DB 쿼리 응답은 30초까지만 기다린다(`spring.datasource.hikari.data-source-properties.socketTimeout`). DB가 답 없이 끊겨도 커넥션이 묶이지 않고 풀려 앱이 회복한다.
 - actuator는 health와 prometheus만 노출한다 (`management.endpoints.web.exposure.include`).
 - 인보이스 자동 확정은 `INVOICE_AUTO_FINALIZE_ENABLED=true`일 때만 돈다(기본 끔). 배포 서버에서는 SSM 파라미터 `invoice-auto-finalize-enabled`로 켠다. 켜면 다음 04:00 KST 실행이 확정 시각(다음 달 2일 04:00 KST)이 지난 과거 달을 모든 환경에서 확정하므로, 켜기 전에 그 달들을 확정해도 되는지 확인한다.
@@ -352,7 +353,7 @@ unset SESSION
 | `customer` | 고객 등록, 수정, 보관과 복원, 조회 | `/v1/customers` |
 | `payment` | 도입사별 토스 키, 카드 등록, 승인과 취소, 결과 확정, 재시도와 대사 | `/v1/invoices/{id}/payment-attempts` |
 | `webhook`, `notification` | 서명된 아웃박스 통보, 발송 이력과 제외 사용량 정기 통보 | `/v1/webhook-endpoints`, `/v1/unbilled-events` |
-| `dashboard` | 도입사 과금과 수납, 전체 월의 미해결 결제, 운영자 상태 조회 | `/v1/dashboard`, `/v1/operations` |
+| `dashboard` | 도입사 과금과 수납, 전체 월의 미해결 결제, 최근 석 달 금액 추이와 날짜별 이벤트 수, 운영자 상태 조회 | `/v1/dashboard`, `/v1/dashboard/insights`, `/v1/operations` |
 | `mail` | 보낼 메일 기록과 메일 발송 포트(`EmailSender`, 로그와 SES 구현). 남긴 메일의 본문과 받는 주소는 고치지 않는다 | 없음 |
 | `organization` | 현재 도입사 조회, 도입사 목록과 상태 변경(정지, 재개), 실제 환경 잠금 | `/v1/organization`, `/v1/organizations` |
 | `liveenvironment` | 실제 환경 이용 신청과 운영자 검토, 국세청 사업자 상태조회 포트(`BusinessRegistrationLookup`, 실제 호출과 조회하지 않는 구현), 승인 뒤 상점아이디 확인 | `/v1/organization/live-environment-applications`, `/v1/live-environment-applications` |
