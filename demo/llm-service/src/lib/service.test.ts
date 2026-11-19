@@ -619,7 +619,7 @@ test("공통 단가와 고객별 단가 중 하나라도 조회 실패하면 부
   }
 });
 
-test("미터 단위, 집계 방식, 이벤트 유형, 차원이 달라지면 단가를 안내하지 않는다", async t => {
+test("과금 미터 단위, 집계 방식, 이벤트 유형, 차원이 달라지면 단가를 안내하지 않는다", async t => {
   const store = new OpenAbStore(":memory:", [ACCOUNT_A]);
   t.after(() => store.close());
   for (const change of ["none", "unit", "aggregation", "rounding", "dimensions", "eventType"] as const) {

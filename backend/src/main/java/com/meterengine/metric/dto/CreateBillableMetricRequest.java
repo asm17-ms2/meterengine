@@ -14,10 +14,10 @@ import java.util.List;
 public record CreateBillableMetricRequest(
     @Schema(
             description =
-                "미터 코드입니다. 같은 업무 환경 안에서 유일해야 하고 등록 뒤 바꿀 수 없습니다. API 경로에 들어가므로 search, options, export는 쓸 수 없습니다.")
+                "과금 미터 코드입니다. 같은 업무 환경 안에서 유일해야 하고 등록 뒤 바꿀 수 없습니다. API 경로에 들어가므로 search, options, export는 쓸 수 없습니다.")
         @NotBlank @StorableText
         String code,
-    @Schema(description = "콘솔과 청구서에 보이는 미터 이름") @NotBlank @StorableText String name,
+    @Schema(description = "콘솔과 청구서에 보이는 과금 미터 이름") @NotBlank @StorableText String name,
     @Schema(description = "집계할 이벤트의 type 값입니다. 대소문자까지 같아야 집계합니다.")
         @NotBlank @StorableText
         @JsonProperty("event_type")

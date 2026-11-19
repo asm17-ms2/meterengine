@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.UUID;
 
 public record BillableMetricPricePriceRate(
-    @Schema(description = "이 단가를 쓰는 구분 값입니다. 구분 키가 없는 미터는 빈 객체입니다.")
+    @Schema(description = "이 단가를 쓰는 구분 값입니다. 구분 키가 없는 과금 미터는 빈 객체입니다.")
         @JsonProperty("dimension_values")
         Map<String, Object> dimensionValues,
     @Schema(description = "per_unit 모델의 과금 수량 1당 단가(원)입니다. graduated, volume 모델에서는 null입니다.")

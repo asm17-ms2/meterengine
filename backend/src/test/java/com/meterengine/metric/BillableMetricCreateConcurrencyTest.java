@@ -51,18 +51,18 @@ class BillableMetricCreateConcurrencyTest {
 
   @AfterEach
   void cleanUp() {
-    jdbcTemplate.update("DELETE FROM billable_metric WHERE name = '먼저 등록한 미터'");
+    jdbcTemplate.update("DELETE FROM billable_metric WHERE name = '먼저 등록한 과금 미터'");
     jdbcTemplate.update(
         """
         DELETE FROM api_key
-        WHERE organization_id IN (SELECT id FROM organization WHERE name = '미터 동시성 테스트 도입사')
+        WHERE organization_id IN (SELECT id FROM organization WHERE name = '과금 미터 동시성 테스트 도입사')
         """);
     jdbcTemplate.update(
         """
         DELETE FROM organization_environment
-        WHERE organization_id IN (SELECT id FROM organization WHERE name = '미터 동시성 테스트 도입사')
+        WHERE organization_id IN (SELECT id FROM organization WHERE name = '과금 미터 동시성 테스트 도입사')
         """);
-    jdbcTemplate.update("DELETE FROM organization WHERE name = '미터 동시성 테스트 도입사'");
+    jdbcTemplate.update("DELETE FROM organization WHERE name = '과금 미터 동시성 테스트 도입사'");
   }
 
   @Test
@@ -95,7 +95,7 @@ class BillableMetricCreateConcurrencyTest {
         .extractingPath("$.code")
         .asString()
         .isEqualTo(ErrorCode.BILLABLE_METRIC_ALREADY_EXISTS.getCode());
-    assertThat(storedName(organizationId)).isEqualTo("먼저 등록한 미터");
+    assertThat(storedName(organizationId)).isEqualTo("먼저 등록한 과금 미터");
   }
 
   private String authorization(UUID organizationId) {
@@ -110,7 +110,7 @@ class BillableMetricCreateConcurrencyTest {
         .contentType(MediaType.APPLICATION_JSON)
         .content(
             """
-            {"code": "token-usage", "name": "늦게 등록한 미터", "event_type": "chat_completion",
+            {"code": "token-usage", "name": "늦게 등록한 과금 미터", "event_type": "chat_completion",
              "aggregation": "sum", "target_property": "token"}
             """)
         .exchange();
@@ -123,7 +123,7 @@ class BillableMetricCreateConcurrencyTest {
             """
             INSERT INTO billable_metric
               (organization_id, code, name, event_type, aggregation, target_property)
-            VALUES (?, 'token-usage', '먼저 등록한 미터', 'chat_completion', 'sum', 'token')
+            VALUES (?, 'token-usage', '먼저 등록한 과금 미터', 'chat_completion', 'sum', 'token')
             """)) {
       statement.setObject(1, organizationId);
       statement.executeUpdate();
@@ -132,7 +132,7 @@ class BillableMetricCreateConcurrencyTest {
 
   private UUID insertOrganization() {
     return jdbcTemplate.queryForObject(
-        "INSERT INTO organization (name) VALUES ('미터 동시성 테스트 도입사') RETURNING id", UUID.class);
+        "INSERT INTO organization (name) VALUES ('과금 미터 동시성 테스트 도입사') RETURNING id", UUID.class);
   }
 
   private String storedName(UUID organizationId) {

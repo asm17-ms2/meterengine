@@ -9,9 +9,12 @@ import java.util.UUID;
 
 public record PriceRateResponse(
     @Schema(description = "단가 버전 ID(UUID)") UUID id,
-    @Schema(description = "미터 코드") @JsonProperty("billable_metric_code") String billableMetricCode,
+    @Schema(description = "과금 미터 코드") @JsonProperty("billable_metric_code")
+        String billableMetricCode,
     @JsonRawValue
-        @Schema(implementation = Map.class, description = "이 단가를 쓰는 구분 값입니다. 구분 키가 없는 미터는 빈 객체입니다.")
+        @Schema(
+            implementation = Map.class,
+            description = "이 단가를 쓰는 구분 값입니다. 구분 키가 없는 과금 미터는 빈 객체입니다.")
         @JsonProperty("dimension_values")
         String dimensionValues,
     @Schema(description = "per_unit 모델의 과금 수량 1당 단가(원)입니다. graduated, volume 모델에서는 null입니다.")

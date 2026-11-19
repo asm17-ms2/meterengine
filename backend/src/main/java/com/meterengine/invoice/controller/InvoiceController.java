@@ -53,7 +53,7 @@ public class InvoiceController {
           customer_id와 month를 함께 주면 둘 다 만족하는 청구서만 나옵니다. month를 생략하면 모든 달입니다.
           달 내림차순이고, 같은 달은 고객 이름 오름차순, 이름이 같으면 고객 ID 순입니다.
           supply_amount, tax_amount, total_amount는 발행할 때 저장한 공급가액, 세액, 합계(공급가액 + 세액)이고 원 단위 정수입니다.
-          lines는 발행할 때 저장한 구분 값별 수량, 단가, 금액이고 미터 코드 오름차순, 같은 미터 안에서는 dimension_values 오름차순입니다. 조회할 때 다시 계산하지 않아 뒤에 단가를 고쳐도 바뀌지 않습니다. 청구 항목 금액의 합이 supply_amount입니다.
+          lines는 발행할 때 저장한 구분 값별 수량, 단가, 금액이고 과금 미터 코드 오름차순, 같은 과금 미터 안에서는 dimension_values 오름차순입니다. 조회할 때 다시 계산하지 않아 뒤에 단가를 고쳐도 바뀌지 않습니다. 청구 항목 금액의 합이 supply_amount입니다.
           cutoff_at은 발행이 읽은 이벤트의 수신 시각(received_at) 상한입니다. 그 달에 발생했고 수신 시각이 이 시각보다 이른 이벤트만 금액에 들었습니다.
           cutoff_at과 finalized_at은 KST(+09:00)로 나옵니다. customer_name은 발행할 때 저장한 고객 이름이라 뒤에 이름을 고쳐도 바뀌지 않습니다. 페이지를 나누지 않습니다.
           """)

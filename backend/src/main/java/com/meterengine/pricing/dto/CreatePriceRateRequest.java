@@ -21,7 +21,7 @@ import java.util.UUID;
 public record CreatePriceRateRequest(
     @Schema(
             description =
-                "구분 값입니다. 키 집합이 미터의 dimension_properties와 같아야 하고, 구분 키가 없는 미터는 빈 객체입니다. 값은 문자열, 숫자, 불리언만 됩니다.")
+                "구분 값입니다. 키 집합이 과금 미터의 dimension_properties와 같아야 하고, 구분 키가 없는 과금 미터는 빈 객체입니다. 값은 문자열, 숫자, 불리언만 됩니다.")
         @NotNull @StorableJson
         @JsonProperty("dimension_values")
         Map<String, Object> dimensionValues,

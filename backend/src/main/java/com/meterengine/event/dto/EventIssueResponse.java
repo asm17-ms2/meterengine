@@ -18,12 +18,12 @@ public record EventIssueResponse(
         OffsetDateTime receivedAt,
     @Schema(
             description =
-                "문제 종류입니다. unknown_event_type(연결할 미터 없음), invalid_target_property(수량을 읽을 수 없음), unpriced_usage(적용 단가 없음) 가운데 하나입니다.")
+                "문제 종류입니다. unknown_event_type(연결할 과금 미터 없음), invalid_target_property(수량을 읽을 수 없음), unpriced_usage(적용 단가 없음) 가운데 하나입니다.")
         String reason,
-    @Schema(description = "문제가 된 미터의 미터 코드입니다. unknown_event_type이면 null입니다.")
+    @Schema(description = "문제가 된 과금 미터의 과금 미터 코드입니다. unknown_event_type이면 null입니다.")
         @JsonProperty("billable_metric_code")
         String billableMetricCode,
-    @Schema(description = "그 미터가 수량을 읽는 속성 이름입니다. unknown_event_type이거나 count 미터면 null입니다.")
+    @Schema(description = "그 과금 미터가 수량을 읽는 속성 이름입니다. unknown_event_type이거나 count 과금 미터면 null입니다.")
         @JsonProperty("target_property")
         String targetProperty,
     @Schema(

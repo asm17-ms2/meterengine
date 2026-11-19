@@ -226,7 +226,7 @@ class ChargeServiceTest {
                     new BillableMetric(
                         ORGANIZATION_ID,
                         "token-usage",
-                        "token-usage 미터",
+                        "token-usage 과금 미터",
                         "chat_completion",
                         "sum",
                         "token",
@@ -442,7 +442,13 @@ class ChargeServiceTest {
 
   private static BillableMetric billableMetric(String code, String targetProperty) {
     return new BillableMetric(
-        ORGANIZATION_ID, code, code + " 미터", "chat_completion", "sum", targetProperty, List.of());
+        ORGANIZATION_ID,
+        code,
+        code + " 과금 미터",
+        "chat_completion",
+        "sum",
+        targetProperty,
+        List.of());
   }
 
   private static BillableMetricUsage usage(BillableMetric billableMetric, String quantity) {

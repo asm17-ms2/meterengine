@@ -64,7 +64,7 @@ async function setupProfiles(replies: Reply[], keys: Record<string, string> = { 
   return context;
 }
 
-test("diff는 두 프로필의 키로 미터와 이번 달 단가를 받아 같으면 identical true를 낸다", async () => {
+test("diff는 두 프로필의 키로 과금 미터와 이번 달 단가를 받아 같으면 identical true를 낸다", async () => {
   const { deps, calls, err, stdoutJson } = await setupProfiles([
     ...on("test", metrics(metric("api-calls")), prices({ code: "api-calls", rates: [rate()] })),
     ...on("live", metrics(metric("api-calls", { version: 3 })), prices({ code: "api-calls", rates: [rate({ effective_from: "2026-11" })] })),
@@ -94,7 +94,7 @@ test("diff는 두 프로필의 키로 미터와 이번 달 단가를 받아 같�
   });
 });
 
-test("diff는 계산 칸이 다른 미터와 한쪽에만 있는 미터를 칸 단위로 보여 준다", async () => {
+test("diff는 계산 칸이 다른 과금 미터와 한쪽에만 있는 과금 미터를 칸 단위로 보여 준다", async () => {
   const { deps, stdoutJson } = await setupProfiles([
     metrics(metric("api-calls", { name: "API 호출" }), metric("seats", { aggregation: "max", dimension_properties: ["plan"] }), metric("storage")),
     prices(),
@@ -121,7 +121,7 @@ test("diff는 계산 칸이 다른 미터와 한쪽에만 있는 미터를 칸 �
   ]);
 });
 
-test("diff는 단가를 미터 code와 속성 값 조합으로 짝지어 모델, 단가, 구간이 다른 것만 보여 준다", async () => {
+test("diff는 단가를 과금 미터 code와 속성 값 조합으로 짝지어 모델, 단가, 구간이 다른 것만 보여 준다", async () => {
   const tiers = [{ up_to: 100, unit_price: 10 }, { up_to: null, unit_price: 5 }];
   const { deps, stdoutJson } = await setupProfiles([
     metrics(),
@@ -272,7 +272,7 @@ test("외부 ID 고객이 한쪽에만 있으면 고객별 단가는 비교하�
   assert.deepEqual(output.warnings, [{ code: "customer_not_found", message: "고객별 단가를 비교하지 않았습니다. 외부 ID acme 고객이 없는 프로필: live" }]);
 });
 
-test("외부 ID 고객이 두 환경 모두에 없으면 미터와 단가가 같을 때 identical true에 경고만 낸다", async () => {
+test("외부 ID 고객이 두 환경 모두에 없으면 과금 미터와 단가가 같을 때 identical true에 경고만 낸다", async () => {
   const { deps, stdoutJson } = await setupProfiles([metrics(), prices(), json(200, { customers: [] }), metrics(), prices(), json(200, { customers: [] })]);
 
   assert.equal(await run(["diff", "test", "live", "--external-id", "acme"], deps), EXIT_OK);

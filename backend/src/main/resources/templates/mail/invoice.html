@@ -10,7 +10,7 @@
     <span th:text="${period}"></span> 사용료를 알려 드립니다.
   </p>
   <table border="1" cellpadding="6" cellspacing="0">
-    <tr><th>미터</th><th>조합</th><th>수량</th><th>단가</th><th>금액</th></tr>
+    <tr><th>과금 미터</th><th>조합</th><th>수량</th><th>단가</th><th>금액</th></tr>
     <tr th:each="line : ${lines}">
       <td th:text="${line.billableMetricCode}"></td>
       <td th:text="${line.dimensionValues}"></td>

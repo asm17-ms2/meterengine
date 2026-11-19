@@ -32,26 +32,26 @@ public record InvoiceResponse(
         long totalAmount,
     @Schema(
             description =
-                "발행할 때 저장한 청구 항목입니다. 미터 코드 오름차순, 같은 미터 안에서는 dimension_values 오름차순이고 수량이 0인 항목은 싣지 않습니다.")
+                "발행할 때 저장한 청구 항목입니다. 과금 미터 코드 오름차순, 같은 과금 미터 안에서는 dimension_values 오름차순이고 수량이 0인 항목은 싣지 않습니다.")
         List<InvoiceLineResponse> lines) {
 
   public record InvoiceLineResponse(
-      @Schema(description = "미터 코드입니다. 기본료와 최소 사용료 조정 항목은 null입니다.")
+      @Schema(description = "과금 미터 코드입니다. 기본료와 최소 사용료 조정 항목은 null입니다.")
           @JsonProperty("billable_metric_code")
           String billableMetricCode,
       @Schema(
               description =
-                  "발행할 때의 미터 이름입니다. 미터 이름을 나중에 바꿔도 그대로입니다. 기본료와 최소 사용료 조정 항목, 이 값을 저장하기 전에 발행한 항목은"
+                  "발행할 때의 과금 미터 이름입니다. 과금 미터 이름을 나중에 바꿔도 그대로입니다. 기본료와 최소 사용료 조정 항목, 이 값을 저장하기 전에 발행한 항목은"
                       + " null입니다.",
               nullable = true)
           @JsonProperty("billable_metric_name")
           String billableMetricName,
-      @Schema(description = "미터가 집계하는 이벤트 속성 키입니다. count 미터와 기본료, 최소 사용료 조정 항목은 null입니다.")
+      @Schema(description = "과금 미터가 집계하는 이벤트 속성 키입니다. count 과금 미터와 기본료, 최소 사용료 조정 항목은 null입니다.")
           @JsonProperty("target_property")
           String targetProperty,
       @Schema(
               description =
-                  "발행할 때 저장한 구분 값입니다. 이 구분 값의 단가를 수량에 곱했습니다. 미터에 dimension_properties가 없었거나 기본료, 최소 사용료 조정 항목이면 빈 객체입니다.")
+                  "발행할 때 저장한 구분 값입니다. 이 구분 값의 단가를 수량에 곱했습니다. 과금 미터에 dimension_properties가 없었거나 기본료, 최소 사용료 조정 항목이면 빈 객체입니다.")
           @JsonProperty("dimension_values")
           Map<String, Object> dimensionValues,
       @Schema(description = "표시용 수량입니다. 금액 계산에는 quantity_numerator와 quantity_denominator를 씁니다.")

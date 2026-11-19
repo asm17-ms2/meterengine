@@ -53,9 +53,9 @@ public class WorkspaceQueryController {
   private static final String Q_CUSTOMERS =
       "검색어입니다. 고객 이름, external_id, billing_email에 이 글자가 들어 있는 고객을 찾고, 대소문자를 가리지 않습니다.";
   private static final String Q_METRICS =
-      "검색어입니다. 미터 코드, 미터 이름, 이벤트 유형에 이 글자가 들어 있는 미터를 찾고, 대소문자를 가리지 않습니다.";
+      "검색어입니다. 과금 미터 코드, 과금 미터 이름, 이벤트 유형에 이 글자가 들어 있는 과금 미터를 찾고, 대소문자를 가리지 않습니다.";
   private static final String Q_PRICES =
-      "검색어입니다. 미터 코드와 미터 이름에 이 글자가 들어 있는 미터를 찾고, 대소문자를 가리지 않습니다.";
+      "검색어입니다. 과금 미터 코드와 과금 미터 이름에 이 글자가 들어 있는 과금 미터를 찾고, 대소문자를 가리지 않습니다.";
   private static final String Q_CUSTOMER_ROWS =
       "검색어입니다. 고객 이름, external_id, 고객 ID에 이 글자가 들어 있는 고객을 찾고, 대소문자를 가리지 않습니다.";
   private static final String Q_INVOICES =
@@ -65,7 +65,7 @@ public class WorkspaceQueryController {
           + " name입니다. 값이 같으면 id 순입니다.";
   private static final String SORT_METRICS =
       "정렬 기준입니다. code, name, event_type, aggregation, archived_at 가운데 하나이고 생략하면 code입니다."
-          + " 값이 같으면 미터 코드 순입니다.";
+          + " 값이 같으면 과금 미터 코드 순입니다.";
   private static final String SORT_PRICES =
       "정렬 기준입니다. code, name, rate_count, archived_at 가운데 하나이고 생략하면 code입니다."
           + " billable_metric_code와 billable_metric_name도 받으며 각각 code, name과 같습니다.";
@@ -85,7 +85,7 @@ public class WorkspaceQueryController {
   private static final String STATUS_CUSTOMERS =
       "고객의 보관 상태입니다. active, archived, all 가운데 하나이고 생략하면 active입니다.";
   private static final String STATUS_METRICS =
-      "미터의 보관 상태입니다. active, archived, all 가운데 하나이고 생략하면 active입니다.";
+      "과금 미터의 보관 상태입니다. active, archived, all 가운데 하나이고 생략하면 active입니다.";
   private static final String STATUS_USAGE =
       "고객의 보관 상태입니다. active, archived, all 가운데 하나이고 생략하면 all입니다.";
   private static final String STATUS_INVOICES =
@@ -99,11 +99,12 @@ public class WorkspaceQueryController {
       "이 고객 ID(UUID)의 고객만 돌려줍니다. 현재 업무 환경에 없는 고객이면 404입니다.";
   private static final String CUSTOMER_ID_INVOICES =
       "이 고객 ID(UUID)의 청구서만 돌려줍니다. 현재 업무 환경에 없는 고객이면 404입니다.";
-  private static final String METRIC_CODE_FILTER = "미터 코드가 이 값과 같은 미터만 돌려줍니다.";
-  private static final String METRIC_CODE_USAGE = "이 미터 코드의 사용량만 담습니다.";
-  private static final String METRIC_CODE_DRAFTS = "이 미터 코드의 청구 항목만 담고, amount는 그 청구 항목만 더한 금액입니다.";
+  private static final String METRIC_CODE_FILTER = "과금 미터 코드가 이 값과 같은 과금 미터만 돌려줍니다.";
+  private static final String METRIC_CODE_USAGE = "이 과금 미터 코드의 사용량만 담습니다.";
+  private static final String METRIC_CODE_DRAFTS =
+      "이 과금 미터 코드의 청구 항목만 담고, amount는 그 청구 항목만 더한 금액입니다.";
   private static final String METRIC_CODE_INVOICES =
-      "이 미터 코드의 청구 항목이 있는 청구서만 돌려줍니다. 금액은 청구서 전체 금액 그대로입니다.";
+      "이 과금 미터 코드의 청구 항목이 있는 청구서만 돌려줍니다. 금액은 청구서 전체 금액 그대로입니다.";
   private static final String MONTH_PRICES = "단가를 볼 달(yyyy-MM, KST)입니다. 생략하면 이번 달입니다.";
   private static final String MONTH_USAGE = "집계할 달(yyyy-MM, KST)입니다. 생략하면 이번 달입니다.";
   private static final String MONTH_DRAFTS = "청구 예정액을 계산할 달(yyyy-MM, KST)입니다. 생략하면 이번 달입니다.";
@@ -207,11 +208,11 @@ public class WorkspaceQueryController {
   @GetMapping("/v1/billable-metrics/search")
   @ReadAccess
   @Operation(
-      summary = "미터 검색",
+      summary = "과금 미터 검색",
       description =
-          "검색어와 여러 조건으로 미터를 거르고 정렬해 한 페이지씩 돌려줍니다. status만으로 거르고 전부 받으려면 GET"
-              + " /v1/billable-metrics가 간단합니다. total_unfiltered는 현재 업무 환경의 전체 미터 수입니다. summary는"
-              + " active_count(사용 중인 미터 수)와 archived_count(보관한 미터 수)이며 조건과 관계없이 업무 환경 전체를"
+          "검색어와 여러 조건으로 과금 미터를 거르고 정렬해 한 페이지씩 돌려줍니다. status만으로 거르고 전부 받으려면 GET"
+              + " /v1/billable-metrics가 간단합니다. total_unfiltered는 현재 업무 환경의 전체 과금 미터 수입니다. summary는"
+              + " active_count(사용 중인 과금 미터 수)와 archived_count(보관한 과금 미터 수)이며 조건과 관계없이 업무 환경 전체를"
               + " 셉니다.")
   @Parameters({
     @Parameter(
@@ -276,10 +277,10 @@ public class WorkspaceQueryController {
   @Operation(
       summary = "단가 검색",
       description =
-          "검색어와 여러 조건으로 미터별 단가를 거르고 정렬해 한 페이지씩 돌려줍니다. month와 customer_id만으로 거르고"
-              + " 전부 받으려면 GET /v1/billable-metric-prices가 간단합니다. 항목마다 미터 이름, 그 달에 적용하는 구분 값별"
-              + " 단가(price_rates), 단가 수(rate_count)를 담습니다. total_unfiltered는 그 달의 전체 미터 수입니다."
-              + " summary는 month, metric_count(조건에 맞는 미터 수), no_rate_count(그 가운데 단가가 없는 미터 수)입니다.")
+          "검색어와 여러 조건으로 과금 미터별 단가를 거르고 정렬해 한 페이지씩 돌려줍니다. month와 customer_id만으로 거르고"
+              + " 전부 받으려면 GET /v1/billable-metric-prices가 간단합니다. 항목마다 과금 미터 이름, 그 달에 적용하는 구분 값별"
+              + " 단가(price_rates), 단가 수(rate_count)를 담습니다. total_unfiltered는 그 달의 전체 과금 미터 수입니다."
+              + " summary는 month, metric_count(조건에 맞는 과금 미터 수), no_rate_count(그 가운데 단가가 없는 과금 미터 수)입니다.")
   @Parameters({
     @Parameter(
         name = "q",
@@ -362,9 +363,9 @@ public class WorkspaceQueryController {
       summary = "사용량 검색",
       description =
           "검색어와 여러 조건으로 고객별 사용량을 거르고 정렬해 한 페이지씩 돌려줍니다. month만 정해 모든 고객을 받으려면"
-              + " GET /v1/usage가 간단합니다. 한 고객의 모든 미터를 같은 페이지에 담습니다. total_unfiltered는 보관한"
+              + " GET /v1/usage가 간단합니다. 한 고객의 모든 과금 미터를 같은 페이지에 담습니다. total_unfiltered는 보관한"
               + " 고객을 포함한 전체 고객 수입니다. summary는 month, customer_count(조건에 맞는 고객 수),"
-              + " metric_count(미터 수), line_count(집계 항목 수), nonzero_customer_count(수량이 0이 아닌 미터가 있는"
+              + " metric_count(과금 미터 수), line_count(집계 항목 수), nonzero_customer_count(수량이 0이 아닌 과금 미터가 있는"
               + " 고객 수)입니다.")
   @Parameters({
     @Parameter(
@@ -724,10 +725,10 @@ public class WorkspaceQueryController {
   @GetMapping("/v1/billable-metrics/options")
   @ReadAccess
   @Operation(
-      summary = "미터 선택지 검색",
+      summary = "과금 미터 선택지 검색",
       description =
-          "미터 검색(GET /v1/billable-metrics/search)과 같은 조건을 받아 선택 상자에 쓸 value(미터 코드),"
-              + " label(미터 이름), archived와 페이지 정보를 돌려줍니다. 보관한 미터도 고를 수 있게 하려면 status=all을"
+          "과금 미터 검색(GET /v1/billable-metrics/search)과 같은 조건을 받아 선택 상자에 쓸 value(과금 미터 코드),"
+              + " label(과금 미터 이름), archived와 페이지 정보를 돌려줍니다. 보관한 과금 미터도 고를 수 있게 하려면 status=all을"
               + " 보냅니다.")
   @Parameters({
     @Parameter(
@@ -924,7 +925,7 @@ public class WorkspaceQueryController {
   @GetMapping(value = "/v1/billable-metrics/export", produces = "text/csv")
   @ReadAccess
   @Operation(
-      summary = "미터 내보내기",
+      summary = "과금 미터 내보내기",
       description =
           "GET /v1/billable-metrics/search와 같은 조건에 맞는 결과를 페이지를 나누지 않고 모두 내보냅니다. 최대 10,000행이며"
               + " 넘으면 400입니다.")

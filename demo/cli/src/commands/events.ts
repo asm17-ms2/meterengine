@@ -64,7 +64,7 @@ export function registerEvents(program: Command, deps: CliDeps): void {
     .option("--from <시각>", "--to와 함께 월 대신 기간으로 좁힌다. 날짜나 ISO 8601 시각, 시간대가 없으면 KST. 시작은 포함")
     .option("--to <시각>", "기간의 끝. 시각이면 제외하고, 날짜만 주면 그 날 하루를 포함")
     .option("--customer <uuid>", "고객 UUID로 좁힌다")
-    .option("--type <type>", "이벤트 type으로 좁힌다. 어느 미터에도 없는 type도 저장됐으면 나온다")
+    .option("--type <type>", "이벤트 type으로 좁힌다. 어느 과금 미터에도 없는 type도 저장됐으면 나온다")
     .option("--page <n>", "0부터 세는 페이지. 서버 기본 0")
     .option("--size <n>", "한 페이지 개수. 서버 기본 20, 최대 100")
     .action(async (options: ListOptions, command: Command) => {
@@ -75,7 +75,7 @@ export function registerEvents(program: Command, deps: CliDeps): void {
 
   events
     .command("types")
-    .description("미터 정의와 상관없이 실제로 들어온 이벤트 type 목록을 조회한다 (GET /v1/events/types)")
+    .description("과금 미터 정의와 상관없이 실제로 들어온 이벤트 type 목록을 조회한다 (GET /v1/events/types)")
     .option("--month <YYYY-MM>", "occurred_at 기준 월(KST). 생략하면 이번 달")
     .action(async (options: TypesOptions, command: Command) => {
       const params = options.month === undefined ? {} : { month: assertMonth(options.month) };

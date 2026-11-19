@@ -298,7 +298,7 @@ class BillableMetricUsageServiceTest {
                 new BillableMetric(
                     ORGANIZATION_ID,
                     "broken",
-                    "잘못 등록된 미터",
+                    "잘못 등록된 과금 미터",
                     "chat_completion",
                     "sum",
                     null,
@@ -326,6 +326,12 @@ class BillableMetricUsageServiceTest {
 
   private BillableMetric billableMetric(String code, String targetProperty) {
     return new BillableMetric(
-        ORGANIZATION_ID, code, code + " 미터", "chat_completion", "sum", targetProperty, List.of());
+        ORGANIZATION_ID,
+        code,
+        code + " 과금 미터",
+        "chat_completion",
+        "sum",
+        targetProperty,
+        List.of());
   }
 }

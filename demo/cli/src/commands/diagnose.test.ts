@@ -23,7 +23,7 @@ function usage(code: string, eventType: string) {
   return { code, name: code, event_type: eventType, aggregation: "sum", target_property: code, customers: [] };
 }
 
-// 서버가 그 달에 집계하는 미터다. 보관한 retired는 서버가 빼고 준다.
+// 서버가 그 달에 집계하는 과금 미터다. 보관한 retired는 서버가 빼고 준다.
 const USAGE = {
   month: "2026-11",
   billable_metric_usages: [usage("input-tokens", "llm_request"), usage("output-tokens", "llm_request"), usage("api-calls", "api_call")],
@@ -39,9 +39,9 @@ function draftCustomer(extra: Record<string, unknown> = {}) {
 
 function issue(transactionId: string, reason: string, code: string | null, extra: Record<string, unknown> = {}) {
   const hints: Record<string, string> = {
-    unknown_event_type: "이벤트 유형에 맞는 미터를 정의하거나 전송 유형을 확인하세요",
-    invalid_target_property: "미터의 수량 속성과 전송 값의 형식을 확인하세요",
-    unpriced_usage: "고객, 미터와 차원에 적용되는 단가를 등록하세요",
+    unknown_event_type: "이벤트 유형에 맞는 과금 미터를 정의하거나 전송 유형을 확인하세요",
+    invalid_target_property: "과금 미터의 수량 속성과 전송 값의 형식을 확인하세요",
+    unpriced_usage: "고객, 과금 미터와 차원에 적용되는 단가를 등록하세요",
   };
   return {
     transaction_id: transactionId,
@@ -125,7 +125,7 @@ function requests(calls: Call[]): Array<[string, Record<string, string>]> {
 
 const ISSUE_QUERY = { month: "2026-11", customer_id: CUSTOMER_ID, q: "tx-1", page: "0", size: "100" };
 
-test("diagnose event는 저장됐고 누락 사유가 없으면 청구에 든다고 판정하고 활성 미터를 함께 낸다", async () => {
+test("diagnose event는 저장됐고 누락 사유가 없으면 청구에 든다고 판정하고 활성 과금 미터를 함께 낸다", async () => {
   const { deps, calls, err, stdoutJson } = await setup(
     server({ "/v1/events/lookup": EVENT, "/v1/invoices": { invoices: [] }, "/v1/usage": USAGE, "/v1/invoices/draft": draft([draftCustomer()]), "/v1/event-issues/search": issuePage([]) }),
     { now: NOW },
@@ -154,7 +154,7 @@ test("diagnose event는 저장됐고 누락 사유가 없으면 청구에 든다
   assert.ok(calls.every((call) => call.method === "GET" && call.headers.get("Authorization") === `Bearer ${TEST_KEY}`));
 });
 
-test("diagnose event는 유형 오타를 transaction_id가 정확히 같은 행만 골라 청구 제외로 판정하고 미터는 조회하지 않는다", async () => {
+test("diagnose event는 유형 오타를 transaction_id가 정확히 같은 행만 골라 청구 제외로 판정하고 과금 미터는 조회하지 않는다", async () => {
   const typo = { ...EVENT, type: "llm_requests" };
   const rows = [issue("tx-10", "unknown_event_type", null, { type: "llm_requests" }), issue("tx-1", "unknown_event_type", null, { type: "llm_requests" })];
   const { deps, calls, stdoutJson } = await setup(
@@ -175,7 +175,7 @@ test("diagnose event는 유형 오타를 transaction_id가 정확히 같은 행�
         type: "llm_requests",
         billable_metric_code: null,
         target_property: null,
-        action_hint: "이벤트 유형에 맞는 미터를 정의하거나 전송 유형을 확인하세요",
+        action_hint: "이벤트 유형에 맞는 과금 미터를 정의하거나 전송 유형을 확인하세요",
       },
     ],
     notes: [],
@@ -183,7 +183,7 @@ test("diagnose event는 유형 오타를 transaction_id가 정확히 같은 행�
   assert.ok(!requests(calls).some(([path]) => path === "/v1/usage"));
 });
 
-test("diagnose event는 미터 하나만 단가가 없으면 나머지 미터로는 청구된다고 나눠 낸다", async () => {
+test("diagnose event는 과금 미터 하나만 단가가 없으면 나머지 과금 미터로는 청구된다고 나눠 낸다", async () => {
   const { deps, stdoutJson } = await setup(
     server({
       "/v1/events/lookup": EVENT,
@@ -204,7 +204,7 @@ test("diagnose event는 미터 하나만 단가가 없으면 나머지 미터로
   );
 });
 
-test("diagnose event는 걸린 미터 모두에 사유가 있으면 청구 제외로 판정한다", async () => {
+test("diagnose event는 걸린 과금 미터 모두에 사유가 있으면 청구 제외로 판정한다", async () => {
   const rows = [issue("tx-1", "invalid_target_property", "input-tokens"), issue("tx-1", "invalid_target_property", "output-tokens")];
   const { deps, stdoutJson } = await setup(
     server({ "/v1/events/lookup": EVENT, "/v1/invoices": { invoices: [] }, "/v1/usage": USAGE, "/v1/event-issues/search": issuePage(rows) }),
@@ -283,7 +283,7 @@ test("diagnose event는 발생 시각이 아직 오지 않은 이벤트를 판�
   assert.equal(result.findings[0].reason, "future_timestamp");
 });
 
-test("diagnose event는 그 달 활성 미터를 사용량 응답에서 골라, 보관했다 복원한 미터도 청구 미터로 센다", async () => {
+test("diagnose event는 그 달 활성 과금 미터를 사용량 응답에서 골라, 보관했다 복원한 과금 미터도 청구 과금 미터로 센다", async () => {
   const restored = { ...EVENT, type: "rv_rr" };
   const { deps, stdoutJson } = await setup(
     server({
@@ -302,7 +302,7 @@ test("diagnose event는 그 달 활성 미터를 사용량 응답에서 골라, 
   assert.deepEqual(result.billable_metrics, { included: ["rv-rr"], excluded: ["rv-rr2"] });
 });
 
-test("diagnose event는 고객의 미터와 차원 값 조합 합계가 음수라 금액에서 빠진 미터를 negative_total로 뺀다", async () => {
+test("diagnose event는 고객의 과금 미터와 차원 값 조합 합계가 음수라 금액에서 빠진 과금 미터를 negative_total로 뺀다", async () => {
   const negatives = [
     { billable_metric_code: "input-tokens", target_property: "input-tokens", dimension_values: { model: "ab-1" }, quantity: -3 },
     { billable_metric_code: "output-tokens", target_property: "output-tokens", dimension_values: { model: "ab-2" }, quantity: -1 },
@@ -332,7 +332,7 @@ test("diagnose event는 고객의 미터와 차원 값 조합 합계가 음수�
         billable_metric_code: "input-tokens",
         dimension_values: { model: "ab-1" },
         quantity: -3,
-        action_hint: "이 고객의 이 미터와 차원 값 조합은 그 달 합계가 음수라 금액에 들지 않습니다. 정정 이벤트의 수량을 확인하세요",
+        action_hint: "이 고객의 이 과금 미터와 차원 값 조합은 그 달 합계가 음수라 금액에 들지 않습니다. 정정 이벤트의 수량을 확인하세요",
       },
     ],
     notes: [],
@@ -340,7 +340,7 @@ test("diagnose event는 고객의 미터와 차원 값 조합 합계가 음수�
   });
 });
 
-test("diagnose event는 남은 미터가 모두 음수 합계면 청구 제외로 판정한다", async () => {
+test("diagnose event는 남은 과금 미터가 모두 음수 합계면 청구 제외로 판정한다", async () => {
   const negative = (code: string) => ({ billable_metric_code: code, target_property: code, dimension_values: {}, quantity: -2 });
   const { deps, stdoutJson } = await setup(
     server({
@@ -387,7 +387,7 @@ test("diagnose event는 사유 조회가 페이지 상한에 걸리고 이 이�
   assert.equal(requests(calls).filter(([path]) => path === "/v1/event-issues/search").length, 10);
 });
 
-test("diagnose event는 그 유형의 활성 미터도 사유도 없으면 판정을 보류하고 이유를 notes에 적는다", async () => {
+test("diagnose event는 그 유형의 활성 과금 미터도 사유도 없으면 판정을 보류하고 이유를 notes에 적는다", async () => {
   const { deps, calls, stdoutJson } = await setup(
     server({ "/v1/events/lookup": EVENT, "/v1/invoices": { invoices: [] }, "/v1/usage": { month: "2026-11", billable_metric_usages: [] }, "/v1/event-issues/search": issuePage([]) }),
     { now: NOW },
@@ -397,7 +397,7 @@ test("diagnose event는 그 유형의 활성 미터도 사유도 없으면 판�
   const result = stdoutJson() as Record<string, unknown>;
   assert.equal(result.billable, null);
   assert.equal(result.billable_metrics, undefined);
-  assert.deepEqual(result.notes, ["이 유형을 집계하는 미터를 찾지 못했지만 서버가 청구 누락 사유도 남기지 않아 판정하지 못했습니다"]);
+  assert.deepEqual(result.notes, ["이 유형을 집계하는 과금 미터를 찾지 못했지만 서버가 청구 누락 사유도 남기지 않아 판정하지 못했습니다"]);
   assert.ok(!requests(calls).some(([path]) => path === "/v1/invoices/draft"));
 });
 
@@ -442,7 +442,7 @@ function invoiceServer(lines: unknown[], issues: unknown[] = []) {
   });
 }
 
-test("diagnose event는 확정한 달이면 인보이스 라인에 이벤트의 미터와 차원 값이 있는지로 판정하고 청구서는 다시 계산하지 않는다", async () => {
+test("diagnose event는 확정한 달이면 인보이스 라인에 이벤트의 과금 미터와 차원 값이 있는지로 판정하고 청구서는 다시 계산하지 않는다", async () => {
   const { deps, calls, stdoutJson } = await setup(invoiceServer([line("input-tokens", { model: "ab-1" }), line("output-tokens", { model: "ab-2" })]), { now: NOW });
 
   assert.equal(await run(["diagnose", "event", "tx-1"], deps), EXIT_OK);
@@ -679,7 +679,7 @@ function monthServer(overrides: Record<string, unknown> = {}) {
   });
 }
 
-test("diagnose month는 이번 달의 청구 제외, 거절, 미터 없는 유형, 자동 확정 일정을 한 JSON으로 낸다", async () => {
+test("diagnose month는 이번 달의 청구 제외, 거절, 과금 미터 없는 유형, 자동 확정 일정을 한 JSON으로 낸다", async () => {
   const { deps, calls, err, stdoutJson } = await setup(monthServer(), { now: NOW });
 
   const code = await run(["diagnose", "month"], deps);
@@ -797,7 +797,7 @@ test("diagnose month는 조회 중 서버 오류를 그대로 올린다", async 
   assert.equal(out.join(""), "");
 });
 
-test("diagnose month는 미터 없는 유형과 오타 후보를 서버가 그 달에 집계하는 미터로 가린다", async () => {
+test("diagnose month는 과금 미터 없는 유형과 오타 후보를 서버가 그 달에 집계하는 과금 미터로 가린다", async () => {
   const { deps, stdoutJson } = await setup(
     monthServer({
       "/v1/events/types": { types: ["rv_rr3", "rv_rr4", "llm_request"] },
