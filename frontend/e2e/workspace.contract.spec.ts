@@ -145,7 +145,7 @@ test("격리 계약: 확정 실패 뒤 다시 취소 요청을 선택해야 새 
   expect(state.cancellationCount).toBe(2);
 });
 
-test("격리 계약: 웹훅 재전송의 202 빈 응답을 성공으로 받고 발송 상태를 갱신한다", async ({ page, request }) => {
+test("격리 계약: 웹훅 재전송의 202 빈 응답을 성공으로 받고 전송 상태를 갱신한다", async ({ page, request }) => {
   await page.goto(`/integrations/${ENDPOINT_ID}`);
   const row = page.getByRole("row").filter({ hasText: "결제 성공" });
   const retry = row.getByRole("button", { name: "결제 성공 다시 보내기", exact: true });
@@ -153,7 +153,7 @@ test("격리 계약: 웹훅 재전송의 202 빈 응답을 성공으로 받고 �
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("button", { name: "다시 보내기", exact: true }).click();
   await expect(dialog).toHaveCount(0);
-  await expect(page.getByRole("cell", { name: "발송 대기", exact: true })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "전송 대기", exact: true })).toBeVisible();
   await expect(retry).toHaveCount(0);
   await expect(page.getByText("응답 내용을 읽지 못했어요", { exact: false })).toHaveCount(0);
   const state = await readState(request);
@@ -419,7 +419,7 @@ test("the payments list can show only the month's failed payments and go back to
 test("changing the month on the payments list keeps the customer carried in from other screens", async ({ page, request }) => {
   await control(request, "failed-payments");
   await page.goto("/payments?month=2026-10&customer_id=77777777-7777-4777-8777-777777777777");
-  await page.getByLabel("청구 월", { exact: true }).fill("2026-09");
+  await page.getByLabel("조회 월", { exact: true }).fill("2026-09");
   await page.getByRole("button", { name: "조건 적용", exact: true }).click();
   await expect(page).toHaveURL(url => url.searchParams.get("month") === "2026-09" && url.searchParams.get("customer_id") === "77777777-7777-4777-8777-777777777777");
 });

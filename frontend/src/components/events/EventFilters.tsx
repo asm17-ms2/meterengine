@@ -169,12 +169,12 @@ export function EventFilters({ query: initialQuery, customers, types, optionsErr
       <div className="event-filter-grid">
         <div className="workspace-field"><label htmlFor={`${id}-customer`}>고객</label><CustomerFilter id={`${id}-customer`} query={query} capabilities={CAPABILITIES.listEvents} customers={customers} selectedCustomerId={customerId} onChange={value => { setCustomerId(value); setIsEdited(true); setError(undefined); }} disabled={isPending} /><input type="hidden" name="customer_id" value={customerId ?? ""} /></div>
         <label className="workspace-field"><span>이벤트 유형</span><input name="type" list={`${id}-types`} defaultValue={query.type} placeholder="모든 유형" autoComplete="off" /><datalist id={`${id}-types`}>{types.map(type => <option key={type} value={type} />)}</datalist></label>
-        <label className="workspace-field event-search"><span>이벤트 또는 고객 찾기</span><input type="search" name="q" defaultValue={query.q} placeholder="전송 ID, 고객명, 외부 고객 ID" autoComplete="off" /></label>
+        <label className="workspace-field event-search"><span>이벤트 또는 고객 찾기</span><input type="search" name="q" defaultValue={query.q} placeholder="transaction_id, 고객명, 외부 고객 ID" autoComplete="off" /></label>
       </div>
       <details ref={detailsRef} className="event-advanced" open={detailCount > 0}>
         <summary className="disclosure-summary">상세 조건{detailCount > 0 && <span className="field-hint"> (적용 {detailCount}개)</span>}</summary>
         <div className="event-filter-grid">
-          <label className="workspace-field"><span>정렬 기준</span><select name="sort" defaultValue={query.sort ?? "occurred_at"}><option value="occurred_at">발생 시각</option><option value="received_at">수신 시각</option><option value="transaction_id">전송 ID</option><option value="customer_name">고객명</option><option value="type">이벤트 유형</option></select></label>
+          <label className="workspace-field"><span>정렬 기준</span><select name="sort" defaultValue={query.sort ?? "occurred_at"}><option value="occurred_at">발생 시각</option><option value="received_at">수신 시각</option><option value="transaction_id">transaction_id</option><option value="customer_name">고객명</option><option value="type">이벤트 유형</option></select></label>
           <label className="workspace-field"><span>정렬 방향</span><select name="order" defaultValue={query.order ?? "desc"}><option value="desc">내림차순</option><option value="asc">오름차순</option></select></label>
           <label className="workspace-field"><span>표시 건수</span><select name="size" defaultValue={query.size}>{PAGE_SIZE_OPTIONS.map(size => <option key={size} value={size}>{size}건</option>)}</select></label>
         </div>

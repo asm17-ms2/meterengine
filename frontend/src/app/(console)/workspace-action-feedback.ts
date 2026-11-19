@@ -53,7 +53,7 @@ const ERROR_MESSAGES: Partial<Record<string, string>> = {
   invoice_amount_zero: "청구 금액이 0원인 청구서는 결제할 수 없어요.",
   payment_attempt_not_cancelable: "완료된 결제만 취소할 수 있어요. 결제와 취소 내역에서 결제 상태를 확인하세요.",
   webhook_endpoint_limit_exceeded: "웹훅 URL은 이 환경에 10개까지 둘 수 있어요. 쓰지 않는 웹훅 URL을 보관한 뒤 다시 시도하세요.",
-  webhook_delivery_not_retryable: "다시 보낼 수 없는 웹훅이에요. 발송이 실패했는지, 웹훅 URL이 발송 중인지 확인하세요.",
+  webhook_delivery_not_retryable: "다시 보낼 수 없는 웹훅이에요. 전송이 실패했는지, 웹훅 URL이 전송 중인지 확인하세요.",
 };
 
 // 같은 오류 코드라도 작업에 따라 다음에 할 일이 달라 작업별 문구를 먼저 찾는다.

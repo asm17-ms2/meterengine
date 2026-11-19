@@ -137,7 +137,7 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
   if (response?.status === "failed") return { isConfirmedFailure: true, message: String(response.failure_message ?? "요청이 거절됐지만 토스페이먼츠가 사유를 알려 주지 않았어요. 잠시 뒤 다시 시도하세요.") };
   if (response?.status === "pending") return { isUnconfirmed: true, message: "요청을 접수했어요. 결과를 확인하는 중이니 같은 요청을 다시 보내지 말고 화면을 새로고침한 뒤 상태를 확인하세요." };
   return {
-    isSuccess: true, message: operation === "testWebhookEndpoint" ? "테스트 웹훅을 곧 보내요. 발송 내역에서 결과를 확인하세요." : successMessage(operation),
+    isSuccess: true, message: operation === "testWebhookEndpoint" ? "테스트 웹훅을 곧 보내요. 전송 기록에서 결과를 확인하세요." : successMessage(operation),
     secret: typeof response?.secret === "string" ? response.secret : undefined,
     registrationPath: typeof response?.token === "string" ? `${operation === "createOrganizationInvitation" ? "/organization-invitations/" : "/payment-method-registrations/"}${encodeURIComponent(response.token)}` : undefined,
     registrationLabel: operation === "createOrganizationInvitation" ? "초대 링크" : undefined,

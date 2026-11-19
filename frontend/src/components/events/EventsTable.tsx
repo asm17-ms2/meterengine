@@ -61,7 +61,7 @@ export function EventsTable({
   const sortableColumns: SortableColumn<EventRowView>[] = [
     {
       key: "transactionId",
-      title: "전송 ID",
+      title: "transaction_id",
       sortKey: "transaction_id",
       width: 150,
       ellipsis: true,

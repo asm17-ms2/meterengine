@@ -55,7 +55,7 @@ test("frontend sources use the console names for environments, webhooks and pric
   assert.deepEqual(hits(/요금 설계/), []);
 });
 
-// 화면은 청구서라 부르고, 법적 문서인 약관과 개인정보 처리방침만 예외다(결정 10).
-test("frontend sources call an invoice a 청구서 outside the terms and the privacy policy", () => {
-  assert.deepEqual(hits(/인보이스/, ["app/(public)/terms/page.tsx", "app/(public)/privacy/page.tsx"]), []);
+// 약관과 개인정보 처리방침도 화면과 같이 청구서라 부른다.
+test("frontend sources call an invoice a 청구서, including the terms and the privacy policy", () => {
+  assert.deepEqual(hits(/인보이스/), []);
 });

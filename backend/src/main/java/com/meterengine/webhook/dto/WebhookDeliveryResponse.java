@@ -17,7 +17,7 @@ public record WebhookDeliveryResponse(
         String type,
     @Schema(
             description =
-                "전송 상태입니다. pending(발송 대기 또는 재시도 대기), done(발송 완료), failed(발송 실패) 가운데 하나입니다.")
+                "전송 상태입니다. pending(전송 대기 또는 재시도 대기), done(전송 완료), failed(전송 실패) 가운데 하나입니다.")
         String status,
     @Schema(description = "보낸 시도 수입니다. 재시도를 요청하면 처음부터 다시 셉니다.") @JsonProperty("attempt_count")
         int attemptCount,

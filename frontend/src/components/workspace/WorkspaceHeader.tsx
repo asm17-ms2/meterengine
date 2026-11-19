@@ -16,5 +16,5 @@ export function MonthFilter({ month, preserve = ["customer_id", "environment", "
   return <form method="get" className="workspace-actions query-row">{names.map(name => {
     const value = name === "environment" ? environmentQueryValue(readEnvironment(search.get(name))) : search.get(name);
     return value ? <input key={name} type="hidden" name={name} value={value} /> : null;
-  })}<MonthField key={month} month={month} label="청구 월" /><Button type="primary" htmlType="submit">조건 적용</Button></form>;
+  })}<MonthField key={month} month={month} label="조회 월" /><Button type="primary" htmlType="submit">조건 적용</Button></form>;
 }

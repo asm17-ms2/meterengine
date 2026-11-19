@@ -79,7 +79,7 @@ export async function EventsSection({
       rows={rows}
       query={query}
       total={listEventsResponse.total}
-      note={`정렬: ${{ occurred_at: "발생 시각", received_at: "수신 시각", transaction_id: "전송 ID", customer_name: "고객명", type: "이벤트 유형" }[query.sort ?? "occurred_at"] ?? "발생 시각"} ${query.order === "asc" ? "오름차순" : "내림차순"}`}
+      note={`정렬: ${{ occurred_at: "발생 시각", received_at: "수신 시각", transaction_id: "transaction_id", customer_name: "고객명", type: "이벤트 유형" }[query.sort ?? "occurred_at"] ?? "발생 시각"} ${query.order === "asc" ? "오름차순" : "내림차순"}`}
     />
   );
 }

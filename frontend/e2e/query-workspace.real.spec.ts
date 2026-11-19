@@ -181,7 +181,7 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
     await page.goto(`/pricing?${new URLSearchParams({ organization_id: tenantA.organizationId, month: currentMonth, metric: activeCode })}`);
     await page.getByRole("button", { name: "단가 버전 등록", exact: true }).click();
     const dialog = page.getByRole("dialog");
-    await dialog.getByLabel("계산 방식", { exact: true }).selectOption("graduated");
+    await dialog.getByLabel("단가 모델", { exact: true }).selectOption("graduated");
     await dialog.getByLabel("구간 1 과금 수량 1당 단가 (원)", { exact: true }).fill("10");
     await dialog.getByLabel("구간 2 과금 수량 1당 단가 (원)", { exact: true }).fill("10");
     const upper = dialog.getByLabel("구간 1 상한", { exact: true });
@@ -194,7 +194,7 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
     await expect(fieldError).toHaveAttribute("id", describedBy!);
     await upper.fill("100");
     await expect(upper).toHaveAttribute("aria-invalid", "false");
-    await dialog.getByLabel("계산 방식", { exact: true }).selectOption("per_unit");
+    await dialog.getByLabel("단가 모델", { exact: true }).selectOption("per_unit");
     await dialog.getByLabel("과금 수량 1당 단가 (원)", { exact: true }).fill("999");
     await context.addCookies([{ name: "me_session", value: tenantB.token, url: FRONTEND_URL, httpOnly: true, sameSite: "Lax" }]);
     await dialog.getByRole("button", { name: "단가 버전 등록", exact: true }).click();
