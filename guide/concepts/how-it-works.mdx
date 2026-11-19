@@ -31,7 +31,7 @@ flowchart TD
 | 구분 값별 사용량 | MeterEngine | 미터에 구분 키(`dimension_properties`)가 있으면 구분 값마다 수량을 나눕니다. | [구분 키와 구분 값](/pricing/dimensions) |
 | 단가 적용 | MeterEngine | 구분 값이 정확히 같은 단가를 찾아 수량에 곱합니다. 단가가 없는 구분 값의 사용량은 청구되지 않습니다. | [단가 모델과 버전](/pricing/price-models) |
 | 요금제 적용 | MeterEngine | 고객에게 적용되는 요금제에 기본료나 최소 사용료가 있으면 반영합니다. 최소 사용료는 청구 항목 금액 합이 모자란 만큼 조정 항목으로 더합니다. | [기본료와 최소 사용료](/pricing/price-plans) |
-| 청구 예정액 | MeterEngine | 아직 발행하지 않은 고객의 금액을 `GET /v1/invoices/draft`를 부를 때마다 계산합니다. 부가세를 뺀 공급가액입니다. | [예정액, 발행액, 수납액](/concepts/amounts) |
+| 청구 예정액 | MeterEngine | 아직 발행하지 않은 고객의 금액을 `GET /v1/invoices/draft`를 부를 때마다 계산합니다. 부가세를 뺀 공급가액입니다. | [예정액, 청구액, 수납액](/concepts/amounts) |
 | 청구서 발행 | 조직 | 달이 끝난 뒤 콘솔의 '청구 검토' 화면이나 `POST /v1/invoices?month=YYYY-MM`으로 발행합니다. 부가세 포함 금액이 고정됩니다. | [청구서 수동 발행](/billing/finalize-invoices) |
 | 결제 요청 | 조직 | 발행한 청구서마다 결제를 요청합니다. | [첫 결제 요청과 결과 확인](/payments/charging) |
 | 결과와 웹훅 | MeterEngine | 결제 결과를 확인해 기록하고, 등록한 웹훅 URL로 웹훅을 보냅니다. | [웹훅 받기 시작하기](/webhooks/overview) |
@@ -134,7 +134,7 @@ AI 서비스가 생성 요청 한 번마다 아래 이벤트를 보낸다고 해
   <Card title="시간 규칙" icon="clock" href="/concepts/time-rules">
     청구 월, 이벤트를 받는 기간, 집계 마감 시각을 봅니다.
   </Card>
-  <Card title="예정액, 발행액, 수납액" icon="receipt" href="/concepts/amounts">
+  <Card title="예정액, 청구액, 수납액" icon="receipt" href="/concepts/amounts">
     화면과 API의 금액이 각각 무엇인지 봅니다.
   </Card>
   <Card title="빠른 시작" icon="rocket" href="/quickstart">
