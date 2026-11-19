@@ -53,8 +53,8 @@ HIDDEN = {
 TAG_NAMES = [
     ("organization-environment-controller", "업무 환경"),
     ("current-organization-controller", "조직 정보"),
-    ("billable-metric-controller", "미터"),
-    ("billable-metric-price-controller", "미터별 단가 조회"),
+    ("billable-metric-controller", "과금 미터"),
+    ("billable-metric-price-controller", "과금 미터별 단가 조회"),
     ("price-rate-controller", "단가"),
     ("price-plan-controller", "요금제"),
     ("customer-controller", "고객"),

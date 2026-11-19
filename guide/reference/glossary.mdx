@@ -75,8 +75,8 @@ description: "가이드 용어의 뜻과 영문 표기, 콘솔 화면 표기를 
 | consent_required | | `403 consent_required` | 콘솔에 로그인한 사용자가 필수 약관에 동의하지 않았습니다. API 키 요청에는 오지 않습니다 | [API 참조 읽는 법](/api-reference/introduction) |
 | Retry-After | | `Retry-After` 응답 헤더 | 429 응답에 붙는, 다시 보내기 전에 기다릴 초(1 이상의 정수) | [요청 한도와 429](/api-basics/rate-limits) |
 | 멱등 | | | 같은 요청을 다시 보내도 결과가 한 번만 반영되는 성질 | [멱등 규칙](/api-basics/idempotency) |
-| 재시도 키 | | `Idempotency-Key` 요청 헤더 | 고객 등록, 미터 등록, 결제 취소를 안전하게 다시 보내려고 요청에 붙이는 값 | [멱등 규칙](/api-basics/idempotency) |
-| 재전송 응답 표시 | | `Idempotency-Replayed: true` 응답 헤더 | 같은 `Idempotency-Key`의 첫 응답을 다시 돌려줄 때 붙는 헤더. 고객 등록과 미터 등록에만 붙습니다 | [멱등 규칙](/api-basics/idempotency) |
+| 재시도 키 | | `Idempotency-Key` 요청 헤더 | 고객 등록, 과금 미터 등록, 결제 취소를 안전하게 다시 보내려고 요청에 붙이는 값 | [멱등 규칙](/api-basics/idempotency) |
+| 재전송 응답 표시 | | `Idempotency-Replayed: true` 응답 헤더 | 같은 `Idempotency-Key`의 첫 응답을 다시 돌려줄 때 붙는 헤더. 고객 등록과 과금 미터 등록에만 붙습니다 | [멱등 규칙](/api-basics/idempotency) |
 | 테스트 화면 | | | API 참조 페이지에서 실제 요청을 보내 보는 입력 화면. 요청과 키가 Mintlify 서버를 거칩니다 | [API 참조 읽는 법](/api-reference/introduction) |
 
 ## 가격 설계
@@ -85,13 +85,13 @@ description: "가이드 용어의 뜻과 영문 표기, 콘솔 화면 표기를 
 
 | 용어 | 뜻 | 영문 표기 | 콘솔 표기 | 자세히 |
 | --- | --- | --- | --- | --- |
-| 미터 | 어떤 type의 이벤트에서 어떤 값을 어떻게 모아 한 달 과금 수량으로 만들지 정한 규칙 | `billable_metric` | 미터 | [미터 설계](/pricing/meters) |
-| 미터 코드 | 미터를 가리키는 값. 업무 환경마다 유일하고 등록한 뒤 바꿀 수 없습니다 | `code` | 코드(미터 등록 창), 미터 코드(검색 조건) | [미터 설계](/pricing/meters) |
-| 이벤트 유형 | 미터가 집계할 이벤트를 고르는 값. 이벤트의 `type`과 글자까지 같아야 집계됩니다 | `event_type`, `type` | 이벤트 유형 | [미터 설계](/pricing/meters) |
-| 집계 함수 | 한 달, 한 고객, 한 구분 값의 이벤트 값을 모으는 방식 | `aggregation`: `sum`, `count`, `count_distinct`, `min`, `max`, `avg`, `first`, `last`, `median`, `percentile` | 집계 함수 | [미터 설계](/pricing/meters) |
-| 집계 대상 속성 | 이벤트 `properties`에서 집계할 키. `count`에는 쓰지 않습니다 | `target_property` | 집계 대상 속성 | [미터 설계](/pricing/meters) |
-| 과금 단위 크기 | 집계량을 나누는 양수. 한 달 구분 값 집계 결과에 한 번 적용합니다 | `unit_size` | 과금 단위 크기 | [미터 설계](/pricing/meters) |
-| 끝수 처리 | 단위 크기로 나눈 수량에 적용하는 반올림과 소수 자릿수 | `rounding_mode`: `none`, `ceil`, `floor`, `round`, `rounding_precision` | 끝수 처리: 추가 반올림 없음, 올림, 내림, 반올림 | [미터 설계](/pricing/meters) |
+| 과금 미터 | 어떤 type의 이벤트에서 어떤 값을 어떻게 모아 한 달 과금 수량으로 만들지 정한 규칙 | `billable_metric` | 과금 미터 | [과금 미터 설계](/pricing/meters) |
+| 과금 미터 코드 | 과금 미터를 가리키는 값. 업무 환경마다 유일하고 등록한 뒤 바꿀 수 없습니다 | `code` | 코드(과금 미터 등록 창), 과금 미터 코드(검색 조건) | [과금 미터 설계](/pricing/meters) |
+| 이벤트 유형 | 과금 미터가 집계할 이벤트를 고르는 값. 이벤트의 `type`과 글자까지 같아야 집계됩니다 | `event_type`, `type` | 이벤트 유형 | [과금 미터 설계](/pricing/meters) |
+| 집계 함수 | 한 달, 한 고객, 한 구분 값의 이벤트 값을 모으는 방식 | `aggregation`: `sum`, `count`, `count_distinct`, `min`, `max`, `avg`, `first`, `last`, `median`, `percentile` | 집계 함수 | [과금 미터 설계](/pricing/meters) |
+| 집계 대상 속성 | 이벤트 `properties`에서 집계할 키. `count`에는 쓰지 않습니다 | `target_property` | 집계 대상 속성 | [과금 미터 설계](/pricing/meters) |
+| 과금 단위 크기 | 집계량을 나누는 양수. 한 달 구분 값 집계 결과에 한 번 적용합니다 | `unit_size` | 과금 단위 크기 | [과금 미터 설계](/pricing/meters) |
+| 끝수 처리 | 단위 크기로 나눈 수량에 적용하는 반올림과 소수 자릿수 | `rounding_mode`: `none`, `ceil`, `floor`, `round`, `rounding_precision` | 끝수 처리: 추가 반올림 없음, 올림, 내림, 반올림 | [과금 미터 설계](/pricing/meters) |
 | 구분 키 | 단가를 가르는 이벤트 `properties` 키의 배열 | `dimension_properties` | 구분 키 | [구분 키와 구분 값](/pricing/dimensions) |
 | 구분 값 | 구분 키마다 이벤트에서 뽑은 값의 묶음. 금액은 구분 값마다 그 구분 값의 단가로 계산합니다 | `dimension_values` | 구분 값 | [구분 키와 구분 값](/pricing/dimensions) |
 | 단가 | 과금 수량 1당 금액. 월 단위 버전으로 등록합니다 | `price_rate`, `unit_price` | 단가 버전 등록, 과금 수량 1당 단가 (원) | [단가 모델과 버전](/pricing/price-models) |
@@ -108,10 +108,10 @@ description: "가이드 용어의 뜻과 영문 표기, 콘솔 화면 표기를 
 | 최소 사용료 조정 | 최소 사용료와 사용료 합의 차액으로 더하는 조정 항목 | `minimum_adjustment` | 최소 사용료 조정 | [기본료와 최소 사용료](/pricing/price-plans) |
 | 공통 요금제와 고객 요금제 | 고객 요금제가 있는 고객은 그것을, 없는 고객은 공통 요금제를 씁니다 | `customer_id` | 적용 대상, 공통 요금제 적용 | [기본료와 최소 사용료](/pricing/price-plans) |
 | 정확한 과금 수량 | | `quantity_numerator`, `quantity_denominator` | 금액과 구간 판정에 쓴 수량의 분자와 분모. `quantity`는 표시용입니다 | [금액 계산 따라가기](/pricing/calculation-example) |
-| 보관 | 지우지 않고 사용을 멈추는 것. 고객은 바로, 미터와 단가와 요금제 버전은 다음 달부터 효력이 생깁니다 | `archived_at`, `archived` | 보관, 고객 보관, 단가 버전 보관, 요금제 버전 보관, 보관됨 | [바꾸기, 보관, 복원](/pricing/changes-and-archiving) |
-| 복원 | 보관을 되돌리는 것. 고객은 바로, 미터는 다음 달부터 다시 집계하고, 단가와 요금제 버전은 보관 효력이 시작되기 전에만 됩니다 | `restorations` | 고객 복원, 미터 복원, 단가 버전 복원, 요금제 버전 복원 | [바꾸기, 보관, 복원](/pricing/changes-and-archiving) |
+| 보관 | 지우지 않고 사용을 멈추는 것. 고객은 바로, 과금 미터와 단가와 요금제 버전은 다음 달부터 효력이 생깁니다 | `archived_at`, `archived` | 보관, 고객 보관, 단가 버전 보관, 요금제 버전 보관, 보관됨 | [바꾸기, 보관, 복원](/pricing/changes-and-archiving) |
+| 복원 | 보관을 되돌리는 것. 고객은 바로, 과금 미터는 다음 달부터 다시 집계하고, 단가와 요금제 버전은 보관 효력이 시작되기 전에만 됩니다 | `restorations` | 고객 복원, 과금 미터 복원, 단가 버전 복원, 요금제 버전 복원 | [바꾸기, 보관, 복원](/pricing/changes-and-archiving) |
 | 보관 효력 시작 월 | 보관한 단가나 요금제 버전이 적용을 멈추는 달 | `archived_from` | 'YYYY년 M월부터 중단'(단가와 요금제 변경 이력), '보관, YYYY-MM부터 중단'(기본료와 최소 사용료 구역) | [바꾸기, 보관, 복원](/pricing/changes-and-archiving) |
-| 미터 집계 중단 월, 재개 월 | | `inactive_from`, `active_from` | 보관한 미터가 집계를 멈추는 달과 복원한 뒤 다시 집계하는 달 | [바꾸기, 보관, 복원](/pricing/changes-and-archiving) |
+| 과금 미터 집계 중단 월, 재개 월 | | `inactive_from`, `active_from` | 보관한 과금 미터가 집계를 멈추는 달과 복원한 뒤 다시 집계하는 달 | [바꾸기, 보관, 복원](/pricing/changes-and-archiving) |
 
 ## 고객과 이벤트 연동
 
@@ -130,7 +130,7 @@ description: "가이드 용어의 뜻과 영문 표기, 콘솔 화면 표기를 
 | 청구 월 | KST 달력 월 | `month` | 청구 월 | [시간 규칙](/concepts/time-rules) |
 | 집계 마감 | 그 달 사용량을 받는 마감 시각, 다음 달 2일 00:00 KST. 그 전에 받은 그 달 이벤트만 청구됩니다 | `cutoff_at` | 집계 마감(마감 전), 집계 기준(마감 뒤) | [시간 규칙](/concepts/time-rules) |
 | cutoff_at | 청구서에서는 금액에 든 이벤트의 받은 시각 상한, 과금 제외 사용량에서는 발생 시각 상한 | `cutoff_at` | 집계 마감, 집계 기준 | [시간 규칙](/concepts/time-rules) |
-| 상계 이벤트 | | | 집계가 `sum`인 미터에서 잘못 보낸 양을 빼려고 같은 고객, type, 구분 값으로 보내는 음수 값 이벤트 | [사용량 이벤트 보내기](/integration/events) |
+| 상계 이벤트 | | | 집계가 `sum`인 과금 미터에서 잘못 보낸 양을 빼려고 같은 고객, type, 구분 값으로 보내는 음수 값 이벤트 | [사용량 이벤트 보내기](/integration/events) |
 | 아웃박스 | | | 보낼 이벤트를 사용 기록과 같은 트랜잭션으로 자사 데이터베이스에 먼저 저장하고 따로 보내는 방식 | [재전송 설계](/integration/retries) |
 
 ## 확인과 진단
@@ -140,12 +140,12 @@ description: "가이드 용어의 뜻과 영문 표기, 콘솔 화면 표기를 
 | --- | --- | --- | --- | --- |
 | 수집 이벤트 | 저장된 사용량 이벤트 원본을 발생 시각, 수신 시각과 함께 보는 콘솔 화면 | `events` | 수집 이벤트 | [보낸 데이터 확인하기](/integration/verify-usage) |
 | 수집 진단 | '사용량' 화면에서 청구에서 빠지거나 확인이 필요한 이벤트를 항목별 건수로 보여 주는 구역 | `unbilled-events` | 수집 진단 | [보낸 데이터 확인하기](/integration/verify-usage) |
-| 수집 진단 항목 | '수집 진단'과 `unbilled_usage_detected` 웹훅이 세는 항목 | `unmatched_type`, `non_numeric_value`, `future_timestamp`, `negative_quantity` | 연결할 미터 없음, 수량을 읽을 수 없음, 발생 시각이 미래인 이벤트, 수량이 음수인 이벤트 | [보낸 데이터 확인하기](/integration/verify-usage) |
+| 수집 진단 항목 | '수집 진단'과 `unbilled_usage_detected` 웹훅이 세는 항목 | `unmatched_type`, `non_numeric_value`, `future_timestamp`, `negative_quantity` | 연결할 과금 미터 없음, 수량을 읽을 수 없음, 발생 시각이 미래인 이벤트, 수량이 음수인 이벤트 | [보낸 데이터 확인하기](/integration/verify-usage) |
 | 수집 거절 | 고객 연결이나 수집 조건 때문에 저장하지 못한 이벤트의 기록. 원문은 남지 않습니다 | `event-rejections` | 수집 거절 | [이벤트가 청구에 안 보일 때](/troubleshooting/events-not-billed) |
 | 거절 사유 | 수집 거절 기록의 사유 | `customer_not_found`, `customer_archived`, `event_too_old`, `validation_error` | 고객을 찾을 수 없음, 보관된 고객, 수집 가능 기간 초과, 요청 값 오류 | [이벤트가 청구에 안 보일 때](/troubleshooting/events-not-billed) |
 | 수집 거절 조회 월 | 이벤트가 일어난 달이 아니라 거절을 기록한 KST 달 | `month` | 조회 월 | [이벤트가 청구에 안 보일 때](/troubleshooting/events-not-billed) |
-| 과금에서 빠진 이벤트 | 저장된 이벤트가 미터, 집계 수량, 단가와 이어지지 않은 문제를 지금 정의로 다시 진단한 결과 | `event-issues` | 과금에서 빠진 이벤트 | [이벤트가 청구에 안 보일 때](/troubleshooting/events-not-billed) |
-| 문제 종류 | 이벤트의 type을 세는 미터가 없거나, 세는 속성이 없거나 형식이 맞지 않거나, 그 구분 값에 단가가 없는 문제 | `unknown_event_type`, `invalid_target_property`, `unpriced_usage` | 연결할 미터 없음, 수량을 읽을 수 없음, 적용 단가 없음 | [이벤트가 청구에 안 보일 때](/troubleshooting/events-not-billed) |
+| 과금에서 빠진 이벤트 | 저장된 이벤트가 과금 미터, 집계 수량, 단가와 이어지지 않은 문제를 지금 정의로 다시 진단한 결과 | `event-issues` | 과금에서 빠진 이벤트 | [이벤트가 청구에 안 보일 때](/troubleshooting/events-not-billed) |
+| 문제 종류 | 이벤트의 type을 세는 과금 미터가 없거나, 세는 속성이 없거나 형식이 맞지 않거나, 그 구분 값에 단가가 없는 문제 | `unknown_event_type`, `invalid_target_property`, `unpriced_usage` | 연결할 과금 미터 없음, 수량을 읽을 수 없음, 적용 단가 없음 | [이벤트가 청구에 안 보일 때](/troubleshooting/events-not-billed) |
 | 단가 없는 사용량 | 같은 구분 값의 단가가 없어 청구 항목과 금액에서 빠진 사용량. 청구되지 않습니다 | `unpriced_usages` | 단가 없는 사용량, 적용 단가 없음 | [구분 키와 구분 값](/pricing/dimensions) |
 | 집계값이 음수인 구분 값 | 집계한 값이 음수라 0원으로 보고 청구 항목에서 뺀 구분 값 | `negative_usages` | 집계값이 음수인 구분 값 | [예정액, 확정액, 수납액](/concepts/amounts) |
 | 조건 전체 CSV 내보내기 | 화면에 건 조건의 전체 결과를 최대 10,000행 CSV로 받는 기능 | `export` | 조건 전체 CSV 내보내기 | [서버 조회와 CSV 내보내기](/reference/search-and-export) |
@@ -166,7 +166,7 @@ description: "가이드 용어의 뜻과 영문 표기, 콘솔 화면 표기를 
 | 받을 금액 | 결제 전, 결과 확인 중, 결제 실패인 청구서의 청구액 합 | `outstanding_amount` | 받을 금액 | [예정액, 확정액, 수납액](/concepts/amounts) |
 | 받은 금액 | 결제가 끝난 청구서의 청구액에서 취소액을 뺀 합 | `collected_amount` | 받은 금액 | [예정액, 확정액, 수납액](/concepts/amounts) |
 | 취소액 | 결제를 취소한 금액의 합. 청구서 금액은 바뀌지 않습니다 | `canceled_amount` | 취소액 | [예정액, 확정액, 수납액](/concepts/amounts) |
-| 청구 항목 | 고객, 미터, 구분 값(구간)마다 한 줄인 금액과 기본료, 최소 사용료 조정 항목. 항목마다 10원 미만을 버립니다 | `lines[]`, `line_type` | '청구 검토', '확정 청구서' 표의 '고객 / 청구 항목', 청구서 조회 링크 화면의 '청구 항목' | [예정액, 확정액, 수납액](/concepts/amounts) |
+| 청구 항목 | 고객, 과금 미터, 구분 값(구간)마다 한 줄인 금액과 기본료, 최소 사용료 조정 항목. 항목마다 10원 미만을 버립니다 | `lines[]`, `line_type` | '청구 검토', '확정 청구서' 표의 '고객 / 청구 항목', 청구서 조회 링크 화면의 '청구 항목' | [예정액, 확정액, 수납액](/concepts/amounts) |
 | 청구 검토 | 청구 검토(화면 제목 '청구 검토 - YYYY년 M월') | | 청구 예정액을 보고 확정하는 콘솔 화면 | [청구서 수동 확정](/billing/finalize-invoices) |
 | 확정 | 한 달의 청구 예정액을 고객마다 청구서로 굳히는 일. 되돌릴 수 없고 결제를 자동으로 시작하지 않습니다 |  | 월 전체 확정 | [청구서 수동 확정](/billing/finalize-invoices) |
 | 확정 상태 | 확정 전, 확정됨 | | '청구 검토' 화면의 달 상태 표시 | [청구서 수동 확정](/billing/finalize-invoices) |
