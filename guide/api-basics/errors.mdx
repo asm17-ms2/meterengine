@@ -132,7 +132,7 @@ API 참조의 code 목록에는 `environment_not_ready`도 있지만, 지금은 
 | 409 | code에 따라 다름 | `resource_version_conflict`는 다시 조회한 뒤 고쳐서 보냅니다. 그 밖의 409는 지금 자원 상태와 맞지 않는다는 뜻이라 상태를 먼저 바꿔야 합니다. |
 | 405, 406, 415 | 아니오 | 요청 형식을 고칩니다. |
 | 429 | 예 | `Retry-After` 헤더의 초만큼 기다린 뒤 보냅니다. |
-| 500, 503, 응답 없음 | 멱등한 요청만 | 이벤트는 같은 `transaction_id`, 고객과 미터 등록은 같은 `Idempotency-Key`로 간격을 늘려 가며 다시 보냅니다. |
+| 500, 503, 응답 없음 | 멱등한 요청만 | 이벤트는 같은 `transaction_id`, 고객과 과금 미터 등록은 같은 `Idempotency-Key`로 간격을 늘려 가며 다시 보냅니다. |
 
 <Danger>
 결제 요청(`POST /v1/invoices/{id}/payment-attempts`)은 재시도 키가 없습니다. 500이나 503을 받았거나 응답을 받지 못했으면 다시 요청하기 전에 결제 시도를 먼저 조회하세요. 자세한 내용은 [첫 결제 요청과 결과 확인](/payments/charging)을 참고하세요.
