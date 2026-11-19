@@ -26,7 +26,7 @@ public record DashboardResponse(
         boolean paymentConfigured,
     @Schema(description = "현재 업무 환경의 결제 모드(test 또는 live)") @JsonProperty("payment_mode")
         String paymentMode,
-    @Schema(description = "청구 예정액(원)입니다. 그 달을 아직 발행하지 않은 고객의 공급가액 합계이며 부가세는 들지 않습니다.")
+    @Schema(description = "청구 예정액(원)입니다. 그 달 청구서를 아직 발행하지 않은 고객의 공급가액 합계이며 부가세는 들지 않습니다.")
         @JsonProperty("draft_supply_amount")
         long draftSupplyAmount,
     @Schema(description = "청구액(원)입니다. 그 달 청구서의 부가세 포함 금액 합계입니다.")

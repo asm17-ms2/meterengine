@@ -6,10 +6,10 @@ import java.util.List;
 
 public record FinalizeInvoicesResponse(
     @Schema(description = "발행한 달(yyyy-MM, KST)") String month,
-    @Schema(description = "이번 호출로 새로 발행한 청구서 수입니다. 이미 발행돼 있던 고객은 세지 않습니다.")
+    @Schema(description = "이번 호출로 새로 발행한 청구서 수입니다. 청구서가 이미 발행돼 있던 고객은 세지 않습니다.")
         @JsonProperty("finalized_count")
         int finalizedCount,
-    @Schema(description = "이번 호출에서 발행하지 못한 고객 수입니다. 0보다 크면 같은 달로 다시 부릅니다.")
+    @Schema(description = "이번 호출에서 청구서를 발행하지 못한 고객 수입니다. 0보다 크면 같은 달로 다시 부릅니다.")
         @JsonProperty("failed_count")
         int failedCount,
     @Schema(description = "이번 호출로 새로 발행한 청구서입니다. 각 원소는 GET /v1/invoices/{id} 응답과 같습니다.")

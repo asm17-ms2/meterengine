@@ -47,7 +47,7 @@ export function InvoiceFinalizeDialog(target: FinalizeTarget) {
     <>
       <InvoiceFinalizeButton
         disabled={isEmpty}
-        disabledReason={isEmpty ? "청구할 금액이 있는 고객이 없거나 이미 모두 발행됐어요." : undefined}
+        disabledReason={isEmpty ? "청구할 금액이 있는 고객이 없거나 청구서가 이미 모두 발행됐어요." : undefined}
         onClick={() => setIsOpen(true)}
       />
 
@@ -101,10 +101,10 @@ function InvoiceFinalizeForm({ onClose, ...target }: FinalizeTarget & { onClose:
         {state.failedCount > 0 || state.finalizedCount !== targetCount ? (
           <Typography.Paragraph style={PARAGRAPH_STYLE}>
             {state.failedCount > 0
-              ? `발행하지 못한 고객이 ${state.failedCount}명 있어요. 발행한 고객은 그대로 남고, 다시 발행하면 남은 고객만 다시 시도해요.`
+              ? `청구서를 발행하지 못한 고객이 ${state.failedCount}명 있어요. 발행한 청구서는 그대로 남고, 다시 발행하면 남은 고객만 다시 시도해요.`
               : state.finalizedCount === 0
-                ? `${monthLabel}에 청구할 금액이 있는 고객이 없거나 이미 모두 발행됐어요.`
-                : `발행한 고객 수가 처음 안내한 ${targetCount}명과 달라요. 창을 연 뒤 사용량이 바뀌었거나 그사이 먼저 발행된 고객이 있어요. 금액은 청구서에서 확인하세요.`}
+                ? `${monthLabel}에 청구할 금액이 있는 고객이 없거나 청구서가 이미 모두 발행됐어요.`
+                : `청구서를 발행한 고객 수가 처음 안내한 ${targetCount}명과 달라요. 창을 연 뒤 사용량이 바뀌었거나 그사이 청구서가 먼저 발행된 고객이 있어요. 금액은 청구서에서 확인하세요.`}
           </Typography.Paragraph>
         ) : null}
       </Modal>
@@ -143,11 +143,11 @@ function InvoiceFinalizeForm({ onClose, ...target }: FinalizeTarget & { onClose:
           순간까지 받은 사용량으로 계산해요.
         </Typography.Paragraph>
         <Typography.Paragraph style={PARAGRAPH_STYLE}>
-          발행한 청구서는 고치거나 지울 수 없어요. 발행한 고객에게는 그 뒤 이 달에 들어온 사용량을
+          발행한 청구서는 고치거나 지울 수 없어요. 청구서를 발행한 고객에게는 그 뒤 이 달에 들어온 사용량을
           청구하지 않아요.
         </Typography.Paragraph>
         <Typography.Paragraph style={PARAGRAPH_STYLE}>
-          청구할 금액이 없는 고객은 이번에 발행되지 않아요. 나중에 금액이 생기면 다시 발행할 수
+          청구할 금액이 없는 고객의 청구서는 이번에 발행되지 않아요. 나중에 금액이 생기면 다시 발행할 수
           있어요.
         </Typography.Paragraph>
 
@@ -156,7 +156,7 @@ function InvoiceFinalizeForm({ onClose, ...target }: FinalizeTarget & { onClose:
             type="warning"
             showIcon
             icon={alertIcon("warning")}
-            title={`${monthLabel}은 아직 끝나지 않았어요. 지금 발행하면 발행한 고객의 남은 기간 사용량은 청구되지 않아요.`}
+            title={`${monthLabel}은 아직 끝나지 않았어요. 지금 발행하면 청구서를 발행한 고객의 남은 기간 사용량은 청구되지 않아요.`}
           />
         ) : null}
 
@@ -165,7 +165,7 @@ function InvoiceFinalizeForm({ onClose, ...target }: FinalizeTarget & { onClose:
             type="warning"
             showIcon
             icon={alertIcon("warning")}
-            title="발행할 고객에게 단가 없는 사용량이 있어요. 이 사용량은 청구되지 않고, 발행한 뒤에 단가를 등록해도 이 달 청구서에는 실리지 않아요."
+            title="청구서를 발행할 고객에게 단가 없는 사용량이 있어요. 이 사용량은 청구되지 않고, 발행한 뒤에 단가를 등록해도 이 달 청구서에는 실리지 않아요."
           />
         ) : null}
 

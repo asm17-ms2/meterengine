@@ -93,7 +93,7 @@ MeterEngine이 정해진 시각에 스스로 하는 일입니다.
 | 매분 | 결과가 확인되지 않은 결제를 토스페이먼츠에 다시 조회합니다. | [첫 결제 요청과 결과 확인](/payments/charging) |
 | 10분마다 | 다시 시도할 때가 된 실패 결제를 다시 시도합니다. | [결제 실패와 재시도](/payments/retries) |
 | 매일 04:00 KST | 토스페이먼츠 거래 내역과 MeterEngine 결제 기록을 맞춰 봅니다(대사). | [수납 상태와 대사 확인](/payments/reconciliation) |
-| 매일 04:00 KST | 발행 시각이 지난 달을 자동으로 발행하고, 앞서 실패한 고객을 다시 시도합니다. | [자동 발행과 보류](/billing/auto-finalization) |
+| 매일 04:00 KST | 발행 시각이 지난 달의 청구서를 자동으로 발행하고, 앞서 실패한 고객을 다시 시도합니다. | [자동 발행과 보류](/billing/auto-finalization) |
 | 매일 04:00 KST 검사, 09:00 KST 전송 | 과금 제외 사용량을 검사합니다. 과금 제외 사용량이 있고 이 웹훅을 받도록 등록한 웹훅 URL이 있으면 `unbilled_usage_detected` 웹훅을 같은 날 09:00 KST에 보냅니다. 지난달과 이번 달을 따로 보냅니다. | [웹훅 이벤트 유형과 data](/webhooks/events) |
 
 웹훅 전송이 실패했을 때 다시 보내는 간격은 [전송, 재전송, 중복 처리](/webhooks/delivery-and-retries)에 있습니다.

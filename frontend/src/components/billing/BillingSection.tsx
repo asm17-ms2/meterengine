@@ -68,8 +68,8 @@ export async function BillingSection({
     if (finalized.data.invoices.length > 0) {
       return (
         <EmptyState
-          title={query.customerId ? "선택한 고객의 청구서가 발행됐어요" : "이 달은 모두 발행됐어요"}
-          body={`${formatKoreanMonth(month)}에 ${query.customerId ? "선택한 고객의 " : ""}발행한 청구서가 ${finalized.data.invoices.length}건 있고, 현재 조건에 발행 전인 고객은 없어요.`}
+          title={query.customerId ? "선택한 고객의 청구서가 발행됐어요" : "이 달 청구서는 모두 발행됐어요"}
+          body={`${formatKoreanMonth(month)}에 ${query.customerId ? "선택한 고객의 " : ""}발행한 청구서가 ${finalized.data.invoices.length}건 있고, 현재 조건에 청구서를 발행하지 않은 고객은 없어요.`}
           resetHref={`/invoices?month=${month}`}
           resetLabel="청구서 보기"
         />

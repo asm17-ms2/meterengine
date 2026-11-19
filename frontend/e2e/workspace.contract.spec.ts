@@ -501,7 +501,7 @@ test("격리 계약: 다른 발행이 먼저 처리해 일부만 발행되면 �
   await page.getByRole("button", { name: "월 전체 발행", exact: true }).click();
   await page.getByRole("dialog").getByRole("button", { name: "발행", exact: true }).click();
   const result = page.getByRole("dialog", { name: /청구서 3건을 발행했어요/ });
-  await expect(result.getByText("발행한 고객 수가 처음 안내한 7명과 달라요. 창을 연 뒤 사용량이 바뀌었거나 그사이 먼저 발행된 고객이 있어요. 금액은 청구서에서 확인하세요.", { exact: true })).toBeVisible();
+  await expect(result.getByText("청구서를 발행한 고객 수가 처음 안내한 7명과 달라요. 창을 연 뒤 사용량이 바뀌었거나 그사이 청구서가 먼저 발행된 고객이 있어요. 금액은 청구서에서 확인하세요.", { exact: true })).toBeVisible();
 });
 
 test("격리 계약: 청구할 고객이 없어 월 전체 발행이 비활성이면 그 이유를 버튼 설명으로 보인다", async ({ page, request }) => {
@@ -509,7 +509,7 @@ test("격리 계약: 청구할 고객이 없어 월 전체 발행이 비활성�
   await page.goto("/billing?month=2026-10");
   const button = page.getByRole("button", { name: "월 전체 발행", exact: true });
   await expect(button).toBeDisabled();
-  await expect(button).toHaveAccessibleDescription("청구할 금액이 있는 고객이 없거나 이미 모두 발행됐어요.");
+  await expect(button).toHaveAccessibleDescription("청구할 금액이 있는 고객이 없거나 청구서가 이미 모두 발행됐어요.");
 });
 
 test("격리 계약: 청구 예정액을 불러오지 못하면 월 전체 발행이 비활성이고 그 이유를 버튼 설명으로 보인다", async ({ page, request }) => {

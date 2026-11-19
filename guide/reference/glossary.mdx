@@ -158,7 +158,7 @@ description: "가이드 용어의 뜻과 영문 표기, 콘솔 화면 표기를 
 
 | 용어 | 뜻 | 영문 표기 | 콘솔 표기 | 자세히 |
 | --- | --- | --- | --- | --- |
-| 청구 예정액 | 아직 발행하지 않은 고객의 세전 공급가액. 조회할 때마다 다시 계산합니다 | `draft`, `total_amount` | 청구 예정액 | [예정액, 청구액, 수납액](/concepts/amounts) |
+| 청구 예정액 | 청구서를 아직 발행하지 않은 고객의 세전 공급가액. 조회할 때마다 다시 계산합니다 | `draft`, `total_amount` | 청구 예정액 | [예정액, 청구액, 수납액](/concepts/amounts) |
 | 청구액 | 발행한 청구서 합계(세액 포함)의 합 | `finalized_total_amount` | 청구액 | [예정액, 청구액, 수납액](/concepts/amounts) |
 | 공급가액 | 세액을 뺀 청구서 금액 | `supply_amount` | 공급가액 | [예정액, 청구액, 수납액](/concepts/amounts) |
 | 세액 | 공급가액의 10% | `tax_amount` | 세액 | [예정액, 청구액, 수납액](/concepts/amounts) |
@@ -170,14 +170,14 @@ description: "가이드 용어의 뜻과 영문 표기, 콘솔 화면 표기를 
 | 청구 검토 | 청구 검토(화면 제목 '청구 검토 - YYYY년 M월') | | 청구 예정액을 보고 발행하는 콘솔 화면 | [청구서 수동 발행](/billing/finalize-invoices) |
 | 발행 | 한 달의 청구 예정액을 고객마다 청구서로 굳히는 일. 되돌릴 수 없고 결제를 자동으로 시작하지 않습니다 |  | 월 전체 발행 | [청구서 수동 발행](/billing/finalize-invoices) |
 | 발행 상태 | 발행 전, 발행됨 | | '청구 검토' 화면의 달 상태 표시 | [청구서 수동 발행](/billing/finalize-invoices) |
-| 발행 결과 수 | | `finalized_count`, `failed_count` | 이번 발행 호출로 새로 발행한 청구서 수와 발행하지 못한 고객 수. 같은 달로 다시 부르면 실패한 고객을 다시 시도합니다 | [청구서 수동 발행](/billing/finalize-invoices) |
+| 발행 결과 수 | | `finalized_count`, `failed_count` | 이번 발행 호출로 새로 발행한 청구서 수와 청구서를 발행하지 못한 고객 수. 같은 달로 다시 부르면 실패한 고객을 다시 시도합니다 | [청구서 수동 발행](/billing/finalize-invoices) |
 | finalized_at | | `finalized_at` | 청구서를 발행한 시각 | [청구서 수동 발행](/billing/finalize-invoices) |
 | 청구서 | 발행한 청구서(API의 invoice)와 그 목록 화면 | `invoices` | 청구서 | [청구서 수동 발행](/billing/finalize-invoices) |
 | 청구서 번호 | 고객에게 보여 주는 번호(예: `ME-202610-00000012`). 세금계산서나 영수증 번호가 아닙니다 | `invoice_number` | 청구서 번호 | [발행 시 주의사항](/billing/after-finalization) |
-| 자동 발행 | 다음 자동 발행, 자동 발행 진행 중 | | 매일 04:00 KST에 발행 시각이 지난 달을 고객마다 발행하는 일. 모든 조직에 켜져 있고 끌 수 없습니다 | [자동 발행과 보류](/billing/auto-finalization) |
+| 자동 발행 | 다음 자동 발행, 자동 발행 진행 중 | | 매일 04:00 KST에 발행 시각이 지난 달의 청구서를 고객마다 발행하는 일. 모든 조직에 켜져 있고 끌 수 없습니다 | [자동 발행과 보류](/billing/auto-finalization) |
 | 발행 시각 | 자동 발행이 그 달을 다루는 시각, 다음 달 2일 04:00 KST | `auto_finalize_at` | 다음 자동 발행 | [자동 발행과 보류](/billing/auto-finalization) |
 | 자동 발행 진행 중 | 자동 발행이 돌고 있고 그 달을 아직 다 처리하지 않은 상태 | `auto_finalize_running` | 자동 발행 진행 중 | [자동 발행과 보류](/billing/auto-finalization) |
-| 보류 | 금액이 0원이 아닌데 단가 없는 사용량이 있어 자동 발행이 발행하지 않은 고객. 다시 시도하지 않으므로 직접 발행합니다 | `auto_finalize_held` | 자동 발행 보류: 단가 없는 사용량, 자동 발행 보류: 수동 발행 필요 | [자동 발행과 보류](/billing/auto-finalization) |
+| 보류 | 금액이 0원이 아닌데 단가 없는 사용량이 있어 자동 발행이 청구서를 발행하지 않은 고객. 다시 시도하지 않으므로 직접 발행합니다 | `auto_finalize_held` | 자동 발행 보류: 단가 없는 사용량, 자동 발행 보류: 수동 발행 필요 | [자동 발행과 보류](/billing/auto-finalization) |
 
 ## 결제
 

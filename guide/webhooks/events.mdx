@@ -235,7 +235,7 @@ MeterEngine이 이 웹훅을 만든 시각입니다. 시간대 표시가 붙은 
 }
 ```
 
-같은 항목은 `GET /v1/unbilled-events?month=YYYY-MM`(`unmatched_type`, `non_numeric_value`, `future_timestamp`, `negative_quantity`)과 `GET /v1/invoices/draft?month=YYYY-MM`의 고객별 `negative_usages`, `unpriced_usages`로도 볼 수 있습니다. 청구 예정액 응답에는 그 달을 이미 발행한 고객이 나오지 않으므로, 웹훅의 `negative_usages`, `unpriced_usages`와 고객 수가 다를 수 있습니다. 항목별 원인과 고치는 방법은 [이벤트가 청구에 안 보일 때](/troubleshooting/events-not-billed)를 참고하세요.
+같은 항목은 `GET /v1/unbilled-events?month=YYYY-MM`(`unmatched_type`, `non_numeric_value`, `future_timestamp`, `negative_quantity`)과 `GET /v1/invoices/draft?month=YYYY-MM`의 고객별 `negative_usages`, `unpriced_usages`로도 볼 수 있습니다. 청구 예정액 응답에는 그 달 청구서를 이미 발행한 고객이 나오지 않으므로, 웹훅의 `negative_usages`, `unpriced_usages`와 고객 수가 다를 수 있습니다. 항목별 원인과 고치는 방법은 [이벤트가 청구에 안 보일 때](/troubleshooting/events-not-billed)를 참고하세요.
 
 ## 테스트 웹훅
 

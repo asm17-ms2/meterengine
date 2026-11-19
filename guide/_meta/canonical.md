@@ -64,7 +64,7 @@
 | 금액은 청구 항목마다 10원 미만을 버린다 | /concepts/amounts | 금액은 청구 항목마다 10원 미만을 버립니다. | /quickstart, /pricing/price-models, /pricing/price-plans, /pricing/calculation-example | 없음 |
 | 세액은 공급가액의 10%다 | /concepts/amounts | 세액은 공급가액의 10%입니다. | /pricing/calculation-example, /billing/finalize-invoices | 없음 |
 | 계산 예시의 숫자(구간 단가, 최소 과금, 기본료) | /pricing/calculation-example | 숫자로 따라가는 예시는 금액 계산 따라가기 페이지에 있습니다. | /concepts/amounts, /pricing/price-models, /pricing/price-plans | 없음 |
-| 공급가액이 0원인 고객에게는 청구서를 만들지 않는다 | /billing/finalize-invoices | 0원 고객은 발행해도 청구서가 생기지 않습니다. | /concepts/amounts, /billing/auto-finalization | 없음 |
+| 공급가액이 0원인 고객에게는 청구서를 만들지 않는다 | /billing/finalize-invoices | 0원인 고객은 발행할 때 청구서가 만들어지지 않습니다. | /concepts/amounts, /billing/auto-finalization | 없음 |
 
 ## [6] 가격 설계와 데이터 변경
 

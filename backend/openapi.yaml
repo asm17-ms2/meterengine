@@ -4293,13 +4293,13 @@ paths:
       - invoice-controller
     post:
       description: |
-        그 달 청구 예정액이 0원이 아닌 고객을 한 번에 발행합니다. 세액은 공급가액의 10%입니다.
-        다음 달 2일 04:00 KST가 지나면 남은 고객은 자동으로 발행됩니다. 그 전에 발행하거나 자동 발행이 보류한 고객을 발행할 때 이 경로를 씁니다.
+        그 달 청구 예정액이 0원이 아닌 고객의 청구서를 한 번에 발행합니다. 세액은 공급가액의 10%입니다.
+        다음 달 2일 04:00 KST가 지나면 남은 고객의 청구서는 자동으로 발행됩니다. 그 전에 발행하거나 자동 발행이 보류한 고객의 청구서를 발행할 때 이 경로를 씁니다.
         그 달에 발생했고 집계 마감 시각(다음 달 2일 00:00 KST) 전에 받은 이벤트로 발행하므로, 마감이 지난 달의 청구서 금액과 청구 항목은 그 시점의 청구 예정액과 같습니다.
         마감 시각 전에 발행하면 발행 시각까지 받은 이벤트로 발행하고 그 시각을 청구서의 cutoff_at에 남깁니다.
-        수량이 0인 청구 항목은 청구서에 싣지 않습니다. 발행한 고객은 그 달 청구 예정액에서 빠집니다.
-        그 달이 이미 발행된 고객은 건너뜁니다. 그래서 같은 달로 다시 부르거나 동시에 불러도 청구서가 겹치지 않습니다.
-        고객마다 따로 발행합니다. 한 고객의 발행이 실패해도 다른 고객의 발행은 남고, 실패한 고객은 failed_count에 세며 다시 부르면 다시 시도합니다.
+        수량이 0인 청구 항목은 청구서에 싣지 않습니다. 청구서를 발행한 고객은 그 달 청구 예정액에서 빠집니다.
+        그 달 청구서가 이미 발행된 고객은 건너뜁니다. 그래서 같은 달로 다시 부르거나 동시에 불러도 청구서가 겹치지 않습니다.
+        고객마다 청구서를 따로 발행합니다. 한 고객의 청구서 발행이 실패해도 다른 고객의 청구서는 남고, 실패한 고객은 failed_count에 세며 다시 부르면 다시 시도합니다.
         발행은 되돌릴 수 없고, 발행한 뒤 그 달에 들어온 그 고객의 이벤트는 청구되지 않습니다.
         finalized_count는 이번 호출로 새로 발행한 청구서 수입니다. 발행된 내용은 청구서 목록 조회로 봅니다.
       operationId: finalizeInvoices
@@ -4317,8 +4317,8 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/FinalizeInvoicesResponse"
-          description: "발행한 달, 새로 발행한 청구서 수, 발행하지 못한 고객 수입니다. 발행할 고객이 없으면 두 수가 모두\
-            \ 0입니다."
+          description: "발행한 달, 새로 발행한 청구서 수, 청구서를 발행하지 못한 고객 수입니다. 청구서를 발행할 고객이 없으\
+            면 두 수가 모두 0입니다."
         "400":
           content:
             application/json:
@@ -4363,9 +4363,9 @@ paths:
   /v1/invoices/draft:
     get:
       description: |
-        아직 발행하지 않은 고객의 청구 예정액을 미터의 구분 값별 사용량에 그 구분 값의 단가를 곱해 계산해 돌려줍니다.
+        청구서를 아직 발행하지 않은 고객의 청구 예정액을 미터의 구분 값별 사용량에 그 구분 값의 단가를 곱해 계산해 돌려줍니다.
         달 하나의 모든 고객을 한 번에 보려면 이 경로를 씁니다. 검색어, 여러 조건, 정렬, 페이지가 필요하면 GET /v1/invoices/draft/search를 씁니다.
-        그 달이 발행된 고객은 나오지 않고 total_amount는 아직 이 달을 발행하지 않은 고객의 합입니다. 발행된 금액은 청구서 목록 조회로 봅니다.
+        그 달 청구서가 발행된 고객은 나오지 않고 total_amount는 이 달 청구서를 아직 발행하지 않은 고객의 합입니다. 발행된 금액은 청구서 목록 조회로 봅니다.
         조회할 때마다 계산하며 저장하지 않습니다. 기간은 KST 기준의 달입니다.
         그 달 이벤트 가운데 수신 시각(received_at)이 집계 마감 시각(다음 달 2일 00:00 KST)보다 이른 것만 집계합니다. 마감 뒤에 받은 그 달 이벤트는 저장되지만 집계와 청구에 들지 않습니다.
         금액은 원 단위 정수입니다. 고객, 미터, 구분 값마다 생기는 청구 항목마다 10원 미만을 버린 뒤 더합니다. 10원이 안 되는 청구 항목은 0원입니다.
@@ -4388,8 +4388,8 @@ paths:
               schema:
                 $ref: "#/components/schemas/DraftInvoiceResponse"
           description: 고객별 청구 예정액입니다. 단가가 있는 사용량이 없고 요금제도 적용되지 않는 고객은 lines가 빈 배열입니다.
-            요금제가 있는 고객은 단가 없는 사용량만 있어도 기본료와 최소 사용료 조정 항목이 나옵니다. 모든 고객이 발행됐으면 customers가
-            빈 배열이고 total_amount가 0입니다.
+            요금제가 있는 고객은 단가 없는 사용량만 있어도 기본료와 최소 사용료 조정 항목이 나옵니다. 모든 고객의 청구서가 발행됐으면
+            customers가 빈 배열이고 total_amount가 0입니다.
         "400":
           content:
             application/json:
@@ -4552,11 +4552,11 @@ paths:
   /v1/invoices/draft/search:
     get:
       description: "검색어와 여러 조건으로 고객별 청구 예정액을 거르고 정렬해 한 페이지씩 돌려줍니다. month만 정해 모든 고객\
-        을 받으려면 GET /v1/invoices/draft가 간단합니다. total_unfiltered는 그 달 아직 발행하지 않은 전체\
-        \ 고객 수입니다. summary의 amount, customer_count, billable_customer_count, line_count,\
+        을 받으려면 GET /v1/invoices/draft가 간단합니다. total_unfiltered는 그 달 청구서를 아직 발행하지 않\
+        은 전체 고객 수입니다. summary의 amount, customer_count, billable_customer_count, line_count,\
         \ unpriced_count, negative_count는 조건에 맞는 고객 전체의 값이고, 앞에 month_가 붙은 같은 이름의\
-        \ 값은 그 달 전체의 값입니다. 청구서 발행은 검색 조건과 관계없이 그 달 전체를 발행하므로 finalization_scope는 month입\
-        니다. summary에는 month, calculated_at과, 청구 예정액 조회와 같은 auto_finalize_enabled,\
+        \ 값은 그 달 전체의 값입니다. 청구서 발행은 검색 조건과 관계없이 그 달 전체 고객의 청구서를 발행하므로 finalization_scope는\
+        \ month입니다. summary에는 month, calculated_at과, 청구 예정액 조회와 같은 auto_finalize_enabled,\
         \ auto_finalize_at, auto_finalize_running도 담습니다."
       operationId: searchDraftInvoices
       parameters:
@@ -10237,7 +10237,7 @@ components:
         draft_supply_amount:
           type: integer
           format: int64
-          description: 청구 예정액(원)입니다. 그 달을 아직 발행하지 않은 고객의 공급가액 합계이며 부가세는 들지 않습니다.
+          description: 청구 예정액(원)입니다. 그 달 청구서를 아직 발행하지 않은 고객의 공급가액 합계이며 부가세는 들지 않습니다.
         event_count:
           type: integer
           format: int64
@@ -10395,11 +10395,11 @@ components:
         auto_finalize_at:
           type: string
           format: date-time
-          description: "이 달을 다음에 자동 발행하는 시각(KST, +09:00)입니다. 그 달의 발행 시각(다음 달 2일 04:00)\
-            \ 전이면 그 시각입니다. 지났으면 요청한 업무 환경에 아직 발행을 시도하지 않은 고객이나 마지막 시도가 실패인 고객이 있을\
-            \ 때만 다음 실행 시각(매일 04:00 KST)이고, 모든 고객을 시도했고 실패도 없거나 그 업무 환경의 첫 고객을 등록하기\
-            \ 전의 달이면 null입니다. 단가 없는 사용량으로 보류된 고객은 지난달 단가를 등록할 수 없어 다시 시도하지 않으므로 직접\
-            \ 발행합니다."
+          description: "이 달 청구서를 다음에 자동 발행하는 시각(KST, +09:00)입니다. 그 달의 발행 시각(다음 달 2일\
+            \ 04:00) 전이면 그 시각입니다. 지났으면 요청한 업무 환경에 아직 발행을 시도하지 않은 고객이나 마지막 시도가 실패인\
+            \ 고객이 있을 때만 다음 실행 시각(매일 04:00 KST)이고, 모든 고객을 시도했고 실패도 없거나 그 업무 환경의 첫 고\
+            객을 등록하기 전의 달이면 null입니다. 단가 없는 사용량으로 보류된 고객은 지난달 단가를 등록할 수 없어 다시 시도하지 않\
+            으므로 직접 발행합니다."
         auto_finalize_enabled:
           type: boolean
           description: 청구서 자동 발행이 켜져 있으면 true입니다. 자동 발행은 모든 조직에 켜져 있고 끌 수 없습니다.
@@ -10414,7 +10414,7 @@ components:
           description: "청구 예정액을 계산한 시각(KST, +09:00)"
         customers:
           type: array
-          description: 아직 이 달을 발행하지 않은 고객별 청구 예정액입니다. 고객 이름 오름차순입니다.
+          description: 이 달 청구서를 아직 발행하지 않은 고객별 청구 예정액입니다. 고객 이름 오름차순입니다.
           items:
             $ref: "#/components/schemas/DraftInvoiceCustomer"
         month:
@@ -10423,7 +10423,7 @@ components:
         total_amount:
           type: integer
           format: int64
-          description: "아직 이 달을 발행하지 않은 고객의 청구 예정액 합(원, 부가세 제외)"
+          description: "이 달 청구서를 아직 발행하지 않은 고객의 청구 예정액 합(원, 부가세 제외)"
     DraftInvoiceUnpricedUsage:
       type: object
       properties:
@@ -10798,11 +10798,11 @@ components:
         failed_count:
           type: integer
           format: int32
-          description: 이번 호출에서 발행하지 못한 고객 수입니다. 0보다 크면 같은 달로 다시 부릅니다.
+          description: 이번 호출에서 청구서를 발행하지 못한 고객 수입니다. 0보다 크면 같은 달로 다시 부릅니다.
         finalized_count:
           type: integer
           format: int32
-          description: 이번 호출로 새로 발행한 청구서 수입니다. 이미 발행돼 있던 고객은 세지 않습니다.
+          description: 이번 호출로 새로 발행한 청구서 수입니다. 청구서가 이미 발행돼 있던 고객은 세지 않습니다.
         invoices:
           type: array
           description: "이번 호출로 새로 발행한 청구서입니다. 각 원소는 GET /v1/invoices/{id} 응답과 같습니다\

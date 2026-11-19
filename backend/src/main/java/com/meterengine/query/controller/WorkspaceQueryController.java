@@ -447,10 +447,10 @@ public class WorkspaceQueryController {
       summary = "청구 예정액 검색",
       description =
           "검색어와 여러 조건으로 고객별 청구 예정액을 거르고 정렬해 한 페이지씩 돌려줍니다. month만 정해 모든 고객을"
-              + " 받으려면 GET /v1/invoices/draft가 간단합니다. total_unfiltered는 그 달 아직 발행하지 않은 전체 고객"
+              + " 받으려면 GET /v1/invoices/draft가 간단합니다. total_unfiltered는 그 달 청구서를 아직 발행하지 않은 전체 고객"
               + " 수입니다. summary의 amount, customer_count, billable_customer_count, line_count, unpriced_count,"
               + " negative_count는 조건에 맞는 고객 전체의 값이고, 앞에 month_가 붙은 같은 이름의 값은 그 달 전체의"
-              + " 값입니다. 청구서 발행은 검색 조건과 관계없이 그 달 전체를 발행하므로 finalization_scope는 month입니다."
+              + " 값입니다. 청구서 발행은 검색 조건과 관계없이 그 달 전체 고객의 청구서를 발행하므로 finalization_scope는 month입니다."
               + " summary에는 month, calculated_at과, 청구 예정액 조회와 같은 auto_finalize_enabled, auto_finalize_at,"
               + " auto_finalize_running도 담습니다.")
   @Parameters({
