@@ -69,8 +69,8 @@ export async function InvoicesSection({
   if (result.data.invoices.length === 0) {
     return (
       <EmptyState
-        title={isAllMonths ? "확정된 청구서가 없어요" : `${formatKoreanMonth(month)}에 확정된 청구서가 없어요`}
-        body="확정 전 금액은 청구 검토에서 확인하세요."
+        title={isAllMonths ? "발행된 청구서가 없어요" : `${formatKoreanMonth(month)}에 발행된 청구서가 없어요`}
+        body="발행 전 금액은 청구 검토에서 확인하세요."
         resetHref={isAllMonths ? "/billing" : `/billing?month=${month}`}
         resetLabel="청구 검토로 이동"
       />
@@ -91,7 +91,7 @@ export async function InvoicesSection({
       />
       <ListPagination query={query} capabilities={capabilities} total={result.data.total} />
       <ScreenNote>
-        금액과 청구 항목은 확정할 때 저장한 값이라 나중에 단가나 고객 이름을 고쳐도 바뀌지 않아요.
+        금액과 청구 항목은 발행할 때 저장한 값이라 나중에 단가나 고객 이름을 고쳐도 바뀌지 않아요.
       </ScreenNote>
     </>
   );

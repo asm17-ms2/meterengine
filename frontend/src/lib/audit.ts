@@ -17,7 +17,7 @@ export const AUDIT_ACTIONS: Record<string, string> = {
   organization_status_updated: "조직 상태 변경", user_account_created: "운영자 계정 생성", user_account_role_updated: "플랫폼 권한 변경", organization_member_created: "사용자 계정 생성",
   organization_member_archived: "사용자 소속 보관", organization_member_role_updated: "역할 변경", organization_invitation_created: "초대 링크 발급",
   organization_invitation_accepted: "초대 수락", organization_invitation_revoked: "초대 취소", api_key_created: "API 키 발급", api_key_deleted: "API 키 폐기",
-  invoice_finalized: "청구서 확정", price_rate_created: "단가 버전 등록", price_rate_deleted: "단가 적용 종료", price_plan_created: "요금제 버전 등록",
+  invoice_finalized: "청구서 발행", price_rate_created: "단가 버전 등록", price_rate_deleted: "단가 적용 종료", price_plan_created: "요금제 버전 등록",
   invoice_view_link_created: "청구서 조회 링크 발급", invoice_view_link_revoked: "청구서 조회 링크 폐기", invoice_viewed: "고객 청구서 조회",
   payment_retry_requested: "고객 결제 재시도 요청",
   customer_created: "고객 등록", customer_updated: "고객 정보 변경", customer_archived: "고객 보관", customer_restored: "고객 복원",

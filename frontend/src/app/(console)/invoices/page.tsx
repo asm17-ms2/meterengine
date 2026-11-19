@@ -20,7 +20,7 @@ import { ALL_MONTHS } from "@/lib/month";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
-export const metadata: Metadata = { title: "확정 청구서" };
+export const metadata: Metadata = { title: "발행 청구서" };
 
 export default async function InvoicesPage({
   searchParams,
@@ -39,8 +39,8 @@ export default async function InvoicesPage({
   return (
     <CollapseProvider>
       <ScreenHeader
-        title={query.from || query.to ? "확정 청구서 - 직접 지정 기간" : isAllMonths ? "확정 청구서 - 전체 기간" : `확정 청구서 - ${formatKoreanMonth(month)}`}
-        tags={<StatusTag color="success">확정됨</StatusTag>}
+        title={query.from || query.to ? "발행 청구서 - 직접 지정 기간" : isAllMonths ? "발행 청구서 - 전체 기간" : `발행 청구서 - ${formatKoreanMonth(month)}`}
+        tags={<StatusTag color="success">발행됨</StatusTag>}
       />
 
       <ScreenCard>

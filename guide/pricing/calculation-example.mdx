@@ -7,7 +7,7 @@ description: "구간 단가, 최소 사용료, 기본료가 있는 예시 하나
 
 - 구간 단가의 규칙: [단가 모델과 버전](/pricing/price-models)
 - 기본료와 최소 사용료의 규칙: [기본료와 최소 사용료](/pricing/price-plans)
-- 10원 미만 버림과 세액: [예정액, 확정액, 수납액](/concepts/amounts)
+- 10원 미만 버림과 세액: [예정액, 발행액, 수납액](/concepts/amounts)
 
 ## 예시 조건
 
@@ -44,8 +44,8 @@ description: "구간 단가, 최소 사용료, 기본료가 있는 예시 하나
 <Step title="공급가액이 나옵니다">
 1,000 + 7,200 + 2,500 + 1,300 + 500 = **12,500원**입니다. 청구 항목은 다섯 줄입니다. 청구 예정액은 이 공급가액이고 부가세를 포함하지 않습니다.
 </Step>
-<Step title="확정하면 세액과 합계가 붙습니다">
-청구서를 확정하면 세액은 공급가액의 10%인 1,250원, 합계는 13,750원입니다.
+<Step title="발행하면 세액과 합계가 붙습니다">
+청구서를 발행하면 세액은 공급가액의 10%인 1,250원, 합계는 13,750원입니다.
 </Step>
 </Steps>
 
@@ -203,7 +203,7 @@ const draft = await response.json();
 단가가 없어 청구 항목과 금액에서 빠진 구분 값의 사용량입니다. 자사 계산에서 이 구분 값에도 요금을 매겼다면 이 차이만큼 금액이 어긋납니다.
 </ResponseField>
 
-확정한 청구서는 `GET /v1/invoices/{id}`로 봅니다. 위 예시를 확정하면 `supply_amount`는 12500, `tax_amount`는 1250, `total_amount`는 13750이고 `lines`는 다섯 줄입니다. 확정 방법은 [청구서 수동 확정](/billing/finalize-invoices)을 참고하세요.
+발행한 청구서는 `GET /v1/invoices/{id}`로 봅니다. 위 예시를 발행하면 `supply_amount`는 12500, `tax_amount`는 1250, `total_amount`는 13750이고 `lines`는 다섯 줄입니다. 발행 방법은 [청구서 수동 발행](/billing/finalize-invoices)을 참고하세요.
 
 ## 테스트 환경에서 직접 재현하기
 

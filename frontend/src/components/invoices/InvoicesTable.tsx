@@ -194,7 +194,7 @@ export function InvoicesTable({
     },
     {
       key: "quantity",
-      title: "확정 시각 / 수량",
+      title: "발행 시각 / 수량",
       align: "right",
       width: 190,
       sortKey: "finalized_at",
@@ -235,7 +235,7 @@ export function InvoicesTable({
 
   return (
     <>
-    <div className="data-mobile-records">{groups.map(group => <article key={group.id} className="data-mobile-record"><div className="data-mobile-line"><h3>{group.customerName}</h3><strong className="numeric">{group.totalAmount}</strong></div><p className="field-hint">{group.invoiceNumber ? `${group.invoiceNumber} / ` : ""}{group.month} / {group.finalizedAt} KST 확정</p><InvoicePaymentLink invoiceId={group.id} />{group.paymentStatus && <p><Tag color={group.paymentStatusColor}>{group.paymentStatus}</Tag> 취소액 {group.canceledAmount}</p>}<details><summary>확정 계산 내역</summary>{linesOf(group.items).map((line, index) => <div key={index}><div className="data-mobile-line"><span>{line.label}</span><strong className="numeric">{line.amount}</strong></div><p className="field-hint">수량 {line.quantity} / 단가 {line.unitPrice}</p>{line.quantityBasis && <p className="field-hint" style={{ overflowWrap: "anywhere" }}>{line.quantityBasis}</p>}{Object.keys(line.dimensionValues).length > 0 && <p className="field-hint">{Object.entries(line.dimensionValues).map(([key, value]) => `${key}: ${String(value)}`).join(", ")}</p>}</div>)}<div className="data-mobile-line"><span>공급가액</span><span className="numeric">{group.supplyAmount}</span></div><div className="data-mobile-line"><span>세액</span><span className="numeric">{group.taxAmount}</span></div></details></article>)}<div className="data-mobile-total"><span>조건 전체 합계(부가세 포함)</span><span className="numeric">{totalAmount}</span></div></div>
+    <div className="data-mobile-records">{groups.map(group => <article key={group.id} className="data-mobile-record"><div className="data-mobile-line"><h3>{group.customerName}</h3><strong className="numeric">{group.totalAmount}</strong></div><p className="field-hint">{group.invoiceNumber ? `${group.invoiceNumber} / ` : ""}{group.month} / {group.finalizedAt} KST 발행</p><InvoicePaymentLink invoiceId={group.id} />{group.paymentStatus && <p><Tag color={group.paymentStatusColor}>{group.paymentStatus}</Tag> 취소액 {group.canceledAmount}</p>}<details><summary>발행할 때 계산한 내역</summary>{linesOf(group.items).map((line, index) => <div key={index}><div className="data-mobile-line"><span>{line.label}</span><strong className="numeric">{line.amount}</strong></div><p className="field-hint">수량 {line.quantity} / 단가 {line.unitPrice}</p>{line.quantityBasis && <p className="field-hint" style={{ overflowWrap: "anywhere" }}>{line.quantityBasis}</p>}{Object.keys(line.dimensionValues).length > 0 && <p className="field-hint">{Object.entries(line.dimensionValues).map(([key, value]) => `${key}: ${String(value)}`).join(", ")}</p>}</div>)}<div className="data-mobile-line"><span>공급가액</span><span className="numeric">{group.supplyAmount}</span></div><div className="data-mobile-line"><span>세액</span><span className="numeric">{group.taxAmount}</span></div></details></article>)}<div className="data-mobile-total"><span>조건 전체 합계(부가세 포함)</span><span className="numeric">{totalAmount}</span></div></div>
     <div className="data-desktop-table"><Table<InvoiceRow>
       rowKey="key"
       columns={columns}

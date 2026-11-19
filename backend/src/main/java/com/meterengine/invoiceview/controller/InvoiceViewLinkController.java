@@ -53,7 +53,7 @@ public class InvoiceViewLinkController {
   @Operation(
       summary = "청구서 조회 링크 발급",
       description =
-          "로그인 없이 확정 청구서 하나를 보는 링크를 만듭니다."
+          "로그인 없이 발행 청구서 하나를 보는 링크를 만듭니다."
               + " token은 발급 응답에만 실립니다. MeterEngine은 token 원문을 저장하지 않으므로 다시 볼 수 없습니다."
               + " 유효 기간은 기본 30일, 최대 90일이고 폐기할 수 있습니다."
               + " 링크는 발급할 때의 결제 모드(test 또는 live)로 결제 상태를 보여 줍니다."
@@ -62,7 +62,7 @@ public class InvoiceViewLinkController {
   public InvoiceViewLinkSecretResponse createInvoiceViewLink(
       @CurrentOrganizationId UUID organizationId,
       @AuthenticationPrincipal AuthenticatedPrincipal principal,
-      @Parameter(description = "링크를 발급할 확정 청구서의 ID") @PathVariable UUID id,
+      @Parameter(description = "링크를 발급할 발행 청구서의 ID") @PathVariable UUID id,
       @Valid @RequestBody(required = false) CreateInvoiceViewLinkRequest request,
       HttpServletResponse response) {
     privateResponse(response);

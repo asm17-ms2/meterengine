@@ -72,7 +72,7 @@ function safeFailure(error: unknown, secrets: Set<string>) {
   return new Error(message.replace(/me_(?:test|live|reg|invite)_[A-Za-z0-9]+/g, "[redacted token]"));
 }
 
-test("집계 10종과 단위 변환을 수집부터 사용량, 청구 예정액, 확정까지 연결한다", async ({ browser, request }) => {
+test("집계 10종과 단위 변환을 수집부터 사용량, 청구 예정액, 발행까지 연결한다", async ({ browser, request }) => {
   const suffix = randomUUID();
   const email = `aggregation-${suffix}@fe-e2e.local`;
   const eventType = `aggregation-event-${suffix}`;
@@ -319,7 +319,7 @@ test("집계 10종과 단위 변환을 수집부터 사용량, 청구 예정액,
       }
     });
 
-    await test.step("청구 검토에서 확정하고 서버 간 조회로 스냅샷 검증", async () => {
+    await test.step("청구 검토에서 발행하고 서버 간 조회로 스냅샷 검증", async () => {
       await page.goto(`/billing?month=${month}`);
       for (const aggregation of ["sum", "avg"]) {
         const row = page.locator(".data-desktop-table").getByRole("row").filter({ hasText: fractionCode(aggregation) });
@@ -333,10 +333,10 @@ test("집계 10종과 단위 변환을 수집부터 사용량, 청구 예정액,
       await expect(mobile.getByText("계산 기준: 1 / 3", { exact: true }).first()).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       await page.setViewportSize({ width: 1280, height: 900 });
-      await expect(page.getByRole("button", { name: "월 전체 확정", exact: true })).toBeEnabled();
-      await page.getByRole("button", { name: "월 전체 확정", exact: true }).click();
-      await page.getByRole("dialog").getByRole("button", { name: "확정", exact: true }).click();
-      await expect(page.getByRole("dialog")).toContainText("1건을 확정했어요");
+      await expect(page.getByRole("button", { name: "월 전체 발행", exact: true })).toBeEnabled();
+      await page.getByRole("button", { name: "월 전체 발행", exact: true }).click();
+      await page.getByRole("dialog").getByRole("button", { name: "발행", exact: true }).click();
+      await expect(page.getByRole("dialog")).toContainText("1건을 발행했어요");
       const invoices = await request.get(`${API_URL}/v1/invoices?month=${month}&customer_id=${customerId}`, { headers: readHeaders });
       expect(invoices.status()).toBe(200);
       const invoice = (await invoices.json()).invoices[0];

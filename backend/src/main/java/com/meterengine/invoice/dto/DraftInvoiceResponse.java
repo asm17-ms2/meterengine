@@ -12,22 +12,22 @@ public record DraftInvoiceResponse(
     @Schema(description = "청구 예정액을 계산한 달(yyyy-MM, KST)") String month,
     @Schema(description = "청구 예정액을 계산한 시각(KST, +09:00)") @JsonProperty("calculated_at")
         OffsetDateTime calculatedAt,
-    @Schema(description = "청구서 자동 확정이 켜져 있으면 true입니다. 자동 확정은 모든 조직에 켜져 있고 끌 수 없습니다.")
+    @Schema(description = "청구서 자동 발행이 켜져 있으면 true입니다. 자동 발행은 모든 조직에 켜져 있고 끌 수 없습니다.")
         @JsonProperty("auto_finalize_enabled")
         boolean autoFinalizeEnabled,
     @Schema(
             description =
-                "이 달을 다음에 자동 확정하는 시각(KST, +09:00)입니다. 그 달의 확정 시각(다음 달 2일 04:00) 전이면 그 시각입니다. 지났으면 요청한 업무 환경에 아직 확정을 시도하지 않은 고객이나 마지막 시도가 실패인 고객이 있을 때만 다음 실행 시각(매일 04:00 KST)이고, 모든 고객을 시도했고 실패도 없거나 그 업무 환경의 첫 고객을 등록하기 전의 달이면 null입니다. 단가 없는 사용량으로 보류된 고객은 지난달 단가를 등록할 수 없어 다시 시도하지 않으므로 직접 확정합니다.")
+                "이 달을 다음에 자동 발행하는 시각(KST, +09:00)입니다. 그 달의 발행 시각(다음 달 2일 04:00) 전이면 그 시각입니다. 지났으면 요청한 업무 환경에 아직 발행을 시도하지 않은 고객이나 마지막 시도가 실패인 고객이 있을 때만 다음 실행 시각(매일 04:00 KST)이고, 모든 고객을 시도했고 실패도 없거나 그 업무 환경의 첫 고객을 등록하기 전의 달이면 null입니다. 단가 없는 사용량으로 보류된 고객은 지난달 단가를 등록할 수 없어 다시 시도하지 않으므로 직접 발행합니다.")
         @JsonProperty("auto_finalize_at")
         OffsetDateTime autoFinalizeAt,
     @Schema(
             description =
-                "자동 확정이 지금 돌고 있고, 요청한 업무 환경에서 확정 시각이 지난 이 달에 아직 확정을 시도하지 않은 고객이 있으면 true입니다. 이번 실행이 이 달에 닿기 전에도 true입니다. 모든 고객을 시도한 뒤에도 남은 고객은 보류나 실패라 false입니다.")
+                "자동 발행이 지금 돌고 있고, 요청한 업무 환경에서 발행 시각이 지난 이 달에 아직 발행을 시도하지 않은 고객이 있으면 true입니다. 이번 실행이 이 달에 닿기 전에도 true입니다. 모든 고객을 시도한 뒤에도 남은 고객은 보류나 실패라 false입니다.")
         @JsonProperty("auto_finalize_running")
         boolean autoFinalizeRunning,
-    @Schema(description = "아직 이 달을 확정하지 않은 고객의 청구 예정액 합(원, 부가세 제외)") @JsonProperty("total_amount")
+    @Schema(description = "아직 이 달을 발행하지 않은 고객의 청구 예정액 합(원, 부가세 제외)") @JsonProperty("total_amount")
         long totalAmount,
-    @Schema(description = "아직 이 달을 확정하지 않은 고객별 청구 예정액입니다. 고객 이름 오름차순입니다.")
+    @Schema(description = "아직 이 달을 발행하지 않은 고객별 청구 예정액입니다. 고객 이름 오름차순입니다.")
         List<DraftInvoiceCustomer> customers) {
 
   public record DraftInvoiceCustomer(
@@ -50,7 +50,7 @@ public record DraftInvoiceResponse(
           List<DraftInvoiceNegativeUsage> negativeUsages,
       @Schema(
               description =
-                  "금액이 0원이 아니면서 단가 없는 사용량이 있어 자동 확정이 이 고객을 보류하면 true입니다. 검색의 미터 조건과 관계없이 고객의 모든 미터로 정합니다.")
+                  "금액이 0원이 아니면서 단가 없는 사용량이 있어 자동 발행이 이 고객을 보류하면 true입니다. 검색의 미터 조건과 관계없이 고객의 모든 미터로 정합니다.")
           @JsonProperty("auto_finalize_held")
           boolean autoFinalizeHeld) {}
 

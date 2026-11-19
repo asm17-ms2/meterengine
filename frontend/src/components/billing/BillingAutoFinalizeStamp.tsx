@@ -10,12 +10,12 @@ export async function BillingAutoFinalizeStamp({
 }) {
   const result = await draftInvoice;
   if (!result.ok) return null;
-  if (result.data.auto_finalize_running) return <QueryStamp label="자동 확정" text="진행 중" />;
+  if (result.data.auto_finalize_running) return <QueryStamp label="자동 발행" text="진행 중" />;
   if (result.data.auto_finalize_at === null) return null;
 
   return (
     <QueryStamp
-      label="다음 자동 확정"
+      label="다음 자동 발행"
       text={formatKstShortStamp(new Date(result.data.auto_finalize_at))}
     />
   );

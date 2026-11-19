@@ -59,17 +59,17 @@ export async function BillingSection({
 
   if (result.data.customers.length === 0) {
     if (result.data.summary && (result.data.total ?? 0) > 0) return <><EmptyState title="이 페이지에 청구 예정 내역이 없어요" body={`현재 조건에 맞는 고객은 ${result.data.total}명이에요. 첫 페이지에서 다시 확인하세요.`} resetHref={buildListHref("/billing", query, { page: 0 })} resetLabel="첫 페이지 보기" /><ListPagination query={query} capabilities={CAPABILITIES.previewDraftInvoice} total={result.data.total} /></>;
-    if (isFinalized) return <EmptyState title="이 달의 청구는 확정됐어요" body={query.customerId ? "선택한 고객과 조건에 표시할 청구 예정 내역이 없어요. '청구서 보기'에서 이 고객의 확정 청구서를 확인하세요." : "현재 조건에 표시할 청구 예정 내역이 없어요. 확정 청구서에서 청구 결과를 확인하세요."} resetHref={buildListHref("/invoices", query, { q: "", metricCode: undefined, minAmount: undefined, maxAmount: undefined, sort: undefined, order: undefined, page: 0 })} resetLabel="청구서 보기" />;
-    if (result.data.summary && result.data.summary.month_customer_count > 0) return <EmptyState title="조건에 맞는 청구 예정 내역이 없어요" body={`검색 조건을 바꿔 확인하세요. 월 전체 확정 대상은 ${result.data.summary.month_billable_customer_count}명이에요.`} resetHref={buildListHref("/billing", query, { page: 0, q: "", customerId: undefined, metricCode: undefined, minAmount: undefined, maxAmount: undefined })} />;
+    if (isFinalized) return <EmptyState title="이 달의 청구서는 발행됐어요" body={query.customerId ? "선택한 고객과 조건에 표시할 청구 예정 내역이 없어요. '청구서 보기'에서 이 고객의 발행 청구서를 확인하세요." : "현재 조건에 표시할 청구 예정 내역이 없어요. 발행 청구서에서 청구 결과를 확인하세요."} resetHref={buildListHref("/invoices", query, { q: "", metricCode: undefined, minAmount: undefined, maxAmount: undefined, sort: undefined, order: undefined, page: 0 })} resetLabel="청구서 보기" />;
+    if (result.data.summary && result.data.summary.month_customer_count > 0) return <EmptyState title="조건에 맞는 청구 예정 내역이 없어요" body={`검색 조건을 바꿔 확인하세요. 월 전체 발행 대상은 ${result.data.summary.month_billable_customer_count}명이에요.`} resetHref={buildListHref("/billing", query, { page: 0, q: "", customerId: undefined, metricCode: undefined, minAmount: undefined, maxAmount: undefined })} />;
     const finalized = await invoices;
     if (!finalized.ok) {
-      return <ErrorState title="확정 여부를 확인하지 못했어요" error={finalized.error} />;
+      return <ErrorState title="발행 여부를 확인하지 못했어요" error={finalized.error} />;
     }
     if (finalized.data.invoices.length > 0) {
       return (
         <EmptyState
-          title={query.customerId ? "선택한 고객의 청구서가 확정됐어요" : "이 달은 모두 확정됐어요"}
-          body={`${formatKoreanMonth(month)}에 ${query.customerId ? "선택한 고객의 " : ""}확정 청구서가 ${finalized.data.invoices.length}건 있고, 현재 조건에 확정 전인 고객은 없어요.`}
+          title={query.customerId ? "선택한 고객의 청구서가 발행됐어요" : "이 달은 모두 발행됐어요"}
+          body={`${formatKoreanMonth(month)}에 ${query.customerId ? "선택한 고객의 " : ""}발행 청구서가 ${finalized.data.invoices.length}건 있고, 현재 조건에 발행 전인 고객은 없어요.`}
           resetHref={`/invoices?month=${month}`}
           resetLabel="청구서 보기"
         />
@@ -78,7 +78,7 @@ export async function BillingSection({
     return (
       <EmptyState
         title={query.customerId ? "선택한 고객의 청구 예정 내역이 없어요" : "등록된 고객이 없어요"}
-        body={query.customerId ? "다른 고객을 선택하거나 확정 청구서에서 청구 내역을 확인하세요." : "고객을 등록하면 이 달의 청구 예정액을 확인할 수 있어요."}
+        body={query.customerId ? "다른 고객을 선택하거나 발행 청구서에서 청구 내역을 확인하세요." : "고객을 등록하면 이 달의 청구 예정액을 확인할 수 있어요."}
         resetHref={query.customerId ? `/billing?month=${month}` : "/customers"}
         resetLabel={query.customerId ? undefined : "고객 화면 열기"}
       />
@@ -105,8 +105,8 @@ export async function BillingSection({
 
   const billingTable = (
     <>
-      {result.data.summary && <><p role="status">조건 전체 {result.data.summary.customer_count}명, 예정액 {formatKrw(result.data.summary.amount)}, 단가 없는 구분 값 {result.data.summary.unpriced_count}개.</p><p className="field-hint">&apos;월 전체 확정&apos;은 필터와 페이지에 관계없이 이 달 청구할 금액이 있는 고객 {result.data.summary.month_billable_customer_count}명을 모두 확정해요.</p></>}
-      {negativeCustomers.length > 0 && <Alert showIcon type="warning" title="집계값이 음수인 구분 값은 청구에서 뺐어요" description={<><p>개별 음수 이벤트도 선택한 집계 함수에 따라 반영해요. 단위 변환 전 집계값이 음수인 구분 값은 청구에서 뺐어요. 확정하기 전에 사용량을 확인하세요.</p><details><summary className="disclosure-summary">뺀 구분 값 보기</summary><ul className="disclosure-list">{negativeCustomers.flatMap(customer => (customer.negative_usages ?? []).map((usage, index) => <li key={`${customer.customer_id}-${index}`}>{customer.customer_name} / {usage.billable_metric_code} / {Object.entries(usage.dimension_values).map(([key,value]) => `${key}: ${String(value)}`).join(", ") || "모든 사용량"} / 집계값 {formatDecimal(usage.quantity)}</li>))}</ul></details></>} />}
+      {result.data.summary && <><p role="status">조건 전체 {result.data.summary.customer_count}명, 예정액 {formatKrw(result.data.summary.amount)}, 단가 없는 구분 값 {result.data.summary.unpriced_count}개.</p><p className="field-hint">&apos;월 전체 발행&apos;은 필터와 페이지에 관계없이 이 달 청구할 금액이 있는 고객 {result.data.summary.month_billable_customer_count}명을 모두 발행해요.</p></>}
+      {negativeCustomers.length > 0 && <Alert showIcon type="warning" title="집계값이 음수인 구분 값은 청구에서 뺐어요" description={<><p>개별 음수 이벤트도 선택한 집계 함수에 따라 반영해요. 단위 변환 전 집계값이 음수인 구분 값은 청구에서 뺐어요. 발행하기 전에 사용량을 확인하세요.</p><details><summary className="disclosure-summary">뺀 구분 값 보기</summary><ul className="disclosure-list">{negativeCustomers.flatMap(customer => (customer.negative_usages ?? []).map((usage, index) => <li key={`${customer.customer_id}-${index}`}>{customer.customer_name} / {usage.billable_metric_code} / {Object.entries(usage.dimension_values).map(([key,value]) => `${key}: ${String(value)}`).join(", ") || "모든 사용량"} / 집계값 {formatDecimal(usage.quantity)}</li>))}</ul></details></>} />}
 
       <BillingTable
         groups={toBillingGroupViews(result.data.customers)}
@@ -121,7 +121,7 @@ export async function BillingSection({
         total={result.data.total}
       />
       <ScreenNote>
-        금액은 세금 전 공급가액이고 줄마다 10원 미만은 버려요. 확정하면 세액 10%가 더해져요.
+        금액은 세금 전 공급가액이고 줄마다 10원 미만은 버려요. 발행하면 세액 10%가 더해져요.
       </ScreenNote>
     </>
   );
@@ -129,7 +129,7 @@ export async function BillingSection({
   if (isFinalized) {
     return (
       <BillingFinalizedNotice
-        title={finalizedInvoices.length ? toFinalizedTitle(month, finalizedInvoices) : `${formatKoreanMonth(month)} 청구는 확정됐어요`}
+        title={finalizedInvoices.length ? toFinalizedTitle(month, finalizedInvoices) : `${formatKoreanMonth(month)} 청구서는 발행됐어요`}
         invoicesHref={buildListHref("/invoices", query, { q: "", metricCode: undefined, minAmount: undefined, maxAmount: undefined, sort: undefined, order: undefined, page: 0 })}
         zeroAmountCustomerCount={result.data.summary?.customer_count ?? result.data.customers.length}
       >
@@ -146,8 +146,8 @@ function toFinalizedTitle(month: string, invoices: InvoiceResponse[]): string {
   const lastFinalizedAt = finalizedAts[finalizedAts.length - 1];
   const prefix = `${formatKoreanMonth(month)} 청구서 ${invoices.length}건을`;
   return finalizedAts[0] === lastFinalizedAt
-    ? `${prefix} ${lastFinalizedAt}에 확정했어요`
-    : `${prefix} 확정했어요. 마지막 확정: ${lastFinalizedAt}`;
+    ? `${prefix} ${lastFinalizedAt}에 발행했어요`
+    : `${prefix} 발행했어요. 마지막 발행: ${lastFinalizedAt}`;
 }
 
 function toBillingGroupViews(customers: DraftInvoiceCustomer[]): BillingGroupView[] {

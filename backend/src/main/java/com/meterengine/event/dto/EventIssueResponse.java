@@ -28,7 +28,7 @@ public record EventIssueResponse(
         String targetProperty,
     @Schema(
             description =
-                "다음에 할 일을 알려 주는 안내 문구입니다. unpriced_usage이고 그 달 청구서를 이미 확정했으면, 단가를 등록해도 그 달 청구에 반영되지 않는다고 알립니다.")
+                "다음에 할 일을 알려 주는 안내 문구입니다. unpriced_usage이고 그 달 청구서를 이미 발행했으면, 단가를 등록해도 그 달 청구에 반영되지 않는다고 알립니다.")
         @JsonProperty("action_hint")
         String actionHint,
     @Schema(description = "unpriced_usage이고 이벤트의 수량 값이 음수면 true입니다. 그 밖에는 false입니다.")

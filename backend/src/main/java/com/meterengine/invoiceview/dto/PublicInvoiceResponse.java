@@ -8,18 +8,18 @@ import java.util.List;
 
 public record PublicInvoiceResponse(
     @Schema(description = "청구하는 조직의 이름") @JsonProperty("organization_name") String organizationName,
-    @Schema(description = "확정할 때 저장한 고객 이름") @JsonProperty("customer_name") String customerName,
+    @Schema(description = "발행할 때 저장한 고객 이름") @JsonProperty("customer_name") String customerName,
     @Schema(description = "청구서 번호입니다. ME-YYYYMM-8자리 숫자 꼴이고, 세금계산서나 영수증 번호가 아닙니다.")
         @JsonProperty("invoice_number")
         String invoiceNumber,
     @Schema(description = "청구 월(yyyy-MM, KST)") String month,
-    @Schema(description = "청구서를 확정한 시각(KST, +09:00)입니다. 고객 화면에는 '발행 시각'으로 나옵니다.")
+    @Schema(description = "청구서를 발행한 시각(KST, +09:00)입니다. 고객 화면에는 '발행 시각'으로 나옵니다.")
         @JsonProperty("finalized_at")
         OffsetDateTime finalizedAt,
     @Schema(description = "공급가액(원)") @JsonProperty("supply_amount") long supplyAmount,
     @Schema(description = "부가세(원)") @JsonProperty("tax_amount") long taxAmount,
     @Schema(description = "부가세 포함 금액(원)") @JsonProperty("total_amount") long totalAmount,
-    @Schema(description = "청구 항목입니다. 확정할 때의 기록이라 이후 요금을 바꾸거나 결제를 취소해도 달라지지 않습니다.")
+    @Schema(description = "청구 항목입니다. 발행할 때의 기록이라 이후 요금을 바꾸거나 결제를 취소해도 달라지지 않습니다.")
         List<InvoiceLineResponse> lines,
     @Schema(description = "링크의 결제 모드로 본 결제 내역") PublicInvoicePayment payment,
     @Schema(description = "고객이 이 링크로 실패한 결제를 다시 시도할 수 있는지와 그 이유") @JsonProperty("payment_retry")

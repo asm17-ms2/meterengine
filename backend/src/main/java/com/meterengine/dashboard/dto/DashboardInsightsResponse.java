@@ -20,7 +20,7 @@ public record DashboardInsightsResponse(
         List<DailyEventCount> dailyEventCounts) {
   public record MonthlyAmount(
       @Schema(description = "달(yyyy-MM, KST)") String month,
-      @Schema(description = "확정 청구액(원)입니다. 그 달 청구서의 부가세 포함 금액 합계입니다.")
+      @Schema(description = "발행 청구액(원)입니다. 그 달 청구서의 부가세 포함 금액 합계입니다.")
           @JsonProperty("finalized_total_amount")
           long finalizedTotalAmount,
       @Schema(description = "받은 금액(원)입니다. 결제를 마친 청구서의 청구액에서 취소한 금액을 뺀 합계입니다.")

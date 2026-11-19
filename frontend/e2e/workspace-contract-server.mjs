@@ -30,7 +30,7 @@ const shiftKstMonth = delta => {
   const shifted = new Date(Date.UTC(year, month - 1 + delta, 1));
   return `${shifted.getUTCFullYear()}-${String(shifted.getUTCMonth() + 1).padStart(2, "0")}`;
 };
-// 화면이 끝난 달을 지금 시각으로 가르므로 이번 달 기준으로 둔다. 이번 달은 확정 시각 전, 지난달은 도는 중, 전전달은 다 훑고 보류만 남은 달, 그 밖은 꺼짐이다.
+// 화면이 끝난 달을 지금 시각으로 가르므로 이번 달 기준으로 둔다. 이번 달은 발행 시각 전, 지난달은 도는 중, 전전달은 다 훑고 보류만 남은 달, 그 밖은 꺼짐이다.
 const AUTO_FINALIZE_BY_MONTH = {
   [shiftKstMonth(0)]: { auto_finalize_enabled: true, auto_finalize_at: `${shiftKstMonth(1)}-02T04:00:00+09:00`, auto_finalize_running: false },
   [shiftKstMonth(-1)]: { auto_finalize_enabled: true, auto_finalize_at: `${shiftKstMonth(0)}-02T04:00:00+09:00`, auto_finalize_running: true },
@@ -130,7 +130,7 @@ const server = createServer(async (request, response) => {
       if (path === "/v1/invoices") return send(response, 200, { invoices: [] });
     }
     if (["finalize-month", "finalize-month-partial"].includes(current.scenario)) {
-      const customers = Array.from({ length: 7 }, (_, index) => ({ customer_id: `14141414-1414-4414-8414-${String(index).padStart(12, "0")}`, customer_name: `확정할 고객 ${index}`, amount: 10_000, lines: [], unpriced_usages: [], negative_usages: [], auto_finalize_held: false }));
+      const customers = Array.from({ length: 7 }, (_, index) => ({ customer_id: `14141414-1414-4414-8414-${String(index).padStart(12, "0")}`, customer_name: `발행할 고객 ${index}`, amount: 10_000, lines: [], unpriced_usages: [], negative_usages: [], auto_finalize_held: false }));
       if (path === "/v1/customers/options") return send(response, 200, { items: [], total: 0, total_unfiltered: 0, page: 1, size: 200, summary: {} });
       if (path === "/v1/usage/months") return send(response, 200, { months: ["2026-09"] });
       if (path === "/v1/invoices/draft/search") return send(response, 200, {
@@ -157,7 +157,7 @@ const server = createServer(async (request, response) => {
       if (path === "/v1/invoices") {
         current.invoiceListCalls.push(Object.fromEntries(url.searchParams));
         const selectedCustomer = url.searchParams.get("customer_id");
-        const invoices = selectedCustomer === ZERO_CUSTOMER_ID ? [] : Array.from({ length: 101 }, (_, index) => ({ ...invoice, id: `13131313-1313-4313-8313-${String(index).padStart(12, "0")}`, customer_name: `다른 고객의 확정 청구 ${index}` }));
+        const invoices = selectedCustomer === ZERO_CUSTOMER_ID ? [] : Array.from({ length: 101 }, (_, index) => ({ ...invoice, id: `13131313-1313-4313-8313-${String(index).padStart(12, "0")}`, customer_name: `다른 고객의 발행 청구 ${index}` }));
         return send(response, 200, { invoices });
       }
     }
@@ -184,7 +184,7 @@ const server = createServer(async (request, response) => {
     if (current.scenario === "failed-payments") {
       const statuses = ["failed", "failed", "paid"];
       const invoiceId = index => `13131313-1313-4313-8313-${String(index).padStart(12, "0")}`;
-      if (path === "/v1/invoices") return send(response, 200, { invoices: statuses.map((_, index) => ({ ...invoice, id: invoiceId(index), customer_name: `다른 고객의 확정 청구 ${index}` })) });
+      if (path === "/v1/invoices") return send(response, 200, { invoices: statuses.map((_, index) => ({ ...invoice, id: invoiceId(index), customer_name: `다른 고객의 발행 청구 ${index}` })) });
       if (path === "/v1/invoice-payments") return send(response, 200, { invoice_payments: statuses.map((status, index) => ({ invoice_id: invoiceId(index), status, mode: "test", amount: 11_000, canceled_amount: 0, attempt_count: 1, last_failure_code: status === "failed" ? "CARD_DECLINED" : null, next_retry_at: null, completed_at: NOW })) });
     }
     if (path === "/v1/invoice-payments") {
