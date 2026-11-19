@@ -15,7 +15,7 @@ export function topCustomerAmounts(customers: readonly { customer_name: string; 
     .slice(0, limit);
 }
 
-/** 모든 고객의 청구 항목을 미터별로 더한다. 한도를 넘는 미터는 마지막 한 줄로 모은다. */
+/** 모든 고객의 청구 항목을 과금 미터별로 더한다. 한도를 넘는 과금 미터는 마지막 한 줄로 모은다. */
 export function metricAmounts(customers: readonly { lines: readonly { billable_metric_code: string | null; amount: number }[] }[], limit: number): RankedAmount[] {
   const amountByLabel = new Map<string, number>();
   for (const line of customers.flatMap(customer => customer.lines)) {
@@ -25,7 +25,7 @@ export function metricAmounts(customers: readonly { lines: readonly { billable_m
   const ranked = Array.from(amountByLabel, ([label, amount]) => ({ label, amount })).filter(row => row.amount > 0).sort(byAmountThenLabel);
   const rest = ranked.slice(limit);
   if (rest.length === 0) return ranked;
-  return [...ranked.slice(0, limit), { label: `그 밖의 미터 ${rest.length}개`, amount: rest.reduce((sum, row) => sum + row.amount, 0) }];
+  return [...ranked.slice(0, limit), { label: `그 밖의 과금 미터 ${rest.length}개`, amount: rest.reduce((sum, row) => sum + row.amount, 0) }];
 }
 
 /** 가장 큰 값을 1로 본 막대 길이. */

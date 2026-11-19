@@ -171,7 +171,7 @@ const server = createServer(async (request, response) => {
         { customer_id: PRICED_CUSTOMER_ID, customer_name: "단가 있는 고객", amount: 10_000, lines: [tokenLine(10_000)], unpriced_usages: [], negative_usages: [] },
         { customer_id: HELD_CUSTOMER_ID, customer_name: "단가 없는 사용량 고객", amount: 5_000, lines: [tokenLine(5_000)], unpriced_usages: [{ billable_metric_code: "api_calls", target_property: null, dimension_values: { model: "beta" }, quantity: 3 }], negative_usages: [] },
       ].map(customer => ({ ...customer, auto_finalize_held: autoFinalize.auto_finalize_enabled && customer.amount !== 0 && customer.unpriced_usages.length > 0 }));
-      // 서버처럼 미터 조건은 라인과 단가 없는 사용량만 거르고 보류 여부는 그대로 둔다.
+      // 서버처럼 과금 미터 조건은 라인과 단가 없는 사용량만 거르고 보류 여부는 그대로 둔다.
       const items = metricCode ? customers.map(customer => ({ ...customer, lines: customer.lines.filter(line => line.billable_metric_code === metricCode), unpriced_usages: customer.unpriced_usages.filter(usage => usage.billable_metric_code === metricCode) })) : customers;
       if (path === "/v1/customers/options") return send(response, 200, { items: [], total: 0, total_unfiltered: 0, page: 1, size: 200, summary: {} });
       if (path === "/v1/usage/months") return send(response, 200, { months: [-3, -2, -1, 0].map(shiftKstMonth) });

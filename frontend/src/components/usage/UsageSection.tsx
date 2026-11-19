@@ -49,8 +49,8 @@ export async function UsageSection({
   });
   if (emptyKind === "no_customers") return <EmptyState title="등록된 고객이 없어요" body="고객을 등록하면 이 달 사용량을 고객별로 집계해요." resetHref="/customers" resetLabel="고객 화면 열기" />;
   if (emptyKind === "no_matching_customers") return <EmptyState title="조건에 맞는 고객이 없어요" body="고객과 검색 조건을 바꿔 다시 조회하세요." resetHref={buildListHref("/usage", query, { page: 0, q: "", customerId: undefined, metricCode: undefined })} />;
-  if (emptyKind === "no_metric_lines") return <EmptyState title="선택한 미터의 집계 항목이 없어요" body={`${formatKoreanMonth(month)}에 선택한 미터로 집계된 사용량이 없어요.`} resetHref={buildListHref("/usage", query, { page: 0, metricCode: undefined })} resetLabel="미터 조건 지우기" />;
-  if (emptyKind === "no_metrics") return <EmptyState title="등록된 미터가 없어요" body={`${formatKoreanMonth(month)}에 집계할 미터가 없어요. 미터를 등록하면 집계 항목이 생겨요.`} resetHref="/billable-metrics" resetLabel="미터 화면 열기" />;
+  if (emptyKind === "no_metric_lines") return <EmptyState title="선택한 과금 미터의 집계 항목이 없어요" body={`${formatKoreanMonth(month)}에 선택한 과금 미터로 집계된 사용량이 없어요.`} resetHref={buildListHref("/usage", query, { page: 0, metricCode: undefined })} resetLabel="과금 미터 조건 지우기" />;
+  if (emptyKind === "no_metrics") return <EmptyState title="등록된 과금 미터가 없어요" body={`${formatKoreanMonth(month)}에 집계할 과금 미터가 없어요. 과금 미터를 등록하면 집계 항목이 생겨요.`} resetHref="/billable-metrics" resetLabel="과금 미터 화면 열기" />;
 
   if (groups.length === 0) {
     return (

@@ -30,7 +30,7 @@ test("lines without a meter are shown as base and minimum fees", () => {
 
 test("meters past the limit fold into one last row instead of disappearing", () => {
   const customers = [{ lines: ["a", "b", "c", "d"].map((code, index) => ({ billable_metric_code: code, amount: 40 - index * 10 })) }];
-  assert.deepEqual(metricAmounts(customers, 2), [{ label: "a", amount: 40 }, { label: "b", amount: 30 }, { label: "그 밖의 미터 2개", amount: 30 }]);
+  assert.deepEqual(metricAmounts(customers, 2), [{ label: "a", amount: 40 }, { label: "b", amount: 30 }, { label: "그 밖의 과금 미터 2개", amount: 30 }]);
 });
 
 test("a bar's length is its share of the largest value and an empty chart has no length", () => {

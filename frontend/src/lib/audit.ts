@@ -21,7 +21,7 @@ export const AUDIT_ACTIONS: Record<string, string> = {
   invoice_view_link_created: "청구서 조회 링크 발급", invoice_view_link_revoked: "청구서 조회 링크 폐기", invoice_viewed: "고객 청구서 조회",
   payment_retry_requested: "고객 결제 재시도 요청",
   customer_created: "고객 등록", customer_updated: "고객 정보 변경", customer_archived: "고객 보관", customer_restored: "고객 복원",
-  billable_metric_created: "미터 등록", billable_metric_updated: "미터 수정", billable_metric_archived: "미터 보관", billable_metric_restored: "미터 복원", price_rate_archived: "단가 버전 보관", price_rate_restored: "단가 버전 복원",
+  billable_metric_created: "과금 미터 등록", billable_metric_updated: "과금 미터 수정", billable_metric_archived: "과금 미터 보관", billable_metric_restored: "과금 미터 복원", price_rate_archived: "단가 버전 보관", price_rate_restored: "단가 버전 복원",
   price_plan_archived: "요금제 버전 보관", price_plan_restored: "요금제 버전 복원", payment_attempt_created: "결제 요청", payment_cancellation_created: "결제 취소",
   organization_member_scopes_updated: "사용자 업무 권한 변경", api_key_scopes_updated: "API 키 권한 변경", session_organization_updated: "조직 전환", user_account_consents_accepted: "약관 동의",
   user_account_password_updated: "비밀번호 변경", payment_setting_updated: "결제 설정 변경", toss_payments_credential_updated: "토스페이먼츠 키 저장", toss_payments_credential_archived: "토스페이먼츠 키 보관",

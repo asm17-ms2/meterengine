@@ -50,7 +50,7 @@ const REQUIRED_MESSAGES: Record<RequiredBillableMetricField, string> = {
 const DIMENSION_PROPERTIES_SEPARATOR = ",";
 
 const ADMIN_REQUIRED_MESSAGE = "전체 관리 권한이 없어 이 작업을 할 수 없어요. 대표관리자에게 권한을 요청하세요.";
-const METRIC_UNKNOWN_MESSAGE = "어느 미터인지 확인하지 못했어요. 목록을 새로고침한 뒤 다시 시도해 주세요.";
+const METRIC_UNKNOWN_MESSAGE = "어느 과금 미터인지 확인하지 못했어요. 목록을 새로고침한 뒤 다시 시도해 주세요.";
 
 function readField(formData: FormData, field: BillableMetricField): string {
   const raw = formData.get(field);
@@ -131,7 +131,7 @@ function toServerFieldErrors(
 
 function toFailureState(error: ApiError): BillableMetricFormState {
   if (error.code === "billable_metric_has_events") {
-    return { status: "failed", message: "수집된 이벤트가 있는 미터는 이름만 바꿀 수 있어요. 계산 기준을 바꾸려면 새 미터를 등록하세요." };
+    return { status: "failed", message: "수집된 이벤트가 있는 과금 미터는 이름만 바꿀 수 있어요. 계산 기준을 바꾸려면 새 과금 미터를 등록하세요." };
   }
   if (error.code === "billable_metric_already_exists") {
     return { status: "invalid", fieldErrors: { code: error.message } };
@@ -192,7 +192,7 @@ export async function updateBillableMetricAction(
   }
 
   const version = formData.get("version");
-  if (typeof version !== "string" || !/^\d+$/.test(version) || !Number.isSafeInteger(Number(version))) return { status: "failed", message: "미터 정보를 확인하지 못했어요. 목록을 새로고침한 뒤 다시 수정하세요." };
+  if (typeof version !== "string" || !/^\d+$/.test(version) || !Number.isSafeInteger(Number(version))) return { status: "failed", message: "과금 미터 정보를 확인하지 못했어요. 목록을 새로고침한 뒤 다시 수정하세요." };
 
   const result = await updateBillableMetric(code, {
     name: values.name,

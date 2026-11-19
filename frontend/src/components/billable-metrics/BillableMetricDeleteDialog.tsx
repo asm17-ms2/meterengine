@@ -52,13 +52,13 @@ export function BillableMetricDeleteDialog({
     return state.reason === "events" ? (
       <Notice
         title="보관할 수 없어요"
-        body={`수집된 이벤트가 있어 ${state.name} 미터를 보관하지 못했어요. 관련 이벤트와 적용 기간을 확인하세요.`}
+        body={`수집된 이벤트가 있어 ${state.name} 과금 미터를 보관하지 못했어요. 관련 이벤트와 적용 기간을 확인하세요.`}
         onClose={onClose}
       />
     ) : (
       <Notice
         title="보관할 수 없어요"
-        body={`등록된 단가가 있어 ${state.name} 미터를 보관하지 못했어요. 단가와 적용 기간을 확인하세요.`}
+        body={`등록된 단가가 있어 ${state.name} 과금 미터를 보관하지 못했어요. 단가와 적용 기간을 확인하세요.`}
         onClose={onClose}
       />
     );
@@ -67,8 +67,8 @@ export function BillableMetricDeleteDialog({
   if (state.status === "gone") {
     return (
       <Notice
-        title="미터를 찾을 수 없어요"
-        body={`${state.name} 미터를 찾지 못했어요. 목록을 새로고침한 뒤 확인하세요.`}
+        title="과금 미터를 찾을 수 없어요"
+        body={`${state.name} 과금 미터를 찾지 못했어요. 목록을 새로고침한 뒤 확인하세요.`}
         onClose={onClose}
       />
     );
@@ -78,7 +78,7 @@ export function BillableMetricDeleteDialog({
     <Modal
       open
       width={MODAL_WIDTH}
-      title="미터를 보관할까요?"
+      title="과금 미터를 보관할까요?"
       onCancel={isPending ? undefined : onClose}
       keyboard={!isPending}
       mask={{ closable: !isPending }}

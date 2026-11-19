@@ -60,8 +60,8 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
     const tenantB = await createTenant(request, operatorToken, `b-${suffix}`);
     secrets.add(tenantA.token); secrets.add(tenantB.token);
     for (const tenant of [tenantA, tenantB]) {
-      const created = await request.post(`${API_URL}/v1/billable-metrics`, { headers: tenant.headers, data: { code: activeCode, name: `현재 미터 ${suffix}`, event_type: activeCode, aggregation: "sum", target_property: "units", dimension_properties: [] } });
-      expect(created.status(), "조직별 동일 코드 미터 준비").toBe(201);
+      const created = await request.post(`${API_URL}/v1/billable-metrics`, { headers: tenant.headers, data: { code: activeCode, name: `현재 과금 미터 ${suffix}`, event_type: activeCode, aggregation: "sum", target_property: "units", dimension_properties: [] } });
+      expect(created.status(), "조직별 동일 코드 과금 미터 준비").toBe(201);
     }
     const customerName = `전용 가격 고객 ${suffix}`;
     const customer = await request.post(`${API_URL}/v1/customers`, { headers: tenantA.headers, data: { name: customerName } });
@@ -72,25 +72,25 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
       expect(rate.status(), "공통과 고객 전용 가격 준비").toBe(201);
     }
     for (const code of oldCodes) {
-      const created = await request.post(`${API_URL}/v1/billable-metrics`, { headers: tenantA.headers, data: { code, name: `보관 미터 ${code}`, event_type: code, aggregation: "sum", target_property: "units", dimension_properties: [] } });
-      expect(created.status(), "보관 미터 준비").toBe(201);
-      expect((await request.delete(`${API_URL}/v1/billable-metrics/${code}`, { headers: tenantA.headers })).status(), "미터 보관").toBe(204);
+      const created = await request.post(`${API_URL}/v1/billable-metrics`, { headers: tenantA.headers, data: { code, name: `보관 과금 미터 ${code}`, event_type: code, aggregation: "sum", target_property: "units", dimension_properties: [] } });
+      expect(created.status(), "보관 과금 미터 준비").toBe(201);
+      expect((await request.delete(`${API_URL}/v1/billable-metrics/${code}`, { headers: tenantA.headers })).status(), "과금 미터 보관").toBe(204);
     }
     await context.addCookies([{ name: "me_session", value: tenantA.token, url: FRONTEND_URL, httpOnly: true, sameSite: "Lax" }]);
     const preserved = { organization_id: tenantA.organizationId, month: currentMonth, metric_status: "archived", plan_status: "all", rate_status: "archived", metric: oldCodes[0], q: suffix, sort: "code", order: "asc" };
     await page.goto(`/pricing?${new URLSearchParams(preserved)}`);
-    const rail = page.getByRole("region", { name: "미터 선택", exact: true });
-    await expect(rail.getByRole("button", { name: /보관 미터/ })).toHaveCount(20);
-    await expect(rail.getByRole("button", { name: /등록 단가 \d+개/ }), "선택한 미터도 단가 개수를 보인다").toHaveCount(20);
+    const rail = page.getByRole("region", { name: "과금 미터 선택", exact: true });
+    await expect(rail.getByRole("button", { name: /보관 과금 미터/ })).toHaveCount(20);
+    await expect(rail.getByRole("button", { name: /등록 단가 \d+개/ }), "선택한 과금 미터도 단가 개수를 보인다").toHaveCount(20);
     await rail.getByRole("link", { name: "다음", exact: true }).click();
     await expectScope(page, { ...preserved, page: "1" });
-    await expect(rail.getByRole("button", { name: /보관 미터/ })).toHaveCount(1);
+    await expect(rail.getByRole("button", { name: /보관 과금 미터/ })).toHaveCount(1);
     const beforeFilterChange = page.url();
     await page.getByRole("combobox", { name: "표시 건수", exact: true }).selectOption("50");
     expect(page.url(), "페이지 크기는 다른 조건과 함께 적용").toBe(beforeFilterChange);
     await page.getByRole("button", { name: "조건 적용", exact: true }).click();
     await expectScope(page, { ...preserved, size: "50" });
-    await expect(rail.getByRole("button", { name: /보관 미터/ })).toHaveCount(21);
+    await expect(rail.getByRole("button", { name: /보관 과금 미터/ })).toHaveCount(21);
     const appliedAdvanced = page.getByRole("form", { name: "조회 조건", exact: true }).locator("details");
     await expect(appliedAdvanced).toHaveJSProperty("open", true);
     await expect(appliedAdvanced.locator("summary")).toContainText("적용 1개");
@@ -107,9 +107,9 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
     if (!downloadPath) throw new Error("검증 CSV 파일이 없습니다.");
     const csv = await readFile(downloadPath, "utf8");
     for (const code of oldCodes) expect(csv.includes(code), "보관 전체 CSV 포함").toBe(true);
-    expect(csv.includes(activeCode), "사용 중 미터 CSV 제외").toBe(false);
+    expect(csv.includes(activeCode), "사용 중 과금 미터 CSV 제외").toBe(false);
 
-    await test.step("작성 중인 검색, 고객, 미터, 금액과 기간을 한 번에 적용", async () => {
+    await test.step("작성 중인 검색, 고객, 과금 미터, 금액과 기간을 한 번에 적용", async () => {
       for (const route of ["usage", "billing", "invoices"]) {
         await page.goto(`/${route}?${new URLSearchParams({ organization_id: tenantA.organizationId, month: currentMonth })}`);
         const originalUrl = page.url();
@@ -140,7 +140,7 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
         const metricListId = await form.getByRole("combobox", { name: "과금 미터", exact: true }).getAttribute("aria-controls");
         expect(metricListId).not.toBeNull();
         const metricPopup = page.locator(".ant-select-dropdown").filter({ has: page.locator(`[id="${metricListId}"]`) });
-        await metricOptions.filter({ hasText: `현재 미터 ${suffix}` }).click();
+        await metricOptions.filter({ hasText: `현재 과금 미터 ${suffix}` }).click();
         await expect(metricPopup).toBeHidden();
         await chooseCustomer(page, "고객", customerName);
         expect(page.url(), "필터를 조합하는 동안 이동하지 않음").toBe(originalUrl);

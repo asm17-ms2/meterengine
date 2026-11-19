@@ -44,7 +44,7 @@ test("every pricing rail meter shows its rate count and the selected meter's for
 test("a meter shows both its name and code on the usage screen and on customer detail", () => {
   const usage = source("lib/api/usage.ts");
   const detail = source("app/(console)/customers/[id]/page.tsx");
-  assert.ok(usage.includes("const labelTooltip = [`미터명: ${billableMetricUsage.name}`, formatTargetPropertyTooltip("));
+  assert.ok(usage.includes("const labelTooltip = [`과금 미터명: ${billableMetricUsage.name}`, formatTargetPropertyTooltip("));
   assert.ok(detail.includes("metric: `${metric.name} (${metric.code})`"));
 });
 

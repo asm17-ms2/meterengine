@@ -9,7 +9,7 @@ import { readListQuery } from "@/lib/list-query";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
-export const metadata: Metadata = { title: "미터" };
+export const metadata: Metadata = { title: "과금 미터" };
 
 export default async function BillableMetricsPage({
   searchParams,
