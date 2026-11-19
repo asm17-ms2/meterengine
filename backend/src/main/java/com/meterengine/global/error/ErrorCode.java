@@ -8,7 +8,7 @@ public enum ErrorCode {
   // 400 Bad Request
   VALIDATION_ERROR(HttpStatus.BAD_REQUEST, "요청 값이 올바르지 않습니다"),
   MALFORMED_REQUEST_BODY(HttpStatus.BAD_REQUEST, "요청 본문을 JSON으로 읽을 수 없습니다"),
-  INVALID_BILLABLE_METRIC(HttpStatus.BAD_REQUEST, "미터 설정이 올바르지 않습니다."),
+  INVALID_BILLABLE_METRIC(HttpStatus.BAD_REQUEST, "과금 미터 설정이 올바르지 않습니다."),
   INVALID_PRICE_RATE(HttpStatus.BAD_REQUEST, "단가 설정이 올바르지 않습니다."),
   EVENT_TOO_OLD(HttpStatus.BAD_REQUEST, "받는 기간이 지난 이벤트입니다"),
   INVALID_TOSS_PAYMENTS_CREDENTIAL(HttpStatus.BAD_REQUEST, "올바르지 않은 토스페이먼츠 키입니다."),
@@ -36,7 +36,7 @@ public enum ErrorCode {
   // 404 Not Found
   CUSTOMER_NOT_FOUND(HttpStatus.NOT_FOUND, "고객을 찾을 수 없습니다"),
   EVENT_NOT_FOUND(HttpStatus.NOT_FOUND, "이벤트를 찾을 수 없습니다"),
-  BILLABLE_METRIC_NOT_FOUND(HttpStatus.NOT_FOUND, "미터를 찾을 수 없습니다"),
+  BILLABLE_METRIC_NOT_FOUND(HttpStatus.NOT_FOUND, "과금 미터를 찾을 수 없습니다"),
   PRICE_RATE_NOT_FOUND(HttpStatus.NOT_FOUND, "단가를 찾을 수 없습니다"),
   INVOICE_NOT_FOUND(HttpStatus.NOT_FOUND, "청구서를 찾을 수 없습니다"),
   INVOICE_VIEW_LINK_NOT_FOUND(HttpStatus.NOT_FOUND, "청구서 조회 링크를 찾을 수 없습니다"),
@@ -71,11 +71,11 @@ public enum ErrorCode {
       HttpStatus.CONFLICT, "현재 버전과 충돌하거나 보관 기간이 시작되어 복원할 수 없습니다. 새 버전을 등록하세요"),
   CUSTOMER_HAS_EVENTS(HttpStatus.CONFLICT, "수집된 이벤트가 있어 고객을 보관할 수 없습니다"),
   CUSTOMER_HAS_PAYMENT_ATTEMPTS(HttpStatus.CONFLICT, "결제 기록이 있어 고객을 보관할 수 없습니다"),
-  BILLABLE_METRIC_HAS_EVENTS(HttpStatus.CONFLICT, "이벤트가 수집된 미터는 name만 바꿀 수 있습니다."),
-  BILLABLE_METRIC_HAS_PRICE_RATE(HttpStatus.CONFLICT, "단가가 붙어 있어 미터를 보관할 수 없습니다"),
-  BILLABLE_METRIC_ALREADY_EXISTS(HttpStatus.CONFLICT, "같은 code의 미터가 이미 있습니다"),
+  BILLABLE_METRIC_HAS_EVENTS(HttpStatus.CONFLICT, "이벤트가 수집된 과금 미터는 name만 바꿀 수 있습니다."),
+  BILLABLE_METRIC_HAS_PRICE_RATE(HttpStatus.CONFLICT, "단가가 붙어 있어 과금 미터를 보관할 수 없습니다"),
+  BILLABLE_METRIC_ALREADY_EXISTS(HttpStatus.CONFLICT, "같은 code의 과금 미터가 이미 있습니다"),
   BILLABLE_METRIC_EVENT_TYPE_TARGET_PROPERTY_ALREADY_EXISTS(
-      HttpStatus.CONFLICT, "event_type과 target_property가 같은 미터가 이미 있습니다"),
+      HttpStatus.CONFLICT, "event_type과 target_property가 같은 과금 미터가 이미 있습니다"),
   INVOICE_ALREADY_PAID(HttpStatus.CONFLICT, "이미 결제했거나 결제 중인 청구서입니다"),
   PAYMENT_RESULT_UNCONFIRMED(HttpStatus.CONFLICT, "이전 결제 결과를 확인한 뒤 다시 요청해 주세요"),
   PAYMENT_RETRY_UNAVAILABLE(HttpStatus.CONFLICT, "현재 상태에서는 결제를 다시 시도할 수 없습니다"),

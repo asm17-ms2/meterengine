@@ -143,7 +143,7 @@ class DashboardIntegrationTest {
         organizationId);
     jdbcTemplate.update(
         "insert into billable_metric (organization_id, code, name, event_type, aggregation,"
-            + " target_property, archived_at) values (?, 'archived', '보관 미터', 'archived', 'sum',"
+            + " target_property, archived_at) values (?, 'archived', '보관 과금 미터', 'archived', 'sum',"
             + " 'quantity', now())",
         organizationId);
     jdbcTemplate.update(
@@ -169,7 +169,7 @@ class DashboardIntegrationTest {
         organizationId);
     jdbcTemplate.update(
         "insert into billable_metric (organization_id, code, name, event_type, aggregation,"
-            + " target_property) values (?, 'active', '활성 미터', 'active', 'sum', 'quantity')",
+            + " target_property) values (?, 'active', '활성 과금 미터', 'active', 'sum', 'quantity')",
         organizationId);
     jdbcTemplate.update(
         "update toss_payments_credential set archived_at = null where organization_id = ?",
@@ -203,7 +203,7 @@ class DashboardIntegrationTest {
     jdbcTemplate.update(
         "insert into billable_metric (organization_id, environment_id, environment_scope_id, code,"
             + " name, event_type, aggregation, target_property, archived_at) values (?, ?, ?,"
-            + " 'archived', '보관 미터', 'archived', 'sum', 'quantity', now())",
+            + " 'archived', '보관 과금 미터', 'archived', 'sum', 'quantity', now())",
         organizationId,
         environmentId,
         environmentId);
@@ -236,7 +236,7 @@ class DashboardIntegrationTest {
     jdbcTemplate.update(
         "insert into billable_metric (organization_id, environment_id, environment_scope_id, code,"
             + " name, event_type, aggregation, target_property) values (?, ?, ?, 'active', '활성"
-            + " 미터', 'active', 'sum', 'quantity')",
+            + " 과금 미터', 'active', 'sum', 'quantity')",
         organizationId,
         environmentId,
         environmentId);

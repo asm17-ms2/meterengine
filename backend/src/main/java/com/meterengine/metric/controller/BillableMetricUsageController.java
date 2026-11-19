@@ -42,14 +42,14 @@ public class BillableMetricUsageController {
       summary = "사용량 조회",
       description =
           """
-          미터마다 event_type이 같은 이벤트를 미터의 집계 함수로 계산합니다.
-          달 하나의 모든 미터와 고객을 한 번에 보려면 이 경로를 씁니다. 검색어, 여러 조건, 정렬, 페이지가 필요하면 GET /v1/usage/search를 씁니다.
+          과금 미터마다 event_type이 같은 이벤트를 과금 미터의 집계 함수로 계산합니다.
+          달 하나의 모든 과금 미터와 고객을 한 번에 보려면 이 경로를 씁니다. 검색어, 여러 조건, 정렬, 페이지가 필요하면 GET /v1/usage/search를 씁니다.
           기간은 KST 기준의 달입니다. occurred_at 2026-08-31T23:59:59+09:00 이벤트는 8월에,
           2026-09-01T00:00:00+09:00 이벤트는 9월에 듭니다.
           지금 이후 시각의 이벤트는 집계에 들지 않습니다.
           그 달 이벤트 가운데 집계 마감 시각(다음 달 2일 00:00 KST) 전에 서버가 받은(received_at) 것만 집계합니다. 마감 뒤에 받은 그 달 이벤트는 저장되지만 집계와 청구에 들지 않습니다.
-          그 달에 집계하는 미터는 미터 코드 오름차순으로, 고객은 이름 오름차순으로 모두 나오며, 이벤트가 없는 고객은 quantity가 0이고 dimension_usages가 빈 배열입니다. 페이지를 나누지 않습니다.
-          dimension_usages는 미터의 dimension_properties마다 이벤트 properties에서 뽑은 구분 값별로 수량을 나눈 것입니다.
+          그 달에 집계하는 과금 미터는 과금 미터 코드 오름차순으로, 고객은 이름 오름차순으로 모두 나오며, 이벤트가 없는 고객은 quantity가 0이고 dimension_usages가 빈 배열입니다. 페이지를 나누지 않습니다.
+          dimension_usages는 과금 미터의 dimension_properties마다 이벤트 properties에서 뽑은 구분 값별로 수량을 나눈 것입니다.
           고객 전체 수량은 원본 이벤트를 따로 집계하므로 구분 값별 수량의 합과 다를 수 있습니다. 청구는 구분 값별 정확한 수량에 단가를 곱합니다. rounding_mode가 none이면 raw_quantity_numerator / (raw_quantity_denominator * unit_size)를, 그 밖의 끝수 처리면 처리한 quantity를 씁니다.
           raw_quantity는 단위 변환 전 집계량, quantity는 unit_size 나눗셈과 끝수 처리를 적용한 결과입니다.
           count는 속성과 관계없이 전체 이벤트를 셉니다. count_distinct는 숫자, 문자열, 불리언 고유값만 세고 나머지는 뺍니다.
@@ -59,7 +59,7 @@ public class BillableMetricUsageController {
   @ApiResponses({
     @ApiResponse(
         responseCode = "200",
-        description = "미터별, 고객별 사용량입니다. 그 달에 집계하는 미터가 없으면 billable_metric_usages가 빈 배열입니다."),
+        description = "과금 미터별, 고객별 사용량입니다. 그 달에 집계하는 과금 미터가 없으면 billable_metric_usages가 빈 배열입니다."),
     @ApiResponse(
         responseCode = "400",
         content =

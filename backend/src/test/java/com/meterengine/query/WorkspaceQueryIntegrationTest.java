@@ -113,19 +113,20 @@ class WorkspaceQueryIntegrationTest {
 
   @Test
   void 미터와_가격_검색은_이름과_페이지_전체의_누락_단가_수를_반환한다() {
-    metric("alpha", "가 미터", "type-alpha");
-    metric("beta", "나 미터", "type-beta");
-    metric("gamma", "다 미터", "type-gamma");
+    metric("alpha", "가 과금 미터", "type-alpha");
+    metric("beta", "나 과금 미터", "type-beta");
+    metric("gamma", "다 과금 미터", "type-gamma");
     rate("alpha", "2026-01", 1, null);
     rate("gamma", "2026-01", 2, null);
-    JsonNode metrics = data(get("/v1/billable-metrics/search?q=미터&size=1&page=2&sort=name"));
+    JsonNode metrics = data(get("/v1/billable-metrics/search?q=과금 미터&size=1&page=2&sort=name"));
     assertThat(metrics.get("total").asInt()).isEqualTo(3);
     assertThat(metrics.get("items").get(0).get("code").asString()).isEqualTo("beta");
     JsonNode prices =
         data(get("/v1/billable-metric-prices/search?month=2026-08&size=1&sort=rate_count"));
     assertThat(prices.get("total").asInt()).isEqualTo(3);
     assertThat(prices.get("summary").get("no_rate_count").asInt()).isEqualTo(1);
-    assertThat(prices.get("items").get(0).get("billable_metric_name").asString()).isEqualTo("나 미터");
+    assertThat(prices.get("items").get(0).get("billable_metric_name").asString())
+        .isEqualTo("나 과금 미터");
     assertThat(prices.get("items").get(0).get("rate_count").asInt()).isZero();
     assertThat(
             data(get("/v1/billable-metrics/options?q=가"))
@@ -138,12 +139,12 @@ class WorkspaceQueryIntegrationTest {
 
   @Test
   void 가격_검색은_그_달에_청구하는_미터만_목록과_누락_단가_수에_넣는다() {
-    metric("restored", "복원 미터", "type-restored");
+    metric("restored", "복원 과금 미터", "type-restored");
     jdbc.update(
         "UPDATE billable_metric SET active_from='2026-11' WHERE organization_id=? AND code='restored'",
         organizationId);
     period("restored", "0001-01", "2026-10");
-    metric("retired", "보관 미터", "type-retired");
+    metric("retired", "보관 과금 미터", "type-retired");
     jdbc.update(
         "UPDATE billable_metric SET archived_at=now(), inactive_from='2026-11' WHERE organization_id=? AND code='retired'",
         organizationId);
@@ -196,8 +197,8 @@ class WorkspaceQueryIntegrationTest {
   void 사용량은_고객별로_페이지를_나누고_모든_미터를_함께_반환한다() {
     UUID first = customer("가 고객", "first", false);
     UUID second = customer("나 고객", "second", false);
-    metric("alpha", "첫 미터", "type-alpha");
-    metric("beta", "둘째 미터", "type-beta");
+    metric("alpha", "첫 과금 미터", "type-alpha");
+    metric("beta", "둘째 과금 미터", "type-beta");
     event(first, "type-alpha", 10);
     event(first, "type-beta", 20);
     event(second, "type-alpha", 30);
@@ -265,7 +266,7 @@ class WorkspaceQueryIntegrationTest {
   void 청구_예정액_요약은_페이지와_무관하고_월_전체_확정_범위를_표시한다() {
     UUID first = customer("가 고객", "first", false);
     UUID second = customer("나 고객", "second", false);
-    metric("alpha", "첫 미터", "type-alpha");
+    metric("alpha", "첫 과금 미터", "type-alpha");
     rate("alpha", "2026-01", 10, null);
     event(first, "type-alpha", 10);
     event(second, "type-alpha", 20);

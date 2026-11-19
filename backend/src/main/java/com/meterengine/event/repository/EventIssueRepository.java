@@ -167,12 +167,12 @@ public class EventIssueRepository {
     String reason = rs.getString("reason");
     String hint =
         switch (reason) {
-          case "unknown_event_type" -> "이벤트 유형에 맞는 미터를 등록하거나 전송 유형을 확인하세요.";
-          case "invalid_target_property" -> "미터의 수량 속성과 전송 값의 형식을 확인하세요";
+          case "unknown_event_type" -> "이벤트 유형에 맞는 과금 미터를 등록하거나 전송 유형을 확인하세요.";
+          case "invalid_target_property" -> "과금 미터의 수량 속성과 전송 값의 형식을 확인하세요";
           default ->
               rs.getBoolean("finalized")
                   ? "청구서를 확정한 달이라 단가를 등록해도 이 달 청구에는 반영되지 않습니다"
-                  : "고객, 미터와 차원에 적용되는 단가를 등록하세요";
+                  : "고객, 과금 미터와 차원에 적용되는 단가를 등록하세요";
         };
     return new EventIssueResponse(
         rs.getString("transaction_id"),

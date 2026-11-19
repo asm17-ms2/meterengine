@@ -93,7 +93,8 @@ class ConditionalCreationIntegrationTest {
     assertThat(live).hasStatus(201);
     assertThat(data(legacy).get("id").asString()).isNotEqualTo(data(test).get("id").asString());
     assertThat(data(test).get("id").asString()).isNotEqualTo(data(live).get("id").asString());
-    assertThat(create("/v1/billable-metrics", key, metricBody("metric-a", "첫 미터"))).hasStatus(201);
+    assertThat(create("/v1/billable-metrics", key, metricBody("metric-a", "첫 과금 미터")))
+        .hasStatus(201);
     UUID otherOrganization = UUID.randomUUID();
     String otherAuthorization = TestCredentials.issueApiKey(jdbc, otherOrganization);
     MvcTestResult other =
@@ -116,8 +117,8 @@ class ConditionalCreationIntegrationTest {
   @Test
   void 미터_생성_재요청은_첫_응답을_유지하고_다른_본문은_409를_반환한다() {
     String key = UUID.randomUUID().toString();
-    MvcTestResult first = create("/v1/billable-metrics", key, metricBody("metric-a", "첫 미터"));
-    MvcTestResult replay = create("/v1/billable-metrics", key, metricBody("metric-a", "첫 미터"));
+    MvcTestResult first = create("/v1/billable-metrics", key, metricBody("metric-a", "첫 과금 미터"));
+    MvcTestResult replay = create("/v1/billable-metrics", key, metricBody("metric-a", "첫 과금 미터"));
     assertThat(first).hasStatus(201);
     assertThat(replay).hasStatus(201);
     assertThat(data(first)).isEqualTo(data(replay));

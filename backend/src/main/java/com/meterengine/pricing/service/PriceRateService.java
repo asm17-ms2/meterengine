@@ -313,7 +313,7 @@ public class PriceRateService {
 
   private void validate(Map<String, Object> values, List<String> dimensions) {
     if (values == null || !values.keySet().equals(new HashSet<>(dimensions)))
-      throw invalid("dimension_values", "키 집합이 미터의 dimension_properties와 같아야 합니다");
+      throw invalid("dimension_values", "키 집합이 과금 미터의 dimension_properties와 같아야 합니다");
     if (values.values().stream()
         .anyMatch(
             value ->
