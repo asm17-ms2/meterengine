@@ -149,7 +149,7 @@ MeterEngine이 이 웹훅을 만든 시각입니다. 시간대 표시가 붙은 
 </ResponseField>
 
 <ResponseField name="unmatched_type" type="object">
-그 달에 맞는 미터가 없는 `type`으로 들어온 이벤트입니다.
+그 달에 맞는 과금 미터가 없는 `type`으로 들어온 이벤트입니다.
 <Expandable title="필드">
 <ResponseField name="event_count" type="integer">그 이벤트 수</ResponseField>
 <ResponseField name="types" type="object[]">`type`(이벤트 유형 값)과 `event_count`의 목록. 이벤트 수가 많은 것부터 최대 20개를 싣고, 위의 `event_count`는 목록에 없는 `type`까지 합친 수입니다</ResponseField>
@@ -157,10 +157,10 @@ MeterEngine이 이 웹훅을 만든 시각입니다. 시간대 표시가 붙은 
 </ResponseField>
 
 <ResponseField name="non_numeric_value" type="object">
-미터가 집계하는 속성의 값이 없거나 숫자가 아닌 이벤트입니다. `count` 미터는 세지 않고, `count_distinct` 미터는 값이 없거나 숫자, 문자열, 불리언이 아닐 때만 셉니다. 판정은 미터마다 하므로 한 이벤트가 여러 미터에 걸리면 `billable_metrics`에는 미터마다 세고 `event_count`에는 한 번만 셉니다. `negative_quantity`도 같습니다.
+과금 미터가 집계하는 속성의 값이 없거나 숫자가 아닌 이벤트입니다. `count` 과금 미터는 세지 않고, `count_distinct` 과금 미터는 값이 없거나 숫자, 문자열, 불리언이 아닐 때만 셉니다. 판정은 과금 미터마다 하므로 한 이벤트가 여러 과금 미터에 걸리면 `billable_metrics`에는 과금 미터마다 세고 `event_count`에는 한 번만 셉니다. `negative_quantity`도 같습니다.
 <Expandable title="필드">
 <ResponseField name="event_count" type="integer">그 이벤트 수</ResponseField>
-<ResponseField name="billable_metrics" type="object[]">`billable_metric_code`(미터 코드)와 `event_count`의 목록</ResponseField>
+<ResponseField name="billable_metrics" type="object[]">`billable_metric_code`(과금 미터 코드)와 `event_count`의 목록</ResponseField>
 </Expandable>
 </ResponseField>
 
@@ -174,7 +174,7 @@ MeterEngine이 이 웹훅을 만든 시각입니다. 시간대 표시가 붙은 
 </ResponseField>
 
 <ResponseField name="negative_quantity" type="object">
-집계 속성 값이 음수인 이벤트입니다(`count`, `count_distinct` 미터는 세지 않습니다). 거절되거나 집계에서 빠지지 않고 그대로 집계됩니다.
+집계 속성 값이 음수인 이벤트입니다(`count`, `count_distinct` 과금 미터는 세지 않습니다). 거절되거나 집계에서 빠지지 않고 그대로 집계됩니다.
 <Expandable title="필드">
 <ResponseField name="event_count" type="integer">그 이벤트 수</ResponseField>
 <ResponseField name="billable_metrics" type="object[]">`billable_metric_code`와 `event_count`의 목록</ResponseField>
@@ -189,8 +189,8 @@ MeterEngine이 이 웹훅을 만든 시각입니다. 시간대 표시가 붙은 
 사용량은 있지만 단가가 없어 금액에서 빠진 구분 값입니다.
 <Expandable title="항목 필드">
 <ResponseField name="customer_id" type="string (UUID)">고객 id</ResponseField>
-<ResponseField name="billable_metric_code" type="string">미터 코드</ResponseField>
-<ResponseField name="target_property" type="string">미터가 집계하는 속성 이름</ResponseField>
+<ResponseField name="billable_metric_code" type="string">과금 미터 코드</ResponseField>
+<ResponseField name="target_property" type="string">과금 미터가 집계하는 속성 이름</ResponseField>
 <ResponseField name="dimension_values" type="object">구분 값</ResponseField>
 <ResponseField name="quantity" type="number">그 구분 값의 집계량</ResponseField>
 </Expandable>
