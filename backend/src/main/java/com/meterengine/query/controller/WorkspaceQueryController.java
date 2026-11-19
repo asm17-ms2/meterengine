@@ -539,11 +539,11 @@ public class WorkspaceQueryController {
   @Operation(
       summary = "청구서와 결제 상태 검색",
       description =
-          "검색어와 여러 조건으로 발행 청구서를 거르고 정렬해 한 페이지씩 돌려줍니다. 항목마다 청구서(invoice)와 결제"
+          "검색어와 여러 조건으로 발행한 청구서를 거르고 정렬해 한 페이지씩 돌려줍니다. 항목마다 청구서(invoice)와 결제"
               + " 상태(payment)를 담습니다. customer_id와 month만으로 거르고 전부 받으려면 GET /v1/invoices가"
               + " 간단합니다. 정렬 방향은 생략하면 desc입니다. from과 to는 한쪽만 줘도 되고, month와 함께 주면 둘 다"
               + " 만족하는 청구서만 나옵니다. 이벤트 목록 조회와 내보내기는 from과 to를 함께 보내야 합니다."
-              + " total_unfiltered는 현재 업무 환경의 전체 발행 청구서 수입니다. summary의 금액과 결제 상태별 건수는"
+              + " total_unfiltered는 현재 업무 환경에서 발행한 청구서 전체 수입니다. summary의 금액과 결제 상태별 건수는"
               + " 페이지와 관계없이 조건에 맞는 청구서 전체의 값이고, pending인 청구서가 있으면 outstanding_amount는"
               + " null입니다. summary는 mode, invoice_count, supply_amount, tax_amount, total_amount,"
               + " canceled_amount, has_pending, outstanding_amount, status_counts(결제 상태별 건수)입니다.")
@@ -814,8 +814,8 @@ public class WorkspaceQueryController {
   @GetMapping("/v1/invoices/months")
   @ReadAccess
   @Operation(
-      summary = "발행 청구서가 있는 월 목록 조회",
-      description = "현재 업무 환경에 발행 청구서가 있는 청구 달(yyyy-MM)을 중복 없이 최신 달부터 돌려줍니다.")
+      summary = "발행한 청구서가 있는 월 목록 조회",
+      description = "현재 업무 환경에 발행한 청구서가 있는 청구 달(yyyy-MM)을 중복 없이 최신 달부터 돌려줍니다.")
   @ApiResponses({
     @ApiResponse(responseCode = "200", description = MONTHS),
     @ApiResponse(

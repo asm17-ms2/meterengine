@@ -60,7 +60,7 @@
 
 | 사실 | 정본 페이지 | 다른 페이지에서 쓰는 한 줄 요약 | 주로 쓰는 페이지 | 확인 필요 |
 | --- | --- | --- | --- | --- |
-| 금액 용어: 청구 예정액(세전 공급가액, 조회할 때마다 계산), 발행 청구액(supply_amount, tax_amount, total_amount), 수납액(부가세 포함) | /concepts/amounts | 청구 예정액은 부가세를 뺀 공급가액이고, 결제는 부가세 포함 발행 금액으로 합니다. | /quickstart, /integration/verify-usage, /billing/finalize-invoices, /payments/charging | 없음 |
+| 금액 용어: 청구 예정액(세전 공급가액, 조회할 때마다 계산), 청구액(supply_amount, tax_amount, total_amount), 수납액(부가세 포함) | /concepts/amounts | 청구 예정액은 부가세를 뺀 공급가액이고, 결제는 부가세 포함 청구서 금액으로 합니다. | /quickstart, /integration/verify-usage, /billing/finalize-invoices, /payments/charging | 없음 |
 | 금액은 청구 항목마다 10원 미만을 버린다 | /concepts/amounts | 금액은 청구 항목마다 10원 미만을 버립니다. | /quickstart, /pricing/price-models, /pricing/price-plans, /pricing/calculation-example | 없음 |
 | 세액은 공급가액의 10%다 | /concepts/amounts | 세액은 공급가액의 10%입니다. | /pricing/calculation-example, /billing/finalize-invoices | 없음 |
 | 계산 예시의 숫자(구간 단가, 최소 과금, 기본료) | /pricing/calculation-example | 숫자로 따라가는 예시는 금액 계산 따라가기 페이지에 있습니다. | /concepts/amounts, /pricing/price-models, /pricing/price-plans | 없음 |
@@ -106,7 +106,7 @@
 | 토스페이먼츠 키는 업무 환경마다 따로 저장하고 콘솔 로그인으로만 저장한다 | /payments/toss-setup | 토스페이먼츠 키는 업무 환경마다 콘솔에서 저장합니다. | /payments/overview, /payments/test-and-live | API 참조에서 숨기는 범위 |
 | 청구서 조회 링크의 token은 발급 응답에만 있고 주소는 직접 조합해 전달한다 | /payments/invoice-links | 청구서 링크는 발급 응답의 token으로 주소를 만들어 직접 전달합니다. | /payments/overview, /billing/after-finalization, /payments/retries | 공개 청구서 조회 API와 카드 등록 링크 권한 |
 | 카드 등록 링크의 token, 24시간, 한 번, MeterEngine 화면에서만 카드 입력 | /payments/card-registration | 카드 등록은 MeterEngine이 제공하는 링크 화면에서만 합니다. | /payments/overview, /payments/charging | 공개 청구서 조회 API와 카드 등록 링크 권한 |
-| 결제 취소해도 발행 금액은 그대로다 | /payments/cancellations | 결제를 취소해도 청구서 금액은 바뀌지 않습니다. | /billing/after-finalization | 없음 |
+| 결제 취소해도 청구서 금액은 그대로다 | /payments/cancellations | 결제를 취소해도 청구서 금액은 바뀌지 않습니다. | /billing/after-finalization | 없음 |
 | 수납 상태 값(not_required ~ canceled)과 콘솔 표기 | /payments/reconciliation | 수납 상태는 지금 업무 환경의 가장 늦은 결제 시도로 정합니다. 값 전체는 [수납 상태와 대사 확인](/payments/reconciliation)에 있습니다. | /payments/charging, /payments/cancellations, /reference/glossary | |
 
 ## [9] 웹훅

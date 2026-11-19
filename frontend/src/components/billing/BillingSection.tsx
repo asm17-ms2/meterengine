@@ -59,7 +59,7 @@ export async function BillingSection({
 
   if (result.data.customers.length === 0) {
     if (result.data.summary && (result.data.total ?? 0) > 0) return <><EmptyState title="이 페이지에 청구 예정 내역이 없어요" body={`현재 조건에 맞는 고객은 ${result.data.total}명이에요. 첫 페이지에서 다시 확인하세요.`} resetHref={buildListHref("/billing", query, { page: 0 })} resetLabel="첫 페이지 보기" /><ListPagination query={query} capabilities={CAPABILITIES.previewDraftInvoice} total={result.data.total} /></>;
-    if (isFinalized) return <EmptyState title="이 달의 청구서는 발행됐어요" body={query.customerId ? "선택한 고객과 조건에 표시할 청구 예정 내역이 없어요. '청구서 보기'에서 이 고객의 발행 청구서를 확인하세요." : "현재 조건에 표시할 청구 예정 내역이 없어요. 발행 청구서에서 청구 결과를 확인하세요."} resetHref={buildListHref("/invoices", query, { q: "", metricCode: undefined, minAmount: undefined, maxAmount: undefined, sort: undefined, order: undefined, page: 0 })} resetLabel="청구서 보기" />;
+    if (isFinalized) return <EmptyState title="이 달의 청구서는 발행됐어요" body={query.customerId ? "선택한 고객과 조건에 표시할 청구 예정 내역이 없어요. '청구서 보기'에서 이 고객의 발행한 청구서를 확인하세요." : "현재 조건에 표시할 청구 예정 내역이 없어요. 청구서 화면에서 청구 결과를 확인하세요."} resetHref={buildListHref("/invoices", query, { q: "", metricCode: undefined, minAmount: undefined, maxAmount: undefined, sort: undefined, order: undefined, page: 0 })} resetLabel="청구서 보기" />;
     if (result.data.summary && result.data.summary.month_customer_count > 0) return <EmptyState title="조건에 맞는 청구 예정 내역이 없어요" body={`검색 조건을 바꿔 확인하세요. 월 전체 발행 대상은 ${result.data.summary.month_billable_customer_count}명이에요.`} resetHref={buildListHref("/billing", query, { page: 0, q: "", customerId: undefined, metricCode: undefined, minAmount: undefined, maxAmount: undefined })} />;
     const finalized = await invoices;
     if (!finalized.ok) {
@@ -69,7 +69,7 @@ export async function BillingSection({
       return (
         <EmptyState
           title={query.customerId ? "선택한 고객의 청구서가 발행됐어요" : "이 달은 모두 발행됐어요"}
-          body={`${formatKoreanMonth(month)}에 ${query.customerId ? "선택한 고객의 " : ""}발행 청구서가 ${finalized.data.invoices.length}건 있고, 현재 조건에 발행 전인 고객은 없어요.`}
+          body={`${formatKoreanMonth(month)}에 ${query.customerId ? "선택한 고객의 " : ""}발행한 청구서가 ${finalized.data.invoices.length}건 있고, 현재 조건에 발행 전인 고객은 없어요.`}
           resetHref={`/invoices?month=${month}`}
           resetLabel="청구서 보기"
         />
@@ -78,7 +78,7 @@ export async function BillingSection({
     return (
       <EmptyState
         title={query.customerId ? "선택한 고객의 청구 예정 내역이 없어요" : "등록된 고객이 없어요"}
-        body={query.customerId ? "다른 고객을 선택하거나 발행 청구서에서 청구 내역을 확인하세요." : "고객을 등록하면 이 달의 청구 예정액을 확인할 수 있어요."}
+        body={query.customerId ? "다른 고객을 선택하거나 청구서 화면에서 청구 내역을 확인하세요." : "고객을 등록하면 이 달의 청구 예정액을 확인할 수 있어요."}
         resetHref={query.customerId ? `/billing?month=${month}` : "/customers"}
         resetLabel={query.customerId ? undefined : "고객 화면 열기"}
       />
