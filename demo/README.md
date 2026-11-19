@@ -32,7 +32,7 @@ cd backend && ./gradlew bootRun
 
 - IntelliJ에서 `MeterEngineApplication`을 실행해도 된다.
 - spring-boot-docker-compose가 postgres 컨테이너를 기동하고 Flyway가 시드를 적용한다.
-- 고객과 미터는 로컬 시드(`backend/src/main/resources/db/local/R__local_seed.sql`)가 데모 도입사의 테스트 환경에 넣는다. 따로 주입할 것이 없다.
+- 고객과 과금 미터는 로컬 시드(`backend/src/main/resources/db/local/R__local_seed.sql`)가 데모 도입사의 테스트 환경에 넣는다. 따로 주입할 것이 없다.
 - `event` 테이블은 append-only 트리거가 걸려 있어 DELETE가 되지 않는다. 잘못 보낸 데이터는 DB를 통째로 지워야 사라진다.
 
 ```bash
@@ -96,7 +96,7 @@ python3 demo/meterdemo.py verify (--log <JSONL> | --csv <CSV>) [옵션]
 
 - 형식이 틀리면 아무것도 보내지 않고 끝난다.
 - 로컬 키는 `backend/src/main/resources/db/local/R__local_credentials.sql`에 있다. 배포 환경 키는 운영자 세션으로 발급한다(스코프 `ingest`, `read`).
-  - 로컬 test 키는 데모 도입사의 테스트 환경, live 키는 실제 환경 키다. 로컬 시드의 고객과 미터는 테스트 환경에만 있어 키를 주지 않으면 test 키를 쓴다. 키와 다른 환경을 지정하면 403 `environment_mismatch`다.
+  - 로컬 test 키는 데모 도입사의 테스트 환경, live 키는 실제 환경 키다. 로컬 시드의 고객과 과금 미터는 테스트 환경에만 있어 키를 주지 않으면 test 키를 쓴다. 키와 다른 환경을 지정하면 403 `environment_mismatch`다.
 - 시작할 때 `GET /v1/organization`으로 키의 조직을 확인한다. 이때나 `send` 전송 중에 401이나 403을 받으면 code를 보여 주고 멈춘다. 종료 코드는 2다.
 - 화면과 기록에는 키를 `me_live_****abcd`처럼 가려서 보인다. 실행 기록 머리말에는 키 대신 조직 id(`organization_id`)를 남긴다. 옛 기록의 조직 값은 읽지 않는다.
 
@@ -123,7 +123,7 @@ python3 demo/meterdemo.py verify (--log <JSONL> | --csv <CSV>) [옵션]
 
 ### verify
 
-- Python Decimal로 고객별 사용량과 청구 예정액을 독립 계산해 `GET /v1/usage`, `GET /v1/invoices/draft`와 비교한다. 미터, 월별 공통 단가, 고객별 단가와 요금제는 별도 조회 API에서 받는다.
+- Python Decimal로 고객별 사용량과 청구 예정액을 독립 계산해 `GET /v1/usage`, `GET /v1/invoices/draft`와 비교한다. 과금 미터, 월별 공통 단가, 고객별 단가와 요금제는 별도 조회 API에서 받는다.
 - KST 월별로 `sum`, `count`, `count_distinct`, `min`, `max`, `avg`, `first`, `last`, `median`, `percentile`을 계산하고 `unit_size`로 나눈 뒤 반올림한다. COUNT는 전체 이벤트, COUNT DISTINCT는 숫자, 문자열, 불리언의 고유 값을 센다. 나머지는 숫자만 집계한다. 중복, 거절과 청구 계산 시각 이후 이벤트는 제외하고, 원본 집계값이 음수인 조합은 과금하지 않는다.
 - 그 달의 집계 마감 시각(다음 달 2일 00:00 KST) 이후에 받은 이벤트는 서버처럼 제외한다. 로그 소스는 `sent_at`을 받은 시각으로 보고, CSV 소스는 받은 시각을 몰라 제외하지 않는다.
 - `per_unit`, `graduated`, `volume`을 계산하며 각 과금 라인의 10원 미만을 절사한다. 고객 단가가 공통 단가보다 우선하고, 양수 사용량이 있으면 최소 과금을 적용한 뒤 기본료를 더한다. 단가 없는 조합은 별도로 표시한다.
@@ -152,7 +152,7 @@ python3 demo/meterdemo.py verify (--log <JSONL> | --csv <CSV>) [옵션]
 |---|---|
 | `transaction_id` | 멱등 키. 같은 값 재전송은 중복 처리 |
 | `customer_id` | 고객 UUID. 시드가 발급한 `customer.id` |
-| `event_type` | 미터의 `event_type`. 부트 시드에 `chat_completion`, `llm_request`, `network_traffic`이 있다 |
+| `event_type` | 과금 미터의 `event_type`. 부트 시드에 `chat_completion`, `llm_request`, `network_traffic`이 있다 |
 | `timestamp` | RFC 3339, 오프셋 포함. `occurred_at`이 된다 |
 | `properties` | JSON 객체 문자열. CSV 셀 안에서는 큰따옴표를 두 번 쓴다 |
 | `note` | 선택. 행 설명이고 콘솔 출력에만 쓴다. 서버로 보내지 않는다 |
@@ -271,14 +271,14 @@ python3 demo/otel_bridge.py status      # 상태와 누적 건수
 
 | OTel 이벤트 | event_type | 집계 |
 |---|---|---|
-| `api_request` | `llm_request` | 된다. 아래 "단가"의 미터에 잡힌다 |
-| `tool_result` | `tool_call` | 안 된다. 미터가 없어 저장만 된다 |
+| `api_request` | `llm_request` | 된다. 아래 "단가"의 과금 미터에 잡힌다 |
+| `tool_result` | `tool_call` | 안 된다. 과금 미터가 없어 저장만 된다 |
 | `api_error` | `llm_error` | 안 된다 |
 | `api_refusal` | `llm_refusal` | 안 된다 |
 
-- 미터가 없는 이벤트도 저장은 된다. 나중에 미터를 만들면 이미 쌓인 이벤트가 그때부터 함께 집계된다.
+- 과금 미터가 없는 이벤트도 저장은 된다. 나중에 과금 미터를 만들면 이미 쌓인 이벤트가 그때부터 함께 집계된다.
 - 키의 점은 언더스코어로 바꾼다 (`agent.name` -> `agent_name`).
-- 수치로 쓸 키는 JSON number로 못박아 보낸다. 같은 이름이라도 이벤트마다 OTLP 타입이 달라서(`duration_ms`가 `api_request`에서는 정수, `tool_result`에서는 문자열) 그대로 두면 미터가 조용히 집계에서 뺀다.
+- 수치로 쓸 키는 JSON number로 못박아 보낸다. 같은 이름이라도 이벤트마다 OTLP 타입이 달라서(`duration_ms`가 `api_request`에서는 정수, `tool_result`에서는 문자열) 그대로 두면 과금 미터가 조용히 집계에서 뺀다.
 - 보내지 않는 것: `user.email`, `user.id`, `user.account_uuid`, `user.account_id`, `organization.id`.
   - 프롬프트와 응답 본문(`user_prompt`, `assistant_response`)도 보내지 않는다.
 
@@ -297,13 +297,13 @@ python3 demo/otel_bridge.py status      # 상태와 누적 건수
 ### 단가
 
 - 단가는 `backend/src/main/resources/db/local/R__local_seed.sql`이 정한다.
-- `llm_request` 이벤트 하나가 `input-tokens`, `output-tokens`, `cache-creation-tokens`, `cache-read-tokens` 미터에 함께 잡힌다.
+- `llm_request` 이벤트 하나가 `input-tokens`, `output-tokens`, `cache-creation-tokens`, `cache-read-tokens` 과금 미터에 함께 잡힌다.
 - `input-tokens`, `output-tokens`는 차원 키가 `model`이라 모델마다 단가가 다르다.
   - Claude 공시가(달러, 100만 토큰당)를 1달러 1,590원으로 환산한 토큰당 원 단가다. 1,590원은 Claude 결제 창의 부가세 포함 원화 가격을 1.1로 나눈 환율이다. 인보이스가 세액 10%를 따로 더하기 때문이다.
   - Claude Haiku 5.5는 프롬프트가 100K 토큰을 넘으면 가격이 오르지만, 토큰당 단가 하나로는 나타낼 수 없어 기본 구간 가격만 넣었다.
   - 시드에는 배포 서버 이벤트와 샘플 CSV에 나온 모델의 단가가 있다. `model` 값이 글자까지 같아야 하고, 목록에 없는 모델은 청구 예정액에서 빠진다.
 - `cache-creation-tokens`, `cache-read-tokens`는 모델과 상관없이 단가 한 행이고, 예전 기준(Claude Opus 5 공시가, 1달러 1,400원)을 그대로 둔다.
-  - 캐시 쓰기 가격은 5분 캐시와 1시간 캐시가 다른데 OTel의 `cache_creation_tokens`가 둘을 구분하지 않는다. 그래서 캐시 미터를 모델별 단가로 바꾸는 일은 미뤘다. 지금 값은 5분 캐시 기준이다.
+  - 캐시 쓰기 가격은 5분 캐시와 1시간 캐시가 다른데 OTel의 `cache_creation_tokens`가 둘을 구분하지 않는다. 그래서 캐시 과금 미터를 모델별 단가로 바꾸는 일은 미뤘다. 지금 값은 5분 캐시 기준이다.
 - 금액은 실제 가격이라 작다. 라인마다 10원 미만을 버리므로 입력 토큰처럼 적은 항목은 0원이 되기도 한다.
 
 ### 검증
@@ -379,7 +379,7 @@ await client.ingestEvent({
   - 이벤트를 다시 보낼 때도 `transaction_id`가 같아 서버가 중복으로 처리한다. 생략하면 SDK가 UUID를 만든다.
 - 고객, 사용량, 청구 예정과 인보이스, 결제, 단가와 요금제, 웹훅 전송 기록을 API로 조회한다. 고객 생성은 `external_id`를 줄 때만 자동 재시도하고, 카드 등록 링크 생성은 자동 재시도하지 않는다.
 - 이벤트 목록은 월 또는 `from`/`to` 기간과 검색/속성/정렬을 받는다. `listEventTypes`는 같은 기간과 고객/검색/속성 조건의 실제 유형을, `getEvent(transactionId)`는 기간과 무관한 단건을 조회한다. 기간 응답의 `month`는 null이다.
-  - `properties` 객체는 JSON으로 직렬화하고, JSON 문자열은 그대로 보낸다. 서버는 JSON 객체 여부를 검증한다. 고객, 카드와 요금제 목록은 `status`(`active`, `archived`, `all`)를 받지만 미터별 가격 목록은 상태 필터를 받지 않는다.
+  - `properties` 객체는 JSON으로 직렬화하고, JSON 문자열은 그대로 보낸다. 서버는 JSON 객체 여부를 검증한다. 고객, 카드와 요금제 목록은 `status`(`active`, `archived`, `all`)를 받지만 과금 미터별 가격 목록은 상태 필터를 받지 않는다.
 - 배치: `ingestEventBatch`는 100건씩 나눠 `POST /v1/event-batches`로 보내고, 결과의 `index`를 입력 전체의 순서로 맞춰 합친다. 중간 묶음이 실패하면 `MeterEngineBatchError`의 `results`에 앞 묶음 결과가 남는다.
 - 웹훅 검증: `verifyWebhookSignature({ payload, headers, secret })`는 Standard Webhooks v1 서명과 시각 차(기본 300초까지)를 확인하고 `{environment, type, timestamp, data}`를 돌려준다. `environment`는 `legacy`, `test`, `live` 중 하나다. 실패하면 `WebhookVerificationError`를 던진다.
   - `payload`는 받은 본문 문자열 그대로 넘긴다. JSON을 파싱해 다시 직렬화하면 서명이 맞지 않는다.
@@ -400,7 +400,7 @@ node cli/src/main.ts --help                             # 명령 목록. 명령�
 
 - 명령
   - 조회: `usage`, `events`, `customers`, `meters`, `prices`, `invoices`.
-  - 진단과 대조: `diagnose`(이벤트 한 건, 한 달), `verify sent`(보낸 `transaction_id` 파일이나 `-`로 받은 표준 입력), `diff`(두 프로필의 미터와 단가).
+  - 진단과 대조: `diagnose`(이벤트 한 건, 한 달), `verify sent`(보낸 `transaction_id` 파일이나 `-`로 받은 표준 입력), `diff`(두 프로필의 과금 미터와 단가).
   - `api get`: 전용 명령이 없는 `/v1/` 조회 API를 GET으로 부른다.
 - 키
   - `login`은 키를 `~/.config/meterengine/credentials.json`(`XDG_CONFIG_HOME`이 있으면 그 아래)에 권한 600으로 저장한다. 표준 입력이 터미널이 아니면 입력 전체를 키로 읽는다.

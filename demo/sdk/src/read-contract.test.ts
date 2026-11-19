@@ -102,11 +102,11 @@ test("실제 유형 조회는 기간과 고객과 검색을 보내고 JSON 문�
   const urls: URL[] = [];
   const client = new MeterEngineClient({ baseUrl: "http://localhost:8080", apiKey: API_KEY, fetch: async input => {
     urls.push(new URL(String(input)));
-    return Response.json({ types: ["미터 없는/유형", "입력"] });
+    return Response.json({ types: ["과금 미터 없는/유형", "입력"] });
   } });
   const properties = '{"수량":9007199254740993,"model":"서울/모델"}';
   const result = await client.listEventTypes({ from: "2026-10-01", to: "2026-10-31", customer_id: CUSTOMER_ID, q: "서울/고객", properties });
-  assert.deepEqual(result.types, ["미터 없는/유형", "입력"]);
+  assert.deepEqual(result.types, ["과금 미터 없는/유형", "입력"]);
   assert.equal(urls[0]?.pathname, "/v1/events/types");
   assert.deepEqual(Object.fromEntries(urls[0]!.searchParams), { from: "2026-10-01", to: "2026-10-31", customer_id: CUSTOMER_ID, q: "서울/고객", properties });
 });

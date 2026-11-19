@@ -27,7 +27,7 @@ export function formatKst(instant: Date): string {
   return new Date(instant.getTime() + KST_OFFSET_MS).toISOString().replace(/(\.000)?Z$/, "+09:00");
 }
 
-// 그 달에 집계하는 미터는 서버의 사용량 응답에서 고른다. 보관했다 복원한 미터의 지난 기간은 미터 목록에 없다.
+// 그 달에 집계하는 과금 미터는 서버의 사용량 응답에서 고른다. 보관했다 복원한 과금 미터의 지난 기간은 과금 미터 목록에 없다.
 export async function activeMetersIn(client: MeterEngineClient, month: string): Promise<ActiveMeter[]> {
   const { billable_metric_usages: usages } = await client.aggregateBillableMetricUsages({ month });
   return usages.map((usage) => ({ code: usage.code, event_type: usage.event_type }));
@@ -42,7 +42,7 @@ function canonical(value: unknown): string {
   return JSON.stringify(value ?? null);
 }
 
-// 서버는 미터의 차원 값을 이벤트 속성 그대로 담고, 속성이 없으면 null로 담는다.
+// 서버는 과금 미터의 차원 값을 이벤트 속성 그대로 담고, 속성이 없으면 null로 담는다.
 export function sameDimensions(dimensionValues: Record<string, unknown>, properties: Record<string, unknown>): boolean {
   return Object.entries(dimensionValues).every(([key, value]) => canonical(value) === canonical(properties[key]));
 }

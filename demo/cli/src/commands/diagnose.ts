@@ -41,7 +41,7 @@ export function registerDiagnose(program: Command, deps: CliDeps): void {
   diagnose
     .command("month")
     .description(
-      "그 달 청구에서 빠지거나 빠질 이벤트와 금액 조합, 거절 수, 미터 없는 이벤트 유형, 자동 확정 일정을 한 번에 진단한다 (GET /v1/unbilled-events, /v1/event-issues/search, /v1/event-rejections/search, /v1/events/types, /v1/usage, /v1/events, /v1/invoices, /v1/invoices/draft)",
+      "그 달 청구에서 빠지거나 빠질 이벤트와 금액 조합, 거절 수, 과금 미터 없는 이벤트 유형, 자동 확정 일정을 한 번에 진단한다 (GET /v1/unbilled-events, /v1/event-issues/search, /v1/event-rejections/search, /v1/events/types, /v1/usage, /v1/events, /v1/invoices, /v1/invoices/draft)",
     )
     .option("--month <YYYY-MM>", "청구 월(KST). 생략하면 이번 달. 거절 수는 이 달에 거절한 것을 센다")
     .action(async (options: { month?: string }, command: Command) => {

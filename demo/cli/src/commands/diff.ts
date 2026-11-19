@@ -104,7 +104,7 @@ function ratesByKey(prices: ListBillableMetricPricesResponse): Map<string, { cod
   return rates;
 }
 
-// 단가는 미터 code와 속성 값 조합으로 짝짓고 모델, 단가, 구간만 비교한다. id와 적용 시작 월은 환경마다 다르다.
+// 단가는 과금 미터 code와 속성 값 조합으로 짝짓고 모델, 단가, 구간만 비교한다. id와 적용 시작 월은 환경마다 다르다.
 function diffPrices(left: ListBillableMetricPricesResponse, right: ListBillableMetricPricesResponse): PriceDiff[] {
   const a = ratesByKey(left);
   const b = ratesByKey(right);
@@ -170,7 +170,7 @@ export function registerDiff(program: Command, deps: CliDeps): void {
   program
     .command("diff")
     .description(
-      "두 프로필의 업무 환경에서 미터와 단가를 비교해 다른 것만 보여 준다 (GET /v1/billable-metrics, GET /v1/billable-metric-prices, --external-id를 주면 GET /v1/customers). 비교를 끝까지 하면 달라도 종료 코드 0이고 판정은 identical에 있다. mode는 서버가 알린 업무 환경(legacy, test, live)이다",
+      "두 프로필의 업무 환경에서 과금 미터와 단가를 비교해 다른 것만 보여 준다 (GET /v1/billable-metrics, GET /v1/billable-metric-prices, --external-id를 주면 GET /v1/customers). 비교를 끝까지 하면 달라도 종료 코드 0이고 판정은 identical에 있다. mode는 서버가 알린 업무 환경(legacy, test, live)이다",
     )
     .argument("<left>", "비교할 프로필. 예: test")
     .argument("<right>", "비교할 프로필. 예: live")

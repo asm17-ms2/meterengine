@@ -203,7 +203,7 @@ def _verify_month(
     billable_metrics = _derive_billable_metrics(usage, prices)
     unsupported = [m.code for m in billable_metrics if m.aggregation not in SUPPORTED_AGGREGATIONS]
     if unsupported:
-        print("지원하지 않는 집계 함수의 미터입니다: %s" % ", ".join(unsupported), file=sys.stderr)
+        print("지원하지 않는 집계 함수의 과금 미터입니다: %s" % ", ".join(unsupported), file=sys.stderr)
         return None
     roster = roster_from_usage(usage.body)
     customer_ids = sorted(roster, key=lambda cid: roster[cid])
@@ -231,7 +231,7 @@ def _verify_month(
 
     print()
     print("== %s 검증 (서버: %s) ==" % (month, client.base_url))
-    print("사용한 미터 정의 (서버 설정에서 유도, 시드와 눈으로 대조 가능):")
+    print("사용한 과금 미터 정의 (서버 설정에서 유도, 시드와 눈으로 대조 가능):")
     for billable_metric in billable_metrics:
         print("  %s: event_type=%s, target_property=%s, %s, unit_size=%s, rounding=%s(%s), %s" % (billable_metric.code, billable_metric.event_type, billable_metric.target_property, billable_metric.aggregation, billable_metric.unit_size, billable_metric.rounding_mode, billable_metric.rounding_precision, _price_summary(billable_metric)))
         if billable_metric.percentile is not None:
