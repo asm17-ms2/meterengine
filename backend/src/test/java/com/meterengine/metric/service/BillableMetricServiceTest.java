@@ -417,7 +417,7 @@ class BillableMetricServiceTest {
                   billableMetricService.create(
                       ORGANIZATION_ID,
                       new CreateBillableMetricRequest(
-                          code, "예약어 미터", "chat_completion", "sum", "token", List.of())))
+                          code, "예약어 과금 미터", "chat_completion", "sum", "token", List.of())))
           .as(code)
           .isInstanceOfSatisfying(
               InvalidRequestException.class,

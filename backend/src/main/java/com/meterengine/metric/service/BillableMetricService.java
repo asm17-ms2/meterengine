@@ -65,7 +65,7 @@ public class BillableMetricService {
   @Transactional
   public BillableMetricResponse create(UUID organizationId, CreateBillableMetricRequest request) {
     if (RESERVED_CODES.contains(request.code()))
-      throw invalid("code", "search, options, export는 조회 경로라 미터 code로 쓸 수 없습니다");
+      throw invalid("code", "search, options, export는 조회 경로라 과금 미터 code로 쓸 수 없습니다");
     lock(organizationId);
     Calculation calculation =
         validate(

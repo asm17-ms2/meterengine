@@ -451,7 +451,7 @@ class DraftInvoiceServiceTest {
                 new BillableMetric(
                     ORGANIZATION_ID,
                     "token-usage",
-                    "token-usage 미터",
+                    "token-usage 과금 미터",
                     "chat_completion",
                     "sum",
                     "token",

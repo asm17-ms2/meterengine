@@ -47,8 +47,8 @@ public class PriceRateController {
       summary = "단가 등록",
       description =
           """
-          미터에 구분 값별 단가 버전을 등록합니다. dimension_values의 키 집합은 미터의 dimension_properties와 같아야 하고,
-          구분 키가 없는 미터는 빈 객체 하나만 받습니다. 청구는 구분 값이 정확히 같은 단가만 쓰고 다른 단가로 대신하지 않습니다.
+          과금 미터에 구분 값별 단가 버전을 등록합니다. dimension_values의 키 집합은 과금 미터의 dimension_properties와 같아야 하고,
+          구분 키가 없는 과금 미터는 빈 객체 하나만 받습니다. 청구는 구분 값이 정확히 같은 단가만 쓰고 다른 단가로 대신하지 않습니다.
           같은 구분 값, 고객 범위, 시작 월의 버전이 있으면 그 버전을 고칩니다. 이번 달보다 앞에서 시작하는 버전은 등록하거나 고칠 수 없습니다.
           종료 월은 포함하지 않으며 고객 단가가 공통 단가보다 먼저 적용됩니다.
           """)
@@ -63,7 +63,7 @@ public class PriceRateController {
         description =
             """
             code=validation_error: dimension_values가 없거나, model과 unit_price, tiers가 맞지 않거나, 단가가 음수거나, effective_until이 시작 월보다 뒤가 아니거나, 경로의 code에 NUL 문자나 짝이 없는 UTF-16 서로게이트가 있습니다.
-            code=invalid_price_rate: dimension_values의 키 집합이 미터의 dimension_properties와 다르거나, 값이 문자열, 숫자, 불리언이 아닙니다. 어느 필드가 왜 거절됐는지는 errors에 있습니다.
+            code=invalid_price_rate: dimension_values의 키 집합이 과금 미터의 dimension_properties와 다르거나, 값이 문자열, 숫자, 불리언이 아닙니다. 어느 필드가 왜 거절됐는지는 errors에 있습니다.
             """),
     @ApiResponse(
         responseCode = "404",
@@ -73,7 +73,7 @@ public class PriceRateController {
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
             """
-            code=billable_metric_not_found: 그런 code의 미터가 없습니다.
+            code=billable_metric_not_found: 그런 code의 과금 미터가 없습니다.
             code=customer_not_found: customer_id가 가리키는 고객이 없습니다.
             """),
     @ApiResponse(
@@ -84,7 +84,7 @@ public class PriceRateController {
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
             """
-            code=resource_archived: 보관한 미터입니다. 미터를 복원한 뒤 등록합니다.
+            code=resource_archived: 보관한 과금 미터입니다. 과금 미터를 복원한 뒤 등록합니다.
             code=price_rate_history_immutable: effective_from이 이번 달보다 앞입니다.
             code=customer_archived: customer_id가 가리키는 고객을 보관했습니다.
             code=archive_restoration_conflict: 같은 구분 값, 고객 범위, 시작 월의 버전을 보관했지만 그 버전이 이번 달에는 아직 적용됩니다.
@@ -92,7 +92,7 @@ public class PriceRateController {
   })
   public PriceRateResponse createPriceRate(
       @CurrentOrganizationId UUID organizationId,
-      @Parameter(description = "단가를 등록할 미터의 미터 코드") @PathVariable @StorableText String code,
+      @Parameter(description = "단가를 등록할 과금 미터의 과금 미터 코드") @PathVariable @StorableText String code,
       @Valid @RequestBody CreatePriceRateRequest request) {
     return priceRateService.create(organizationId, code, request);
   }
@@ -104,9 +104,9 @@ public class PriceRateController {
       summary = "구분 값 단가 보관",
       description =
           """
-          미터에서 구분 값 하나의 공통 단가(customer_id 없음) 가운데 이번 달(KST)에 적용 중인
+          과금 미터에서 구분 값 하나의 공통 단가(customer_id 없음) 가운데 이번 달(KST)에 적용 중인
           버전을 보관하고 다음 달부터 멈춥니다. 이번 달 계산과 버전 이력, 미래 예약은 그대로 두고 고객 단가도
-          건드리지 않습니다. dimension_values는 JSON 객체 문자열이고, 구분 키가 없는 미터는 빈 객체 {}를 보냅니다.
+          건드리지 않습니다. dimension_values는 JSON 객체 문자열이고, 구분 키가 없는 과금 미터는 빈 객체 {}를 보냅니다.
           같은 구분 값인지는 키 순서와 관계없이 봅니다.
           버전 ID 없이 구분 값으로 이번 달 공통 단가를 멈출 때 이 경로를 씁니다. 고객 단가나 아직 시작하지 않은 버전처럼
           버전 하나를 골라 보관하려면 DELETE /v1/billable-metrics/{code}/price-rates/{id}를 씁니다.
@@ -128,11 +128,11 @@ public class PriceRateController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=price_rate_not_found: 그 미터에 이번 달 적용 중인 그 구분 값의 공통 단가가 없습니다.")
+        description = "code=price_rate_not_found: 그 과금 미터에 이번 달 적용 중인 그 구분 값의 공통 단가가 없습니다.")
   })
   public void deletePriceRate(
       @CurrentOrganizationId UUID organizationId,
-      @Parameter(description = "단가를 보관할 미터의 미터 코드") @PathVariable @StorableText String code,
+      @Parameter(description = "단가를 보관할 과금 미터의 과금 미터 코드") @PathVariable @StorableText String code,
       @Parameter(description = "보관할 공통 단가의 구분 값을 담은 JSON 객체 문자열")
           @RequestParam("dimension_values")
           @StorableText
@@ -143,12 +143,12 @@ public class PriceRateController {
   @GetMapping
   @ReadAccess
   @Operation(
-      summary = "미터 단가 이력 조회",
+      summary = "과금 미터 단가 이력 조회",
       description =
-          "미터의 단가 버전을 시작 월 내림차순으로 돌려줍니다. customer_id를 주면 그 고객의 고객 단가만, 생략하면 공통 단가만 돌려줍니다. 페이지를 나누지 않습니다. 한 달에 적용되는 단가만 미터마다 보려면 GET /v1/billable-metric-prices를 씁니다.")
+          "과금 미터의 단가 버전을 시작 월 내림차순으로 돌려줍니다. customer_id를 주면 그 고객의 고객 단가만, 생략하면 공통 단가만 돌려줍니다. 페이지를 나누지 않습니다. 한 달에 적용되는 단가만 과금 미터마다 보려면 GET /v1/billable-metric-prices를 씁니다.")
   public ListPriceRatesResponse listPriceRates(
       @CurrentOrganizationId UUID organizationId,
-      @Parameter(description = "단가 이력을 볼 미터의 미터 코드") @PathVariable @StorableText String code,
+      @Parameter(description = "단가 이력을 볼 과금 미터의 과금 미터 코드") @PathVariable @StorableText String code,
       @Parameter(description = "이 고객의 고객 단가만 돌려줍니다. 생략하면 공통 단가만 돌려줍니다.")
           @RequestParam(name = "customer_id", required = false)
           UUID customerId,
@@ -177,7 +177,7 @@ public class PriceRateController {
           """)
   public void deletePriceRateVersion(
       @CurrentOrganizationId UUID organizationId,
-      @Parameter(description = "단가 버전이 속한 미터의 미터 코드") @PathVariable @StorableText String code,
+      @Parameter(description = "단가 버전이 속한 과금 미터의 과금 미터 코드") @PathVariable @StorableText String code,
       @Parameter(description = "보관할 단가 버전 ID(UUID)") @PathVariable UUID id) {
     priceRateService.delete(organizationId, code, id);
   }
@@ -196,7 +196,7 @@ public class PriceRateController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=price_rate_not_found: 그 미터에 그런 id의 단가 버전이 없습니다."),
+        description = "code=price_rate_not_found: 그 과금 미터에 그런 id의 단가 버전이 없습니다."),
     @ApiResponse(
         responseCode = "409",
         content =
@@ -208,7 +208,7 @@ public class PriceRateController {
   })
   public PriceRateResponse restorePriceRate(
       @CurrentOrganizationId UUID organizationId,
-      @Parameter(description = "단가 버전이 속한 미터의 미터 코드") @PathVariable @StorableText String code,
+      @Parameter(description = "단가 버전이 속한 과금 미터의 과금 미터 코드") @PathVariable @StorableText String code,
       @Parameter(description = "복원할 단가 버전 ID(UUID)") @PathVariable UUID id) {
     return priceRateService.restore(organizationId, code, id);
   }

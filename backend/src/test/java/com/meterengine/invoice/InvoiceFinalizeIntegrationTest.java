@@ -293,7 +293,7 @@ class InvoiceFinalizeIntegrationTest {
         .hasStatusOk()
         .bodyJson()
         .extractingPath("$.lines[0].billable_metric_name")
-        .isEqualTo("token-usage 미터");
+        .isEqualTo("token-usage 과금 미터");
   }
 
   @Test
@@ -626,7 +626,7 @@ class InvoiceFinalizeIntegrationTest {
         """,
         organizationId,
         code,
-        code + " 미터",
+        code + " 과금 미터",
         targetProperty);
   }
 
