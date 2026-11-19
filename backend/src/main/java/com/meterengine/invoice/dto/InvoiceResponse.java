@@ -14,16 +14,16 @@ public record InvoiceResponse(
         @JsonProperty("invoice_number")
         String invoiceNumber,
     @Schema(description = "고객 ID(UUID)") @JsonProperty("customer_id") UUID customerId,
-    @Schema(description = "확정할 때 저장한 고객 이름입니다. 뒤에 고객 이름을 고쳐도 바뀌지 않습니다.")
+    @Schema(description = "발행할 때 저장한 고객 이름입니다. 뒤에 고객 이름을 고쳐도 바뀌지 않습니다.")
         @JsonProperty("customer_name")
         String customerName,
     @Schema(description = "청구 대상 달(yyyy-MM, KST)") String month,
     @Schema(
             description =
-                "확정이 읽은 이벤트의 수신 시각(received_at) 상한입니다. 그 달에 발생했고 수신 시각이 이 시각보다 이른 이벤트만 금액에 들었습니다. KST(+09:00)로 나옵니다.")
+                "발행이 읽은 이벤트의 수신 시각(received_at) 상한입니다. 그 달에 발생했고 수신 시각이 이 시각보다 이른 이벤트만 금액에 들었습니다. KST(+09:00)로 나옵니다.")
         @JsonProperty("cutoff_at")
         OffsetDateTime cutoffAt,
-    @Schema(description = "확정한 시각(KST, +09:00)") @JsonProperty("finalized_at")
+    @Schema(description = "발행한 시각(KST, +09:00)") @JsonProperty("finalized_at")
         OffsetDateTime finalizedAt,
     @Schema(description = "공급가액(원)입니다. 청구 항목 금액의 합입니다.") @JsonProperty("supply_amount")
         long supplyAmount,
@@ -32,7 +32,7 @@ public record InvoiceResponse(
         long totalAmount,
     @Schema(
             description =
-                "확정할 때 저장한 청구 항목입니다. 과금 미터 코드 오름차순, 같은 과금 미터 안에서는 dimension_values 오름차순이고 수량이 0인 항목은 싣지 않습니다.")
+                "발행할 때 저장한 청구 항목입니다. 과금 미터 코드 오름차순, 같은 과금 미터 안에서는 dimension_values 오름차순이고 수량이 0인 항목은 싣지 않습니다.")
         List<InvoiceLineResponse> lines) {
 
   public record InvoiceLineResponse(
@@ -41,7 +41,7 @@ public record InvoiceResponse(
           String billableMetricCode,
       @Schema(
               description =
-                  "확정할 때의 과금 미터 이름입니다. 과금 미터 이름을 나중에 바꿔도 그대로입니다. 기본료와 최소 사용료 조정 항목, 이 값을 저장하기 전에 확정한 항목은"
+                  "발행할 때의 과금 미터 이름입니다. 과금 미터 이름을 나중에 바꿔도 그대로입니다. 기본료와 최소 사용료 조정 항목, 이 값을 저장하기 전에 발행한 항목은"
                       + " null입니다.",
               nullable = true)
           @JsonProperty("billable_metric_name")
@@ -51,7 +51,7 @@ public record InvoiceResponse(
           String targetProperty,
       @Schema(
               description =
-                  "확정할 때 저장한 구분 값입니다. 이 구분 값의 단가를 수량에 곱했습니다. 과금 미터에 dimension_properties가 없었거나 기본료, 최소 사용료 조정 항목이면 빈 객체입니다.")
+                  "발행할 때 저장한 구분 값입니다. 이 구분 값의 단가를 수량에 곱했습니다. 과금 미터에 dimension_properties가 없었거나 기본료, 최소 사용료 조정 항목이면 빈 객체입니다.")
           @JsonProperty("dimension_values")
           Map<String, Object> dimensionValues,
       @Schema(description = "표시용 수량입니다. 금액 계산에는 quantity_numerator와 quantity_denominator를 씁니다.")

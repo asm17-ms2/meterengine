@@ -53,7 +53,7 @@ export default async function EventIssuesPage({ searchParams }: { searchParams: 
         <Button type="primary" htmlType="submit">조건 적용</Button>
       </form>
       <Suspense key={searchKey(params)} fallback={<AggregateLoading title="과금에서 빠진 이벤트를 찾는 중이에요" />}><EventIssues params={params} month={month} reason={reason} size={size} source={source} /></Suspense>
-      <p>받을 때 거절된 이벤트는 이 목록에 없어요. <Link href={workspaceHref("/event-rejections", source)}>수집 거절</Link>에서 확인하세요. 미터나 단가를 고쳐도 이미 확정한 청구서는 바뀌지 않아요.</p>
+      <p>받을 때 거절된 이벤트는 이 목록에 없어요. <Link href={workspaceHref("/event-rejections", source)}>수집 거절</Link>에서 확인하세요. 미터나 단가를 고쳐도 이미 발행한 청구서는 바뀌지 않아요.</p>
     </section>
   </>;
 }

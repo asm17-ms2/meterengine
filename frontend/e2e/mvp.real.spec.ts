@@ -161,13 +161,13 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     expect(customer.lines.map((line: { amount: number }) => line.amount).sort((left: number, right: number) => left - right)).toEqual([500, 700, 1800]);
   });
   let invoiceId = "";
-  await test.step("브라우저 청구 검토와 청구서 확정", async () => {
+  await test.step("브라우저 청구 검토와 청구서 발행", async () => {
     await page.goto(`/billing?month=${month}`);
-    await expect(page.getByRole("button", { name: "월 전체 확정", exact: true })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "월 전체 발행", exact: true })).toBeEnabled();
     await page.screenshot({ path: "/tmp/meterengine-mvp-billing.png", fullPage: true });
-    await page.getByRole("button", { name: "월 전체 확정", exact: true }).click();
-    await page.getByRole("dialog").getByRole("button", { name: "확정", exact: true }).click();
-    await expect(page.getByRole("dialog")).toContainText("1건을 확정했어요");
+    await page.getByRole("button", { name: "월 전체 발행", exact: true }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "발행", exact: true }).click();
+    await expect(page.getByRole("dialog")).toContainText("1건을 발행했어요");
     const invoices = await request.get(`${API_URL}/v1/invoices?month=${month}&customer_id=${customerId}`, { headers: apiHeaders });
     const invoice = (await invoices.json()).invoices[0];
     expect(invoice).toMatchObject({ supply_amount: 3000, tax_amount: 300, total_amount: 3300 });
@@ -216,7 +216,7 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     const provider = await (await request.get(`${PG_URL}/__state`)).json();
     expect(provider.approval_calls - providerBefore.approval_calls).toBe(1);
   });
-  await test.step("브라우저 부분 취소와 전액 취소, 확정 원장 보존", async () => {
+  await test.step("브라우저 부분 취소와 전액 취소, 발행 원장 보존", async () => {
     await request.post(`${PG_URL}/__control`, { data: { nextCancellationDelayMs: 6000 } });
     const attempts = await request.get(`${API_URL}/v1/invoices/${invoiceId}/payment-attempts`, { headers: apiHeaders });
     const attemptId = (await attempts.json()).payment_attempts[0].id;

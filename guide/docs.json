@@ -38,7 +38,7 @@
               { "group": "고객과 이벤트 연동", "pages": ["integration/customers", "integration/events", "integration/retries"] },
               { "group": "확인과 진단", "pages": ["integration/verify-usage", "troubleshooting/events-not-billed", "reference/search-and-export"] },
               { "group": "결제 연동", "pages": ["payments/overview", "payments/toss-setup", "payments/test-and-live", "payments/card-registration", "payments/charging", "payments/retries", "payments/cancellations", "payments/invoice-links", "payments/reconciliation"] },
-              { "group": "청구 확정", "pages": ["billing/auto-finalization", "billing/finalize-invoices", "billing/after-finalization"] },
+              { "group": "청구 발행", "pages": ["billing/auto-finalization", "billing/finalize-invoices", "billing/after-finalization"] },
               { "group": "웹훅", "pages": ["webhooks/overview", "webhooks/verify-signatures", "webhooks/events", "webhooks/delivery-and-retries"] },
               { "group": "계정과 조직", "pages": ["account/signup", "account/members", "account/supplier", "account/audit-logs"] },
               { "group": "참고", "pages": ["reference/glossary"] }

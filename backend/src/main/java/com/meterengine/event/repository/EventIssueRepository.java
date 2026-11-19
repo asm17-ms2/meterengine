@@ -171,7 +171,7 @@ public class EventIssueRepository {
           case "invalid_target_property" -> "과금 미터의 수량 속성과 전송 값의 형식을 확인하세요";
           default ->
               rs.getBoolean("finalized")
-                  ? "청구서를 확정한 달이라 단가를 등록해도 이 달 청구에는 반영되지 않습니다"
+                  ? "청구서를 발행한 달이라 단가를 등록해도 이 달 청구에는 반영되지 않습니다"
                   : "고객, 과금 미터와 차원에 적용되는 단가를 등록하세요";
         };
     return new EventIssueResponse(

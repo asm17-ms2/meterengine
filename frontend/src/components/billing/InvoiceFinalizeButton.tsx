@@ -21,7 +21,7 @@ export function InvoiceFinalizeButton({
     return (
       <Flex vertical gap={4}>
         <Button type="primary" disabled aria-describedby={hintId}>
-          월 전체 확정
+          월 전체 발행
         </Button>
         <span id={hintId} className="field-hint">{disabledReason}</span>
       </Flex>
@@ -29,7 +29,7 @@ export function InvoiceFinalizeButton({
   }
   return (
     <Button type="primary" disabled={disabled} onClick={onClick}>
-      월 전체 확정
+      월 전체 발행
     </Button>
   );
 }

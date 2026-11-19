@@ -39,8 +39,8 @@ async function TrendCharts({ insights }: { insights: Promise<Result<DashboardIns
   return <>
     <ColumnChart
       title="최근 석 달 청구액과 받은 금액"
-      summary={`확정한 청구서 기준이고 부가세를 포함해요. ${formatKstShortStamp(new Date(result.data.calculated_at))}에 계산했어요.`}
-      series={[{ name: "확정 청구액", color: "var(--series-1)" }, { name: "받은 금액", color: "var(--series-2)" }]}
+      summary={`발행한 청구서 기준이고 부가세를 포함해요. ${formatKstShortStamp(new Date(result.data.calculated_at))}에 계산했어요.`}
+      series={[{ name: "청구액", color: "var(--series-1)" }, { name: "받은 금액", color: "var(--series-2)" }]}
       columns={monthlyAmounts.map(amount => ({ key: amount.month, axisLabel: `${Number(amount.month.slice(5))}월`, name: formatKoreanMonth(amount.month), values: [amount.finalized_total_amount, amount.collected_amount] }))}
       formatValue={formatKrw}
       formatCompact={value => COMPACT_NUMBER.format(value)}
@@ -76,7 +76,7 @@ async function Overview({ month, insights }: { month: string; insights: Promise<
   const draftCustomers = data.draft_invoice.customers;
   return <>
     <WorkspaceHeader title={hasStarted ? `홈 - ${formatKoreanMonth(month)}` : "첫 청구를 준비하세요"} description={HOME_DESCRIPTION}><MonthFilter month={month} /></WorkspaceHeader>
-    <section className="finance-flow" aria-label="월별 금액 흐름"><div><span>청구 예정액</span><strong>{formatKrw(data.draft_supply_amount)}</strong><small>확정 전, 공급가액</small></div><div><span>확정 청구액</span><strong>{formatKrw(data.finalized_total_amount)}</strong><small>부가세 포함</small></div><div><span>받을 금액</span><strong>{formatKrw(data.outstanding_amount)}</strong><small>결제 전, 실패, 확인 중</small></div><div><span>받은 금액</span><strong>{formatKrw(data.collected_amount)}</strong><small>취소 {formatKrw(data.canceled_amount)} 제외</small></div></section>
+    <section className="finance-flow" aria-label="월별 금액 흐름"><div><span>청구 예정액</span><strong>{formatKrw(data.draft_supply_amount)}</strong><small>발행 전, 공급가액</small></div><div><span>청구액</span><strong>{formatKrw(data.finalized_total_amount)}</strong><small>부가세 포함</small></div><div><span>받을 금액</span><strong>{formatKrw(data.outstanding_amount)}</strong><small>결제 전, 실패, 확인 중</small></div><div><span>받은 금액</span><strong>{formatKrw(data.collected_amount)}</strong><small>취소 {formatKrw(data.canceled_amount)} 제외</small></div></section>
     {steps.some(step => !step.isComplete) ? <section className="workspace-panel"><h2>청구 전 준비</h2><ol className="setup-list">{steps.filter(step => !step.isComplete).map(step => <li key={step.href}><div><strong>{step.title}</strong><p>{step.detail}</p></div><LinkButton href={step.href}>설정하기</LinkButton></li>)}</ol></section> : null}
     <section className="workspace-panel"><h2>확인할 항목</h2><ul className="setup-list">{data.unpriced_usage_count > 0 && <li><div><strong>단가 없는 사용량 구분 값 {data.unpriced_usage_count}개</strong><p>단가를 등록해야 청구액에 들어가요.</p></div><span className="workspace-actions"><LinkButton href={`/billing?month=${month}`}>검토</LinkButton><LinkButton href={`/event-issues?month=${month}&reason=unpriced_usage`}>이벤트 보기</LinkButton></span></li>}{data.negative_usage_count > 0 && <li><div><strong>집계값이 음수인 구분 값 {data.negative_usage_count}개</strong><p>집계값이 음수인 구분 값은 청구에서 빠져요.</p></div><LinkButton href={`/billing?month=${month}`}>확인</LinkButton></li>}{data.failed_payment_count > 0 && <li><div><strong>결제 실패 {data.failed_payment_count}건</strong><p>카드와 실패 사유를 확인한 뒤 다시 요청하세요.</p></div><LinkButton href={`/payments?month=${month}&payment_status=failed`}>수납 확인</LinkButton></li>}</ul>{data.unpriced_usage_count === 0 && data.negative_usage_count === 0 && data.failed_payment_count === 0 && <p role="status">선택한 달에 확인할 항목이 없어요.</p>}<div><LinkButton href={`/events?month=${month}`}>수집 이벤트 {data.event_count.toLocaleString("ko-KR")}건 보기</LinkButton></div></section>
     <section className="workspace-panel" aria-labelledby="home-insights-title">
@@ -95,7 +95,7 @@ async function Overview({ month, insights }: { month: string; insights: Promise<
         {Array.isArray(unresolved) ? <WorkspaceTable rows={unresolved} rowKey="invoice_id" label="전체 월 처리할 결제" columns={[{ key: "customer_name", label: "고객", hrefPrefix: "/payments/", hrefKey: "invoice_id" }, { key: "month", label: "청구 월" }, { key: "status", label: "수납 상태", isStatus: true }, { key: "amount", label: "청구 금액", isMoney: true }, { key: "next_retry_at", label: "다음 재시도", isDate: true }]} empty="처리할 결제가 없어요." /> : <WorkspaceError message="전체 월의 처리할 결제를 불러오지 못했어요." />}
       </details>
     </section>
-    <section className="workspace-panel"><div className="workspace-heading"><h2>고객별 수납 현황</h2><LinkButton href={`/payments?month=${month}`}>수납과 취소</LinkButton></div><WorkspaceTable rows={data.invoice_payments.map(payment => ({ ...payment, id: payment.invoice_id }))} rowKey="invoice_id" columns={[{ key: "customer_name", label: "고객", hrefPrefix: "/payments/" }, { key: "status", label: "수납 상태", isStatus: true }, { key: "amount", label: "청구 금액", isMoney: true }, { key: "canceled_amount", label: "취소액", isMoney: true }, { key: "next_retry_at", label: "다음 재시도" }]} empty="청구서를 확정하면 고객별 수납 상태가 여기에 보여요." /></section>
+    <section className="workspace-panel"><div className="workspace-heading"><h2>고객별 수납 현황</h2><LinkButton href={`/payments?month=${month}`}>수납과 취소</LinkButton></div><WorkspaceTable rows={data.invoice_payments.map(payment => ({ ...payment, id: payment.invoice_id }))} rowKey="invoice_id" columns={[{ key: "customer_name", label: "고객", hrefPrefix: "/payments/" }, { key: "status", label: "수납 상태", isStatus: true }, { key: "amount", label: "청구 금액", isMoney: true }, { key: "canceled_amount", label: "취소액", isMoney: true }, { key: "next_retry_at", label: "다음 재시도" }]} empty="청구서를 발행하면 고객별 수납 상태가 여기에 보여요." /></section>
     <p>{formatKstDateTime(data.calculated_at)} KST 기준.</p>
   </>;
 }

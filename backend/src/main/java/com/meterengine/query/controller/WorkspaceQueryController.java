@@ -114,10 +114,10 @@ public class WorkspaceQueryController {
   private static final String MIN_INVOICES = "청구서의 부가세 포함 금액(total_amount, 원)이 이 값 이상인 청구서만 돌려줍니다.";
   private static final String MAX_INVOICES = "청구서의 부가세 포함 금액(total_amount, 원)이 이 값 이하인 청구서만 돌려줍니다.";
   private static final String FROM =
-      "확정 시각(finalized_at)의 시작입니다. 날짜(yyyy-MM-dd)를 주면 그날 0시(KST)부터, ISO 8601 시각을 주면 그"
+      "발행 시각(finalized_at)의 시작입니다. 날짜(yyyy-MM-dd)를 주면 그날 0시(KST)부터, ISO 8601 시각을 주면 그"
           + " 시각부터입니다. 시간대를 빼면 KST로 읽습니다.";
   private static final String TO =
-      "확정 시각(finalized_at)의 끝입니다. 날짜(yyyy-MM-dd)를 주면 그날까지 포함하고, ISO 8601 시각을 주면 그 시각"
+      "발행 시각(finalized_at)의 끝입니다. 날짜(yyyy-MM-dd)를 주면 그날까지 포함하고, ISO 8601 시각을 주면 그 시각"
           + " 전까지입니다. 시간대를 빼면 KST로 읽으며, from보다 뒤여야 합니다.";
   private static final String MODE =
       "결제 모드입니다. test나 live이고, 생략하면 현재 업무 환경의 결제 모드를 씁니다. 업무 환경과 다른 값이면"
@@ -448,10 +448,10 @@ public class WorkspaceQueryController {
       summary = "청구 예정액 검색",
       description =
           "검색어와 여러 조건으로 고객별 청구 예정액을 거르고 정렬해 한 페이지씩 돌려줍니다. month만 정해 모든 고객을"
-              + " 받으려면 GET /v1/invoices/draft가 간단합니다. total_unfiltered는 그 달 아직 확정하지 않은 전체 고객"
+              + " 받으려면 GET /v1/invoices/draft가 간단합니다. total_unfiltered는 그 달 청구서를 아직 발행하지 않은 전체 고객"
               + " 수입니다. summary의 amount, customer_count, billable_customer_count, line_count, unpriced_count,"
               + " negative_count는 조건에 맞는 고객 전체의 값이고, 앞에 month_가 붙은 같은 이름의 값은 그 달 전체의"
-              + " 값입니다. 청구서 확정은 검색 조건과 관계없이 그 달 전체를 확정하므로 finalization_scope는 month입니다."
+              + " 값입니다. 청구서 발행은 검색 조건과 관계없이 그 달 전체 고객의 청구서를 발행하므로 finalization_scope는 month입니다."
               + " summary에는 month, calculated_at과, 청구 예정액 조회와 같은 auto_finalize_enabled, auto_finalize_at,"
               + " auto_finalize_running도 담습니다.")
   @Parameters({
@@ -540,11 +540,11 @@ public class WorkspaceQueryController {
   @Operation(
       summary = "청구서와 결제 상태 검색",
       description =
-          "검색어와 여러 조건으로 확정 청구서를 거르고 정렬해 한 페이지씩 돌려줍니다. 항목마다 청구서(invoice)와 결제"
+          "검색어와 여러 조건으로 발행한 청구서를 거르고 정렬해 한 페이지씩 돌려줍니다. 항목마다 청구서(invoice)와 결제"
               + " 상태(payment)를 담습니다. customer_id와 month만으로 거르고 전부 받으려면 GET /v1/invoices가"
               + " 간단합니다. 정렬 방향은 생략하면 desc입니다. from과 to는 한쪽만 줘도 되고, month와 함께 주면 둘 다"
               + " 만족하는 청구서만 나옵니다. 이벤트 목록 조회와 내보내기는 from과 to를 함께 보내야 합니다."
-              + " total_unfiltered는 현재 업무 환경의 전체 확정 청구서 수입니다. summary의 금액과 결제 상태별 건수는"
+              + " total_unfiltered는 현재 업무 환경에서 발행한 청구서 전체 수입니다. summary의 금액과 결제 상태별 건수는"
               + " 페이지와 관계없이 조건에 맞는 청구서 전체의 값이고, pending인 청구서가 있으면 outstanding_amount는"
               + " null입니다. summary는 mode, invoice_count, supply_amount, tax_amount, total_amount,"
               + " canceled_amount, has_pending, outstanding_amount, status_counts(결제 상태별 건수)입니다.")
@@ -815,8 +815,8 @@ public class WorkspaceQueryController {
   @GetMapping("/v1/invoices/months")
   @ReadAccess
   @Operation(
-      summary = "확정 청구서가 있는 월 목록 조회",
-      description = "현재 업무 환경에 확정 청구서가 있는 청구 달(yyyy-MM)을 중복 없이 최신 달부터 돌려줍니다.")
+      summary = "발행한 청구서가 있는 월 목록 조회",
+      description = "현재 업무 환경에 발행한 청구서가 있는 청구 달(yyyy-MM)을 중복 없이 최신 달부터 돌려줍니다.")
   @ApiResponses({
     @ApiResponse(responseCode = "200", description = MONTHS),
     @ApiResponse(

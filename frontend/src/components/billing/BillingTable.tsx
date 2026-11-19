@@ -88,8 +88,8 @@ type BillingRow =
 
 const MIN_WIDTH = 900;
 const UNPRICED_LABEL = "기타 (단가 없음)";
-const HELD_GUIDANCE = "이 달이 끝나기 전에 단가를 등록하세요. 단가 없는 사용량이 남으면 자동 확정이 보류되고, 월 전체 확정으로 단가 있는 사용량만 청구할 수 있어요.";
-const PAST_HELD_GUIDANCE = "끝난 달에는 단가를 등록할 수 없어 자동 확정을 다시 시도하지 않아요. 월 전체 확정으로 단가 있는 사용량만 청구하세요.";
+const HELD_GUIDANCE = "이 달이 끝나기 전에 단가를 등록하세요. 단가 없는 사용량이 남으면 자동 발행이 보류되고, 월 전체 발행으로 단가 있는 사용량만 청구할 수 있어요.";
+const PAST_HELD_GUIDANCE = "끝난 달에는 단가를 등록할 수 없어 자동 발행을 다시 시도하지 않아요. 월 전체 발행으로 단가 있는 사용량만 청구하세요.";
 
 function byCustomerName(left: BillingRow, right: BillingRow): number {
   return left.kind === "customer" && right.kind === "customer"
@@ -112,8 +112,8 @@ function toExpandLabel(row: BillingRow): string {
 
 const BILLING_EXPAND_ICON = labeledExpandIcon(toExpandLabel);
 
-// 끝난 달은 단가를 등록할 수 없어(price_rate_history_immutable) 가격 화면 대신 수동 확정을 안내한다.
-// 안내는 월 전체 확정 비활성 이유처럼 툴팁이 아닌 보이는 글자로 두고 표시가 그 글자를 설명으로 가리킨다.
+// 끝난 달은 단가를 등록할 수 없어(price_rate_history_immutable) 가격 화면 대신 수동 발행을 안내한다.
+// 안내는 월 전체 발행 비활성 이유처럼 툴팁이 아닌 보이는 글자로 두고 표시가 그 글자를 설명으로 가리킨다.
 function HeldTag({
   customerId,
   month,
@@ -128,7 +128,7 @@ function HeldTag({
   if (isPastMonth) {
     return (
       <Tag color="warning" variant="outlined" aria-describedby={guidanceId}>
-        자동 확정 보류: 수동 확정 필요
+        자동 발행 보류: 수동 발행 필요
       </Tag>
     );
   }
@@ -136,7 +136,7 @@ function HeldTag({
   return (
     <Tag color="warning" variant="outlined">
       <ScopedLink href={pricingHref} aria-describedby={guidanceId} onClick={(event) => event.stopPropagation()}>
-        자동 확정 보류: 단가 없는 사용량
+        자동 발행 보류: 단가 없는 사용량
       </ScopedLink>
     </Tag>
   );

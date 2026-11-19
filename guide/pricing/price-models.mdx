@@ -95,7 +95,7 @@ const priceRate = await response.json();
 
 ## 단가 모델
 
-어느 모델이든 과금 미터에서 `unit_size`와 끝수 처리를 적용한 과금 수량에 단가를 곱합니다. 구간 상한도 이 과금 수량 기준입니다. 금액은 청구 항목마다 10원 미만을 버립니다([예정액, 확정액, 수납액](/concepts/amounts)).
+어느 모델이든 과금 미터에서 `unit_size`와 끝수 처리를 적용한 과금 수량에 단가를 곱합니다. 구간 상한도 이 과금 수량 기준입니다. 금액은 청구 항목마다 10원 미만을 버립니다([예정액, 청구액, 수납액](/concepts/amounts)).
 
 아래 예시는 구분 키가 없는 과금 미터(`dimension_values` `{}`)에 두 구간 `[{"up_to": 100, "unit_price": 10}, {"up_to": null, "unit_price": 8}]`을 쓴다고 봅니다.
 

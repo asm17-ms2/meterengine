@@ -83,9 +83,9 @@ test("한 조직의 test와 live가 같은 고객 외부 ID와 미터 코드로 
       await credentials.getByRole("button", { name: "토스페이먼츠 키 저장", exact: true }).click();
       await expect(credentials).toHaveCount(0);
       await page.goto(href("/billing", environment));
-      await page.getByRole("button", { name: "월 전체 확정", exact: true }).click();
-      await page.getByRole("dialog").getByRole("button", { name: "확정", exact: true }).click();
-      await expect(page.getByRole("dialog")).toContainText("1건을 확정했어요");
+      await page.getByRole("button", { name: "월 전체 발행", exact: true }).click();
+      await page.getByRole("dialog").getByRole("button", { name: "발행", exact: true }).click();
+      await expect(page.getByRole("dialog")).toContainText("1건을 발행했어요");
       const invoices = await json<{ invoices: { id: string; customer_id: string; total_amount: number }[] }>(await request.get(`${API_URL}/v1/invoices?month=${month}`, { headers }));
       expect(invoices.invoices).toHaveLength(1);
       expect(invoices.invoices[0]).toMatchObject({ customer_id: customer.id, total_amount: scope.total });
