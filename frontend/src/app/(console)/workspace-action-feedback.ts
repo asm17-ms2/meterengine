@@ -16,7 +16,7 @@ const SUCCESS_MESSAGES: Partial<Record<string, string>> = {
   updateWebhookEndpoint: "웹훅 설정을 저장했어요.",
   restoreWebhookEndpoint: "웹훅 URL을 복원했어요.",
   retryWebhookDelivery: "웹훅을 다시 보내도록 예약했어요.",
-  restoreBillableMetric: "미터를 복원했어요.",
+  restoreBillableMetric: "과금 미터를 복원했어요.",
   createLiveEnvironmentApplication: "라이브 환경 이용을 신청했어요.",
 };
 

@@ -34,8 +34,8 @@ export function resourceSearchFormId(resource: SearchResource) {
 
 const SORTS: Record<SearchResource, { value: string; label: string }[]> = {
   customers: [{ value: "name", label: "고객명" }, { value: "external_id", label: "외부 고객 ID" }, { value: "created_at", label: "등록 시각" }],
-  "billable-metrics": [{ value: "code", label: "미터 코드" }, { value: "name", label: "미터명" }, { value: "event_type", label: "이벤트 유형" }, { value: "aggregation", label: "집계 함수" }],
-  "billable-metric-prices": [{ value: "code", label: "미터 코드" }, { value: "name", label: "미터명" }, { value: "rate_count", label: "단가 수" }],
+  "billable-metrics": [{ value: "code", label: "과금 미터 코드" }, { value: "name", label: "과금 미터명" }, { value: "event_type", label: "이벤트 유형" }, { value: "aggregation", label: "집계 함수" }],
+  "billable-metric-prices": [{ value: "code", label: "과금 미터 코드" }, { value: "name", label: "과금 미터명" }, { value: "rate_count", label: "단가 수" }],
   usage: [{ value: "customer_name", label: "고객명" }, { value: "customer_id", label: "고객 ID" }, { value: "line_count", label: "집계 항목 수" }],
   billing: [{ value: "customer_name", label: "고객명" }, { value: "amount", label: "청구 예정액" }, { value: "line_count", label: "청구 항목 수" }],
   invoices: [{ value: "month", label: "청구 월" }, { value: "customer_name", label: "고객명" }, { value: "total_amount", label: "청구 금액" }, { value: "finalized_at", label: "발행 시각" }, { value: "invoice_number", label: "청구서 번호" }, { value: "status", label: "수납 상태" }],
@@ -128,7 +128,7 @@ function ResourceSearchForm({ query, capabilities, resource, month, customers = 
     } catch {
       if (latestRequest.current !== request) return;
       setOptions([]);
-      setOptionError("미터 목록을 불러오지 못했어요.");
+      setOptionError("과금 미터 목록을 불러오지 못했어요.");
     } finally {
       if (latestRequest.current === request) setIsLoading(false);
     }
@@ -140,10 +140,10 @@ function ResourceSearchForm({ query, capabilities, resource, month, customers = 
       {Object.entries(draft.preservedParameters ?? {}).map(([name, value]) => <input key={name} type="hidden" name={name} value={value} />)}
       {!month && search.get("month") && <input type="hidden" name="month" value={search.get("month")!} />}
       {month && <div className="workspace-field"><label htmlFor={`${formId}-month`}>{monthLabel}</label><MonthPicker id={`${formId}-month`} label={monthLabel} query={draft} capabilities={capabilities} month={month.value} allowAll={month.allowAll} onChange={value => change({ month: value, from: undefined, to: undefined, rangeMode: undefined })} /><input type="hidden" name="month" value={draft.month ?? month.value} /></div>}
-      {capabilities.archive && <label className="workspace-field"><span>{resource === "billable-metric-prices" ? "미터 상태" : "상태"}</span><select name={draft.archiveParameter ?? "status"} value={draft.status ?? "active"} onChange={event => change({ status: event.target.value as ListQuery["status"] })}><option value="active">사용 중</option><option value="archived">보관됨</option><option value="all">전체</option></select></label>}
+      {capabilities.archive && <label className="workspace-field"><span>{resource === "billable-metric-prices" ? "과금 미터 상태" : "상태"}</span><select name={draft.archiveParameter ?? "status"} value={draft.status ?? "active"} onChange={event => change({ status: event.target.value as ListQuery["status"] })}><option value="active">사용 중</option><option value="archived">보관됨</option><option value="all">전체</option></select></label>}
       {capabilities.customer_id && <div className="workspace-field"><label htmlFor={`${formId}-customer`}>{resource === "billable-metric-prices" ? "적용 대상" : "고객"}</label><CustomerFilter id={`${formId}-customer`} query={draft} capabilities={capabilities} customers={customers} isLoadingOptions={isLoadingOptions} label={resource === "billable-metric-prices" ? "적용 대상" : "고객"} selectedCustomerId={draft.customerId} onChange={customerId => change({ customerId })} /><input type="hidden" name="customer_id" value={draft.customerId ?? ""} /></div>}
-      {capabilities.metric && <div className="workspace-field"><label htmlFor={`${resource}-metric`}>과금 미터</label><Select id={`${resource}-metric`} aria-label="과금 미터" style={{ minWidth: 180 }} allowClear placeholder="모든 미터" value={draft.metricCode} options={options.map(option => ({ value: option.value, label: `${option.label}${option.archived ? " (보관됨)" : ""}` }))} loading={isLoading} showSearch={{ filterOption: false, onSearch: loadMetrics }} onOpenChange={open => { if (open) void loadMetrics(); }} onChange={metricCode => change({ metricCode })} notFoundContent={isLoading ? "조회 중" : optionError || "일치하는 미터가 없어요"} /><input type="hidden" name="billable_metric_code" value={draft.metricCode ?? ""} /></div>}
-      {capabilities.q && <label className="workspace-field resource-search-text"><span>{resource === "customers" ? "이름, 외부 ID, 청구 이메일로 찾기" : "검색"}</span><input type="search" name="q" maxLength={255} value={draft.q} onChange={event => change({ q: event.target.value })} placeholder={resource === "customers" ? "이름, 외부 ID, 청구 이메일" : "이름 또는 코드"} /></label>}
+      {capabilities.metric && <div className="workspace-field"><label htmlFor={`${resource}-metric`}>과금 미터</label><Select id={`${resource}-metric`} aria-label="과금 미터" style={{ minWidth: 180 }} allowClear placeholder="모든 과금 미터" value={draft.metricCode} options={options.map(option => ({ value: option.value, label: `${option.label}${option.archived ? " (보관됨)" : ""}` }))} loading={isLoading} showSearch={{ filterOption: false, onSearch: loadMetrics }} onOpenChange={open => { if (open) void loadMetrics(); }} onChange={metricCode => change({ metricCode })} notFoundContent={isLoading ? "조회 중" : optionError || "일치하는 과금 미터가 없어요"} /><input type="hidden" name="billable_metric_code" value={draft.metricCode ?? ""} /></div>}
+      {capabilities.q && <label className="workspace-field resource-search-text"><span>{resource === "customers" ? "이름, 외부 ID, 청구 이메일로 찾기" : "검색"}</span><input type="search" name="q" maxLength={255} defaultValue={query.q} placeholder={resource === "customers" ? "이름, 외부 ID, 청구 이메일" : "이름 또는 코드"} /></label>}
       {capabilities.paymentStatus && <label className="workspace-field"><span>수납 상태</span><select name="payment_status" value={draft.paymentStatus ?? ""} onChange={event => change({ paymentStatus: event.target.value })}><option value="">전체</option>{["unpaid", "pending", "paid", "failed", "partially_canceled", "canceled"].map(status => <option key={status} value={status}>{INVOICE_PAYMENT_STATUS_LABELS[status]}</option>)}</select></label>}
       <label className="workspace-field resource-search-sort"><span>정렬</span><select aria-label="정렬" value={`${sort}${SORT_SEPARATOR}${order}`} onChange={event => changeSort(event.target.value)}>{SORTS[resource].flatMap(option => SORT_ORDERS.map(direction => <option key={`${option.value}${SORT_SEPARATOR}${direction.value}`} value={`${option.value}${SORT_SEPARATOR}${direction.value}`}>{option.label} {direction.label}</option>))}</select><input type="hidden" name="sort" value={sort} /><input type="hidden" name="order" value={order} /></label>
       {capabilities.mode && query.environment === "legacy" && <label className="workspace-field"><span>업무 환경</span><select name="mode" value={draft.mode ?? ""} onChange={event => change({ mode: event.target.value === "live" ? "live" : event.target.value === "test" ? "test" : undefined })}><option value="">현재 업무 환경</option><option value="test">테스트 환경</option><option value="live">라이브 환경</option></select></label>}
@@ -157,6 +157,6 @@ function ResourceSearchForm({ query, capabilities, resource, month, customers = 
       </details></div>}
       <Button type="primary" htmlType="submit">조건 적용</Button>
     </form>
-    {optionError && <Alert type="warning" showIcon title="미터 목록을 불러오지 못했어요" description="과금 미터 선택 칸을 다시 열어 주세요." />}
+    {optionError && <Alert type="warning" showIcon title="과금 미터 목록을 불러오지 못했어요" description="과금 미터 선택 칸을 다시 열어 주세요." />}
   </div>;
 }

@@ -10,7 +10,7 @@ export type MeterItem<Line> =
       lines: Line[];
     };
 
-/** 같은 미터의 줄이 둘 이상 붙어 있으면 소계 줄 아래로 묶는다. */
+/** 같은 과금 미터의 줄이 둘 이상 붙어 있으면 소계 줄 아래로 묶는다. */
 export function toMeterItems<Row, Line extends { label: string; labelTooltip?: string }>(
   groupId: string,
   rows: Row[],

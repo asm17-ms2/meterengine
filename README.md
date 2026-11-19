@@ -1,55 +1,34 @@
 # MeterEngine
 
-사용량 기반 과금(usage-based billing) 플랫폼. raw usage event 수집, 미터링과 rating 집계, 인보이스 생성까지를 자체 엔진으로 처리하고, 그 위에 국내 PG 결제 연동과 전자세금계산서 발행을 결합하는 것을 목표로 한다.
+MeterEngine은 서비스 사용량을 고객별 월 청구액으로 계산하는 과금 플랫폼입니다. 예를 들어 AI 서비스가 고객별 토큰 사용량을 보내면, 등록한 단가에 따라 청구서를 발행하고 토스페이먼츠로 카드 결제를 요청할 수 있습니다.
 
-## 저장소 구조
-
-| 경로 | 내용 |
-| --- | --- |
-| `backend/` | 미터링 엔진 API 서버. Java 25 + Spring Boot 4 + Gradle |
-| `frontend/` | 관리자 화면. Next.js + TypeScript |
-| `demo/` | 데모와 검증 CLI, Claude Code 사용량 브리지(Python 3.9+, 표준 라이브러리), TypeScript SDK와 테스트 웹, 자사 서비스 개발자용 CLI `meterengine`, OpenAB LLM 서비스 예제(Node 24, pnpm) |
-| `deploy/` | 배포 구성. compose, 배포 스크립트, Terraform, 공용 모니터링 |
-| `measurements/` | 측정과 측정에 쓰는 SUT |
+서비스에 연동하려면 [빠른 시작 가이드](https://docs.meterengine.com/quickstart)를 따라 테스트 환경에서 첫 사용량 이벤트를 보내 보세요. [OpenAB 예제](demo/llm-service/README.md)에서는 AI 서비스가 사용량을 보내고 고객에게 청구 내역을 보여 주는 코드를 볼 수 있습니다.
 
 ## 시작하기
 
-- 사전 준비: JDK 25, Node.js 24+, Docker Desktop (Compose 포함).
-  - `demo/console.py`를 쓸 때만 [uv](https://docs.astral.sh/uv/)가 추가로 필요하다.
+로컬에서 실행하려면 JDK 25와 Node.js 24를 설치하고 Docker Desktop(Compose 포함)을 실행하세요. 두 터미널을 각각 저장소 루트에서 엽니다.
 
-```
-# backend + PostgreSQL (DB는 자동 기동)
-cd backend && ./gradlew bootRun
+**첫 번째 터미널: API 서버.** PostgreSQL도 함께 시작됩니다.
 
-# 백엔드 확인 (로컬 test 키)
-curl -s http://localhost:8080/v1/customers -H 'Authorization: Bearer me_test_wiCp766QYNqhyYm4Z7Xq9wYosNvQCeVC'
-
-# frontend
-cd frontend && corepack enable pnpm && pnpm install && pnpm dev
-
-# 데모/검증 CLI (백엔드가 떠 있어야 한다, 레포 루트에서)
-python3 demo/meterdemo.py --help
-
-# Claude Code 사용량을 실제로 흘려보내는 브리지 (설정은 demo/README.md 참조)
-python3 demo/otel_bridge.py --help
-uv run demo/console.py            # 같은 일을 화면으로
-
-# SDK로 이벤트와 웹훅을 시험하는 테스트 웹 (http://127.0.0.1:3100, 설정은 demo/README.md 참조)
-cd demo && corepack enable pnpm && pnpm install && pnpm --filter @meterengine/demo-web dev
-
-# DB만 필요할 때
-docker compose up -d
+```bash
+cd backend
+./gradlew bootRun
 ```
 
-- OpenAB LLM 서비스 예제는 [로컬 실행 안내](demo/llm-service/README.md#로컬-실행)를 따른다.
-- 위 키는 `bootRun`이 로컬 DB에만 넣는 키이고, 로컬 계정과 키 목록은 `backend/README.md`의 "인증"에 있다.
-- 자세한 내용은 `backend/README.md`, `frontend/README.md`, `demo/README.md` 참조.
-  - API 계약의 정본은 `backend/openapi.yaml`이다 (컨트롤러와 DTO에서 자동 생성한다).
+**두 번째 터미널: 관리자 콘솔.**
 
-## 배포
+```bash
+cd frontend
+corepack enable pnpm
+pnpm install
+pnpm dev
+```
 
-- 배포 구성과 절차는 `deploy/README.md`에 있다.
+[로컬 콘솔](http://localhost:3000)에서 [로컬 계정](backend/README.md#로컬-계정과-키)으로 로그인해 고객 목록을 확인하세요. [API 문서](http://localhost:8080/scalar)는 백엔드만 실행해도 열립니다.
 
-## 기여
+## 개발 문서
 
-- 규칙은 [`CONTRIBUTING.md`](CONTRIBUTING.md)에서 시작한다.
+- [백엔드](backend/README.md)와 [OpenAPI 명세](backend/openapi.yaml): 사용량 수집, 요금 계산, 청구 API
+- [프론트엔드](frontend/README.md): 관리자 콘솔의 화면과 개발 방법
+- [연동 예제와 도구](demo/README.md): TypeScript SDK, CLI, Claude Code 사용량 연동
+- [배포 안내](deploy/README.md), [성능 측정](measurements/), [기여 안내](CONTRIBUTING.md)

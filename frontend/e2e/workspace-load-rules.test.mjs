@@ -21,5 +21,5 @@ test("every workspace table on these pages names its scroll area", () => {
 
 test("a row restore action on the meter list is a small link button", () => {
   const source = read("components/billable-metrics/BillableMetricsTable.tsx");
-  assert.match(source, /<ActionPanel title="미터 복원" triggerType="link"/);
+  assert.match(source, /<ActionPanel title="과금 미터 복원" triggerType="link"/);
 });

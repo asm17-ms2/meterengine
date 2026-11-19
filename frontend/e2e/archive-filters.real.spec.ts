@@ -29,7 +29,7 @@ function section(page: Page, heading: string) {
 async function selectedFilter(page: Page, label: string, value: string) {
   const select = page.getByRole("combobox", { name: label, exact: true });
   const pathname = new URL(page.url()).pathname;
-  const isSubmitted = label === "상태" && ["/customers", "/billable-metrics"].includes(pathname) || pathname === "/pricing" && ["미터 상태", "요금제 상태", "단가 상태"].includes(label);
+  const isSubmitted = label === "상태" && ["/customers", "/billable-metrics"].includes(pathname) || pathname === "/pricing" && ["과금 미터 상태", "요금제 상태", "단가 상태"].includes(label);
   if (isSubmitted) {
     await expect(select).toBeVisible();
     await expect.poll(() => new URL(page.url()).searchParams.get("organization_id")).toMatch(/^[0-9a-f-]{36}$/);
@@ -57,17 +57,17 @@ function safeFailure(error: unknown, secrets: Set<string>) {
   return new Error(message.replace(/me_(?:test|live|reg|invite)_[A-Za-z0-9]+/g, "[redacted token]"));
 }
 
-test("미터 이름과 이름 정렬 머리글이 데스크톱 폭에서 보인다", async ({ page, request }) => {
+test("과금 미터 이름과 이름 정렬 머리글이 데스크톱 폭에서 보인다", async ({ page, request }) => {
   await page.goto("/login?returnTo=%2Fbillable-metrics");
   await page.getByLabel("이메일", { exact: true }).fill("member@meterengine.local");
   await page.getByLabel("비밀번호", { exact: true }).fill("local-member-password");
   await page.getByRole("button", { name: "로그인", exact: true }).click();
   await expect(page).toHaveURL(/\/billable-metrics(?:\?.*)?$/);
-  // 로컬 시드 미터는 legacy에만 있어 테스트 환경 화면에 그릴 미터를 만든다.
+  // 로컬 시드 과금 미터는 legacy에만 있어 테스트 환경 화면에 그릴 과금 미터를 만든다.
   const token = (await page.context().cookies()).find(cookie => cookie.name === "me_session")?.value;
   if (!token) throw new Error("로컬 검증 세션이 없습니다.");
   const code = `column-width-${randomUUID()}`;
-  const metric = await request.post(`${API_URL}/v1/billable-metrics`, { headers: consoleHeaders(token), data: { code, name: "열 너비 확인 미터", event_type: code, aggregation: "sum", target_property: "units", dimension_properties: [] } });
+  const metric = await request.post(`${API_URL}/v1/billable-metrics`, { headers: consoleHeaders(token), data: { code, name: "열 너비 확인 과금 미터", event_type: code, aggregation: "sum", target_property: "units", dimension_properties: [] } });
   expect(metric.status()).toBe(201);
   await page.reload();
 
@@ -88,8 +88,8 @@ test("보관을 지원하는 모든 도입사 목록에서 상태별 조회와 �
   const email = `archive-owner-${suffix}@fe-e2e.local`;
   const activeName = `사용 고객 ${suffix}`;
   const archivedName = `보관 고객 ${suffix}`;
-  const activeMetricName = `사용 미터 ${suffix}`;
-  const archivedMetricName = `보관 미터 ${suffix}`;
+  const activeMetricName = `사용 과금 미터 ${suffix}`;
+  const archivedMetricName = `보관 과금 미터 ${suffix}`;
   const activeMetricCode = `archive-current-${suffix}`;
   const archivedMetricCode = `archive-stopped-${suffix}`;
   const activeKeyLabel = `사용 키 ${suffix}`;
@@ -196,7 +196,7 @@ test("보관을 지원하는 모든 도입사 목록에서 상태별 조회와 �
       await expectRecords(customers, [activeName, archivedName]);
     });
 
-    await test.step("미터의 사용 중, 보관됨, 전체를 직접 탐색", async () => {
+    await test.step("과금 미터의 사용 중, 보관됨, 전체를 직접 탐색", async () => {
       await page.goto("/billable-metrics");
       await expect(page.getByRole("row").filter({ hasText: activeMetricName })).toHaveCount(1);
       await expect(page.getByRole("row").filter({ hasText: archivedMetricName })).toHaveCount(0);
@@ -231,7 +231,7 @@ test("보관을 지원하는 모든 도입사 목록에서 상태별 조회와 �
       await expect(page.locator(`${options}[value="${activeMetricCode}"]`)).toHaveCount(1);
     });
 
-    await test.step("요금제, 단가와 미터 필터를 서로 독립적으로 유지", async () => {
+    await test.step("요금제, 단가와 과금 미터 필터를 서로 독립적으로 유지", async () => {
       await page.goto(`/pricing?month=${currentMonth}&metric=${activeMetricCode}`);
       const plans = page.locator("details").filter({ has: page.locator("summary").filter({ hasText: "요금제 변경 이력" }) });
       if ((await plans.getAttribute("open")) === null) await plans.locator("summary").click();
@@ -247,10 +247,10 @@ test("보관을 지원하는 모든 도입사 목록에서 상태별 조회와 �
       await expect(rates.getByRole("row").filter({ hasText: "123원" })).toHaveCount(1);
       await expect(rates.getByRole("row").filter({ hasText: "456원" })).toHaveCount(0);
       expect(new URL(page.url()).searchParams.get("plan_status")).toBe("archived");
-      await selectedFilter(page, "미터 상태", "보관됨");
+      await selectedFilter(page, "과금 미터 상태", "보관됨");
       await expect(page.getByRole("button", { name: new RegExp(archivedMetricName) })).toBeVisible();
       await expect(page.getByRole("button", { name: new RegExp(activeMetricName) })).toHaveCount(0);
-      await selectedFilter(page, "미터 상태", "전체");
+      await selectedFilter(page, "과금 미터 상태", "전체");
       await page.getByRole("button", { name: new RegExp(activeMetricName) }).click();
       await selectedFilter(page, "요금제 상태", "전체");
       await selectedFilter(page, "단가 상태", "전체");
@@ -323,7 +323,7 @@ test("보관을 지원하는 모든 도입사 목록에서 상태별 조회와 �
       const routes = [
         { path: "/customers?status=all", filters: ["상태"] },
         { path: "/billable-metrics?status=all", filters: ["상태"] },
-        { path: `/pricing?month=${currentMonth}&metric=${activeMetricCode}&metric_status=all&plan_status=all&rate_status=all`, filters: ["미터 상태", "요금제 상태", "단가 상태"] },
+        { path: `/pricing?month=${currentMonth}&metric=${activeMetricCode}&metric_status=all&plan_status=all&rate_status=all`, filters: ["과금 미터 상태", "요금제 상태", "단가 상태"] },
         { path: "/members?status=all", filters: ["사용자 상태"] },
         { path: "/integrations?status=all&key_status=all", filters: ["API 키 상태", "웹훅 URL 상태"] },
         { path: "/settings?status=all", filters: ["토스페이먼츠 키 상태"] },

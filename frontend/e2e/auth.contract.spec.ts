@@ -1,4 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { test } from "./console-browser";
 
 import { fixtureUrl, frontendOrigin } from "./contract-stack";
 
@@ -189,6 +190,21 @@ test("closing a workspace dialog returns focus to its trigger", async ({ page })
   await expect(trigger).toBeFocused();
 });
 
+test("issuing a key shows the secret first and updates the list after closing", { tag: "@slow-browser" }, async ({ page }) => {
+  await login(page, "member@contract.local", "/integrations");
+  await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel(/^키 이름/).fill("목록 갱신 시험 키");
+  await dialog.getByRole("button", { name: "API 키 발급", exact: true }).click();
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await dialog.getByRole("button", { name: "API 키 복사" }).click();
+  await expect(dialog.getByRole("status")).toHaveText("복사했어요.");
+  const issuedRow = page.locator(".workspace-desktop-table tr").filter({ hasText: "목록 갱신 시험 키" });
+  await expect(issuedRow).toHaveCount(0);
+  await dialog.getByRole("button", { name: "닫기", exact: true }).last().click();
+  await expect(issuedRow).toBeVisible();
+});
+
 test("an issued secret is shown first and closing before copying asks for confirmation", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await login(page, "member@contract.local", "/integrations");
@@ -298,7 +314,7 @@ test("a customer edit that lost a version race offers to load the latest values 
   await expect(page.getByRole("heading", { name: "다시 고친 이름", level: 1 })).toBeVisible();
 });
 
-test("restoring a customer returns focus to the same button, now offering to archive", async ({ page, request }) => {
+test("restoring a customer returns focus to the same button, now offering to archive", { tag: "@slow-browser" }, async ({ page, request }) => {
   await login(page);
   await page.getByRole("button", { name: "고객 등록", exact: true }).click();
   const dialog = page.getByRole("dialog");
@@ -363,9 +379,9 @@ test("the sidebar lists the meter screen and marks it as the current place", asy
   await login(page);
   await expectTenantUrl(page, "/customers");
   const nav = page.getByRole("navigation", { name: "주 메뉴" });
-  await nav.getByRole("link", { name: "미터", exact: true }).click();
+  await nav.getByRole("link", { name: "과금 미터", exact: true }).click();
   await expectTenantUrl(page, "/billable-metrics");
-  await expect(nav.getByRole("link", { name: "미터", exact: true })).toHaveAttribute("aria-current", "page");
+  await expect(nav.getByRole("link", { name: "과금 미터", exact: true })).toHaveAttribute("aria-current", "page");
   await expect(nav.locator("[aria-current=page]")).toHaveCount(1);
 });
 
@@ -377,8 +393,8 @@ test("each screen has its own document title", async ({ page }) => {
   await login(page);
   await expectTenantUrl(page, "/customers");
   await expect(page).toHaveTitle("고객 | MeterEngine");
-  await page.getByRole("navigation", { name: "주 메뉴" }).getByRole("link", { name: "미터", exact: true }).click();
-  await expect(page).toHaveTitle("미터 | MeterEngine");
+  await page.getByRole("navigation", { name: "주 메뉴" }).getByRole("link", { name: "과금 미터", exact: true }).click();
+  await expect(page).toHaveTitle("과금 미터 | MeterEngine");
 });
 
 test("a workspace load failure offers an in-place retry button", async ({ page, request }) => {
@@ -430,20 +446,20 @@ test("the audit list marks rejected requests and keeps entries compact", async (
 
 test("a meter form with input asks before Escape throws it away", async ({ page }) => {
   await login(page, "member@contract.local", "/billable-metrics");
-  await page.getByRole("button", { name: "미터 등록", exact: true }).first().click();
-  const dialog = page.getByRole("dialog", { name: "미터 등록" });
-  await dialog.getByLabel("이름", { exact: true }).fill("작성 중인 미터");
+  await page.getByRole("button", { name: "과금 미터 등록", exact: true }).first().click();
+  const dialog = page.getByRole("dialog", { name: "과금 미터 등록" });
+  await dialog.getByLabel("이름", { exact: true }).fill("작성 중인 과금 미터");
   let asked = "";
   page.once("dialog", prompt => { asked = prompt.message(); void prompt.dismiss(); });
   await page.keyboard.press("Escape");
-  await expect.poll(() => asked).toBe("작성 중인 미터를 버리고 닫을까요?");
+  await expect.poll(() => asked).toBe("작성 중인 과금 미터를 버리고 닫을까요?");
   await expect(dialog).toBeVisible();
 });
 
 test("meter number inputs do not expose English stepper buttons", async ({ page }) => {
   await login(page, "member@contract.local", "/billable-metrics");
-  await page.getByRole("button", { name: "미터 등록", exact: true }).first().click();
-  const dialog = page.getByRole("dialog", { name: "미터 등록" });
+  await page.getByRole("button", { name: "과금 미터 등록", exact: true }).first().click();
+  const dialog = page.getByRole("dialog", { name: "과금 미터 등록" });
   await expect(dialog.getByLabel("과금 단위 크기")).toBeVisible();
   await expect(dialog.getByRole("button", { name: /Increase Value|Decrease Value/ })).toHaveCount(0);
 });
@@ -664,7 +680,7 @@ test("logging in to a return path of another member organization opens that orga
   await expect(page.getByRole("heading", { name: "선택한 조직이 바뀌었어요" })).toHaveCount(0);
 });
 
-test("a required choice group error reads without a broken particle", async ({ page }) => {
+test("a required choice group error reads without a broken particle", { tag: "@slow-browser" }, async ({ page }) => {
   await login(page, "member@contract.local", "/integrations");
   await expectTenantUrl(page, "/integrations");
   await page.getByRole("button", { name: "API 키 발급", exact: true }).click();
@@ -931,7 +947,7 @@ test("375px forms and tenant header fit, keyboard focus and menu work", async ({
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "메뉴 열기" })).toBeFocused();
   await page.getByRole("button", { name: "메뉴 열기" }).click();
-  await page.getByRole("dialog").getByRole("link", { name: "미터", exact: true }).click();
+  await page.getByRole("dialog").getByRole("link", { name: "과금 미터", exact: true }).click();
   await expectTenantUrl(page, "/billable-metrics");
   await expect(page.getByRole("dialog")).toHaveCount(0);
 });
@@ -1246,7 +1262,7 @@ test("a new organization works in the test environment and is sent to the applic
   await expect(page.getByText("운영자", { exact: false })).toHaveCount(0);
 });
 
-test("the application is rejected beside the field at once and waits for review after it passes", async ({ page, request }) => {
+test("the application is rejected beside the field at once and waits for review after it passes", { tag: "@slow-browser" }, async ({ page, request }) => {
   await login(page, "locked@contract.local", "/live-environment");
   await expect(page.getByRole("heading", { level: 2, name: "라이브 환경은 이용 신청이 승인되면 쓸 수 있어요", exact: true })).toBeVisible();
   const form = page.locator("form.workspace-form");

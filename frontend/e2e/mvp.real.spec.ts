@@ -68,7 +68,7 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     customerId = new URL(page.url()).pathname.split("/").pop()!;
     await expect(page.getByText(`external-${suffix}`, { exact: true })).toBeVisible();
     await page.goto("/billable-metrics");
-    await page.getByRole("button", { name: "미터 등록", exact: true }).first().click();
+    await page.getByRole("button", { name: "과금 미터 등록", exact: true }).first().click();
     const metricDialog = page.getByRole("dialog");
     await metricDialog.getByLabel("코드", { exact: true }).fill(metricCode);
     await metricDialog.getByLabel("이름", { exact: true }).fill("MVP 사용 단위");
@@ -182,7 +182,7 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     await dialog.getByRole("button", { name: "토스페이먼츠 키 저장", exact: true }).click();
     await expect(dialog).toHaveCount(0);
     await page.goto(`/customers/${customerId}?month=${month}`);
-    await expect(page.getByRole("cell", { name: `MVP 사용 단위 (${metricCode})`, exact: true }).first(), "고객 상세 사용량도 미터 코드를 함께 보인다").toBeVisible();
+    await expect(page.getByRole("cell", { name: `MVP 사용 단위 (${metricCode})`, exact: true }).first(), "고객 상세 사용량도 과금 미터 코드를 함께 보인다").toBeVisible();
     await page.getByRole("button", { name: "카드 등록 링크 만들기", exact: true }).click();
     await page.getByRole("dialog").getByRole("button", { name: "카드 등록 링크 만들기", exact: true }).click();
     const registration = page.getByRole("dialog").getByRole("link", { name: "카드 등록 링크 열기", exact: true });

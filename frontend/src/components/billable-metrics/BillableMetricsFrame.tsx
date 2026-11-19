@@ -15,7 +15,7 @@ export function BillableMetricsFrame({
 }) {
   return (
     <>
-      <ScreenHeader title="미터" />
+      <ScreenHeader title="과금 미터" />
       <ScreenCard>
         <ResourceSearchControls query={query} capabilities={capabilities} resource="billable-metrics" />
         {children}

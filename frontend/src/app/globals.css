@@ -279,7 +279,7 @@ input, textarea { caret-color: var(--blue); }
 @media (max-width: 480px) { .ant-pagination.ant-pagination > li { margin-inline-end: 4px; min-width: 34px; }.ant-pagination.ant-pagination > li:last-child { margin-inline-end: 0; }.ant-pagination :is(.ant-pagination-prev, .ant-pagination-next) > :is(a, button) { padding-inline: 4px !important; } }
 /* 펼침 버튼 옆의 말줄임 글자가 버튼 폭만큼 칸 밖으로 밀려 말줄임표 없이 잘리지 않게 남은 폭에 맞춘다. */
 .ant-table-cell-with-append > .ant-typography-ellipsis-single-line { display: block; }
-/* antd는 펼침 버튼을 17px로 보고 위 여백을 잡아 19px 버튼이 한글 고객 이름 줄에서 처진다. 영문 소문자인 미터 코드 줄은 기본값이 맞아 고객 줄만 올린다. */
+/* antd는 펼침 버튼을 17px로 보고 위 여백을 잡아 19px 버튼이 한글 고객 이름 줄에서 처진다. 영문 소문자인 과금 미터 코드 줄은 기본값이 맞아 고객 줄만 올린다. */
 .ant-table-wrapper .ant-table-tbody .ant-table-row-level-0 .ant-table-row-indent + .ant-table-row-expand-icon { margin-top: 1.5px; }
 /* 작은 표에서 오른쪽 정렬 열 바로 뒤의 왼쪽 정렬 열이 붙어 보이지 않게 보통 표와 같은 32px를 둔다. */
 .ant-table-small :is(th, td)[style*="text-align:right"] + :is(th, td):not([style*="text-align:right"]) { padding-inline-start: 24px !important; }

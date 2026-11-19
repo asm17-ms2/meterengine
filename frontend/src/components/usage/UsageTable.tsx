@@ -109,7 +109,7 @@ export function UsageTable({
   const sortableColumns: SortableColumn<UsageRow>[] = [
     {
       key: "label",
-      title: "고객 / 미터",
+      title: "고객 / 과금 미터",
       ellipsis: true,
       clientSorter: byCustomerName,
       sortKey: "customer_name",

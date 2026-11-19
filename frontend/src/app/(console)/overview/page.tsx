@@ -68,7 +68,7 @@ async function Overview({ month, insights }: { month: string; insights: Promise<
   const missingSettings = [!data.supplier_configured && "공급자 정보 미입력", !data.payment_configured && `토스페이먼츠 ${paymentModeName} 키 미등록`].filter(Boolean);
   const steps = [
     { title: "과금할 고객 연결", detail: `고객 ${data.customer_count}명`, isComplete: data.customer_count > 0, href: "/customers" },
-    { title: "사용량과 요금 정의", detail: `미터 ${data.billable_metric_count}개. 단가와 적용 월을 확인하세요.`, isComplete: data.billable_metric_count > 0, href: `/pricing?month=${month}` },
+    { title: "사용량과 요금 정의", detail: `과금 미터 ${data.billable_metric_count}개. 단가와 적용 월을 확인하세요.`, isComplete: data.billable_metric_count > 0, href: `/pricing?month=${month}` },
     { title: "API 키 발급", detail: "사용량을 보내고 고객부터 수납까지 조회할 수 있게 수집, 조회 권한으로 API 키를 발급하세요.", isComplete: data.active_api_key_count > 0, href: "/integrations" },
     { title: "공급자와 결제 설정", detail: `${missingSettings.length ? `${missingSettings.join(", ")}. ` : ""}현재 업무 환경: ${paymentModeLabel}`, isComplete: data.supplier_configured && data.payment_configured, href: "/settings" },
   ];
@@ -85,7 +85,7 @@ async function Overview({ month, insights }: { month: string; insights: Promise<
       <div className={insightStyles.grid}>
         <Suspense fallback={<AggregateLoading title="금액 추이와 이벤트 수를 세는 중이에요" />}><TrendCharts insights={insights} /></Suspense>
         <RankBars title="청구 예정액이 큰 고객" summary={`이 달 청구 예정액 상위 ${RANK_LIMIT}곳이에요. 공급가액 기준이에요.`} rows={topCustomerAmounts(draftCustomers, RANK_LIMIT)} formatValue={formatKrw} empty="이 달에 청구할 금액이 있는 고객이 없어요." />
-        <RankBars title="미터별 청구 예정액" summary="어느 미터가 매출을 만드는지 보여요. 공급가액 기준이에요." rows={metricAmounts(draftCustomers, RANK_LIMIT)} formatValue={formatKrw} empty="이 달에 금액이 생긴 미터가 없어요." />
+        <RankBars title="과금 미터별 청구 예정액" summary="어느 과금 미터가 매출을 만드는지 보여요. 공급가액 기준이에요." rows={metricAmounts(draftCustomers, RANK_LIMIT)} formatValue={formatKrw} empty="이 달에 금액이 생긴 과금 미터가 없어요." />
       </div>
     </section>
     <section className="workspace-panel" aria-labelledby="overview-unresolved-title">

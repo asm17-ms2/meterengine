@@ -50,7 +50,7 @@ export default async function PricingPage({ searchParams }: { searchParams: Prom
   }
   const detailFailure = [selectedMetric, commonPrices, history].find(result => result && !result.ok);
   return <>
-    <WorkspaceHeader title="요금 설정" description={PRICING_DESCRIPTION}><LinkButton href="/billable-metrics">미터 관리</LinkButton></WorkspaceHeader>
+    <WorkspaceHeader title="요금 설정" description={PRICING_DESCRIPTION}><LinkButton href="/billable-metrics">과금 미터 관리</LinkButton></WorkspaceHeader>
     {detailFailure && !detailFailure.ok && <WorkspaceError message={toDisplayMessage(detailFailure.error)} />}
     <PricingWorkspace dataMonths={<Suspense fallback={null}><DataMonths filterForm="resource-search-billable-metric-prices" resource="billable-metric-prices" pathname="/pricing" query={query} /></Suspense>} query={query} total={prices.data.total} summary={prices.data.summary}
       planHistoryStatus={readArchiveStatus(typeof params.plan_status === "string" ? params.plan_status : typeof params.status === "string" ? params.status : undefined)}

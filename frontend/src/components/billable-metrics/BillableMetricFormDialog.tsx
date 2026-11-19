@@ -150,7 +150,7 @@ export function BillableMetricFormDialog({
 
   const submitForm = () => form.submit();
   const close = () => {
-    if (!isPending && (!form.isFieldsTouched() || window.confirm("작성 중인 미터를 버리고 닫을까요?"))) onClose();
+    if (!isPending && (!form.isFieldsTouched() || window.confirm("작성 중인 과금 미터를 버리고 닫을까요?"))) onClose();
   };
 
   return (
@@ -160,7 +160,7 @@ export function BillableMetricFormDialog({
       width="min(680px, calc(100vw - 32px))"
       style={{ top: 24 }}
       styles={{ body: { maxHeight: "calc(100dvh - 180px)", overflowY: "auto", paddingInline: 8, marginInline: -8 } }}
-      title={isEdit ? "미터 수정" : "미터 등록"}
+      title={isEdit ? "과금 미터 수정" : "과금 미터 등록"}
       onCancel={isPending ? undefined : close}
       keyboard={!isPending}
       mask={{ closable: !isPending }}
@@ -210,7 +210,7 @@ export function BillableMetricFormDialog({
           <Form.Item
             name="code"
             label="코드"
-            extra="다른 미터와 같은 코드는 쓸 수 없어요. 등록한 뒤에는 바꿀 수 없어요."
+            extra="다른 과금 미터와 같은 코드는 쓸 수 없어요. 등록한 뒤에는 바꿀 수 없어요."
             rules={[{ required: true, transform: trimText, message: "코드를 입력하세요" }]}
           >
             <Input
@@ -223,7 +223,7 @@ export function BillableMetricFormDialog({
           </Form.Item>
         )}
         {isEdit ? <Typography.Paragraph type="secondary">
-          수집된 이벤트가 있는 미터는 이름만 바꿀 수 있어요. 계산 기준을 바꾸려면 새 미터를 등록하세요.
+          수집된 이벤트가 있는 과금 미터는 이름만 바꿀 수 있어요. 계산 기준을 바꾸려면 새 과금 미터를 등록하세요.
         </Typography.Paragraph> : null}
         <Form.Item
           name="name"
@@ -239,7 +239,7 @@ export function BillableMetricFormDialog({
         <Form.Item
           name="eventType"
           label="이벤트 유형"
-          extra="사용량 이벤트의 type이 이 값과 같으면 이 미터로 집계해요."
+          extra="사용량 이벤트의 type이 이 값과 같으면 이 과금 미터로 집계해요."
           rules={[{ required: true, transform: trimText, message: "이벤트 유형을 입력하세요" }]}
         >
           <Input
@@ -344,7 +344,7 @@ export function BillableMetricFormDialog({
 
       <Divider size="small" />
       <Typography.Paragraph type="secondary" style={{ margin: 0, fontSize: token.fontSizeSM }}>
-        화면 위에서 고른 조직과 업무 환경에 저장해요. 다른 업무 환경에서 쓰려면 그 환경에서 다시 등록하세요. 같은 이벤트와 속성으로 미터를 여러 개 만들 수 있어요. 예를 들어 합계 미터와 이벤트 수 미터에 각각 단가를 등록하면 두 사용료가 모두 청구돼요.
+        화면 위에서 고른 조직과 업무 환경에 저장해요. 다른 업무 환경에서 쓰려면 그 환경에서 다시 등록하세요. 같은 이벤트와 속성으로 과금 미터를 여러 개 만들 수 있어요. 예를 들어 합계 과금 미터와 이벤트 수 과금 미터에 각각 단가를 등록하면 두 사용료가 모두 청구돼요.
       </Typography.Paragraph>
 
     </Modal>
