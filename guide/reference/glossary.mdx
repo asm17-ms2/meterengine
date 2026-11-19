@@ -217,8 +217,8 @@ description: "가이드 용어의 뜻과 영문 표기, 콘솔 화면 표기를 
 | 웹훅 URL | 웹훅을 받을 자사 서버의 HTTPS URL. 업무 환경마다 10개까지 등록합니다 | `webhook_endpoint`, `url` | 웹훅 URL, 웹훅 URL 등록, 웹훅 URL 상태 | [웹훅 받기 시작하기](/webhooks/overview) |
 | 웹훅 시크릿 | 웹훅 URL마다 하나인 서명 키. 등록 응답에만 한 번 나옵니다 | `secret`, `whsec_` | 웹훅 시크릿 복사 | [웹훅 서명 검증](/webhooks/verify-signatures) |
 | 받을 웹훅 | 웹훅 URL이 받을 웹훅 유형의 목록 | `event_types` | 받을 웹훅 | [웹훅 받기 시작하기](/webhooks/overview) |
-| 발송 상태 | 웹훅 URL의 발송을 켜고 끄는 값. 끈 동안 생긴 웹훅은 나중에도 보내지 않습니다 | `enabled` | 발송 중, 발송 일시 중지 | [웹훅 받기 시작하기](/webhooks/overview) |
-| 웹훅 URL 보관 | 웹훅 URL의 발송을 멈추고 기본 목록에서 뺀 상태. 기록은 남고 복원할 수 있습니다 | `archived_at`, `archived` | 웹훅 URL 보관, 보관됨, 웹훅 URL 복원 | [웹훅 받기 시작하기](/webhooks/overview) |
+| 전송 상태(웹훅 URL) | 웹훅 URL의 전송을 켜고 끄는 값. 끈 동안 생긴 웹훅은 나중에도 보내지 않습니다 | `enabled` | 전송 중, 전송 일시 중지 | [웹훅 받기 시작하기](/webhooks/overview) |
+| 웹훅 URL 보관 | 웹훅 URL의 전송을 멈추고 기본 목록에서 뺀 상태. 기록은 남고 복원할 수 있습니다 | `archived_at`, `archived` | 웹훅 URL 보관, 보관됨, 웹훅 URL 복원 | [웹훅 받기 시작하기](/webhooks/overview) |
 | 결제 성공 | 결제 시도가 승인으로 끝났을 때의 웹훅 | `payment_succeeded` | 결제 성공 | [웹훅 이벤트 유형과 data](/webhooks/events) |
 | 결제 실패 | 결제 시도가 실패로 끝났을 때의 웹훅. 실패 사유는 실리지 않습니다 | `payment_failed` | 결제 실패 | [웹훅 이벤트 유형과 data](/webhooks/events) |
 | 결제 취소 웹훅 | 결제 취소가 끝났을 때의 웹훅. `amount`는 이번 취소 금액입니다 | `payment_canceled` | 결제 취소 | [웹훅 이벤트 유형과 data](/webhooks/events) |
@@ -227,7 +227,7 @@ description: "가이드 용어의 뜻과 영문 표기, 콘솔 화면 표기를 
 | environment(웹훅 본문) | 웹훅이 생긴 업무 환경 | `test`, `live`, `legacy` | 테스트 환경, 라이브 환경, 기존 데이터 | [웹훅 이벤트 유형과 data](/webhooks/events) |
 | mode(결제 웹훅 data) | 그 결제를 처리한 결제 모드 | `test`, `live` | '업무 환경' 열의 테스트 환경, 라이브 환경 | [웹훅 이벤트 유형과 data](/webhooks/events) |
 | webhook-id | | `webhook-id` 요청 헤더 | 웹훅 하나의 고유 값. 재전송과 여러 웹훅 URL에서도 같아 중복을 거르는 데 씁니다 | [전송, 재전송, 중복 처리](/webhooks/delivery-and-retries) |
-| 웹훅 발송 내역 | 발송 내역과 설정(링크), 웹훅 발송 내역(화면 제목) | | 웹훅 URL별 전송 기록 화면 | [전송, 재전송, 중복 처리](/webhooks/delivery-and-retries) |
-| 전송 상태 | 웹훅 URL별 전송 한 건의 상태 | `pending`, `done`, `failed` | 발송 대기, 재시도 대기, 발송 완료, 발송 실패 | [전송, 재전송, 중복 처리](/webhooks/delivery-and-retries) |
-| 전송 실패 사유 | 전송 시도가 실패한 이유 | `timeout`, `connection_error`, `unexpected_status`, `blocked_address`, `endpoint_disabled`, `lease_expired`, `secret_unavailable` | 응답 시간 초과, 연결 실패, 2xx가 아닌 응답, 허용되지 않는 주소, 발송을 멈춘 웹훅 URL, 발송 결과를 기록하지 못함, 웹훅 시크릿을 읽지 못함 | [전송, 재전송, 중복 처리](/webhooks/delivery-and-retries) |
-| 다시 보내기 | 발송 실패로 끝난 전송을 같은 `webhook-id`로 다시 보내는 것 | `retries` | 다시 보내기 | [전송, 재전송, 중복 처리](/webhooks/delivery-and-retries) |
+| 웹훅 전송 기록 | 전송 기록과 설정(링크), 웹훅 전송 기록(화면 제목) | | 웹훅 URL별 전송 기록 화면 | [전송, 재전송, 중복 처리](/webhooks/delivery-and-retries) |
+| 전송 상태(전송 한 건) | 웹훅 URL별 전송 한 건의 상태 | `pending`, `done`, `failed` | 전송 대기, 재시도 대기, 전송 완료, 전송 실패 | [전송, 재전송, 중복 처리](/webhooks/delivery-and-retries) |
+| 전송 실패 사유 | 전송 시도가 실패한 이유 | `timeout`, `connection_error`, `unexpected_status`, `blocked_address`, `endpoint_disabled`, `lease_expired`, `secret_unavailable` | 응답 시간 초과, 연결 실패, 2xx가 아닌 응답, 허용되지 않는 주소, 전송을 멈춘 웹훅 URL, 전송 결과를 기록하지 못함, 웹훅 시크릿을 읽지 못함 | [전송, 재전송, 중복 처리](/webhooks/delivery-and-retries) |
+| 다시 보내기 | 전송 실패로 끝난 전송을 같은 `webhook-id`로 다시 보내는 것 | `retries` | 다시 보내기 | [전송, 재전송, 중복 처리](/webhooks/delivery-and-retries) |
