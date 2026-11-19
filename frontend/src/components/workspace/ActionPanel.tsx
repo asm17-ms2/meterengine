@@ -100,6 +100,7 @@ function ActionBody({ title, operation, description, fields = [], label, isDange
     if (isDirty && !window.confirm("작성 중인 내용을 버리고 닫을까요?")) return;
     if ((state.secret || state.registrationPath) && !isCopied && !window.confirm("닫으면 이 값을 다시 볼 수 없어요. 복사하지 않고 닫을까요?")) return;
     onClose?.(Boolean(state.isConfirmedFailure));
+    if (operation === "createApiKey" && state.secret) router.refresh();
   }
 
   async function copy(value: string) {
