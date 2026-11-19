@@ -43,7 +43,7 @@ export function EventDetailDrawer({
         items={[
           {
             key: "transactionId",
-            label: "전송 ID",
+            label: "transaction_id",
             children: (
               <Typography.Text style={{ fontFamily: token.fontFamilyCode, wordBreak: "break-all" }}>
                 {row.transactionId}

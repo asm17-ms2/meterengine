@@ -161,7 +161,7 @@
 | 수집 이벤트 | 이벤트 또는 고객 찾기, 조회 월, 정렬 기준(발생 시각, 수신 시각), 원본 속성 포함 (JSON) | 조회 조건 |
 | 수집 이벤트 | 발생 시각 (KST), 수신 시각 (KST), 이 요청의 감사 기록 보기 | 이벤트 상세 |
 | 목록 화면 공통 | 조건 전체 CSV 내보내기 | 버튼 |
-| 수집 거절 | 조회 월, 거절 사유, 요청에 담긴 고객 ID (선택), 전송 ID와 유형 검색 | 조회 조건 |
+| 수집 거절 | 조회 월, 거절 사유, 요청에 담긴 고객 ID (선택), transaction_id와 유형 검색 | 조회 조건 |
 | 수집 거절 | 요청 ID, 거절 기록 시각 | 목록 열 |
 | 수집 거절 | 고객을 찾을 수 없음, 보관된 고객, 수집 가능 기간 초과, 요청 값 오류 | 거절 사유(customer_not_found, customer_archived, event_too_old, validation_error) |
 | 과금에서 빠진 이벤트 | 연결할 미터 없음, 수량을 읽을 수 없음, 적용 단가 없음 | 문제 종류(unknown_event_type, invalid_target_property, unpriced_usage) |

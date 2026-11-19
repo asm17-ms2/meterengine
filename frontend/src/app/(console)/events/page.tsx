@@ -38,7 +38,7 @@ export default async function EventsPage({ searchParams }: { searchParams: Promi
   const events = query.devState === "loading" ? null : listEvents(query, query.devState);
   const transactionId = typeof params.transaction_id === "string" ? params.transaction_id : undefined;
   return <>
-    <ScreenHeader title="수집 이벤트" description={<>받은 사용량 이벤트예요. 전송 ID를 누르면 전송 속성이 보여요. 이벤트를 보내는 연동은 <ScopedLink href="/integrations">API 키와 웹훅</ScopedLink>에서 설정하세요.</>}>{events && <Suspense fallback={null}><EventsMeta events={events} /></Suspense>}</ScreenHeader>
+    <ScreenHeader title="수집 이벤트" description={<>받은 사용량 이벤트예요. transaction_id를 누르면 전송 속성이 보여요. 이벤트를 보내는 연동은 <ScopedLink href="/integrations">API 키와 웹훅</ScopedLink>에서 설정하세요.</>}>{events && <Suspense fallback={null}><EventsMeta events={events} /></Suspense>}</ScreenHeader>
     {(query.from || query.to) && <p className="field-hint">사용량과 청구는 달 단위로 집계해요. 사용량이나 청구 검토 화면으로 이동하면 조회 시작 시각이 속한 달을 보여 줘요.</p>}
     {transactionId && <Suspense fallback={<p role="status">이벤트 상세를 불러오는 중이에요.</p>}><SelectedEvent transactionId={transactionId} /></Suspense>}
     <ScreenCard><Suspense fallback={<p role="status">조회 조건을 불러오는 중이에요.</p>}><Filters query={query} /></Suspense><Suspense fallback={null}><DataMonths resource="events" pathname="/events" query={query} filterForm="event-search" /></Suspense><CsvDownload resource="events" />{events ? <Suspense fallback={<TableSkeleton />}><EventsSection events={events} query={query} /></Suspense> : <TableSkeleton />}</ScreenCard>

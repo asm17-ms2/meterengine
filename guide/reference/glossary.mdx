@@ -122,7 +122,7 @@ description: "가이드 용어의 뜻과 영문 표기, 콘솔 화면 표기를 
 | 청구 이메일 | 고객에 저장하는 이메일. MeterEngine은 이 주소로 메일을 보내지 않습니다 | `billing_email` | 청구 이메일 | [고객 등록과 ID 대응](/integration/customers) |
 | 고객 보관 | 고객의 새 이벤트를 막는 상태. 지난 기록은 남고 복원할 수 있습니다 | `archived_at`, `customer_archived` | 고객 보관, 고객 복원 | [고객 등록과 ID 대응](/integration/customers) |
 | 이벤트 | | `POST /v1/events` | 고객이 서비스를 쓴 사실 하나. `transaction_id`, `customer_id`, `type`, `properties`, `timestamp`로 보냅니다 | [사용량 이벤트 보내기](/integration/events) |
-| transaction_id | 이벤트마다 직접 붙이는 고유 값. 업무 환경 안에서 유일해야 하고 같은 값으로 다시 보내면 처음 것이 남습니다 | `transaction_id` | 전송 ID | [사용량 이벤트 보내기](/integration/events) |
+| transaction_id | 이벤트마다 직접 붙이는 고유 값. 업무 환경 안에서 유일해야 하고 같은 값으로 다시 보내면 처음 것이 남습니다 | `transaction_id` | transaction_id | [사용량 이벤트 보내기](/integration/events) |
 | 중복 | | 단건 `duplicate: true`, batch `result` `duplicate` | 같은 `transaction_id`가 이미 저장돼 있어 저장하지 않은 결과. 성공으로 처리합니다 | [멱등 규칙](/api-basics/idempotency) |
 | batch 보내기 | | `POST /v1/event-batches`, `results[].result`: `stored`, `duplicate`, `rejected` | 한 요청에 1건부터 100건까지 이벤트를 보내고 원소마다 결과를 받는 방식 | [사용량 이벤트 보내기](/integration/events) |
 | 발생 시각 | 이벤트가 일어난 시각. 청구 월을 정합니다 | `timestamp`, `occurred_at` | 발생 시각 (KST) | [시간 규칙](/concepts/time-rules) |
