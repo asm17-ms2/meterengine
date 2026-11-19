@@ -404,7 +404,7 @@ test("a forbidden workspace load says so without a retry", async ({ page, reques
 test("webhook delivery history names event types, delivery states and failure reasons", async ({ page }) => {
   await login(page, "member@contract.local", `/integrations/${WEBHOOK_ENDPOINT_ID}`);
   const table = page.locator(".workspace-desktop-table");
-  for (const label of ["결제 실패", "테스트 웹훅", "재시도 대기", "발송 실패", "연결 실패", "허용되지 않는 주소"]) await expect(table.getByText(label, { exact: true })).toBeVisible();
+  for (const label of ["결제 실패", "테스트 웹훅", "재시도 대기", "전송 실패", "연결 실패", "허용되지 않는 주소"]) await expect(table.getByText(label, { exact: true })).toBeVisible();
   for (const raw of ["payment_failed", "webhook_test", "connection_error", "blocked_address", "결과 확인 중"]) await expect(table.getByText(raw, { exact: true })).toHaveCount(0);
 });
 
@@ -552,15 +552,15 @@ test("a webhook receiver whose latest delivery is failing is flagged in the list
   await expectTenantUrl(page, "/integrations");
   const failing = page.getByRole("listitem").filter({ hasText: "https://hooks.contract.local/meterengine" });
   const healthy = page.getByRole("listitem").filter({ hasText: "https://hooks.contract.local/healthy" });
-  await expect(failing).toContainText("최근 발송 실패");
-  await expect(healthy).toContainText("발송 중");
-  await expect(healthy).not.toContainText("최근 발송 실패");
+  await expect(failing).toContainText("최근 전송 실패");
+  await expect(healthy).toContainText("전송 중");
+  await expect(healthy).not.toContainText("최근 전송 실패");
 });
 
 test("the integrations list reads the failure flag from the receiver list without asking each receiver's deliveries", async ({ page, request }) => {
   await login(page, "member@contract.local", "/integrations");
   await expectTenantUrl(page, "/integrations");
-  await expect(page.getByRole("listitem").filter({ hasText: "https://hooks.contract.local/meterengine" })).toContainText("최근 발송 실패");
+  await expect(page.getByRole("listitem").filter({ hasText: "https://hooks.contract.local/meterengine" })).toContainText("최근 전송 실패");
   const paths = (await (await request.get(`${FIXTURE_URL}/__requests`)).json()).map((call: { path: string }) => call.path);
   expect(paths.filter((path: string) => path.includes("/deliveries"))).toEqual([]);
 });

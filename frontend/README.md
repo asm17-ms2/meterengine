@@ -182,7 +182,7 @@ docker run -p 3000:3000 \
 | `/billing`, `/invoices` | 단가 없는 구분 값과 음수 합을 검토한 뒤 확정, 계산 근거 조회 |
 | `/payments`, `/payments/{id}` | 결제 요청과 수동 재시도, 결과 확인, 결제 실패 건만 보기, 부분과 전액 취소, 시도와 취소 이력, 청구서 조회 링크의 재시도 권한 선택, 발급과 폐기 |
 | `/invoice-links` | 로그인 없이 확정 청구와 결제 상태 확인. 별도 허용된 링크에서 실패 결제의 금액을 확인한 뒤 등록 카드로 직접 재시도. 링크 원문은 URL fragment로 받고 주소창에서 제거하며 현재 탭의 sessionStorage에만 보존 |
-| `/integrations`, `/integrations/{id}` | API 키 발급과 교체, 권한 변경, 폐기, 웹훅 등록과 발송 이력, 마지막 시도가 실패한 웹훅 URL 표시, 테스트 웹훅과 실패 재전송 |
+| `/integrations`, `/integrations/{id}` | API 키 발급과 교체, 권한 변경, 폐기, 웹훅 등록과 전송 기록, 마지막 시도가 실패한 웹훅 URL 표시, 테스트 웹훅과 실패 재전송 |
 | `/members` | 사용자 관리 (계정 직접 생성, 초대 링크, 업무 권한과 역할 변경, 소속 보관, 초대 이력) |
 | `/audit` | 감사 기록 (도입사의 변경 기록과 API 요청 기록 조회) |
 | `/settings` | 환경별 공급자와 토스페이먼츠 키. 기존 데이터 환경을 켠 서버에서는 그 환경의 결제 설정 |
@@ -240,7 +240,7 @@ E2E_OPERATOR_PASSWORD=local-operator-e2e-password \
 pnpm test:e2e:real
 ```
 
-결제와 환경 분리까지 이어지는 실제 스택 시나리오는 같은 변수로 `pnpm exec playwright test -c playwright.mvp.config.ts`를 돌린다. 백엔드는 `local` 프로파일(사설 주소 웹훅 허용)로, `TOSSPAYMENTS_BASE_URL=http://127.0.0.1:38447`과 `UNBILLED_USAGE_REPORT_CRON='*/20 * * * * *'`, `UNBILLED_USAGE_DELIVERY_TIME=00:00`을 주고 띄운다. 미청구 사용량 통보의 기본값(매일 04:00 검사, 09:00 발송)으로는 `mvp.real.spec.ts`의 통보 대기 단계가 실패한다. 토스 대역 `38447`은 설정이 띄우며 `MVP_EXTERNAL_PG_FIXTURE=1`이면 띄우지 않는다. `MVP_REUSE_FRONTEND=1`이면 이미 뜬 `33147` FE를 쓴다.
+결제와 환경 분리까지 이어지는 실제 스택 시나리오는 같은 변수로 `pnpm exec playwright test -c playwright.mvp.config.ts`를 돌린다. 백엔드는 `local` 프로파일(사설 주소 웹훅 허용)로, `TOSSPAYMENTS_BASE_URL=http://127.0.0.1:38447`과 `UNBILLED_USAGE_REPORT_CRON='*/20 * * * * *'`, `UNBILLED_USAGE_DELIVERY_TIME=00:00`을 주고 띄운다. 미청구 사용량 통보의 기본값(매일 04:00 검사, 09:00 전송)으로는 `mvp.real.spec.ts`의 통보 대기 단계가 실패한다. 토스 대역 `38447`은 설정이 띄우며 `MVP_EXTERNAL_PG_FIXTURE=1`이면 띄우지 않는다. `MVP_REUSE_FRONTEND=1`이면 이미 뜬 `33147` FE를 쓴다.
 
 `playwright.mvp.config.ts` 시나리오는 테스트 DB를 `docker exec ... psql`로 직접 고친다. 가입한 도입사는 실제 환경이 잠겨 있어, 잠금이 아닌 기능을 보는 시나리오는 가입 뒤 `e2e/real-organization.ts`의 `openLiveEnvironment`로 실제 환경을 열고 시작한다. `customer-payment-retry`, `invoice-links`, `permissions`는 그 밖의 행도 고친다. `E2E_DB_CONTAINER`에 `S1_API_URL` 백엔드가 쓰는 PostgreSQL 컨테이너 이름(기본 `meterengine-0696-e2e`)을, `E2E_BACKEND_ENV_FILE`에 백엔드를 띄운 `TOSSPAYMENTS_BASE_URL`을 담은 JSON 파일(기본 `/private/tmp/meterengine-orchestration-0696/backend-e2e-environment.json`, 값은 `{"TOSSPAYMENTS_BASE_URL":"http://127.0.0.1:38447"}`)을 지정한다.
 

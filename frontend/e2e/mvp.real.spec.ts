@@ -282,7 +282,7 @@ test("새 도입사의 수집, 청구, 카드 등록, 수납, 부분과 전액 �
     await expect(page.getByText("전액 취소 완료", { exact: true })).toBeVisible();
     await page.screenshot({ path: "/tmp/meterengine-mvp-payments-desktop.png", fullPage: true });
   });
-  await test.step("실제 예약 발송과 도입사 수신기의 서명 검증", async () => {
+  await test.step("실제 예약 전송과 도입사 수신기의 서명 검증", async () => {
     await expect.poll(async () => {
       const provider = await (await request.get(`${PG_URL}/__state`)).json();
       return ["payment_succeeded", "payment_canceled", "unbilled_usage_detected"].every(type => provider.webhooks.some((event: { channel: string; type: string; is_valid: boolean }) => event.channel === suffix && event.type === type && event.is_valid));

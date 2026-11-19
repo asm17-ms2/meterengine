@@ -129,7 +129,7 @@ const endpoint = await response.json();
 웹훅 시크릿은 수신 서버의 비밀 저장소나 환경 변수에 넣고 코드와 저장소에 남기지 마세요. 웹훅 URL마다 웹훅 시크릿이 다릅니다.
 </Step>
 <Step title="테스트 웹훅을 보냅니다">
-콘솔에서는 'API 키와 웹훅' 화면의 웹훅 URL 옆 '발송 내역과 설정'을 열고 '테스트 웹훅 보내기'를 누릅니다. API로는 `POST /v1/webhook-endpoints/{id}/test-events`를 부릅니다(본문 없음).
+콘솔에서는 'API 키와 웹훅' 화면의 웹훅 URL 옆 '전송 기록과 설정'을 열고 '테스트 웹훅 보내기'를 누릅니다. API로는 `POST /v1/webhook-endpoints/{id}/test-events`를 부릅니다(본문 없음).
 
 ```bash curl
 curl -X POST https://meterengine.com/v1/webhook-endpoints/7c9e6679-7425-40de-944b-e07fc1f90ae7/test-events \
@@ -142,37 +142,37 @@ curl -X POST https://meterengine.com/v1/webhook-endpoints/7c9e6679-7425-40de-944
 }
 ```
 
-`202`는 곧 보낸다는 뜻이고 전달이 끝났다는 뜻이 아닙니다. 웹훅은 30초 간격으로 도는 발송 작업이 보내므로 수신 서버에 닿기까지 수십 초가 걸릴 수 있습니다. 테스트 웹훅은 '받을 웹훅'에 테스트 웹훅을 고르지 않았어도 이 웹훅 URL로 갑니다. 발송을 일시 중지했거나 보관한 웹훅 URL에 보내면 `409 webhook_endpoint_disabled`를 받습니다.
+`202`는 곧 보낸다는 뜻이고 전달이 끝났다는 뜻이 아닙니다. 웹훅은 30초 간격으로 도는 전송 작업이 보내므로 수신 서버에 닿기까지 수십 초가 걸릴 수 있습니다. 테스트 웹훅은 '받을 웹훅'에 테스트 웹훅을 고르지 않았어도 이 웹훅 URL로 갑니다. 전송을 일시 중지했거나 보관한 웹훅 URL에 보내면 `409 webhook_endpoint_disabled`를 받습니다.
 
 받은 요청의 `webhook-id` 헤더 값은 응답의 `webhook_event_id`와 같습니다.
 </Step>
 <Step title="전송 결과를 확인합니다">
-'발송 내역과 설정'을 열면 나오는 '웹훅 발송 내역' 화면 아래 표에서 테스트 웹훅이 '발송 완료'로 바뀌고 '수신 응답'에 2xx 값이 찍히면 연결이 확인된 것입니다. API로는 `GET /v1/webhook-endpoints/{id}/deliveries`로 봅니다.
+'전송 기록과 설정'을 열면 나오는 '웹훅 전송 기록' 화면 아래 표에서 테스트 웹훅이 '전송 완료'로 바뀌고 '수신 응답'에 2xx 값이 찍히면 연결이 확인된 것입니다. API로는 `GET /v1/webhook-endpoints/{id}/deliveries`로 봅니다.
 
-'발송 실패'나 '재시도 대기'가 보이면 '실패 사유'를 확인하세요. 사유별 뜻과 다시 보내는 방법은 [전송, 재전송, 중복 처리](/webhooks/delivery-and-retries)를 참고하세요.
+'전송 실패'나 '재시도 대기'가 보이면 '실패 사유'를 확인하세요. 사유별 뜻과 다시 보내는 방법은 [전송, 재전송, 중복 처리](/webhooks/delivery-and-retries)를 참고하세요.
 </Step>
 </Steps>
 
 ## 웹훅 URL 관리
 
-콘솔에서는 'API 키와 웹훅' 화면의 '웹훅 URL' 구역에서 웹훅 URL 옆 '발송 내역과 설정'을 누르면 '웹훅 발송 내역' 화면이 열립니다. 아래 표의 콘솔 동작은 따로 적지 않으면 이 화면에 있습니다.
+콘솔에서는 'API 키와 웹훅' 화면의 '웹훅 URL' 구역에서 웹훅 URL 옆 '전송 기록과 설정'을 누르면 '웹훅 전송 기록' 화면이 열립니다. 아래 표의 콘솔 동작은 따로 적지 않으면 이 화면에 있습니다.
 
 | 하려는 일 | 콘솔 | API |
 | --- | --- | --- |
 | 목록 보기 | '웹훅 URL' 구역의 목록('사용 중', '보관됨', '전체'로 거르기) | `GET /v1/webhook-endpoints` (`status`는 `active` 기본, `archived`, `all`) |
-| 하나 보기 | '웹훅 발송 내역' 화면 | `GET /v1/webhook-endpoints/{id}` |
-| 주소, 받을 유형, 발송 상태 바꾸기 | '웹훅 설정 수정' | `PUT /v1/webhook-endpoints/{id}` |
-| 발송 멈추기 | '웹훅 설정 수정'에서 '발송 상태'를 '발송 일시 중지'로 | `PUT`의 `enabled`를 `false`로 |
+| 하나 보기 | '웹훅 전송 기록' 화면 | `GET /v1/webhook-endpoints/{id}` |
+| 주소, 받을 유형, 전송 상태 바꾸기 | '웹훅 설정 수정' | `PUT /v1/webhook-endpoints/{id}` |
+| 전송 멈추기 | '웹훅 설정 수정'에서 '전송 상태'를 '전송 일시 중지'로 | `PUT`의 `enabled`를 `false`로 |
 | 보관하기 | '웹훅 URL 보관' | `DELETE /v1/webhook-endpoints/{id}` (`204`, 다시 불러도 `204`) |
-| 보관한 웹훅 URL 되살리기 | '웹훅 URL' 구역에서 '보관됨'을 고르고 그 웹훅 URL의 '발송 내역과 설정'을 연 뒤 '웹훅 URL 복원' | `POST /v1/webhook-endpoints/{id}/restorations` |
+| 보관한 웹훅 URL 되살리기 | '웹훅 URL' 구역에서 '보관됨'을 고르고 그 웹훅 URL의 '전송 기록과 설정'을 연 뒤 '웹훅 URL 복원' | `POST /v1/webhook-endpoints/{id}/restorations` |
 
-목록의 상태 표시는 '발송 중', '발송 일시 중지', '보관됨'입니다. '발송 중'인 웹훅 URL의 가장 최근 발송 시도가 실패했으면 '최근 발송 실패'가 붙습니다. API의 `latest_attempt_failed`는 일시 중지나 보관 상태여도 기록된 가장 최근 시도가 실패였으면 `true`입니다.
+목록의 상태 표시는 '전송 중', '전송 일시 중지', '보관됨'입니다. '전송 중'인 웹훅 URL의 가장 최근 전송 시도가 실패했으면 '최근 전송 실패'가 붙습니다. API의 `latest_attempt_failed`는 일시 중지나 보관 상태여도 기록된 가장 최근 시도가 실패였으면 `true`입니다.
 
 <Danger>`PUT /v1/webhook-endpoints/{id}`는 값을 통째로 바꿉니다. `url`, `event_types`, `enabled`를 모두 보내야 하고, `description`을 빼면 메모가 지워집니다. 주소를 바꾸지 않았어도 `PUT`을 부를 때마다 등록할 때와 같은 주소 검사를 다시 합니다.</Danger>
 
-- 발송을 멈추거나 보관한 동안 생긴 일은 그 웹훅 URL로 보내지 않고, 나중에 다시 켜도 보내지 않습니다. 이미 대기 중이던 전송도 실패로 끝납니다. 자세한 내용은 [전송, 재전송, 중복 처리](/webhooks/delivery-and-retries)를 참고하세요.
+- 전송을 멈추거나 보관한 동안 생긴 일은 그 웹훅 URL로 보내지 않고, 나중에 다시 켜도 보내지 않습니다. 이미 대기 중이던 전송도 실패로 끝납니다. 자세한 내용은 [전송, 재전송, 중복 처리](/webhooks/delivery-and-retries)를 참고하세요.
 - 보관한 웹훅 URL은 고칠 수 없습니다(`409 resource_archived`). 복원한 뒤 고칩니다.
-- 복원하면 '발송 일시 중지' 상태로 돌아옵니다. 받을 유형을 확인하고 '발송 중'으로 바꾼 뒤 테스트 웹훅으로 다시 점검하세요. 복원할 때도 주소 검사와 등록 한도를 다시 확인합니다.
+- 복원하면 '전송 일시 중지' 상태로 돌아옵니다. 받을 유형을 확인하고 '전송 중'으로 바꾼 뒤 테스트 웹훅으로 다시 점검하세요. 복원할 때도 주소 검사와 등록 한도를 다시 확인합니다.
 - 보관해도 전송 기록은 남습니다.
 
 ## 등록 한도
@@ -191,7 +191,7 @@ curl -X POST https://meterengine.com/v1/webhook-endpoints/7c9e6679-7425-40de-944
 서명 검증에서 기존 웹훅 시크릿과 새 웹훅 시크릿 중 하나라도 맞으면 통과시킵니다. 이 동안에는 같은 웹훅이 두 웹훅 URL로 한 번씩, 같은 `webhook-id`로 옵니다. `webhook-id`로 중복을 거르고 있으면 한 번만 처리됩니다.
 </Step>
 <Step title="기존 웹훅 URL을 보관합니다">
-새 웹훅 URL의 전송 기록이 '발송 완료'인 것을 확인한 뒤 기존 웹훅 URL을 보관하고, 수신 서버에서 기존 웹훅 시크릿을 지웁니다.
+새 웹훅 URL의 전송 기록이 '전송 완료'인 것을 확인한 뒤 기존 웹훅 URL을 보관하고, 수신 서버에서 기존 웹훅 시크릿을 지웁니다.
 </Step>
 </Steps>
 
