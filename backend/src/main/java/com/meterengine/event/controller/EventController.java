@@ -201,7 +201,7 @@ public class EventController {
           @DateTimeFormat(pattern = "yyyy-MM")
           @FourDigitYear
           YearMonth month,
-      @Parameter(description = "이 유형의 이벤트만 돌려줍니다. 어느 미터의 event_type도 아닌 값이어도 저장된 이벤트는 조회됩니다.")
+      @Parameter(description = "이 유형의 이벤트만 돌려줍니다. 어느 과금 미터의 event_type도 아닌 값이어도 저장된 이벤트는 조회됩니다.")
           @RequestParam(required = false)
           @StorableText
           String type,
@@ -243,7 +243,7 @@ public class EventController {
   @Operation(
       summary = "수집 이벤트 유형 목록 조회",
       description =
-          "미터 정의와 관계없이 조회 기간에 실제로 수집된 유형을 이름순으로 돌려줍니다. 기간은 month나 from과 to로 정합니다. 모르는 조회 조건은 무시합니다.")
+          "과금 미터 정의와 관계없이 조회 기간에 실제로 수집된 유형을 이름순으로 돌려줍니다. 기간은 month나 from과 to로 정합니다. 모르는 조회 조건은 무시합니다.")
   public Map<String, List<String>> listEventTypes(
       @CurrentOrganizationId UUID organizationId,
       @Parameter(description = CUSTOMER_DESCRIPTION)

@@ -30,17 +30,17 @@ public class BillableMetricPriceController {
   @GetMapping("/v1/billable-metric-prices")
   @ReadAccess
   @Operation(
-      summary = "미터별 단가 조회",
+      summary = "과금 미터별 단가 조회",
       description =
           """
-          지정한 달에 적용되는 구분 값별 최신 단가를 미터마다 돌려줍니다. customer_id가 없으면 공통 단가만, 있으면 그 고객의 고객 단가만 돌려줍니다.
-          미터는 보관한 미터를 포함해 미터 코드 오름차순으로 모두 나오고, 페이지를 나누지 않습니다.
+          지정한 달에 적용되는 구분 값별 최신 단가를 과금 미터마다 돌려줍니다. customer_id가 없으면 공통 단가만, 있으면 그 고객의 고객 단가만 돌려줍니다.
+          과금 미터는 보관한 과금 미터를 포함해 과금 미터 코드 오름차순으로 모두 나오고, 페이지를 나누지 않습니다.
           달과 고객으로만 거르면 이 경로를 씁니다. 검색어, 여러 조건, 정렬, 페이지가 필요하면 GET /v1/billable-metric-prices/search를 씁니다.
           """)
   @ApiResponses({
     @ApiResponse(
         responseCode = "200",
-        description = "미터별 단가 목록입니다. 미터가 없으면 billable_metric_prices가 빈 배열입니다.")
+        description = "과금 미터별 단가 목록입니다. 과금 미터가 없으면 billable_metric_prices가 빈 배열입니다.")
   })
   public ListBillableMetricPricesResponse listBillableMetricPrices(
       @CurrentOrganizationId UUID organizationId,

@@ -8,11 +8,11 @@ import java.util.Map;
 import java.util.UUID;
 
 public record BillableMetricUsageResponse(
-    @Schema(description = "미터 코드") String code,
-    @Schema(description = "미터 이름") String name,
+    @Schema(description = "과금 미터 코드") String code,
+    @Schema(description = "과금 미터 이름") String name,
     @Schema(description = "집계한 이벤트의 type 값") @JsonProperty("event_type") String eventType,
     @Schema(description = "집계 함수(소문자)") String aggregation,
-    @Schema(description = "이벤트 properties에서 집계한 키입니다. count 미터는 null입니다.")
+    @Schema(description = "이벤트 properties에서 집계한 키입니다. count 과금 미터는 null입니다.")
         @JsonProperty("target_property")
         String targetProperty,
     @Schema(description = "고객별 사용량입니다. 그 업무 환경의 모든 고객이 이름 오름차순으로 나옵니다.")
@@ -49,7 +49,7 @@ public record BillableMetricUsageResponse(
           BigDecimal quantity,
       @Schema(
               description =
-                  "구분 값별 수량입니다. dimension_values 오름차순이고, 이벤트가 없는 고객은 빈 배열입니다. 미터에 dimension_properties가 없으면 dimension_values가 빈 객체인 원소 하나입니다.")
+                  "구분 값별 수량입니다. dimension_values 오름차순이고, 이벤트가 없는 고객은 빈 배열입니다. 과금 미터에 dimension_properties가 없으면 dimension_values가 빈 객체인 원소 하나입니다.")
           @JsonProperty("dimension_usages")
           List<BillableMetricUsageDimensionUsage> dimensionUsages,
       @Schema(description = "고객 전체 이벤트의 단위 변환 전 집계량") @JsonProperty("raw_quantity")
@@ -76,7 +76,7 @@ public record BillableMetricUsageResponse(
   public record BillableMetricUsageDimensionUsage(
       @Schema(
               description =
-                  "미터의 dimension_properties마다 이벤트 properties에서 뽑은 구분 값입니다. 이벤트에 그 키가 없으면 값이 null입니다.")
+                  "과금 미터의 dimension_properties마다 이벤트 properties에서 뽑은 구분 값입니다. 이벤트에 그 키가 없으면 값이 null입니다.")
           @JsonProperty("dimension_values")
           Map<String, Object> dimensionValues,
       @Schema(description = "그 구분 값의 수량 표시값입니다. 순환소수는 근사치이며 청구에는 정확한 분자와 분모를 씁니다.")

@@ -120,7 +120,7 @@ public class WebhookEndpointController {
   @Operation(
       summary = "웹훅 URL 보관",
       description =
-          "발송을 멈추고 꺼진 상태로 보관합니다. 기본 목록에서는 빠지지만 GET /v1/webhook-endpoints/{id}와 status=archived 목록으로 조회됩니다. 지난 전송 기록은 남깁니다. 이미 보관한 웹훅 URL에 다시 요청해도 204입니다.")
+          "전송을 멈추고 꺼진 상태로 보관합니다. 기본 목록에서는 빠지지만 GET /v1/webhook-endpoints/{id}와 status=archived 목록으로 조회됩니다. 지난 전송 기록은 남깁니다. 이미 보관한 웹훅 URL에 다시 요청해도 204입니다.")
   public void deleteWebhookEndpoint(
       @CurrentOrganizationId UUID organizationId,
       @Parameter(description = ENDPOINT_ID) @PathVariable UUID id) {

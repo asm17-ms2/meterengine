@@ -51,7 +51,7 @@ export default async function BillingPage({
     devState === "loading" ? null : previewDraftInvoice(query, devState);
   const invoices = listAllInvoices(invoicesQuery, devState);
   const monthInvoices = isCustomerFiltered ? listAllInvoices(monthInvoicesQuery, devState) : invoices;
-  // 조건을 건 응답도 summary에 월 전체 값(month_*)을 실어 오므로 월 전체 확정 영역도 같은 응답을 쓴다.
+  // 조건을 건 응답도 summary에 월 전체 값(month_*)을 실어 오므로 월 전체 발행 영역도 같은 응답을 쓴다.
   const isMonthFinalized = draftInvoice ? resolveIsFinalizedMonth(draftInvoice, monthInvoices) : Promise.resolve(false);
 
   return (

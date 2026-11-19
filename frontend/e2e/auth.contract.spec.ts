@@ -34,7 +34,7 @@ test("overview keeps the selected month and shows unresolved invoices from every
   ] } });
   await login(page, "member@contract.local", "/overview");
   const currentMonth = new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit" }).format(new Date());
-  await expect(page.getByLabel("청구 월", { exact: true })).toHaveValue(currentMonth);
+  await expect(page.getByLabel("조회 월", { exact: true })).toHaveValue(currentMonth);
   const unresolved = page.locator("section.workspace-panel").filter({ has: page.getByRole("heading", { name: "처리할 결제", exact: true }) });
   await expect(unresolved).toBeVisible();
   // 처리할 결제는 접혀 있고 제목 옆에 건수만 보인다.
@@ -46,7 +46,7 @@ test("overview keeps the selected month and shows unresolved invoices from every
   expect(target.pathname).toBe(`/payments/${invoiceId}`);
   expect(target.searchParams.get("organization_id")).toBe(ORGANIZATION_ID);
   // 직접 쓴 월은 Enter 없이 조회를 눌러도 반영한다.
-  await page.getByLabel("청구 월", { exact: true }).fill("2026-05");
+  await page.getByLabel("조회 월", { exact: true }).fill("2026-05");
   await page.getByRole("button", { name: "조건 적용", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("홈 - 2026년 5월");
   await expect(unresolved).toContainText("지난달 실패 고객");
@@ -57,8 +57,8 @@ test("overview keeps the selected month and shows unresolved invoices from every
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   // Enter만 눌러 제출해도 직접 쓴 월로 조회한다. 접힌 목록을 누른 마우스가 달력 패널 위에 남으면 그 칸의 달이 골라지므로 먼저 치운다.
   await page.mouse.move(0, 0);
-  await page.getByLabel("청구 월", { exact: true }).fill("2026-04");
-  await page.getByLabel("청구 월", { exact: true }).press("Enter");
+  await page.getByLabel("조회 월", { exact: true }).fill("2026-04");
+  await page.getByLabel("조회 월", { exact: true }).press("Enter");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("홈 - 2026년 4월");
 });
 
@@ -404,7 +404,7 @@ test("a forbidden workspace load says so without a retry", async ({ page, reques
 test("webhook delivery history names event types, delivery states and failure reasons", async ({ page }) => {
   await login(page, "member@contract.local", `/integrations/${WEBHOOK_ENDPOINT_ID}`);
   const table = page.locator(".workspace-desktop-table");
-  for (const label of ["결제 실패", "테스트 웹훅", "재시도 대기", "발송 실패", "연결 실패", "허용되지 않는 주소"]) await expect(table.getByText(label, { exact: true })).toBeVisible();
+  for (const label of ["결제 실패", "테스트 웹훅", "재시도 대기", "전송 실패", "연결 실패", "허용되지 않는 주소"]) await expect(table.getByText(label, { exact: true })).toBeVisible();
   for (const raw of ["payment_failed", "webhook_test", "connection_error", "blocked_address", "결과 확인 중"]) await expect(table.getByText(raw, { exact: true })).toHaveCount(0);
 });
 
@@ -552,15 +552,15 @@ test("a webhook receiver whose latest delivery is failing is flagged in the list
   await expectTenantUrl(page, "/integrations");
   const failing = page.getByRole("listitem").filter({ hasText: "https://hooks.contract.local/meterengine" });
   const healthy = page.getByRole("listitem").filter({ hasText: "https://hooks.contract.local/healthy" });
-  await expect(failing).toContainText("최근 발송 실패");
-  await expect(healthy).toContainText("발송 중");
-  await expect(healthy).not.toContainText("최근 발송 실패");
+  await expect(failing).toContainText("최근 전송 실패");
+  await expect(healthy).toContainText("전송 중");
+  await expect(healthy).not.toContainText("최근 전송 실패");
 });
 
 test("the integrations list reads the failure flag from the receiver list without asking each receiver's deliveries", async ({ page, request }) => {
   await login(page, "member@contract.local", "/integrations");
   await expectTenantUrl(page, "/integrations");
-  await expect(page.getByRole("listitem").filter({ hasText: "https://hooks.contract.local/meterengine" })).toContainText("최근 발송 실패");
+  await expect(page.getByRole("listitem").filter({ hasText: "https://hooks.contract.local/meterengine" })).toContainText("최근 전송 실패");
   const paths = (await (await request.get(`${FIXTURE_URL}/__requests`)).json()).map((call: { path: string }) => call.path);
   expect(paths.filter((path: string) => path.includes("/deliveries"))).toEqual([]);
 });

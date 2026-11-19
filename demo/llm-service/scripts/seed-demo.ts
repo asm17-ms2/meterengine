@@ -226,9 +226,9 @@ const current = await request<{ id: string; name?: string }>("GET", "/v1/organiz
 type CustomerRow = { id: string; external_id?: string | null; archived_at?: string | null };
 const listCustomers = async () => (await request<{ customers: CustomerRow[] }>("GET", "/v1/customers?status=all", undefined, owner)).customers;
 if (!state.organizationId && existingOwner) {
-  // 처음 이어받을 때는 테스트 환경에 고객도 미터도 없는 조직만 받는다. 쓰던 조직에 시연 데이터를 섞지 않는다.
+  // 처음 이어받을 때는 테스트 환경에 고객도 과금 미터도 없는 조직만 받는다. 쓰던 조직에 시연 데이터를 섞지 않는다.
   const metrics = (await request<{ billable_metrics: unknown[] }>("GET", "/v1/billable-metrics?status=all", undefined, owner)).billable_metrics;
-  if ((await listCustomers()).length > 0 || metrics.length > 0) throw new Error("이 조직의 테스트 환경에 이미 고객이나 미터가 있습니다. 방금 가입한 빈 조직만 이어받습니다");
+  if ((await listCustomers()).length > 0 || metrics.length > 0) throw new Error("이 조직의 테스트 환경에 이미 고객이나 과금 미터가 있습니다. 방금 가입한 빈 조직만 이어받습니다");
   state.organizationId = current.id;
   state.organizationName = current.name ?? "";
   await saveState();
@@ -236,7 +236,7 @@ if (!state.organizationId && existingOwner) {
 }
 if (current.id !== state.organizationId) throw new Error("대표 계정의 조직이 상태 파일과 다릅니다");
 
-// --- 미터 ---
+// --- 과금 미터 ---
 for (const metric of METRICS) {
   let existing: JsonObject | null = null;
   try { existing = await request<JsonObject>("GET", `/v1/billable-metrics/${metric.code}`, undefined, owner); }
@@ -245,12 +245,12 @@ for (const metric of METRICS) {
     const dimensions = JSON.stringify(existing.dimension_properties);
     if (existing.event_type !== EVENT_TYPE || existing.aggregation !== "sum" || existing.target_property !== metric.property || Number(existing.unit_size) !== TOKEN_UNIT_SIZE
       || dimensions !== JSON.stringify(DIMENSION_PROPERTIES) || existing.archived_at != null) {
-      throw new Error(`계산 기준이 다른 미터가 이미 있습니다: ${metric.code}`);
+      throw new Error(`계산 기준이 다른 과금 미터가 이미 있습니다: ${metric.code}`);
     }
     continue;
   }
   await request("POST", "/v1/billable-metrics", { code: metric.code, name: metric.name, event_type: EVENT_TYPE, aggregation: "sum", target_property: metric.property, dimension_properties: [...DIMENSION_PROPERTIES], unit_size: TOKEN_UNIT_SIZE, rounding_mode: "none", rounding_precision: 0 }, owner);
-  log(`미터를 만들었습니다: ${metric.code}`);
+  log(`과금 미터를 만들었습니다: ${metric.code}`);
 }
 
 // --- 고객 ---

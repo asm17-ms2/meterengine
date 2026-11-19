@@ -32,7 +32,7 @@ description: "가이드 용어의 뜻과 영문 표기, 콘솔 화면 표기를 
 | 용어 | 뜻 | 영문 표기 | 콘솔 표기 | 자세히 |
 | --- | --- | --- | --- | --- |
 | 업무 환경 | 한 조직 안에서 데이터를 나누는 범위. 콘솔은 화면 위 선택 상자로, API는 키로 정합니다 | `environment` | 업무 환경 | [업무 환경](/concepts/environments) |
-| 테스트 환경 | 라이브 환경과 데이터가 분리되고 실결제가 없는 업무 환경. 보낸 이벤트, 확정, 웹훅은 실제로 일어나고 되돌릴 수 없습니다 | `test` | 테스트 환경 | [업무 환경](/concepts/environments) |
+| 테스트 환경 | 라이브 환경과 데이터가 분리되고 실결제가 없는 업무 환경. 보낸 이벤트, 발행, 웹훅은 실제로 일어나고 되돌릴 수 없습니다 | `test` | 테스트 환경 | [업무 환경](/concepts/environments) |
 | 라이브 환경 | 실제 고객에게 실결제로 청구하는 업무 환경. 이용 신청이 승인되어야 열립니다 | `live` | 라이브 환경, 승인 전에는 라이브 환경 (승인 전) | [업무 환경](/concepts/environments) |
 | 라이브 환경 이용 신청 | 사업자등록번호와 토스페이먼츠 실결제 키를 내고 라이브 환경을 열어 달라고 하는 것. MeterEngine이 승인하면 열립니다 | `live_environment_opened_at` | 라이브 환경 이용 신청, 이용 신청서, 신청 내역 | [업무 환경](/concepts/environments) |
 | 기존 데이터 | 테스트 환경과 라이브 환경이 나뉘기 전의 자료를 보존하는 범위. 새로 가입한 조직의 업무 환경 목록에는 나오지 않습니다 | `legacy` | 기존 데이터 | [업무 환경](/concepts/environments) |
@@ -75,8 +75,8 @@ description: "가이드 용어의 뜻과 영문 표기, 콘솔 화면 표기를 
 | consent_required | | `403 consent_required` | 콘솔에 로그인한 사용자가 필수 약관에 동의하지 않았습니다. API 키 요청에는 오지 않습니다 | [API 참조 읽는 법](/api-reference/introduction) |
 | Retry-After | | `Retry-After` 응답 헤더 | 429 응답에 붙는, 다시 보내기 전에 기다릴 초(1 이상의 정수) | [요청 한도와 429](/api-basics/rate-limits) |
 | 멱등 | | | 같은 요청을 다시 보내도 결과가 한 번만 반영되는 성질 | [멱등 규칙](/api-basics/idempotency) |
-| 재시도 키 | | `Idempotency-Key` 요청 헤더 | 고객 등록, 미터 등록, 결제 취소를 안전하게 다시 보내려고 요청에 붙이는 값 | [멱등 규칙](/api-basics/idempotency) |
-| 재전송 응답 표시 | | `Idempotency-Replayed: true` 응답 헤더 | 같은 `Idempotency-Key`의 첫 응답을 다시 돌려줄 때 붙는 헤더. 고객 등록과 미터 등록에만 붙습니다 | [멱등 규칙](/api-basics/idempotency) |
+| 재시도 키 | | `Idempotency-Key` 요청 헤더 | 고객 등록, 과금 미터 등록, 결제 취소를 안전하게 다시 보내려고 요청에 붙이는 값 | [멱등 규칙](/api-basics/idempotency) |
+| 재전송 응답 표시 | | `Idempotency-Replayed: true` 응답 헤더 | 같은 `Idempotency-Key`의 첫 응답을 다시 돌려줄 때 붙는 헤더. 고객 등록과 과금 미터 등록에만 붙습니다 | [멱등 규칙](/api-basics/idempotency) |
 | 테스트 화면 | | | API 참조 페이지에서 실제 요청을 보내 보는 입력 화면. 요청과 키가 Mintlify 서버를 거칩니다 | [API 참조 읽는 법](/api-reference/introduction) |
 
 ## 가격 설계
@@ -85,13 +85,13 @@ description: "가이드 용어의 뜻과 영문 표기, 콘솔 화면 표기를 
 
 | 용어 | 뜻 | 영문 표기 | 콘솔 표기 | 자세히 |
 | --- | --- | --- | --- | --- |
-| 미터 | 어떤 type의 이벤트에서 어떤 값을 어떻게 모아 한 달 과금 수량으로 만들지 정한 규칙 | `billable_metric` | 미터 | [미터 설계](/pricing/meters) |
-| 미터 코드 | 미터를 가리키는 값. 업무 환경마다 유일하고 등록한 뒤 바꿀 수 없습니다 | `code` | 코드(미터 등록 창), 미터 코드(검색 조건) | [미터 설계](/pricing/meters) |
-| 이벤트 유형 | 미터가 집계할 이벤트를 고르는 값. 이벤트의 `type`과 글자까지 같아야 집계됩니다 | `event_type`, `type` | 이벤트 유형 | [미터 설계](/pricing/meters) |
-| 집계 함수 | 한 달, 한 고객, 한 구분 값의 이벤트 값을 모으는 방식 | `aggregation`: `sum`, `count`, `count_distinct`, `min`, `max`, `avg`, `first`, `last`, `median`, `percentile` | 집계 함수 | [미터 설계](/pricing/meters) |
-| 집계 대상 속성 | 이벤트 `properties`에서 집계할 키. `count`에는 쓰지 않습니다 | `target_property` | 집계 대상 속성 | [미터 설계](/pricing/meters) |
-| 과금 단위 크기 | 집계량을 나누는 양수. 한 달 구분 값 집계 결과에 한 번 적용합니다 | `unit_size` | 과금 단위 크기 | [미터 설계](/pricing/meters) |
-| 끝수 처리 | 단위 크기로 나눈 수량에 적용하는 반올림과 소수 자릿수 | `rounding_mode`: `none`, `ceil`, `floor`, `round`, `rounding_precision` | 끝수 처리: 추가 반올림 없음, 올림, 내림, 반올림 | [미터 설계](/pricing/meters) |
+| 과금 미터 | 어떤 type의 이벤트에서 어떤 값을 어떻게 모아 한 달 과금 수량으로 만들지 정한 규칙 | `billable_metric` | 과금 미터 | [과금 미터 설계](/pricing/meters) |
+| 과금 미터 코드 | 과금 미터를 가리키는 값. 업무 환경마다 유일하고 등록한 뒤 바꿀 수 없습니다 | `code` | 코드(과금 미터 등록 창), 과금 미터 코드(검색 조건) | [과금 미터 설계](/pricing/meters) |
+| 이벤트 유형 | 과금 미터가 집계할 이벤트를 고르는 값. 이벤트의 `type`과 글자까지 같아야 집계됩니다 | `event_type`, `type` | 이벤트 유형 | [과금 미터 설계](/pricing/meters) |
+| 집계 함수 | 한 달, 한 고객, 한 구분 값의 이벤트 값을 모으는 방식 | `aggregation`: `sum`, `count`, `count_distinct`, `min`, `max`, `avg`, `first`, `last`, `median`, `percentile` | 집계 함수 | [과금 미터 설계](/pricing/meters) |
+| 집계 대상 속성 | 이벤트 `properties`에서 집계할 키. `count`에는 쓰지 않습니다 | `target_property` | 집계 대상 속성 | [과금 미터 설계](/pricing/meters) |
+| 과금 단위 크기 | 집계량을 나누는 양수. 한 달 구분 값 집계 결과에 한 번 적용합니다 | `unit_size` | 과금 단위 크기 | [과금 미터 설계](/pricing/meters) |
+| 끝수 처리 | 단위 크기로 나눈 수량에 적용하는 반올림과 소수 자릿수 | `rounding_mode`: `none`, `ceil`, `floor`, `round`, `rounding_precision` | 끝수 처리: 추가 반올림 없음, 올림, 내림, 반올림 | [과금 미터 설계](/pricing/meters) |
 | 구분 키 | 단가를 가르는 이벤트 `properties` 키의 배열 | `dimension_properties` | 구분 키 | [구분 키와 구분 값](/pricing/dimensions) |
 | 구분 값 | 구분 키마다 이벤트에서 뽑은 값의 묶음. 금액은 구분 값마다 그 구분 값의 단가로 계산합니다 | `dimension_values` | 구분 값 | [구분 키와 구분 값](/pricing/dimensions) |
 | 단가 | 과금 수량 1당 금액. 월 단위 버전으로 등록합니다 | `price_rate`, `unit_price` | 단가 버전 등록, 과금 수량 1당 단가 (원) | [단가 모델과 버전](/pricing/price-models) |
@@ -108,10 +108,10 @@ description: "가이드 용어의 뜻과 영문 표기, 콘솔 화면 표기를 
 | 최소 사용료 조정 | 최소 사용료와 사용료 합의 차액으로 더하는 조정 항목 | `minimum_adjustment` | 최소 사용료 조정 | [기본료와 최소 사용료](/pricing/price-plans) |
 | 공통 요금제와 고객 요금제 | 고객 요금제가 있는 고객은 그것을, 없는 고객은 공통 요금제를 씁니다 | `customer_id` | 적용 대상, 공통 요금제 적용 | [기본료와 최소 사용료](/pricing/price-plans) |
 | 정확한 과금 수량 | | `quantity_numerator`, `quantity_denominator` | 금액과 구간 판정에 쓴 수량의 분자와 분모. `quantity`는 표시용입니다 | [금액 계산 따라가기](/pricing/calculation-example) |
-| 보관 | 지우지 않고 사용을 멈추는 것. 고객은 바로, 미터와 단가와 요금제 버전은 다음 달부터 효력이 생깁니다 | `archived_at`, `archived` | 보관, 고객 보관, 단가 버전 보관, 요금제 버전 보관, 보관됨 | [바꾸기, 보관, 복원](/pricing/changes-and-archiving) |
-| 복원 | 보관을 되돌리는 것. 고객은 바로, 미터는 다음 달부터 다시 집계하고, 단가와 요금제 버전은 보관 효력이 시작되기 전에만 됩니다 | `restorations` | 고객 복원, 미터 복원, 단가 버전 복원, 요금제 버전 복원 | [바꾸기, 보관, 복원](/pricing/changes-and-archiving) |
+| 보관 | 지우지 않고 사용을 멈추는 것. 고객은 바로, 과금 미터와 단가와 요금제 버전은 다음 달부터 효력이 생깁니다 | `archived_at`, `archived` | 보관, 고객 보관, 단가 버전 보관, 요금제 버전 보관, 보관됨 | [바꾸기, 보관, 복원](/pricing/changes-and-archiving) |
+| 복원 | 보관을 되돌리는 것. 고객은 바로, 과금 미터는 다음 달부터 다시 집계하고, 단가와 요금제 버전은 보관 효력이 시작되기 전에만 됩니다 | `restorations` | 고객 복원, 과금 미터 복원, 단가 버전 복원, 요금제 버전 복원 | [바꾸기, 보관, 복원](/pricing/changes-and-archiving) |
 | 보관 효력 시작 월 | 보관한 단가나 요금제 버전이 적용을 멈추는 달 | `archived_from` | 'YYYY년 M월부터 중단'(단가와 요금제 변경 이력), '보관, YYYY-MM부터 중단'(기본료와 최소 사용료 구역) | [바꾸기, 보관, 복원](/pricing/changes-and-archiving) |
-| 미터 집계 중단 월, 재개 월 | | `inactive_from`, `active_from` | 보관한 미터가 집계를 멈추는 달과 복원한 뒤 다시 집계하는 달 | [바꾸기, 보관, 복원](/pricing/changes-and-archiving) |
+| 과금 미터 집계 중단 월, 재개 월 | | `inactive_from`, `active_from` | 보관한 과금 미터가 집계를 멈추는 달과 복원한 뒤 다시 집계하는 달 | [바꾸기, 보관, 복원](/pricing/changes-and-archiving) |
 
 ## 고객과 이벤트 연동
 
@@ -122,7 +122,7 @@ description: "가이드 용어의 뜻과 영문 표기, 콘솔 화면 표기를 
 | 청구 이메일 | 고객에 저장하는 이메일. MeterEngine은 이 주소로 메일을 보내지 않습니다 | `billing_email` | 청구 이메일 | [고객 등록과 ID 대응](/integration/customers) |
 | 고객 보관 | 고객의 새 이벤트를 막는 상태. 지난 기록은 남고 복원할 수 있습니다 | `archived_at`, `customer_archived` | 고객 보관, 고객 복원 | [고객 등록과 ID 대응](/integration/customers) |
 | 이벤트 | | `POST /v1/events` | 고객이 서비스를 쓴 사실 하나. `transaction_id`, `customer_id`, `type`, `properties`, `timestamp`로 보냅니다 | [사용량 이벤트 보내기](/integration/events) |
-| transaction_id | 이벤트마다 직접 붙이는 고유 값. 업무 환경 안에서 유일해야 하고 같은 값으로 다시 보내면 처음 것이 남습니다 | `transaction_id` | 전송 ID | [사용량 이벤트 보내기](/integration/events) |
+| transaction_id | 이벤트마다 직접 붙이는 고유 값. 업무 환경 안에서 유일해야 하고 같은 값으로 다시 보내면 처음 것이 남습니다 | `transaction_id` | transaction_id | [사용량 이벤트 보내기](/integration/events) |
 | 중복 | | 단건 `duplicate: true`, batch `result` `duplicate` | 같은 `transaction_id`가 이미 저장돼 있어 저장하지 않은 결과. 성공으로 처리합니다 | [멱등 규칙](/api-basics/idempotency) |
 | batch 보내기 | | `POST /v1/event-batches`, `results[].result`: `stored`, `duplicate`, `rejected` | 한 요청에 1건부터 100건까지 이벤트를 보내고 원소마다 결과를 받는 방식 | [사용량 이벤트 보내기](/integration/events) |
 | 발생 시각 | 이벤트가 일어난 시각. 청구 월을 정합니다 | `timestamp`, `occurred_at` | 발생 시각 (KST) | [시간 규칙](/concepts/time-rules) |
@@ -130,7 +130,7 @@ description: "가이드 용어의 뜻과 영문 표기, 콘솔 화면 표기를 
 | 청구 월 | KST 달력 월 | `month` | 청구 월 | [시간 규칙](/concepts/time-rules) |
 | 집계 마감 | 그 달 사용량을 받는 마감 시각, 다음 달 2일 00:00 KST. 그 전에 받은 그 달 이벤트만 청구됩니다 | `cutoff_at` | 집계 마감(마감 전), 집계 기준(마감 뒤) | [시간 규칙](/concepts/time-rules) |
 | cutoff_at | 청구서에서는 금액에 든 이벤트의 받은 시각 상한, 과금 제외 사용량에서는 발생 시각 상한 | `cutoff_at` | 집계 마감, 집계 기준 | [시간 규칙](/concepts/time-rules) |
-| 상계 이벤트 | | | 집계가 `sum`인 미터에서 잘못 보낸 양을 빼려고 같은 고객, type, 구분 값으로 보내는 음수 값 이벤트 | [사용량 이벤트 보내기](/integration/events) |
+| 상계 이벤트 | | | 집계가 `sum`인 과금 미터에서 잘못 보낸 양을 빼려고 같은 고객, type, 구분 값으로 보내는 음수 값 이벤트 | [사용량 이벤트 보내기](/integration/events) |
 | 아웃박스 | | | 보낼 이벤트를 사용 기록과 같은 트랜잭션으로 자사 데이터베이스에 먼저 저장하고 따로 보내는 방식 | [재전송 설계](/integration/retries) |
 
 ## 확인과 진단
@@ -140,48 +140,48 @@ description: "가이드 용어의 뜻과 영문 표기, 콘솔 화면 표기를 
 | --- | --- | --- | --- | --- |
 | 수집 이벤트 | 저장된 사용량 이벤트 원본을 발생 시각, 수신 시각과 함께 보는 콘솔 화면 | `events` | 수집 이벤트 | [보낸 데이터 확인하기](/integration/verify-usage) |
 | 수집 진단 | '사용량' 화면에서 청구에서 빠지거나 확인이 필요한 이벤트를 항목별 건수로 보여 주는 구역 | `unbilled-events` | 수집 진단 | [보낸 데이터 확인하기](/integration/verify-usage) |
-| 수집 진단 항목 | '수집 진단'과 `unbilled_usage_detected` 웹훅이 세는 항목 | `unmatched_type`, `non_numeric_value`, `future_timestamp`, `negative_quantity` | 연결할 미터 없음, 수량을 읽을 수 없음, 발생 시각이 미래인 이벤트, 수량이 음수인 이벤트 | [보낸 데이터 확인하기](/integration/verify-usage) |
+| 수집 진단 항목 | '수집 진단'과 `unbilled_usage_detected` 웹훅이 세는 항목 | `unmatched_type`, `non_numeric_value`, `future_timestamp`, `negative_quantity` | 연결할 과금 미터 없음, 수량을 읽을 수 없음, 발생 시각이 미래인 이벤트, 수량이 음수인 이벤트 | [보낸 데이터 확인하기](/integration/verify-usage) |
 | 수집 거절 | 고객 연결이나 수집 조건 때문에 저장하지 못한 이벤트의 기록. 원문은 남지 않습니다 | `event-rejections` | 수집 거절 | [이벤트가 청구에 안 보일 때](/troubleshooting/events-not-billed) |
 | 거절 사유 | 수집 거절 기록의 사유 | `customer_not_found`, `customer_archived`, `event_too_old`, `validation_error` | 고객을 찾을 수 없음, 보관된 고객, 수집 가능 기간 초과, 요청 값 오류 | [이벤트가 청구에 안 보일 때](/troubleshooting/events-not-billed) |
 | 수집 거절 조회 월 | 이벤트가 일어난 달이 아니라 거절을 기록한 KST 달 | `month` | 조회 월 | [이벤트가 청구에 안 보일 때](/troubleshooting/events-not-billed) |
-| 과금에서 빠진 이벤트 | 저장된 이벤트가 미터, 집계 수량, 단가와 이어지지 않은 문제를 지금 정의로 다시 진단한 결과 | `event-issues` | 과금에서 빠진 이벤트 | [이벤트가 청구에 안 보일 때](/troubleshooting/events-not-billed) |
-| 문제 종류 | 이벤트의 type을 세는 미터가 없거나, 세는 속성이 없거나 형식이 맞지 않거나, 그 구분 값에 단가가 없는 문제 | `unknown_event_type`, `invalid_target_property`, `unpriced_usage` | 연결할 미터 없음, 수량을 읽을 수 없음, 적용 단가 없음 | [이벤트가 청구에 안 보일 때](/troubleshooting/events-not-billed) |
+| 과금에서 빠진 이벤트 | 저장된 이벤트가 과금 미터, 집계 수량, 단가와 이어지지 않은 문제를 지금 정의로 다시 진단한 결과 | `event-issues` | 과금에서 빠진 이벤트 | [이벤트가 청구에 안 보일 때](/troubleshooting/events-not-billed) |
+| 문제 종류 | 이벤트의 type을 세는 과금 미터가 없거나, 세는 속성이 없거나 형식이 맞지 않거나, 그 구분 값에 단가가 없는 문제 | `unknown_event_type`, `invalid_target_property`, `unpriced_usage` | 연결할 과금 미터 없음, 수량을 읽을 수 없음, 적용 단가 없음 | [이벤트가 청구에 안 보일 때](/troubleshooting/events-not-billed) |
 | 단가 없는 사용량 | 같은 구분 값의 단가가 없어 청구 항목과 금액에서 빠진 사용량. 청구되지 않습니다 | `unpriced_usages` | 단가 없는 사용량, 적용 단가 없음 | [구분 키와 구분 값](/pricing/dimensions) |
-| 집계값이 음수인 구분 값 | 집계한 값이 음수라 0원으로 보고 청구 항목에서 뺀 구분 값 | `negative_usages` | 집계값이 음수인 구분 값 | [예정액, 확정액, 수납액](/concepts/amounts) |
+| 집계값이 음수인 구분 값 | 집계한 값이 음수라 0원으로 보고 청구 항목에서 뺀 구분 값 | `negative_usages` | 집계값이 음수인 구분 값 | [예정액, 청구액, 수납액](/concepts/amounts) |
 | 조건 전체 CSV 내보내기 | 화면에 건 조건의 전체 결과를 최대 10,000행 CSV로 받는 기능 | `export` | 조건 전체 CSV 내보내기 | [서버 조회와 CSV 내보내기](/reference/search-and-export) |
 | 원본 속성 포함 | 이벤트 CSV에 `properties` JSON 열을 붙이는 선택 | `include_properties` | 원본 속성 포함 (JSON) | [서버 조회와 CSV 내보내기](/reference/search-and-export) |
 | total_unfiltered | | `total_unfiltered` | 검색 조건을 적용하기 전 지금 업무 환경의 전체 건수 | [서버 조회와 CSV 내보내기](/reference/search-and-export) |
 
-## 금액과 청구 확정
+## 금액과 청구 발행
 
-{/* 확인 필요: 확정 뒤 자동 첫 결제 없음 */}
+{/* 확인 필요: 발행 뒤 자동 첫 결제 없음 */}
 
 | 용어 | 뜻 | 영문 표기 | 콘솔 표기 | 자세히 |
 | --- | --- | --- | --- | --- |
-| 청구 예정액 | 아직 확정하지 않은 고객의 세전 공급가액. 조회할 때마다 다시 계산합니다 | `draft`, `total_amount` | 청구 예정액 | [예정액, 확정액, 수납액](/concepts/amounts) |
-| 확정 청구액 | 확정한 청구서 합계(세액 포함)의 합 | `finalized_total_amount` | 확정 청구액 | [예정액, 확정액, 수납액](/concepts/amounts) |
-| 공급가액 | 세액을 뺀 확정 금액 | `supply_amount` | 공급가액 | [예정액, 확정액, 수납액](/concepts/amounts) |
-| 세액 | 공급가액의 10% | `tax_amount` | 세액 | [예정액, 확정액, 수납액](/concepts/amounts) |
-| 합계 | 공급가액에 세액을 더한 금액. 결제하는 금액입니다 | `total_amount`, `amount` | '확정 청구서' 고객 줄의 금액, '수납과 취소'의 청구 금액 | [예정액, 확정액, 수납액](/concepts/amounts) |
-| 받을 금액 | 결제 전, 결과 확인 중, 결제 실패인 청구서의 청구액 합 | `outstanding_amount` | 받을 금액 | [예정액, 확정액, 수납액](/concepts/amounts) |
-| 받은 금액 | 결제가 끝난 청구서의 청구액에서 취소액을 뺀 합 | `collected_amount` | 받은 금액 | [예정액, 확정액, 수납액](/concepts/amounts) |
-| 취소액 | 결제를 취소한 금액의 합. 청구서 금액은 바뀌지 않습니다 | `canceled_amount` | 취소액 | [예정액, 확정액, 수납액](/concepts/amounts) |
-| 청구 항목 | 고객, 미터, 구분 값(구간)마다 한 줄인 금액과 기본료, 최소 사용료 조정 항목. 항목마다 10원 미만을 버립니다 | `lines[]`, `line_type` | '청구 검토', '확정 청구서' 표의 '고객 / 청구 항목', 청구서 조회 링크 화면의 '청구 항목' | [예정액, 확정액, 수납액](/concepts/amounts) |
-| 청구 검토 | 청구 검토(화면 제목 '청구 검토 - YYYY년 M월') | | 청구 예정액을 보고 확정하는 콘솔 화면 | [청구서 수동 확정](/billing/finalize-invoices) |
-| 확정 | 한 달의 청구 예정액을 고객마다 청구서로 굳히는 일. 되돌릴 수 없고 결제를 자동으로 시작하지 않습니다 |  | 월 전체 확정 | [청구서 수동 확정](/billing/finalize-invoices) |
-| 확정 상태 | 확정 전, 확정됨 | | '청구 검토' 화면의 달 상태 표시 | [청구서 수동 확정](/billing/finalize-invoices) |
-| 확정 결과 수 | | `finalized_count`, `failed_count` | 이번 확정 호출로 새로 확정한 청구서 수와 확정하지 못한 고객 수. 같은 달로 다시 부르면 실패한 고객을 다시 시도합니다 | [청구서 수동 확정](/billing/finalize-invoices) |
-| finalized_at | | `finalized_at` | 청구서를 확정한 시각 | [청구서 수동 확정](/billing/finalize-invoices) |
-| 확정 청구서 | 확정된 청구서(API의 invoice)와 그 목록 화면 | `invoices` | 확정 청구서 | [청구서 수동 확정](/billing/finalize-invoices) |
-| 청구서 번호 | 고객에게 보여 주는 번호(예: `ME-202610-00000012`). 세금계산서나 영수증 번호가 아닙니다 | `invoice_number` | 청구서 번호 | [확정 시 주의사항](/billing/after-finalization) |
-| 자동 확정 | 다음 자동 확정, 자동 확정 진행 중 | | 매일 04:00 KST에 확정 시각이 지난 달을 고객마다 확정하는 일. 모든 조직에 켜져 있고 끌 수 없습니다 | [자동 확정과 보류](/billing/auto-finalization) |
-| 확정 시각 | 자동 확정이 그 달을 다루는 시각, 다음 달 2일 04:00 KST | `auto_finalize_at` | 다음 자동 확정 | [자동 확정과 보류](/billing/auto-finalization) |
-| 자동 확정 진행 중 | 자동 확정이 돌고 있고 그 달을 아직 다 처리하지 않은 상태 | `auto_finalize_running` | 자동 확정 진행 중 | [자동 확정과 보류](/billing/auto-finalization) |
-| 보류 | 금액이 0원이 아닌데 단가 없는 사용량이 있어 자동 확정이 확정하지 않은 고객. 다시 시도하지 않으므로 직접 확정합니다 | `auto_finalize_held` | 자동 확정 보류: 단가 없는 사용량, 자동 확정 보류: 수동 확정 필요 | [자동 확정과 보류](/billing/auto-finalization) |
+| 청구 예정액 | 청구서를 아직 발행하지 않은 고객의 세전 공급가액. 조회할 때마다 다시 계산합니다 | `draft`, `total_amount` | 청구 예정액 | [예정액, 청구액, 수납액](/concepts/amounts) |
+| 청구액 | 발행한 청구서 합계(세액 포함)의 합 | `finalized_total_amount` | 청구액 | [예정액, 청구액, 수납액](/concepts/amounts) |
+| 공급가액 | 세액을 뺀 청구서 금액 | `supply_amount` | 공급가액 | [예정액, 청구액, 수납액](/concepts/amounts) |
+| 세액 | 공급가액의 10% | `tax_amount` | 세액 | [예정액, 청구액, 수납액](/concepts/amounts) |
+| 합계 | 공급가액에 세액을 더한 금액. 결제하는 금액입니다 | `total_amount`, `amount` | '청구서' 고객 줄의 금액, '수납과 취소'의 청구 금액 | [예정액, 청구액, 수납액](/concepts/amounts) |
+| 받을 금액 | 결제 전, 결과 확인 중, 결제 실패인 청구서의 청구액 합 | `outstanding_amount` | 받을 금액 | [예정액, 청구액, 수납액](/concepts/amounts) |
+| 받은 금액 | 결제가 끝난 청구서의 청구액에서 취소액을 뺀 합 | `collected_amount` | 받은 금액 | [예정액, 청구액, 수납액](/concepts/amounts) |
+| 취소액 | 결제를 취소한 금액의 합. 청구서 금액은 바뀌지 않습니다 | `canceled_amount` | 취소액 | [예정액, 청구액, 수납액](/concepts/amounts) |
+| 청구 항목 | 고객, 과금 미터, 구분 값(구간)마다 한 줄인 금액과 기본료, 최소 사용료 조정 항목. 항목마다 10원 미만을 버립니다 | `lines[]`, `line_type` | '청구 검토', '청구서' 표의 '고객 / 청구 항목', 청구서 조회 링크 화면의 '청구 항목' | [예정액, 청구액, 수납액](/concepts/amounts) |
+| 청구 검토 | 청구 검토(화면 제목 '청구 검토 - YYYY년 M월') | | 청구 예정액을 보고 발행하는 콘솔 화면 | [청구서 수동 발행](/billing/finalize-invoices) |
+| 발행 | 한 달의 청구 예정액을 고객마다 청구서로 굳히는 일. 되돌릴 수 없고 결제를 자동으로 시작하지 않습니다 |  | 월 전체 발행 | [청구서 수동 발행](/billing/finalize-invoices) |
+| 발행 상태 | 발행 전, 발행됨 | | '청구 검토' 화면의 달 상태 표시 | [청구서 수동 발행](/billing/finalize-invoices) |
+| 발행 결과 수 | | `finalized_count`, `failed_count` | 이번 발행 호출로 새로 발행한 청구서 수와 청구서를 발행하지 못한 고객 수. 같은 달로 다시 부르면 실패한 고객을 다시 시도합니다 | [청구서 수동 발행](/billing/finalize-invoices) |
+| finalized_at | | `finalized_at` | 청구서를 발행한 시각 | [청구서 수동 발행](/billing/finalize-invoices) |
+| 청구서 | 발행한 청구서(API의 invoice)와 그 목록 화면 | `invoices` | 청구서 | [청구서 수동 발행](/billing/finalize-invoices) |
+| 청구서 번호 | 고객에게 보여 주는 번호(예: `ME-202610-00000012`). 세금계산서나 영수증 번호가 아닙니다 | `invoice_number` | 청구서 번호 | [발행 시 주의사항](/billing/after-finalization) |
+| 자동 발행 | 다음 자동 발행, 자동 발행 진행 중 | | 매일 04:00 KST에 발행 시각이 지난 달의 청구서를 고객마다 발행하는 일. 모든 조직에 켜져 있고 끌 수 없습니다 | [자동 발행과 보류](/billing/auto-finalization) |
+| 발행 시각 | 자동 발행이 그 달을 다루는 시각, 다음 달 2일 04:00 KST | `auto_finalize_at` | 다음 자동 발행 | [자동 발행과 보류](/billing/auto-finalization) |
+| 자동 발행 진행 중 | 자동 발행이 돌고 있고 그 달을 아직 다 처리하지 않은 상태 | `auto_finalize_running` | 자동 발행 진행 중 | [자동 발행과 보류](/billing/auto-finalization) |
+| 보류 | 금액이 0원이 아닌데 단가 없는 사용량이 있어 자동 발행이 청구서를 발행하지 않은 고객. 다시 시도하지 않으므로 직접 발행합니다 | `auto_finalize_held` | 자동 발행 보류: 단가 없는 사용량, 자동 발행 보류: 수동 발행 필요 | [자동 발행과 보류](/billing/auto-finalization) |
 
 ## 결제
 
-{/* 확인 필요: 확정 뒤 자동 첫 결제 없음, 공개 청구서 조회 API와 카드 등록 링크 권한, 토스 테스트 코드 헤더와 기존 데이터 결제 모드 */}
+{/* 확인 필요: 발행 뒤 자동 첫 결제 없음, 공개 청구서 조회 API와 카드 등록 링크 권한, 토스 테스트 코드 헤더와 기존 데이터 결제 모드 */}
 
 | 용어 | 뜻 | 영문 표기 | 콘솔 표기 | 자세히 |
 | --- | --- | --- | --- | --- |
@@ -202,14 +202,14 @@ description: "가이드 용어의 뜻과 영문 표기, 콘솔 화면 표기를 
 | 고객의 링크 재시도 | 재시도를 허용한 청구서 조회 링크 화면에서 고객이 실패한 결제를 등록 카드로 다시 요청하는 것 | `allow_payment_retry` | 고객의 실패 결제 재시도 허용, 결제 다시 시도 | [결제 실패와 재시도](/payments/retries) |
 | 결제 취소 | 승인된 결제 시도의 금액 전부나 일부를 토스페이먼츠에 돌려 달라고 요청하는 것. 청구서 금액은 바뀌지 않습니다 | `cancellations`, `status`: `pending`, `done`, `failed` | 결제 취소, 부분 취소, 남은 금액 전액 취소, 입력한 금액 취소 요청, 전액 취소 요청 | [결제 취소](/payments/cancellations) |
 | 취소할 수 있는 금액 | 취소할 수 있는 금액 | | 결제 시도 금액에서 끝난 취소의 합을 뺀 값. 더 취소할 수 있는 상한입니다 | [결제 취소](/payments/cancellations) |
-| 청구서 조회 링크 | 고객이 로그인 없이 확정 청구서 하나와 결제 상태를 보는 링크(`https://meterengine.com/invoice-links#<token>`) | `view-links`, `token` | 청구서 조회 링크 | [고객에게 청구서 전달하기](/payments/invoice-links) |
+| 청구서 조회 링크 | 고객이 로그인 없이 발행한 청구서 하나와 결제 상태를 보는 링크(`https://meterengine.com/invoice-links#<token>`) | `view-links`, `token` | 청구서 조회 링크 | [고객에게 청구서 전달하기](/payments/invoice-links) |
 | 조회 전용 링크 | 재시도를 허용하지 않은 청구서 조회 링크 | `allow_payment_retry: false` | 조회 전용 | [고객에게 청구서 전달하기](/payments/invoice-links) |
 | 대사 | | `GET /v1/payment-reconciliation-mismatches` | 매일 04:00 KST에 토스페이먼츠 거래 목록과 MeterEngine의 승인된 결제, 끝난 취소를 맞춰 보고 다른 것을 불일치로 기록하는 작업 | [수납 상태와 대사 확인](/payments/reconciliation) |
 | 불일치 종류 | | `missing_in_meterengine`, `missing_in_toss_payments`, `amount_mismatch`, `status_mismatch` | 대사가 찾은 차이의 종류 | [수납 상태와 대사 확인](/payments/reconciliation) |
 
 ## 웹훅
 
-{/* 확인 필요: 웹훅 data 공개 형태와 확정 웹훅 없음 */}
+{/* 확인 필요: 웹훅 data 공개 형태와 발행 웹훅 없음 */}
 
 | 용어 | 뜻 | 영문 표기 | 콘솔 표기 | 자세히 |
 | --- | --- | --- | --- | --- |
@@ -217,8 +217,8 @@ description: "가이드 용어의 뜻과 영문 표기, 콘솔 화면 표기를 
 | 웹훅 URL | 웹훅을 받을 자사 서버의 HTTPS URL. 업무 환경마다 10개까지 등록합니다 | `webhook_endpoint`, `url` | 웹훅 URL, 웹훅 URL 등록, 웹훅 URL 상태 | [웹훅 받기 시작하기](/webhooks/overview) |
 | 웹훅 시크릿 | 웹훅 URL마다 하나인 서명 키. 등록 응답에만 한 번 나옵니다 | `secret`, `whsec_` | 웹훅 시크릿 복사 | [웹훅 서명 검증](/webhooks/verify-signatures) |
 | 받을 웹훅 | 웹훅 URL이 받을 웹훅 유형의 목록 | `event_types` | 받을 웹훅 | [웹훅 받기 시작하기](/webhooks/overview) |
-| 발송 상태 | 웹훅 URL의 발송을 켜고 끄는 값. 끈 동안 생긴 웹훅은 나중에도 보내지 않습니다 | `enabled` | 발송 중, 발송 일시 중지 | [웹훅 받기 시작하기](/webhooks/overview) |
-| 웹훅 URL 보관 | 웹훅 URL의 발송을 멈추고 기본 목록에서 뺀 상태. 기록은 남고 복원할 수 있습니다 | `archived_at`, `archived` | 웹훅 URL 보관, 보관됨, 웹훅 URL 복원 | [웹훅 받기 시작하기](/webhooks/overview) |
+| 전송 상태(웹훅 URL) | 웹훅 URL의 전송을 켜고 끄는 값. 끈 동안 생긴 웹훅은 나중에도 보내지 않습니다 | `enabled` | 전송 중, 전송 일시 중지 | [웹훅 받기 시작하기](/webhooks/overview) |
+| 웹훅 URL 보관 | 웹훅 URL의 전송을 멈추고 기본 목록에서 뺀 상태. 기록은 남고 복원할 수 있습니다 | `archived_at`, `archived` | 웹훅 URL 보관, 보관됨, 웹훅 URL 복원 | [웹훅 받기 시작하기](/webhooks/overview) |
 | 결제 성공 | 결제 시도가 승인으로 끝났을 때의 웹훅 | `payment_succeeded` | 결제 성공 | [웹훅 이벤트 유형과 data](/webhooks/events) |
 | 결제 실패 | 결제 시도가 실패로 끝났을 때의 웹훅. 실패 사유는 실리지 않습니다 | `payment_failed` | 결제 실패 | [웹훅 이벤트 유형과 data](/webhooks/events) |
 | 결제 취소 웹훅 | 결제 취소가 끝났을 때의 웹훅. `amount`는 이번 취소 금액입니다 | `payment_canceled` | 결제 취소 | [웹훅 이벤트 유형과 data](/webhooks/events) |
@@ -227,7 +227,7 @@ description: "가이드 용어의 뜻과 영문 표기, 콘솔 화면 표기를 
 | environment(웹훅 본문) | 웹훅이 생긴 업무 환경 | `test`, `live`, `legacy` | 테스트 환경, 라이브 환경, 기존 데이터 | [웹훅 이벤트 유형과 data](/webhooks/events) |
 | mode(결제 웹훅 data) | 그 결제를 처리한 결제 모드 | `test`, `live` | '업무 환경' 열의 테스트 환경, 라이브 환경 | [웹훅 이벤트 유형과 data](/webhooks/events) |
 | webhook-id | | `webhook-id` 요청 헤더 | 웹훅 하나의 고유 값. 재전송과 여러 웹훅 URL에서도 같아 중복을 거르는 데 씁니다 | [전송, 재전송, 중복 처리](/webhooks/delivery-and-retries) |
-| 웹훅 발송 내역 | 발송 내역과 설정(링크), 웹훅 발송 내역(화면 제목) | | 웹훅 URL별 전송 기록 화면 | [전송, 재전송, 중복 처리](/webhooks/delivery-and-retries) |
-| 전송 상태 | 웹훅 URL별 전송 한 건의 상태 | `pending`, `done`, `failed` | 발송 대기, 재시도 대기, 발송 완료, 발송 실패 | [전송, 재전송, 중복 처리](/webhooks/delivery-and-retries) |
-| 전송 실패 사유 | 전송 시도가 실패한 이유 | `timeout`, `connection_error`, `unexpected_status`, `blocked_address`, `endpoint_disabled`, `lease_expired`, `secret_unavailable` | 응답 시간 초과, 연결 실패, 2xx가 아닌 응답, 허용되지 않는 주소, 발송을 멈춘 웹훅 URL, 발송 결과를 기록하지 못함, 웹훅 시크릿을 읽지 못함 | [전송, 재전송, 중복 처리](/webhooks/delivery-and-retries) |
-| 다시 보내기 | 발송 실패로 끝난 전송을 같은 `webhook-id`로 다시 보내는 것 | `retries` | 다시 보내기 | [전송, 재전송, 중복 처리](/webhooks/delivery-and-retries) |
+| 웹훅 전송 기록 | 전송 기록과 설정(링크), 웹훅 전송 기록(화면 제목) | | 웹훅 URL별 전송 기록 화면 | [전송, 재전송, 중복 처리](/webhooks/delivery-and-retries) |
+| 전송 상태(전송 한 건) | 웹훅 URL별 전송 한 건의 상태 | `pending`, `done`, `failed` | 전송 대기, 재시도 대기, 전송 완료, 전송 실패 | [전송, 재전송, 중복 처리](/webhooks/delivery-and-retries) |
+| 전송 실패 사유 | 전송 시도가 실패한 이유 | `timeout`, `connection_error`, `unexpected_status`, `blocked_address`, `endpoint_disabled`, `lease_expired`, `secret_unavailable` | 응답 시간 초과, 연결 실패, 2xx가 아닌 응답, 허용되지 않는 주소, 전송을 멈춘 웹훅 URL, 전송 결과를 기록하지 못함, 웹훅 시크릿을 읽지 못함 | [전송, 재전송, 중복 처리](/webhooks/delivery-and-retries) |
+| 다시 보내기 | 전송 실패로 끝난 전송을 같은 `webhook-id`로 다시 보내는 것 | `retries` | 다시 보내기 | [전송, 재전송, 중복 처리](/webhooks/delivery-and-retries) |

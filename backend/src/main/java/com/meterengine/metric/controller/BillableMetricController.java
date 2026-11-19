@@ -48,7 +48,7 @@ public class BillableMetricController {
   private static final String UPDATE_CONFLICT =
       """
       code=billable_metric_has_events: 이벤트가 있어 계산 정의를 바꿀 수 없습니다.
-      code=resource_archived: 보관한 미터입니다. 복원한 뒤 고칩니다.
+      code=resource_archived: 보관한 과금 미터입니다. 복원한 뒤 고칩니다.
       code=resource_version_conflict: If-Match의 version이 지금 version과 다릅니다. 다시 조회한 뒤 고칩니다.
       """;
 
@@ -65,22 +65,22 @@ public class BillableMetricController {
   @ResponseStatus(HttpStatus.CREATED)
   @AdminAccess
   @Operation(
-      summary = "미터 등록",
+      summary = "과금 미터 등록",
       description =
           """
-          미터를 등록합니다. type이 미터의 event_type과 같은 사용량 이벤트가 이 미터의 집계 대상입니다.
+          과금 미터를 등록합니다. type이 과금 미터의 event_type과 같은 사용량 이벤트가 이 과금 미터의 집계 대상입니다.
           aggregation(집계 함수)은 sum, count, count_distinct, min, max, avg, first, last, median, percentile을 받으며 대소문자를 구분하지 않습니다.
           count는 전체 이벤트 수이며 target_property를 지정하지 않습니다. count_distinct는 대상 속성의 숫자, 문자열, 불리언 고유값 수입니다.
           나머지는 숫자 속성만 집계합니다. first와 last는 occurred_at, transaction_id 순서입니다. median은 50백분위이고, percentile 집계 함수는 percentile 값(0~100)이 필수입니다.
           집계량을 unit_size(기본 1)로 나눈 뒤 rounding_mode(none, ceil, floor, round)의 끝수 처리를 rounding_precision(0~12, 기본 0) 자리에 적용합니다.
           round는 반올림(사사오입)입니다. none은 유한소수를 그대로 두고, 순환소수는 유효숫자와 소수 자릿수를 각각 최소 18자리로 둡니다.
-          code(미터 코드)는 같은 업무 환경 안에서 유일해야 하고 등록 뒤 바꿀 수 없습니다. search, options, export는 조회 경로와 겹쳐 미터 코드로 쓸 수 없습니다.
-          같은 이벤트와 속성에 여러 미터를 등록할 수 있습니다. 각 미터에 단가를 등록하면 각각 청구합니다.
+          code(과금 미터 코드)는 같은 업무 환경 안에서 유일해야 하고 등록 뒤 바꿀 수 없습니다. search, options, export는 조회 경로와 겹쳐 과금 미터 코드로 쓸 수 없습니다.
+          같은 이벤트와 속성에 여러 과금 미터를 등록할 수 있습니다. 각 과금 미터에 단가를 등록하면 각각 청구합니다.
           """)
   @ApiResponses({
     @ApiResponse(
         responseCode = "201",
-        description = "등록된 미터",
+        description = "등록된 과금 미터",
         headers =
             @Header(
                 name = "Idempotency-Replayed",
@@ -108,7 +108,7 @@ public class BillableMetricController {
                 schema = @Schema(implementation = ErrorResponse.class)),
         description =
             """
-            code=billable_metric_already_exists: 현재 업무 환경에 같은 code의 미터가 이미 있습니다.
+            code=billable_metric_already_exists: 현재 업무 환경에 같은 code의 과금 미터가 이미 있습니다.
             code=idempotency_conflict: 같은 Idempotency-Key를 다른 요청 본문에 썼습니다.
             """)
   })
@@ -135,15 +135,15 @@ public class BillableMetricController {
   @PutMapping("/{code}")
   @AdminAccess
   @Operation(
-      summary = "미터 수정",
+      summary = "과금 미터 수정",
       description =
           """
-          미터를 요청 값으로 덮어쓰고 바뀐 미터를 돌려줍니다. code는 바꿀 수 없습니다.
+          과금 미터를 요청 값으로 덮어쓰고 바뀐 과금 미터를 돌려줍니다. code는 바꿀 수 없습니다.
           지금 event_type의 이벤트가 한 건이라도 있으면 이름만 바꿀 수 있습니다. 이때 집계 함수, 대상 속성, 구분 키, 단위, 끝수 처리, 백분위를 바꾸면 409입니다.
           If-Match는 선택입니다. 보내면 version을 확인하고, 빼면 확인 없이 덮어씁니다. 다른 요청이 고친 값을 덮어쓰지 않으려면 If-Match를 보내거나 PATCH /v1/billable-metrics/{code}를 씁니다.
           """)
   @ApiResponses({
-    @ApiResponse(responseCode = "200", description = "바뀐 미터"),
+    @ApiResponse(responseCode = "200", description = "바뀐 과금 미터"),
     @ApiResponse(
         responseCode = "400",
         content =
@@ -157,7 +157,7 @@ public class BillableMetricController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=billable_metric_not_found: 그런 code의 미터가 없습니다."),
+        description = "code=billable_metric_not_found: 그런 code의 과금 미터가 없습니다."),
     @ApiResponse(
         responseCode = "409",
         content =
@@ -168,11 +168,11 @@ public class BillableMetricController {
   })
   public BillableMetricResponse updateBillableMetric(
       @CurrentOrganizationId UUID organizationId,
-      @Parameter(description = "고칠 미터의 미터 코드") @PathVariable @StorableText String code,
+      @Parameter(description = "고칠 과금 미터의 과금 미터 코드") @PathVariable @StorableText String code,
       @Valid @RequestBody UpdateBillableMetricRequest request,
       @Parameter(
               description =
-                  "선택 입력입니다. 미터 조회 응답의 ETag처럼 version을 큰따옴표로 감싼 값(예: \"3\")입니다. 보내면 지금 version과 다를 때 409로 거절하고, 빼면 version을 확인하지 않습니다.")
+                  "선택 입력입니다. 과금 미터 조회 응답의 ETag처럼 version을 큰따옴표로 감싼 값(예: \"3\")입니다. 보내면 지금 version과 다를 때 409로 거절하고, 빼면 version을 확인하지 않습니다.")
           @RequestHeader(name = "If-Match", required = false)
           @StorableText
           String ifMatch) {
@@ -183,13 +183,13 @@ public class BillableMetricController {
   @PatchMapping("/{code}")
   @AdminAccess
   @Operation(
-      summary = "버전을 확인한 미터 수정",
+      summary = "버전을 확인한 과금 미터 수정",
       description =
-          "미터를 보낸 값으로 통째로 바꿉니다. PUT과 같지만 If-Match가 반드시 있어야 합니다. 조회한 version을 큰따옴표로 감싸 If-Match 헤더에 보냅니다."
-              + " 그 사이 다른 요청이 미터를 고쳐 version이 다르면 409입니다."
+          "과금 미터를 보낸 값으로 통째로 바꿉니다. PUT과 같지만 If-Match가 반드시 있어야 합니다. 조회한 version을 큰따옴표로 감싸 If-Match 헤더에 보냅니다."
+              + " 그 사이 다른 요청이 과금 미터를 고쳐 version이 다르면 409입니다."
               + " 다른 요청이 고친 값을 덮어쓰지 않으려면 이 경로를 쓰고, version 확인 없이 덮어써도 되면 PUT /v1/billable-metrics/{code}를 씁니다.")
   @ApiResponses({
-    @ApiResponse(responseCode = "200", description = "바뀐 미터"),
+    @ApiResponse(responseCode = "200", description = "바뀐 과금 미터"),
     @ApiResponse(
         responseCode = "400",
         content =
@@ -203,7 +203,7 @@ public class BillableMetricController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=billable_metric_not_found: 그런 code의 미터가 없습니다."),
+        description = "code=billable_metric_not_found: 그런 code의 과금 미터가 없습니다."),
     @ApiResponse(
         responseCode = "409",
         content =
@@ -214,11 +214,11 @@ public class BillableMetricController {
   })
   public BillableMetricResponse updateConditionalBillableMetric(
       @CurrentOrganizationId UUID organizationId,
-      @Parameter(description = "고칠 미터의 미터 코드") @PathVariable @StorableText String code,
+      @Parameter(description = "고칠 과금 미터의 과금 미터 코드") @PathVariable @StorableText String code,
       @Valid @RequestBody UpdateBillableMetricRequest request,
       @Parameter(
               description =
-                  "미터 조회 응답의 ETag처럼 version을 큰따옴표로 감싼 값(예: \"3\")입니다. 지금 version과 다르면 409로 거절합니다.")
+                  "과금 미터 조회 응답의 ETag처럼 version을 큰따옴표로 감싼 값(예: \"3\")입니다. 지금 version과 다르면 409로 거절합니다.")
           @RequestHeader("If-Match")
           @StorableText
           String ifMatch) {
@@ -229,14 +229,14 @@ public class BillableMetricController {
   @GetMapping
   @ReadAccess
   @Operation(
-      summary = "미터 목록 조회",
+      summary = "과금 미터 목록 조회",
       description =
-          "현재 업무 환경의 미터를 미터 코드 오름차순으로 모두 돌려줍니다. 페이지를 나누지 않습니다. 보관 상태로만 거르면 이 경로를 씁니다. 검색어, 여러 조건, 정렬, 페이지가 필요하면 GET /v1/billable-metrics/search를 씁니다.")
+          "현재 업무 환경의 과금 미터를 과금 미터 코드 오름차순으로 모두 돌려줍니다. 페이지를 나누지 않습니다. 보관 상태로만 거르면 이 경로를 씁니다. 검색어, 여러 조건, 정렬, 페이지가 필요하면 GET /v1/billable-metrics/search를 씁니다.")
   public ListBillableMetricsResponse listBillableMetrics(
       @CurrentOrganizationId UUID organizationId,
       @Parameter(
               description =
-                  "보관 상태입니다. active는 보관하지 않은 미터, archived는 보관한 미터, all은 둘 다입니다. 생략하면 active입니다.",
+                  "보관 상태입니다. active는 보관하지 않은 과금 미터, archived는 보관한 과금 미터, all은 둘 다입니다. 생략하면 active입니다.",
               schema =
                   @Schema(
                       allowableValues = {"active", "archived", "all"},
@@ -250,32 +250,32 @@ public class BillableMetricController {
   @GetMapping("/{code}")
   @ReadAccess
   @Operation(
-      summary = "미터 조회",
+      summary = "과금 미터 조회",
       description =
-          "미터 하나를 돌려줍니다. 보관한 미터도 나옵니다. 응답의 ETag 헤더에 version이 큰따옴표로 감싸여 실리므로, 그 값을 PATCH의 If-Match에 그대로 씁니다.")
+          "과금 미터 하나를 돌려줍니다. 보관한 과금 미터도 나옵니다. 응답의 ETag 헤더에 version이 큰따옴표로 감싸여 실리므로, 그 값을 PATCH의 If-Match에 그대로 씁니다.")
   public ResponseEntity<BillableMetricResponse> getBillableMetric(
       @CurrentOrganizationId UUID organizationId,
-      @Parameter(description = "조회할 미터의 미터 코드") @PathVariable @StorableText String code) {
+      @Parameter(description = "조회할 과금 미터의 과금 미터 코드") @PathVariable @StorableText String code) {
     BillableMetricResponse metric = billableMetricService.get(organizationId, code);
     return ResponseEntity.ok().eTag(Long.toString(metric.version())).body(metric);
   }
 
   @PostMapping("/{code}/restorations")
   @AdminAccess
-  @Operation(summary = "미터 복원", description = "다음 달부터 다시 집계합니다. 보관한 기간을 거슬러 집계하지 않습니다.")
+  @Operation(summary = "과금 미터 복원", description = "다음 달부터 다시 집계합니다. 보관한 기간을 거슬러 집계하지 않습니다.")
   @ApiResponses({
-    @ApiResponse(responseCode = "200", description = "복원한 미터입니다. 보관하지 않은 미터면 그대로 돌려줍니다."),
+    @ApiResponse(responseCode = "200", description = "복원한 과금 미터입니다. 보관하지 않은 과금 미터면 그대로 돌려줍니다."),
     @ApiResponse(
         responseCode = "404",
         content =
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=billable_metric_not_found: 그런 code의 미터가 없습니다.")
+        description = "code=billable_metric_not_found: 그런 code의 과금 미터가 없습니다.")
   })
   public BillableMetricResponse restoreBillableMetric(
       @CurrentOrganizationId UUID organizationId,
-      @Parameter(description = "복원할 미터의 미터 코드") @PathVariable @StorableText String code) {
+      @Parameter(description = "복원할 과금 미터의 과금 미터 코드") @PathVariable @StorableText String code) {
     return billableMetricService.restore(organizationId, code);
   }
 
@@ -283,8 +283,8 @@ public class BillableMetricController {
   @ResponseStatus(HttpStatus.NO_CONTENT)
   @AdminAccess
   @Operation(
-      summary = "미터 보관",
-      description = "이번 달까지 집계하고 다음 달부터 멈춥니다. 이벤트와 단가는 그대로 둡니다. 이미 보관한 미터에 다시 보내도 204입니다.")
+      summary = "과금 미터 보관",
+      description = "이번 달까지 집계하고 다음 달부터 멈춥니다. 이벤트와 단가는 그대로 둡니다. 이미 보관한 과금 미터에 다시 보내도 204입니다.")
   @ApiResponses({
     @ApiResponse(responseCode = "204", description = "보관했습니다. 본문 없음"),
     @ApiResponse(
@@ -293,11 +293,11 @@ public class BillableMetricController {
             @Content(
                 mediaType = "application/json",
                 schema = @Schema(implementation = ErrorResponse.class)),
-        description = "code=billable_metric_not_found: 그런 code의 미터가 없습니다.")
+        description = "code=billable_metric_not_found: 그런 code의 과금 미터가 없습니다.")
   })
   public void deleteBillableMetric(
       @CurrentOrganizationId UUID organizationId,
-      @Parameter(description = "보관할 미터의 미터 코드") @PathVariable @StorableText String code) {
+      @Parameter(description = "보관할 과금 미터의 과금 미터 코드") @PathVariable @StorableText String code) {
     billableMetricService.delete(organizationId, code);
   }
 }

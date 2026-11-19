@@ -116,14 +116,14 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
         const form = page.getByRole("form", { name: "조회 조건", exact: true });
         await form.getByRole("searchbox", { name: "검색", exact: true }).fill(suffix);
         if (route !== "usage") {
-          // 금액과 확정 시각 조건은 버튼을 눌러 여는 상자 안에 있다.
+          // 금액과 발행 시각 조건은 버튼을 눌러 여는 상자 안에 있다.
           await form.locator(".range-dropdown > summary").click();
           await form.getByLabel("최소 금액 (원)", { exact: true }).fill("0");
           await form.getByLabel("최대 금액 (원)", { exact: true }).fill("10000");
         }
         if (route === "invoices") {
-          await form.getByLabel("확정 시각 시작 (KST)", { exact: true }).fill("2026-01-01T00:00");
-          await form.getByLabel("확정 시각 종료 전 (KST)", { exact: true }).fill("2027-01-01T00:00");
+          await form.getByLabel("발행 시각 시작 (KST)", { exact: true }).fill("2026-01-01T00:00");
+          await form.getByLabel("발행 시각 종료 전 (KST)", { exact: true }).fill("2027-01-01T00:00");
         }
         if (route === "billing") {
           await form.getByLabel("최소 금액 (원)", { exact: true }).fill("-1");
@@ -181,7 +181,7 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
     await page.goto(`/pricing?${new URLSearchParams({ organization_id: tenantA.organizationId, month: currentMonth, metric: activeCode })}`);
     await page.getByRole("button", { name: "단가 버전 등록", exact: true }).click();
     const dialog = page.getByRole("dialog");
-    await dialog.getByLabel("계산 방식", { exact: true }).selectOption("graduated");
+    await dialog.getByLabel("단가 모델", { exact: true }).selectOption("graduated");
     await dialog.getByLabel("구간 1 과금 수량 1당 단가 (원)", { exact: true }).fill("10");
     await dialog.getByLabel("구간 2 과금 수량 1당 단가 (원)", { exact: true }).fill("10");
     const upper = dialog.getByLabel("구간 1 상한", { exact: true });
@@ -194,7 +194,7 @@ test("가격 조회 조건, 전체 CSV, 이전 조직의 단가 폼과 CSV 경�
     await expect(fieldError).toHaveAttribute("id", describedBy!);
     await upper.fill("100");
     await expect(upper).toHaveAttribute("aria-invalid", "false");
-    await dialog.getByLabel("계산 방식", { exact: true }).selectOption("per_unit");
+    await dialog.getByLabel("단가 모델", { exact: true }).selectOption("per_unit");
     await dialog.getByLabel("과금 수량 1당 단가 (원)", { exact: true }).fill("999");
     await context.addCookies([{ name: "me_session", value: tenantB.token, url: FRONTEND_URL, httpOnly: true, sameSite: "Lax" }]);
     await dialog.getByRole("button", { name: "단가 버전 등록", exact: true }).click();

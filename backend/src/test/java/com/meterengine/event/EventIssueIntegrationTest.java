@@ -244,7 +244,7 @@ class EventIssueIntegrationTest {
     assertThat((List<String>) JsonPath.read(json, "$.issues[*].action_hint"))
         .singleElement()
         .asString()
-        .contains("확정");
+        .contains("발행");
   }
 
   @Test

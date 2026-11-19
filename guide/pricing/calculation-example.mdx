@@ -7,13 +7,13 @@ description: "구간 단가, 최소 사용료, 기본료가 있는 예시 하나
 
 - 구간 단가의 규칙: [단가 모델과 버전](/pricing/price-models)
 - 기본료와 최소 사용료의 규칙: [기본료와 최소 사용료](/pricing/price-plans)
-- 10원 미만 버림과 세액: [예정액, 확정액, 수납액](/concepts/amounts)
+- 10원 미만 버림과 세액: [예정액, 청구액, 수납액](/concepts/amounts)
 
 ## 예시 조건
 
 | 항목 | 값 |
 | --- | --- |
-| 미터 | `aggregation`은 `sum`, `unit_size`는 1, `rounding_mode`는 `none`(기본값), 구분 키 없음 |
+| 과금 미터 | `aggregation`은 `sum`, `unit_size`는 1, `rounding_mode`는 `none`(기본값), 구분 키 없음 |
 | 단가 | 누진 구간(`graduated`): 100까지 10원, 1,000까지 8원, 그 위는 5원 |
 | 요금제 | 기본료 500원, 최소 사용료 12,000원 |
 | 그 달 사용량 | 한 고객이 이벤트 한 건으로 1500.5를 보냄 |
@@ -44,8 +44,8 @@ description: "구간 단가, 최소 사용료, 기본료가 있는 예시 하나
 <Step title="공급가액이 나옵니다">
 1,000 + 7,200 + 2,500 + 1,300 + 500 = **12,500원**입니다. 청구 항목은 다섯 줄입니다. 청구 예정액은 이 공급가액이고 부가세를 포함하지 않습니다.
 </Step>
-<Step title="확정하면 세액과 합계가 붙습니다">
-청구서를 확정하면 세액은 공급가액의 10%인 1,250원, 합계는 13,750원입니다.
+<Step title="발행하면 세액과 합계가 붙습니다">
+청구서를 발행하면 세액은 공급가액의 10%인 1,250원, 합계는 13,750원입니다.
 </Step>
 </Steps>
 
@@ -104,7 +104,7 @@ const draft = await response.json();
 ```
 </CodeGroup>
 
-예시 고객 한 명만 있을 때 누진 구간의 응답은 아래와 같습니다. 미터 코드는 `example-hours`, 집계 대상 속성은 `hours`로 만든 경우입니다.
+예시 고객 한 명만 있을 때 누진 구간의 응답은 아래와 같습니다. 과금 미터 코드는 `example-hours`, 집계 대상 속성은 `hours`로 만든 경우입니다.
 
 ```json 200 응답의 일부
 {
@@ -203,23 +203,23 @@ const draft = await response.json();
 단가가 없어 청구 항목과 금액에서 빠진 구분 값의 사용량입니다. 자사 계산에서 이 구분 값에도 요금을 매겼다면 이 차이만큼 금액이 어긋납니다.
 </ResponseField>
 
-확정한 청구서는 `GET /v1/invoices/{id}`로 봅니다. 위 예시를 확정하면 `supply_amount`는 12500, `tax_amount`는 1250, `total_amount`는 13750이고 `lines`는 다섯 줄입니다. 확정 방법은 [청구서 수동 확정](/billing/finalize-invoices)을 참고하세요.
+발행한 청구서는 `GET /v1/invoices/{id}`로 봅니다. 위 예시를 발행하면 `supply_amount`는 12500, `tax_amount`는 1250, `total_amount`는 13750이고 `lines`는 다섯 줄입니다. 발행 방법은 [청구서 수동 발행](/billing/finalize-invoices)을 참고하세요.
 
 ## 테스트 환경에서 직접 재현하기
 
-위 예시를 테스트 환경에서 그대로 만들어 볼 수 있습니다. 미터 등록 요청 형식은 [미터 설계](/pricing/meters)에, 고객 등록과 이벤트 전송, 청구 예정액 조회의 요청 형식은 [빠른 시작](/quickstart)에 있으니, 여기서는 이 예시에 넣을 값만 적습니다. 요청은 admin 권한의 테스트 키로 보내고, 날짜는 오늘이 속한 달로 바꿔 넣으세요.
+위 예시를 테스트 환경에서 그대로 만들어 볼 수 있습니다. 과금 미터 등록 요청 형식은 [과금 미터 설계](/pricing/meters)에, 고객 등록과 이벤트 전송, 청구 예정액 조회의 요청 형식은 [빠른 시작](/quickstart)에 있으니, 여기서는 이 예시에 넣을 값만 적습니다. 요청은 admin 권한의 테스트 키로 보내고, 날짜는 오늘이 속한 달로 바꿔 넣으세요.
 
 {/* 확인 필요: 테스트 키 정의와 mode 설명 */}
 <Danger>
-테스트 환경도 보낸 이벤트는 지울 수 없고, 만든 미터와 고객도 지우지 못하고 보관만 됩니다. 이 예시 전용의 미터 코드, 이벤트 `type`, 고객을 따로 써서 다른 테스트 데이터와 섞이지 않게 하세요. 테스트 환경의 성질은 [업무 환경](/concepts/environments)을 참고하세요.
+테스트 환경도 보낸 이벤트는 지울 수 없고, 만든 과금 미터와 고객도 지우지 못하고 보관만 됩니다. 이 예시 전용의 과금 미터 코드, 이벤트 `type`, 고객을 따로 써서 다른 테스트 데이터와 섞이지 않게 하세요. 테스트 환경의 성질은 [업무 환경](/concepts/environments)을 참고하세요.
 </Danger>
 
 <Steps>
-<Step title="미터를 만듭니다">
-미터 코드 `example-hours`, 이벤트 유형 `example_job`, 집계 함수 `sum`, 집계 대상 속성 `hours`, 구분 키 없음으로 등록합니다. 다른 미터와 겹치지 않는 이벤트 `type`을 씁니다. 같은 `type`을 세는 미터가 이미 있으면 그 미터에도 이 이벤트가 집계됩니다.
+<Step title="과금 미터를 만듭니다">
+과금 미터 코드 `example-hours`, 이벤트 유형 `example_job`, 집계 함수 `sum`, 집계 대상 속성 `hours`, 구분 키 없음으로 등록합니다. 다른 과금 미터와 겹치지 않는 이벤트 `type`을 씁니다. 같은 `type`을 세는 과금 미터가 이미 있으면 그 과금 미터에도 이 이벤트가 집계됩니다.
 </Step>
 <Step title="누진 구간 단가를 등록합니다">
-구분 키가 없는 미터는 `dimension_values`에 빈 객체를 넣습니다. 마지막 구간의 `up_to`는 `null`입니다. `effective_from`을 생략하면 이번 달부터 적용됩니다.
+구분 키가 없는 과금 미터는 `dimension_values`에 빈 객체를 넣습니다. 마지막 구간의 `up_to`는 `null`입니다. `effective_from`을 생략하면 이번 달부터 적용됩니다.
 
 ```bash curl
 curl -X POST https://meterengine.com/v1/billable-metrics/example-hours/price-rates \
@@ -274,6 +274,6 @@ curl -X POST https://meterengine.com/v1/price-plans \
 단가가 없는 구분 값의 사용량도 요금제를 붙이는 기준이 되는 사용량으로 셉니다. 사용료는 0원이라 최소 사용료 전액이 조정 항목으로 붙습니다. `unpriced_usages`를 보고 단가를 등록하세요. 자세한 내용은 [기본료와 최소 사용료](/pricing/price-plans)를 참고하세요.
 </Accordion>
 <Accordion title="이벤트를 보냈는데 금액이 0원입니다">
-미터의 이벤트 `type`, 단가의 구분 값, 이벤트의 `timestamp`가 맞는지 봅니다. 원인별 확인 순서는 [이벤트가 청구에 안 보일 때](/troubleshooting/events-not-billed)를 참고하세요.
+과금 미터의 이벤트 `type`, 단가의 구분 값, 이벤트의 `timestamp`가 맞는지 봅니다. 원인별 확인 순서는 [이벤트가 청구에 안 보일 때](/troubleshooting/events-not-billed)를 참고하세요.
 </Accordion>
 </AccordionGroup>

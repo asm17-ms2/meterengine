@@ -42,10 +42,10 @@ public class EventIssueController {
   @Operation(
       summary = "과금에서 빠진 이벤트 조회",
       description =
-          "저장된 이벤트를 지금 미터 정의와 단가로 다시 검사해, 연결할 미터가 없거나, 수량을 읽을 수 없거나, 적용 단가가 없어 과금에서 빠진 이벤트를 돌려줍니다."
+          "저장된 이벤트를 지금 과금 미터 정의와 단가로 다시 검사해, 연결할 과금 미터가 없거나, 수량을 읽을 수 없거나, 적용 단가가 없어 과금에서 빠진 이벤트를 돌려줍니다."
               + " 대상은 조회한 달에 발생했고 occurred_at이 cutoff_at보다 이른 이벤트이며, cutoff_at은 지금 시각과 그 달의 끝 가운데 이른 쪽입니다."
               + " 수신 시각(received_at)은 보지 않으므로 집계 마감 뒤에 받아 청구에서 빠진 지난달 이벤트를 따로 가려내지 않습니다."
-              + " total과 summary는 고객, 검색어, 사유 조건을 적용한 문제 행 수이며, 한 이벤트가 여러 미터에서 문제가 되면 여러 번 셉니다."
+              + " total과 summary는 고객, 검색어, 사유 조건을 적용한 문제 행 수이며, 한 이벤트가 여러 과금 미터에서 문제가 되면 여러 번 셉니다."
               + " warnings는 이 조건과 관계없이 그 달 전체를 셉니다. 수집을 거절한 이벤트는 저장되지 않아 들지 않습니다."
               + " 원본 properties는 돌려주지 않습니다. 모르는 조회 조건은 400 validation_error로 거절합니다.")
   @ApiResponses({
@@ -77,7 +77,7 @@ public class EventIssueController {
           UUID customerId,
       @Parameter(
               description =
-                  "이 문제 종류만 봅니다. unknown_event_type(연결할 미터 없음), invalid_target_property(수량을 읽을 수 없음), unpriced_usage(적용 단가 없음) 가운데 하나입니다.")
+                  "이 문제 종류만 봅니다. unknown_event_type(연결할 과금 미터 없음), invalid_target_property(수량을 읽을 수 없음), unpriced_usage(적용 단가 없음) 가운데 하나입니다.")
           @RequestParam(required = false)
           @Pattern(regexp = "unknown_event_type|invalid_target_property|unpriced_usage") @StorableText
           String reason,

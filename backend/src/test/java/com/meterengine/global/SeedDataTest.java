@@ -251,7 +251,7 @@ class SeedDataTest {
     jdbcTemplate.update(
         "INSERT INTO billable_metric (organization_id, code, name, event_type, aggregation,"
             + " target_property, dimension_properties) VALUES (?::uuid, 'token-usage',"
-            + " '예전 미터', 'chat_completion', 'sum', 'token', '{}')",
+            + " '예전 과금 미터', 'chat_completion', 'sum', 'token', '{}')",
         SEED_ORGANIZATION_ID);
     jdbcTemplate.update(
         "INSERT INTO price_rate (organization_id, billable_metric_code, dimension_values,"

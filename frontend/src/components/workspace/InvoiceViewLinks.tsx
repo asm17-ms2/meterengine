@@ -54,7 +54,7 @@ export function InvoiceViewLinks({ invoiceId, initialLinks, loadError, checkedAt
     if (isBusy || !canManage) return;
     modal.confirm({
       title: "이 링크를 폐기할까요?",
-      content: "이미 전달한 링크도 더 이상 쓸 수 없어요. 확정 청구와 결제 기록은 그대로 남아요.",
+      content: "이미 전달한 링크도 더 이상 쓸 수 없어요. 발행한 청구서와 결제 기록은 그대로 남아요.",
       okText: "링크 폐기", okButtonProps: { danger: true }, cancelText: "닫기",
       onOk: () => revoke(link),
     });

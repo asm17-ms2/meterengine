@@ -80,7 +80,7 @@ async function meterCodesFor(client: MeterEngineClient, type: string, month: str
   return (await activeMetersIn(client, month)).filter((meter) => meter.event_type === type).map((meter) => meter.code);
 }
 
-// 고객, 미터, 차원 값 조합의 그 달 합계가 음수면 서버는 그 조합을 금액에 넣지 않는다.
+// 고객, 과금 미터, 차원 값 조합의 그 달 합계가 음수면 서버는 그 조합을 금액에 넣지 않는다.
 async function negativeTotalFindings(client: MeterEngineClient, event: EventResponse, month: string, codes: string[]): Promise<Finding[]> {
   const draft = await client.previewDraftInvoice({ month });
   const customer = draft.customers.find((item) => item.customer_id === event.customer_id);
@@ -92,11 +92,11 @@ async function negativeTotalFindings(client: MeterEngineClient, event: EventResp
       billable_metric_code: usage.billable_metric_code,
       dimension_values: usage.dimension_values,
       quantity: usage.quantity,
-      action_hint: "이 고객의 이 미터와 차원 값 조합은 그 달 합계가 음수라 금액에 들지 않습니다. 정정 이벤트의 수량을 확인하세요",
+      action_hint: "이 고객의 이 과금 미터와 차원 값 조합은 그 달 합계가 음수라 금액에 들지 않습니다. 정정 이벤트의 수량을 확인하세요",
     }));
 }
 
-// 확정한 인보이스는 바뀌지 않으므로, 이벤트의 미터와 차원 값이 금액 라인에 있어야 청구된 것이다.
+// 확정한 인보이스는 바뀌지 않으므로, 이벤트의 과금 미터와 차원 값이 금액 라인에 있어야 청구된 것이다.
 function invoiceLineFindings(event: EventResponse, invoice: Invoice, codes: string[], issues: EventIssue[]): Finding[] {
   return codes.flatMap((code) => {
     if (invoice.lines.some((line) => line.billable_metric_code === code && sameDimensions(line.dimension_values, event.properties))) return [];
@@ -108,7 +108,7 @@ function invoiceLineFindings(event: EventResponse, invoice: Invoice, codes: stri
         reason: "not_in_finalized_invoice",
         billable_metric_code: code,
         invoice_id: invoice.id,
-        action_hint: "확정한 인보이스에 이 미터와 차원 값의 금액 라인이 없습니다. 확정 당시 단가가 없었거나 합계가 0 이하였을 수 있고, 확정한 인보이스는 바뀌지 않습니다",
+        action_hint: "확정한 인보이스에 이 과금 미터와 차원 값의 금액 라인이 없습니다. 확정 당시 단가가 없었거나 합계가 0 이하였을 수 있고, 확정한 인보이스는 바뀌지 않습니다",
       },
     ];
   });
@@ -175,7 +175,7 @@ async function diagnoseStored(client: MeterEngineClient, event: EventResponse, n
       result.billable = false;
       return result;
     }
-    result.notes.push("인보이스를 확정한 달이라 확정한 인보이스의 금액 라인에 이 이벤트의 미터와 차원 값이 있는지로 판정했습니다. 확정한 금액은 바뀌지 않습니다");
+    result.notes.push("인보이스를 확정한 달이라 확정한 인보이스의 금액 라인에 이 이벤트의 과금 미터와 차원 값이 있는지로 판정했습니다. 확정한 금액은 바뀌지 않습니다");
   }
 
   const { issues, complete } = await findIssues(client, event, month);
@@ -206,7 +206,7 @@ async function diagnoseStored(client: MeterEngineClient, event: EventResponse, n
   else if (excluded.length > 0) result.billable = false;
   else {
     result.billable = null;
-    result.notes.push("이 유형을 집계하는 미터를 찾지 못했지만 서버가 청구 누락 사유도 남기지 않아 판정하지 못했습니다");
+    result.notes.push("이 유형을 집계하는 과금 미터를 찾지 못했지만 서버가 청구 누락 사유도 남기지 않아 판정하지 못했습니다");
   }
   if (!complete && result.billable === true) result.billable = null;
   return result;

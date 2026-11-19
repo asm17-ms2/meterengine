@@ -12,7 +12,7 @@ public record DashboardResponse(
     @Schema(description = "현황을 계산한 시각(ISO 8601)") @JsonProperty("calculated_at")
         OffsetDateTime calculatedAt,
     @Schema(description = "보관하지 않은 고객 수") @JsonProperty("customer_count") long customerCount,
-    @Schema(description = "보관하지 않은 미터 수") @JsonProperty("billable_metric_count")
+    @Schema(description = "보관하지 않은 과금 미터 수") @JsonProperty("billable_metric_count")
         long billableMetricCount,
     @Schema(description = "폐기하지 않았고 만료되지 않은 API 키 수") @JsonProperty("active_api_key_count")
         long activeApiKeyCount,
@@ -26,10 +26,10 @@ public record DashboardResponse(
         boolean paymentConfigured,
     @Schema(description = "현재 업무 환경의 결제 모드(test 또는 live)") @JsonProperty("payment_mode")
         String paymentMode,
-    @Schema(description = "청구 예정액(원)입니다. 그 달을 아직 확정하지 않은 고객의 공급가액 합계이며 부가세는 들지 않습니다.")
+    @Schema(description = "청구 예정액(원)입니다. 그 달 청구서를 아직 발행하지 않은 고객의 공급가액 합계이며 부가세는 들지 않습니다.")
         @JsonProperty("draft_supply_amount")
         long draftSupplyAmount,
-    @Schema(description = "확정 청구액(원)입니다. 그 달 청구서의 부가세 포함 금액 합계입니다.")
+    @Schema(description = "청구액(원)입니다. 그 달 청구서의 부가세 포함 금액 합계입니다.")
         @JsonProperty("finalized_total_amount")
         long finalizedTotalAmount,
     @Schema(
@@ -47,10 +47,10 @@ public record DashboardResponse(
         long outstandingAmount,
     @Schema(description = "그 달 청구서 가운데 결제 상태가 failed인 청구서 수") @JsonProperty("failed_payment_count")
         long failedPaymentCount,
-    @Schema(description = "단가 없는 사용량 구분 값 수입니다. 청구 예정액에서 단가가 없어 빠진 고객, 미터, 구분 값 묶음을 셉니다.")
+    @Schema(description = "단가 없는 사용량 구분 값 수입니다. 청구 예정액에서 단가가 없어 빠진 고객, 과금 미터, 구분 값 묶음을 셉니다.")
         @JsonProperty("unpriced_usage_count")
         long unpricedUsageCount,
-    @Schema(description = "집계값이 음수인 구분 값 수입니다. 청구 예정액에서 집계값이 음수라 빠진 고객, 미터, 구분 값 묶음을 셉니다.")
+    @Schema(description = "집계값이 음수인 구분 값 수입니다. 청구 예정액에서 집계값이 음수라 빠진 고객, 과금 미터, 구분 값 묶음을 셉니다.")
         @JsonProperty("negative_usage_count")
         long negativeUsageCount,
     @Schema(description = "그 달 청구서별 결제 현황") @JsonProperty("invoice_payments")
@@ -65,7 +65,7 @@ public record DashboardResponse(
   public record DashboardInvoice(
       @Schema(description = "청구서 ID(UUID)") @JsonProperty("invoice_id") UUID invoiceId,
       @Schema(description = "고객 ID(UUID)") @JsonProperty("customer_id") UUID customerId,
-      @Schema(description = "확정할 때 저장한 고객 이름") @JsonProperty("customer_name") String customerName,
+      @Schema(description = "발행할 때 저장한 고객 이름") @JsonProperty("customer_name") String customerName,
       @Schema(description = "청구 월(yyyy-MM, KST)") String month,
       @Schema(
               description =

@@ -24,12 +24,14 @@ public record IngestEventRequest(
             example = "3f2b8c1e-7a4d-4e6b-9c0a-5d1f2e3a4b5c")
         @JsonProperty("customer_id")
         @NotNull UUID customerId,
-    @Schema(description = "이벤트 유형입니다. 미터의 event_type과 같은 값이어야 그 미터에 집계됩니다.", example = "api_call")
+    @Schema(
+            description = "이벤트 유형입니다. 과금 미터의 event_type과 같은 값이어야 그 과금 미터에 집계됩니다.",
+            example = "api_call")
         @JsonProperty("type")
         @NotBlank @StorableText
         String type,
     @Schema(
-            description = "JSON 객체입니다. 비어 있어도({}) 됩니다. 미터의 집계 속성과 구분 키를 여기에 담습니다.",
+            description = "JSON 객체입니다. 비어 있어도({}) 됩니다. 과금 미터의 집계 속성과 구분 키를 여기에 담습니다.",
             example = "{\"units\": 12}")
         @NotNull @StorableJson
         Map<String, Object> properties,

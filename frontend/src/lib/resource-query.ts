@@ -54,6 +54,6 @@ export function resourceRangeErrors(parameters: URLSearchParams): ResourceRangeE
   if (minAmount && maxAmount && Number(minAmount) > Number(maxAmount)) errors.push({ field: "max_amount", message: "최대 금액은 최소 금액보다 작을 수 없어요." });
   const from = parameters.get("from");
   const to = parameters.get("to");
-  if (from && to && from >= to) errors.push({ field: "to", message: "확정 시각 끝은 시작보다 뒤여야 해요." });
+  if (from && to && from >= to) errors.push({ field: "to", message: "발행 시각 끝은 시작보다 뒤여야 해요." });
   return errors;
 }

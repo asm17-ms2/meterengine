@@ -15,7 +15,7 @@ description: "응답을 받지 못해 같은 요청을 다시 보내도 결과�
 | `POST /v1/billable-metrics/{code}/price-rates` | 같은 구분 값(`dimension_values`), 고객 범위(`customer_id`), 시작 월(`effective_from`) | 그 단가를 요청 값으로 덮어쓰고 201로 답합니다. |
 | `POST /v1/price-plans` | 같은 고객 범위(`customer_id`)와 시작 월(`effective_from`) | 그 요금제를 요청 값으로 덮어쓰고 201로 답합니다. |
 | `POST /v1/payment-attempts/{id}/cancellations` | `Idempotency-Key` 헤더(UUID) | 그 취소를 지금 상태로 201로 돌려줍니다. |
-| `POST /v1/invoices?month=YYYY-MM` | 확정할 달과 고객 | 그 달이 이미 확정된 고객은 건너뜁니다. |
+| `POST /v1/invoices?month=YYYY-MM` | 발행할 달과 고객 | 그 달 청구서가 이미 발행된 고객은 건너뜁니다. |
 
 아래 요청은 같은 요청을 알아보는 장치가 없습니다. 다시 보내기 전에 먼저 조회하세요.
 
@@ -67,9 +67,9 @@ curl https://meterengine.com/v1/events \
 
 다시 보낼지 멈출지, 보내지 못한 이벤트를 쌓아 두는 방법은 [재전송 설계](/integration/retries)를 참고하세요.
 
-## 고객과 미터 등록: Idempotency-Key
+## 고객과 과금 미터 등록: Idempotency-Key
 
-고객 등록(`POST /v1/customers`)과 미터 등록(`POST /v1/billable-metrics`)은 `Idempotency-Key` 헤더를 받습니다. 헤더는 선택이지만, 응답을 받지 못했을 때 안전하게 다시 보내려면 넣으세요.
+고객 등록(`POST /v1/customers`)과 과금 미터 등록(`POST /v1/billable-metrics`)은 `Idempotency-Key` 헤더를 받습니다. 헤더는 선택이지만, 응답을 받지 못했을 때 안전하게 다시 보내려면 넣으세요.
 
 <Steps>
 <Step title="요청마다 키를 만듭니다">
@@ -97,9 +97,9 @@ idempotency-replayed: true
 
 키의 규칙은 아래와 같습니다.
 
-- **범위는 조직, 업무 환경, 요청 종류입니다.** 고객 등록과 미터 등록은 같은 키를 써도 서로 영향이 없습니다. 테스트 환경과 라이브 환경도 따로입니다.
+- **범위는 조직, 업무 환경, 요청 종류입니다.** 고객 등록과 과금 미터 등록은 같은 키를 써도 서로 영향이 없습니다. 테스트 환경과 라이브 환경도 따로입니다.
 - **같은 키에 다른 본문을 보내면 `409 idempotency_conflict`입니다.** 본문을 고쳐 새로 등록하려면 새 키를 쓰세요. 공백이나 필드 순서만 다른 본문은 같은 본문으로 봅니다.
-- **첫 응답은 기한 없이 보관합니다.** 그 뒤에 고객이나 미터를 고치거나 보관해도, 같은 키로 다시 보내면 등록 당시의 첫 응답이 옵니다. 지금 상태는 조회 요청으로 확인하세요.
+- **첫 응답은 기한 없이 보관합니다.** 그 뒤에 고객이나 과금 미터를 고치거나 보관해도, 같은 키로 다시 보내면 등록 당시의 첫 응답이 옵니다. 지금 상태는 조회 요청으로 확인하세요.
 - **비었거나 공백뿐인 키, 255자를 넘는 키는 `400 validation_error`입니다.** `errors[].field`가 `Idempotency-Key`입니다.
 - 같은 키로 동시에 두 번 보내도 한 번만 등록되고 두 요청 모두 같은 응답을 받습니다.
 
@@ -107,9 +107,9 @@ idempotency-replayed: true
 
 ## 결제 취소: Idempotency-Key
 
-결제 취소 요청(`POST /v1/payment-attempts/{id}/cancellations`)의 `Idempotency-Key`는 고객과 미터 등록의 키와 규칙이 다릅니다.
+결제 취소 요청(`POST /v1/payment-attempts/{id}/cancellations`)의 `Idempotency-Key`는 고객과 과금 미터 등록의 키와 규칙이 다릅니다.
 
-| 항목 | 고객과 미터 등록 | 결제 취소 |
+| 항목 | 고객과 과금 미터 등록 | 결제 취소 |
 | --- | --- | --- |
 | 키 형식 | 1자에서 255자 문자열 | UUID만 받습니다. UUID가 아니면 `400 validation_error` |
 | 다시 보냈을 때 | 첫 응답을 그대로 | 그 취소를 지금 상태로 `201` |
@@ -120,7 +120,7 @@ idempotency-replayed: true
 
 ## 단가와 요금제: 같은 자리 덮어쓰기
 
-단가 등록과 요금제 등록은 키 없이 다시 보내도 됩니다. 같은 자리(단가는 미터, 구분 값, 고객 범위, 시작 월이 같은 것, 요금제는 고객 범위와 시작 월이 같은 것)에 다시 보내면 새로 만들지 않고 요청 값으로 덮어쓰고 `201`로 답합니다.
+단가 등록과 요금제 등록은 키 없이 다시 보내도 됩니다. 같은 자리(단가는 과금 미터, 구분 값, 고객 범위, 시작 월이 같은 것, 요금제는 고객 범위와 시작 월이 같은 것)에 다시 보내면 새로 만들지 않고 요청 값으로 덮어쓰고 `201`로 답합니다.
 
 <Danger>
 `effective_from`을 빼면 이번 달(KST)이 시작 월이 됩니다. 달이 바뀐 뒤에 같은 요청을 다시 보내면 지난 단가를 덮어쓰지 않고 새 달의 단가가 하나 더 생깁니다. 다시 보낼 수 있는 요청에는 `effective_from`을 적어 두세요. 다만 시작 월이 지난달 이전이면 `409 price_rate_history_immutable`(요금제는 `409 price_plan_history_immutable`)로 거절됩니다.
@@ -128,6 +128,6 @@ idempotency-replayed: true
 
 덮어쓰면 마지막에 받은 요청의 값이 남습니다. 다른 사람이 콘솔에서 그 사이에 바꾼 값도 덮어쓰니, 오래전에 실패한 요청을 나중에 다시 보내지 마세요. 단가와 요금제의 시작 월과 이력 규칙은 [단가 모델과 버전](/pricing/price-models)과 [기본료와 최소 사용료](/pricing/price-plans)를 참고하세요.
 
-## 청구서 확정
+## 청구서 발행
 
-`POST /v1/invoices?month=YYYY-MM`은 그 달이 이미 확정된 고객을 건너뛰므로 같은 달로 다시 불러도 청구서가 겹치지 않습니다. 확정하지 못한 고객은 다시 부르면 다시 시도합니다. 자세한 내용은 [청구서 수동 확정](/billing/finalize-invoices)을 참고하세요.
+`POST /v1/invoices?month=YYYY-MM`은 그 달 청구서가 이미 발행된 고객을 건너뛰므로 같은 달로 다시 불러도 청구서가 겹치지 않습니다. 청구서를 발행하지 못한 고객은 다시 부르면 다시 시도합니다. 자세한 내용은 [청구서 수동 발행](/billing/finalize-invoices)을 참고하세요.

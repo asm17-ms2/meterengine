@@ -12,7 +12,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public record UpdateBillableMetricRequest(
-    @Schema(description = "콘솔과 청구서에 보이는 미터 이름") @NotBlank @StorableText String name,
+    @Schema(description = "콘솔과 청구서에 보이는 과금 미터 이름") @NotBlank @StorableText String name,
     @Schema(description = "집계할 이벤트의 type 값입니다. 대소문자까지 같아야 집계합니다.")
         @NotBlank @StorableText
         @JsonProperty("event_type")

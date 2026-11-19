@@ -20,7 +20,7 @@ const NAV_GROUPS: { label?: string; items: NavEntry[] }[] = [
   { label: "사용량과 청구", items: [
     { href: "/usage", label: "사용량" },
     { label: "이벤트", children: [{ href: "/events", label: "수집 이벤트" }, { href: "/event-issues", label: "과금에서 빠진 이벤트" }, { href: "/event-rejections", label: "수집 거절" }] },
-    { href: "/billing", label: "청구 검토" }, { href: "/invoices", label: "확정 청구서" }, { href: "/payments", label: "수납과 취소" },
+    { href: "/billing", label: "청구 검토" }, { href: "/invoices", label: "청구서" }, { href: "/payments", label: "수납과 취소" },
   ] },
   { label: "요금과 연동", items: [{ href: "/billable-metrics", label: "미터" }, { href: "/pricing", label: "요금 설정" }, { href: "/integrations", label: "API 키와 웹훅" }] },
   { label: "조직", items: [{ href: "/settings", label: "조직 설정" }, { href: "/members", label: "사용자 관리" }, { href: "/audit", label: "감사 기록" }] },

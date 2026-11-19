@@ -145,7 +145,7 @@ test("격리 계약: 확정 실패 뒤 다시 취소 요청을 선택해야 새 
   expect(state.cancellationCount).toBe(2);
 });
 
-test("격리 계약: 웹훅 재전송의 202 빈 응답을 성공으로 받고 발송 상태를 갱신한다", async ({ page, request }) => {
+test("격리 계약: 웹훅 재전송의 202 빈 응답을 성공으로 받고 전송 상태를 갱신한다", async ({ page, request }) => {
   await page.goto(`/integrations/${ENDPOINT_ID}`);
   const row = page.getByRole("row").filter({ hasText: "결제 성공" });
   const retry = row.getByRole("button", { name: "결제 성공 다시 보내기", exact: true });
@@ -153,7 +153,7 @@ test("격리 계약: 웹훅 재전송의 202 빈 응답을 성공으로 받고 �
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("button", { name: "다시 보내기", exact: true }).click();
   await expect(dialog).toHaveCount(0);
-  await expect(page.getByRole("cell", { name: "발송 대기", exact: true })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "전송 대기", exact: true })).toBeVisible();
   await expect(retry).toHaveCount(0);
   await expect(page.getByText("응답 내용을 읽지 못했어요", { exact: false })).toHaveCount(0);
   const state = await readState(request);
@@ -358,15 +358,15 @@ test("격리 계약: 최초 화면을 읽는 동안 소속이 바뀌어도 다�
 });
 
 
-test("격리 계약: 확정된 월의 0원 고객을 구분하고 검색 페이지 반복 없이 조건별 월 조회를 한다", async ({ page, request }) => {
+test("격리 계약: 발행된 월의 0원 고객을 구분하고 검색 페이지 반복 없이 조건별 월 조회를 한다", async ({ page, request }) => {
   const customerId = "12121212-1212-4212-8212-121212121212";
   await control(request, "finalized-month-zero-customer");
   await page.goto(`/billing?month=2026-10&customer_id=${customerId}&sort=amount&order=desc`);
-  await expect(page.getByText("확정됨", { exact: true })).toBeVisible();
+  await expect(page.getByText("발행됨", { exact: true })).toBeVisible();
   await expect(page.getByText("청구 예정액이 0원인 고객 1명은 청구서가 만들어지지 않았어요.", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "모두 펼치기", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "모두 접기", exact: true })).toHaveCount(0);
-  const monthLink = page.getByRole("link", { name: "이 달에 확정된 청구서 101건 보기", exact: true });
+  const monthLink = page.getByRole("link", { name: "이 달에 발행된 청구서 101건 보기", exact: true });
   await expect(monthLink).toBeVisible();
   const monthHref = await monthLink.getAttribute("href");
   expect(monthHref).not.toBeNull();
@@ -374,7 +374,7 @@ test("격리 계약: 확정된 월의 0원 고객을 구분하고 검색 페이�
   expect(monthDestination.searchParams.has("customer_id")).toBe(false);
   expect(monthDestination.searchParams.get("organization_id")).toBe("55555555-5555-4555-8555-555555555555");
   expect(monthDestination.searchParams.get("environment")).toBeNull();
-  await expect(page.getByText(/^다른 고객의 확정 청구/)).toHaveCount(0);
+  await expect(page.getByText(/^다른 고객의 발행 청구/)).toHaveCount(0);
   const destinationHref = await page.getByRole("link", { name: "청구서 보기", exact: true }).getAttribute("href");
   expect(destinationHref).not.toBeNull();
   const destination = new URL(destinationHref!, FRONTEND_ORIGIN);
@@ -385,7 +385,7 @@ test("격리 계약: 확정된 월의 0원 고객을 구분하고 검색 페이�
   expect(destination.searchParams.has("order")).toBe(false);
   await page.getByRole("button", { name: "0원 고객 1명 보기", exact: true }).click();
   await expect(page.getByRole("row").filter({ hasText: "청구서 없는 0원 고객" })).toHaveCount(1);
-  await expect(page.getByText(/^다른 고객의 확정 청구/)).toHaveCount(0);
+  await expect(page.getByText(/^다른 고객의 발행 청구/)).toHaveCount(0);
   const state = await readState(request);
   expect(state.invoiceSearchCalls, "월 전체 조회는 검색 페이지를 반복하지 않음").toBe(0);
   expect(state.invoiceListCalls).toHaveLength(2);
@@ -408,18 +408,18 @@ test("the payments list can show only the month's failed payments and go back to
   await control(request, "failed-payments");
   await page.goto("/payments?month=2026-10&payment_status=failed");
   await expect(page.getByText("결제 실패 2건만 표시해요.", { exact: false })).toBeVisible();
-  for (const index of [0, 1]) await expect(page.getByRole("link", { name: `다른 고객의 확정 청구 ${index}`, exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: "다른 고객의 확정 청구 2", exact: true })).toHaveCount(0);
+  for (const index of [0, 1]) await expect(page.getByRole("link", { name: `다른 고객의 발행 청구 ${index}`, exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "다른 고객의 발행 청구 2", exact: true })).toHaveCount(0);
   await expect(page.locator('form input[type="hidden"][name="payment_status"]')).toHaveValue("failed");
   await page.getByRole("link", { name: "전체 수납 보기", exact: true }).click();
   await expect(page).toHaveURL(url => url.pathname === "/payments" && !url.searchParams.has("payment_status") && url.searchParams.get("month") === "2026-10");
-  await expect(page.getByRole("link", { name: "다른 고객의 확정 청구 2", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "다른 고객의 발행 청구 2", exact: true })).toBeVisible();
 });
 
 test("changing the month on the payments list keeps the customer carried in from other screens", async ({ page, request }) => {
   await control(request, "failed-payments");
   await page.goto("/payments?month=2026-10&customer_id=77777777-7777-4777-8777-777777777777");
-  await page.getByLabel("청구 월", { exact: true }).fill("2026-09");
+  await page.getByLabel("조회 월", { exact: true }).fill("2026-09");
   await page.getByRole("button", { name: "조건 적용", exact: true }).click();
   await expect(page).toHaveURL(url => url.searchParams.get("month") === "2026-09" && url.searchParams.get("customer_id") === "77777777-7777-4777-8777-777777777777");
 });
@@ -485,50 +485,50 @@ test("격리 계약: 화면을 그릴 때 고객 선택지를 받지 못했으�
   await expect(page.locator(".ant-select-item-option").filter({ hasText: "다시 받은 고객" })).toBeVisible();
 });
 
-test("격리 계약: 월 확정 결과 창은 다섯 건까지만 펼치고 나머지는 청구서 화면으로 안내한다", async ({ page, request }) => {
+test("격리 계약: 월 발행 결과 창은 다섯 건까지만 펼치고 나머지는 청구서 화면으로 안내한다", async ({ page, request }) => {
   await control(request, "finalize-month");
   await page.goto("/billing?month=2026-09");
-  await page.getByRole("button", { name: "월 전체 확정", exact: true }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "확정", exact: true }).click();
-  const result = page.getByRole("dialog", { name: /청구서 7건을 확정했어요/ });
+  await page.getByRole("button", { name: "월 전체 발행", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "발행", exact: true }).click();
+  const result = page.getByRole("dialog", { name: /청구서 7건을 발행했어요/ });
   await expect(result.getByRole("listitem")).toHaveCount(5);
   await expect(result.getByText("나머지 2건은 '청구서 보기'에서 확인하세요.", { exact: true })).toBeVisible();
 });
 
-test("격리 계약: 다른 확정이 먼저 처리해 일부만 확정되면 결과 창이 그 원인도 안내한다", async ({ page, request }) => {
+test("격리 계약: 다른 발행이 먼저 처리해 일부만 발행되면 결과 창이 그 원인도 안내한다", async ({ page, request }) => {
   await control(request, "finalize-month-partial");
   await page.goto("/billing?month=2026-09");
-  await page.getByRole("button", { name: "월 전체 확정", exact: true }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "확정", exact: true }).click();
-  const result = page.getByRole("dialog", { name: /청구서 3건을 확정했어요/ });
-  await expect(result.getByText("확정한 고객 수가 처음 안내한 7명과 달라요. 창을 연 뒤 사용량이 바뀌었거나 그사이 먼저 확정된 고객이 있어요. 금액은 청구서에서 확인하세요.", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "월 전체 발행", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "발행", exact: true }).click();
+  const result = page.getByRole("dialog", { name: /청구서 3건을 발행했어요/ });
+  await expect(result.getByText("청구서를 발행한 고객 수가 처음 안내한 7명과 달라요. 창을 연 뒤 사용량이 바뀌었거나 그사이 청구서가 먼저 발행된 고객이 있어요. 금액은 청구서에서 확인하세요.", { exact: true })).toBeVisible();
 });
 
-test("격리 계약: 청구할 고객이 없어 월 전체 확정이 비활성이면 그 이유를 버튼 설명으로 보인다", async ({ page, request }) => {
+test("격리 계약: 청구할 고객이 없어 월 전체 발행이 비활성이면 그 이유를 버튼 설명으로 보인다", async ({ page, request }) => {
   await control(request, "finalized-month-zero-customer");
   await page.goto("/billing?month=2026-10");
-  const button = page.getByRole("button", { name: "월 전체 확정", exact: true });
+  const button = page.getByRole("button", { name: "월 전체 발행", exact: true });
   await expect(button).toBeDisabled();
-  await expect(button).toHaveAccessibleDescription("청구할 금액이 있는 고객이 없거나 이미 모두 확정됐어요.");
+  await expect(button).toHaveAccessibleDescription("청구할 금액이 있는 고객이 없거나 청구서가 이미 모두 발행됐어요.");
 });
 
-test("격리 계약: 청구 예정액을 불러오지 못하면 월 전체 확정이 비활성이고 그 이유를 버튼 설명으로 보인다", async ({ page, request }) => {
+test("격리 계약: 청구 예정액을 불러오지 못하면 월 전체 발행이 비활성이고 그 이유를 버튼 설명으로 보인다", async ({ page, request }) => {
   await control(request, "draft-failure");
   await page.goto("/billing?month=2026-09");
-  const button = page.getByRole("button", { name: "월 전체 확정", exact: true });
+  const button = page.getByRole("button", { name: "월 전체 발행", exact: true });
   await expect(button).toBeDisabled();
-  await expect(button).toHaveAccessibleDescription("청구 예정액을 불러오지 못해 확정할 수 없어요.");
+  await expect(button).toHaveAccessibleDescription("청구 예정액을 불러오지 못해 발행할 수 없어요.");
 });
 
-test("격리 계약: 자동 확정이 켜진 이번 달은 다음 자동 확정 시각과 단가 없는 사용량으로 보류될 고객의 단가 화면 링크를 보인다", async ({ page, request }) => {
+test("격리 계약: 자동 발행이 켜진 이번 달은 다음 자동 발행 시각과 단가 없는 사용량으로 보류될 고객의 단가 화면 링크를 보인다", async ({ page, request }) => {
   await control(request, "auto-finalize");
   const month = formatKstMonth();
   await page.goto(`/billing?month=${month}`);
-  await expect(page.getByText(`다음 자동 확정 ${Number(shiftMonth(month, 1).slice(5))}월 2일 04:00`, { exact: true })).toBeVisible();
-  const held = page.getByRole("link", { name: "자동 확정 보류: 단가 없는 사용량", exact: true }).filter({ visible: true });
+  await expect(page.getByText(`다음 자동 발행 ${Number(shiftMonth(month, 1).slice(5))}월 2일 04:00`, { exact: true })).toBeVisible();
+  const held = page.getByRole("link", { name: "자동 발행 보류: 단가 없는 사용량", exact: true }).filter({ visible: true });
   await expect(held).toHaveCount(1);
   await expect(page.getByRole("row").filter({ has: held })).toContainText("단가 없는 사용량 고객");
-  await expect(page.getByRole("row").filter({ hasText: "단가 있는 고객" }).getByText(/자동 확정 보류/)).toHaveCount(0);
+  await expect(page.getByRole("row").filter({ hasText: "단가 있는 고객" }).getByText(/자동 발행 보류/)).toHaveCount(0);
   await expect(held).toHaveAccessibleDescription(/이 달이 끝나기 전에 단가를 등록하세요/);
   await expect(page.getByRole("row").filter({ has: held }).getByText(/이 달이 끝나기 전에 단가를 등록하세요/)).toBeVisible();
   const destination = new URL((await held.getAttribute("href"))!, FRONTEND_ORIGIN);
@@ -538,54 +538,54 @@ test("격리 계약: 자동 확정이 켜진 이번 달은 다음 자동 확정 
   expect(destination.searchParams.get("environment")).toBeNull();
 });
 
-test("격리 계약: 미터 조건으로 다른 미터의 단가 없는 사용량이 가려져도 서버가 정한 자동 확정 보류를 보인다", async ({ page, request }) => {
+test("격리 계약: 미터 조건으로 다른 미터의 단가 없는 사용량이 가려져도 서버가 정한 자동 발행 보류를 보인다", async ({ page, request }) => {
   await control(request, "auto-finalize");
   await page.goto(`/billing?month=${formatKstMonth()}&billable_metric_code=tokens`);
   await expect(page.getByRole("row").filter({ hasText: "단가 없는 사용량 고객" })).toBeVisible();
   await expect(page.getByText("기타 (단가 없음)").filter({ visible: true })).toHaveCount(0);
-  const held = page.getByRole("link", { name: "자동 확정 보류: 단가 없는 사용량", exact: true }).filter({ visible: true });
+  const held = page.getByRole("link", { name: "자동 발행 보류: 단가 없는 사용량", exact: true }).filter({ visible: true });
   await expect(held).toHaveCount(1);
   await expect(page.getByRole("row").filter({ has: held })).toContainText("단가 없는 사용량 고객");
 });
 
-test("격리 계약: 확정 시각이 지난 달을 자동 확정하는 중이면 다음 시각 대신 진행 중을 보인다", async ({ page, request }) => {
+test("격리 계약: 발행 시각이 지난 달을 자동 발행하는 중이면 다음 시각 대신 진행 중을 보인다", async ({ page, request }) => {
   await control(request, "auto-finalize");
   await page.goto(`/billing?month=${shiftMonth(formatKstMonth(), -1)}`);
-  await expect(page.getByText("자동 확정 진행 중", { exact: true })).toBeVisible();
-  await expect(page.getByText(/^다음 자동 확정/)).toHaveCount(0);
+  await expect(page.getByText("자동 발행 진행 중", { exact: true })).toBeVisible();
+  await expect(page.getByText(/^다음 자동 발행/)).toHaveCount(0);
 });
 
-test("격리 계약: 끝난 달의 보류 표시는 단가 화면 대신 수동 확정을 안내하고 다 훑은 달은 시각을 보이지 않는다", async ({ page, request }) => {
+test("격리 계약: 끝난 달의 보류 표시는 단가 화면 대신 수동 발행을 안내하고 다 훑은 달은 시각을 보이지 않는다", async ({ page, request }) => {
   await control(request, "auto-finalize");
   await page.goto(`/billing?month=${shiftMonth(formatKstMonth(), -2)}`);
-  const held = page.getByText("자동 확정 보류: 수동 확정 필요", { exact: true }).filter({ visible: true });
+  const held = page.getByText("자동 발행 보류: 수동 발행 필요", { exact: true }).filter({ visible: true });
   await expect(held).toHaveCount(1);
-  await expect(held).toHaveAccessibleDescription(/월 전체 확정으로 단가 있는 사용량만 청구하세요/);
-  await expect(page.getByRole("row").filter({ has: held }).getByText(/월 전체 확정으로 단가 있는 사용량만 청구하세요/)).toBeVisible();
+  await expect(held).toHaveAccessibleDescription(/월 전체 발행으로 단가 있는 사용량만 청구하세요/);
+  await expect(page.getByRole("row").filter({ has: held }).getByText(/월 전체 발행으로 단가 있는 사용량만 청구하세요/)).toBeVisible();
   await expect(page.getByRole("row").filter({ has: held })).toContainText("단가 없는 사용량 고객");
-  await expect(page.getByRole("link", { name: /자동 확정 보류/ })).toHaveCount(0);
-  await expect(page.getByText(/^다음 자동 확정|^자동 확정 진행 중$/)).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /자동 발행 보류/ })).toHaveCount(0);
+  await expect(page.getByText(/^다음 자동 발행|^자동 발행 진행 중$/)).toHaveCount(0);
 });
 
-test("격리 계약: 자동 확정이 꺼져 있으면 단가 없는 사용량이 있어도 보류 표시와 다음 자동 확정 시각을 보이지 않는다", async ({ page, request }) => {
+test("격리 계약: 자동 발행이 꺼져 있으면 단가 없는 사용량이 있어도 보류 표시와 다음 자동 발행 시각을 보이지 않는다", async ({ page, request }) => {
   await control(request, "auto-finalize");
   await page.goto(`/billing?month=${shiftMonth(formatKstMonth(), -3)}`);
   await expect(page.getByRole("row").filter({ hasText: "단가 없는 사용량 고객" })).toBeVisible();
-  await expect(page.getByText(/자동 확정 보류/)).toHaveCount(0);
-  await expect(page.getByText(/^다음 자동 확정|^자동 확정 진행 중$/)).toHaveCount(0);
+  await expect(page.getByText(/자동 발행 보류/)).toHaveCount(0);
+  await expect(page.getByText(/^다음 자동 발행|^자동 발행 진행 중$/)).toHaveCount(0);
 });
 
-test("격리 계약: 모바일 카드는 보류 표시 아래에 이번 달의 단가 등록 기한과 끝난 달의 수동 확정 안내를 보인다", async ({ page, request }) => {
+test("격리 계약: 모바일 카드는 보류 표시 아래에 이번 달의 단가 등록 기한과 끝난 달의 수동 발행 안내를 보인다", async ({ page, request }) => {
   await control(request, "auto-finalize");
   await page.setViewportSize({ width: 390, height: 844 });
   const month = formatKstMonth();
   await page.goto(`/billing?month=${month}`);
   const card = page.getByRole("article").filter({ hasText: "단가 없는 사용량 고객" });
   await expect(card.getByText(/이 달이 끝나기 전에 단가를 등록하세요/)).toBeVisible();
-  await expect(card.getByRole("link", { name: "자동 확정 보류: 단가 없는 사용량", exact: true })).toHaveAccessibleDescription(/이 달이 끝나기 전에 단가를 등록하세요/);
-  await expect(page.getByRole("article").filter({ hasText: "단가 있는 고객" }).getByText(/자동 확정/)).toHaveCount(0);
+  await expect(card.getByRole("link", { name: "자동 발행 보류: 단가 없는 사용량", exact: true })).toHaveAccessibleDescription(/이 달이 끝나기 전에 단가를 등록하세요/);
+  await expect(page.getByRole("article").filter({ hasText: "단가 있는 고객" }).getByText(/자동 발행/)).toHaveCount(0);
   await page.goto(`/billing?month=${shiftMonth(month, -2)}`);
-  await expect(card.getByText("자동 확정 보류: 수동 확정 필요", { exact: true })).toBeVisible();
-  await expect(card.getByText(/끝난 달에는 단가를 등록할 수 없어 자동 확정을 다시 시도하지 않아요/)).toBeVisible();
-  await expect(card.getByText("자동 확정 보류: 수동 확정 필요", { exact: true })).toHaveAccessibleDescription(/월 전체 확정으로 단가 있는 사용량만 청구하세요/);
+  await expect(card.getByText("자동 발행 보류: 수동 발행 필요", { exact: true })).toBeVisible();
+  await expect(card.getByText(/끝난 달에는 단가를 등록할 수 없어 자동 발행을 다시 시도하지 않아요/)).toBeVisible();
+  await expect(card.getByText("자동 발행 보류: 수동 발행 필요", { exact: true })).toHaveAccessibleDescription(/월 전체 발행으로 단가 있는 사용량만 청구하세요/);
 });
