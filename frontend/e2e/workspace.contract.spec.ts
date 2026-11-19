@@ -419,7 +419,7 @@ test("the payments list can show only the month's failed payments and go back to
 test("changing the month on the payments list keeps the customer carried in from other screens", async ({ page, request }) => {
   await control(request, "failed-payments");
   await page.goto("/payments?month=2026-10&customer_id=77777777-7777-4777-8777-777777777777");
-  await page.getByLabel("청구 월", { exact: true }).fill("2026-09");
+  await page.getByLabel("조회 월", { exact: true }).fill("2026-09");
   await page.getByRole("button", { name: "조건 적용", exact: true }).click();
   await expect(page).toHaveURL(url => url.searchParams.get("month") === "2026-09" && url.searchParams.get("customer_id") === "77777777-7777-4777-8777-777777777777");
 });
