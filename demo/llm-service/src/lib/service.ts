@@ -94,7 +94,7 @@ function hasDimensionContract(properties: string[]): boolean {
   return properties.length === DIMENSION_PROPERTIES.length && DIMENSION_PROPERTIES.every(property => properties.includes(property));
 }
 
-// 앱이 보여 주는 단가와 사용량은 catalog.ts의 미터 정의와 같을 때만 믿는다.
+// 앱이 보여 주는 단가와 사용량은 catalog.ts의 과금 미터 정의와 같을 때만 믿는다.
 export function matchesMetricContract(code: string, usage: ListBillableMetricUsagesResponse | null, prices: ListBillableMetricPricesResponse | null): boolean {
   const definition = METRICS.find(metric => metric.code === code);
   const metric = usage?.billable_metric_usages.find(item => item.code === code);

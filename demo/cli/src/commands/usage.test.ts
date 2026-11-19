@@ -57,14 +57,14 @@ test("usage --customer는 검색 API에 고객 UUID와 최대 쪽 크기를 보�
   assert.deepEqual(stdoutJson(), SEARCH_PAGE);
 });
 
-test("usage --meter와 --month는 검색 API에 미터 코드와 달을 함께 보낸다", async () => {
+test("usage --meter와 --month는 검색 API에 과금 미터 코드와 달을 함께 보낸다", async () => {
   const { deps, calls } = await setup([json(200, SEARCH_PAGE)]);
 
   assert.equal(await run(["usage", "--meter", "input-tokens", "--month", "2026-11"], deps), EXIT_OK);
   assert.deepEqual(requestOf(calls[0].url), { path: "/v1/usage/search", query: { month: "2026-11", billable_metric_code: "input-tokens", size: "200" } });
 });
 
-test("usage는 고객과 미터를 함께 좁히고 --page와 --size를 그대로 보낸다", async () => {
+test("usage는 고객과 과금 미터를 함께 좁히고 --page와 --size를 그대로 보낸다", async () => {
   const { deps, calls } = await setup([json(200, { ...SEARCH_PAGE, page: 2, size: 50 })]);
 
   assert.equal(await run(["usage", "--customer", CUSTOMER_ID, "--meter", "input-tokens", "--page", "2", "--size", "50"], deps), EXIT_OK);
@@ -90,7 +90,7 @@ test("usage는 형식이 틀린 달이면 서버에 보내지 않고 종료 코�
   assert.equal((stderrJson() as { code: string }).code, "invalid_month");
 });
 
-test("usage는 빈 미터 코드면 서버에 보내지 않고 종료 코드 2다", async () => {
+test("usage는 빈 과금 미터 코드면 서버에 보내지 않고 종료 코드 2다", async () => {
   const { deps, calls, stderrJson } = await setup([]);
 
   assert.equal(await run(["usage", "--meter", " "], deps), EXIT_USAGE);

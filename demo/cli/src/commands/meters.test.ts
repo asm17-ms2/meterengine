@@ -62,8 +62,8 @@ test("meters get은 code를 경로에 맞게 인코딩한다", async () => {
   assert.equal(calls[0].url, "http://localhost:8080/v1/billable-metrics/a%2Fb%20c");
 });
 
-test("없는 미터면 종료 코드 1과 서버의 오류 JSON을 낸다", async () => {
-  const notFound = { code: "billable_metric_not_found", message: "미터를 찾을 수 없습니다" };
+test("없는 과금 미터면 종료 코드 1과 서버의 오류 JSON을 낸다", async () => {
+  const notFound = { code: "billable_metric_not_found", message: "과금 미터를 찾을 수 없습니다" };
   const { deps, out, stderrJson } = await setup([json(404, notFound)]);
 
   assert.equal(await run(["meters", "get", "nope"], deps), EXIT_FAILED);

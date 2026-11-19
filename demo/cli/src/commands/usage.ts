@@ -27,7 +27,7 @@ function positiveInteger(value: string, max: number, code: string, message: stri
 // 서버에 보내기 전에 입력을 확인한다. 좁히지 않으면 undefined를 돌려 GET /v1/usage를 부른다.
 function searchParamsOf(options: UsageOptions): SearchParams | undefined {
   if (options.customer !== undefined) assertCustomerId(options.customer);
-  if (options.meter !== undefined && options.meter.trim() === "") throw new UsageError("invalid_meter", "--meter에는 미터 코드를 넣습니다");
+  if (options.meter !== undefined && options.meter.trim() === "") throw new UsageError("invalid_meter", "--meter에는 과금 미터 코드를 넣습니다");
   const isNarrowed = options.customer !== undefined || options.meter !== undefined;
   if (!isNarrowed) {
     if (options.page !== undefined || options.size !== undefined) {
@@ -47,10 +47,10 @@ function searchParamsOf(options: UsageOptions): SearchParams | undefined {
 export function registerUsage(program: Command, deps: CliDeps): void {
   program
     .command("usage")
-    .description("미터마다 고객별 사용량을 조회한다 (GET /v1/usage). --customer나 --meter로 좁히면 고객 단위 페이지로 낸다 (GET /v1/usage/search)")
+    .description("과금 미터마다 고객별 사용량을 조회한다 (GET /v1/usage). --customer나 --meter로 좁히면 고객 단위 페이지로 낸다 (GET /v1/usage/search)")
     .option("--month <YYYY-MM>", "청구 월. 생략하면 이번 달(KST)")
     .option("--customer <uuid>", "MeterEngine 고객 UUID. 외부 ID는 받지 않으니 customers list --external-id로 UUID를 먼저 찾는다")
-    .option("--meter <code>", "미터 코드. 그 달에 쓰지 않는 코드면 오류 없이 각 고객의 metrics가 빈 배열이고 summary.metric_count가 0이다")
+    .option("--meter <code>", "과금 미터 코드. 그 달에 쓰지 않는 코드면 오류 없이 각 고객의 metrics가 빈 배열이고 summary.metric_count가 0이다")
     .option("--page <n>", "좁힌 조회의 쪽 번호. 기본 1")
     .option("--size <n>", `좁힌 조회의 한 쪽 고객 수. 1부터 ${MAX_PAGE_SIZE}까지, 기본 ${MAX_PAGE_SIZE}. total이 더 크면 --page로 다음 쪽을 받는다`)
     .action(async (options: UsageOptions, command: Command) => {
