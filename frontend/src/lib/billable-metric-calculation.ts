@@ -5,8 +5,8 @@ export const METRIC_AGGREGATIONS = [
   { value: "min", label: "최솟값", description: "숫자 속성 중 가장 작은 값이에요." },
   { value: "max", label: "최댓값", description: "숫자 속성 중 가장 큰 값이에요." },
   { value: "avg", label: "평균", description: "숫자 속성 값의 산술평균이에요." },
-  { value: "first", label: "첫 값", description: "발생 시각이 가장 이른 이벤트의 숫자 값이에요. 시각이 같으면 전송 ID 순서로 정해요." },
-  { value: "last", label: "마지막 값", description: "발생 시각이 가장 늦은 이벤트의 숫자 값이에요. 시각이 같으면 전송 ID 순서로 정해요." },
+  { value: "first", label: "첫 값", description: "발생 시각이 가장 이른 이벤트의 숫자 값이에요. 시각이 같으면 transaction_id 순서로 정해요." },
+  { value: "last", label: "마지막 값", description: "발생 시각이 가장 늦은 이벤트의 숫자 값이에요. 시각이 같으면 transaction_id 순서로 정해요." },
   { value: "median", label: "중앙값", description: "숫자 속성을 정렬했을 때 가운데 값이에요. 개수가 짝수면 가운데 두 값의 평균이에요." },
   { value: "percentile", label: "백분위수", description: "숫자 속성을 정렬해 지정한 백분위의 값을 구해요. 두 값 사이에 걸리면 선형 보간해요." },
 ] as const;

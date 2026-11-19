@@ -48,7 +48,7 @@ export default async function EventIssuesPage({ searchParams }: { searchParams: 
         <MonthField key={month} month={month} label="조회 월" />
         <label className="workspace-field"><span>문제 종류</span><select key={reason ?? ""} name="reason" defaultValue={reason ?? ""}><option value="">전체</option>{Object.entries(REASONS).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
         <CustomerFilterField key={params.customer_id ?? "all"} query={readListQuery(params, CAPABILITIES.listEvents, { hasMonth: true })} customers={customers.ok ? customers.data.map(customer => ({ value: customer.value, label: customer.label + (customer.archived ? " (보관됨)" : "") })) : []} />
-        <label className="workspace-field"><span>전송 ID, 고객, 유형으로 찾기</span><input name="q" defaultValue={params.q ?? ""} maxLength={255} /></label>
+        <label className="workspace-field"><span>transaction_id, 고객, 유형으로 찾기</span><input name="q" defaultValue={params.q ?? ""} maxLength={255} /></label>
         <label className="workspace-field"><span>표시 건수</span><select name="size" defaultValue={size}>{[20, 50, 100].map(value => <option value={value} key={value}>{value}건</option>)}</select></label>
         <Button type="primary" htmlType="submit">조건 적용</Button>
       </form>
@@ -79,7 +79,7 @@ async function EventIssues({ params, month, reason, size, source }: { params: Re
     </ul>
     <p>{formatKstShortStamp(new Date(result.data.cutoff_at))} 기준이에요.</p>
     <WorkspaceTable serverPaged rows={rows} columns={[
-      { key: "transaction_id", label: "전송 ID", hrefPrefix: `/events?month=${month}${params.customer_id ? `&customer_id=${encodeURIComponent(params.customer_id)}` : ""}&transaction_id=`, hrefKey: "transaction_id" }, { key: "reason_label", label: "문제" }, { key: "customer_name", label: "고객" }, { key: "type", label: "이벤트 유형" }, { key: "billable_metric_code", label: "미터" }, { key: "target_property", label: "수량 속성" }, { key: "occurred_at", label: "발생 시각", isDate: true },
+      { key: "transaction_id", label: "transaction_id", hrefPrefix: `/events?month=${month}${params.customer_id ? `&customer_id=${encodeURIComponent(params.customer_id)}` : ""}&transaction_id=`, hrefKey: "transaction_id" }, { key: "reason_label", label: "문제" }, { key: "customer_name", label: "고객" }, { key: "type", label: "이벤트 유형" }, { key: "billable_metric_code", label: "미터" }, { key: "target_property", label: "수량 속성" }, { key: "occurred_at", label: "발생 시각", isDate: true },
     ]} empty="이 조건에서는 미터, 수량, 단가 연결 문제가 없어요." />
     <PageLinks label="진단 결과 페이지" pathname="/event-issues" params={Object.fromEntries(source)} page={page} size={size} total={result.data.total} />
   </>;
