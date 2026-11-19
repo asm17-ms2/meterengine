@@ -3,7 +3,7 @@
 import { useWorkspaceSearch } from "@/components/workspace/use-workspace-search";
 
 import { Alert, App, Button, Checkbox, Modal } from "antd";
-import { startTransition, useActionState, useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { startTransition, useActionState, useEffect, useId, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { unstable_rethrow, useRouter } from "next/navigation";
 
@@ -100,6 +100,7 @@ function ActionBody({ title, operation, description, fields = [], label, isDange
     if (isDirty && !window.confirm("작성 중인 내용을 버리고 닫을까요?")) return;
     if ((state.secret || state.registrationPath) && !isCopied && !window.confirm("닫으면 이 값을 다시 볼 수 없어요. 복사하지 않고 닫을까요?")) return;
     onClose?.(Boolean(state.isConfirmedFailure));
+    if (operation === "createApiKey" && state.secret) window.location.reload();
   }
 
   async function copy(value: string) {
@@ -159,13 +160,17 @@ export function ActionPanel(props: ActionPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [requestId, setRequestId] = useState("");
   const triggerId = useId();
-  const restoreFocus = () => requestAnimationFrame(() => document.getElementById(triggerId)?.focus());
+  const wasOpen = useRef(false);
+  useLayoutEffect(() => {
+    if (wasOpen.current && !isOpen) document.getElementById(triggerId)?.focus();
+    wasOpen.current = isOpen;
+  }, [isOpen, triggerId]);
   // 최신 정보를 불러와 version이 바뀌면 폼을 새 값으로 다시 그린다.
   const version = props.fields?.find(field => field.name === "version")?.value ?? "";
   if (!canPerformWorkspaceOperation(access?.scopes, access?.organizationRole, props.operation)) return null;
   if (props.isInline) return <section className="workspace-panel"><h2>{props.title}</h2><ActionBody {...props} /></section>;
   return <>
     <Button id={triggerId} aria-label={props.triggerLabel} danger={props.isDanger} type={props.triggerType ?? "default"} size={props.triggerType === "link" ? "small" : "middle"} onClick={() => { setRequestId(current => current || createRequestId()); setIsOpen(true); }}>{props.title}</Button>
-    {isOpen && <ActionBody key={`${requestId}-${version}`} {...props} requestId={requestId} onClose={isConfirmedFailure => { if (isConfirmedFailure) setRequestId(""); setIsOpen(false); restoreFocus(); }} onNewRequest={() => setRequestId(createRequestId())} onSuccess={() => { setIsOpen(false); setRequestId(""); restoreFocus(); }} />}
+    {isOpen && <ActionBody key={`${requestId}-${version}`} {...props} requestId={requestId} onClose={isConfirmedFailure => { if (isConfirmedFailure) setRequestId(""); setIsOpen(false); }} onNewRequest={() => setRequestId(createRequestId())} onSuccess={() => { setIsOpen(false); setRequestId(""); }} />}
   </>;
 }

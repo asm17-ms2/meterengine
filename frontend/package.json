@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "test:unit": "node --test \"e2e/*.test.mjs\"",
     "test:e2e:contract": "E2E_MODE=contract playwright test --project=contract",
+    "test:e2e:slow": "E2E_SLOW_BROWSER=1 playwright test --project=contract --grep @slow-browser && E2E_SLOW_BROWSER=1 playwright test -c playwright.workspace.config.ts --grep @slow-browser",
     "test:e2e:real": "E2E_MODE=real playwright test --project=real-stack"
   },
   "dependencies": {

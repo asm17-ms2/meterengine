@@ -120,7 +120,9 @@ export async function workspaceAction(_previous: WorkspaceActionState, data: For
     if (staleVersion) return { isStale: true, message: staleVersion };
     return { message: result.error.errors?.length ? "입력한 내용을 확인하세요." : errorMessageForCode(result.error.code, operation) ?? toDisplayMessage(result.error), fieldErrors: result.error.errors ? Object.fromEntries(result.error.errors.map(error => [error.field, error.message])) : undefined };
   }
-  revalidatePath("/", "layout");
+  // 한 번만 보여 주는 API 키는 먼저 반환하고 발급 창을 닫을 때 목록을 갱신한다.
+  const hasIssuedKey = operation === "createApiKey" && typeof result.data?.secret === "string" && result.data.secret.length > 0;
+  if (!hasIssuedKey) revalidatePath("/", "layout");
   const archivedListPath = ARCHIVED_LIST_PATHS[operation];
   if (archivedListPath) {
     const archivedListScope = new URLSearchParams({ organization_id: session.organization!.id, environment });

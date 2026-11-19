@@ -122,6 +122,9 @@ jobs:
       - run: pnpm exec playwright test -c playwright.workspace.config.ts
         env:
           WORKSPACE_CONTRACT_OUTPUT_DIR: /tmp/meterengine-workspace-contract-results
+      - run: pnpm test:e2e:slow
+        env:
+          WORKSPACE_CONTRACT_OUTPUT_DIR: /tmp/meterengine-workspace-contract-results
       # 실패한 시험의 trace와 오류 화면 정보를 받아 보려고 결과 폴더를 올린다
       - if: failure()
         uses: actions/upload-artifact@v7
