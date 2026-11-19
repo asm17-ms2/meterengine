@@ -4837,7 +4837,7 @@ paths:
       - workspace-query-controller
   /v1/invoices/months:
     get:
-      description: 현재 업무 환경에 발행 청구서가 있는 청구 달(yyyy-MM)을 중복 없이 최신 달부터 돌려줍니다.
+      description: 현재 업무 환경에 발행한 청구서가 있는 청구 달(yyyy-MM)을 중복 없이 최신 달부터 돌려줍니다.
       operationId: listInvoiceMonths
       responses:
         "200":
@@ -4887,18 +4887,18 @@ paths:
               schema:
                 type: integer
                 format: int32
-      summary: 발행 청구서가 있는 월 목록 조회
+      summary: 발행한 청구서가 있는 월 목록 조회
       tags:
       - workspace-query-controller
   /v1/invoices/search:
     get:
-      description: "검색어와 여러 조건으로 발행 청구서를 거르고 정렬해 한 페이지씩 돌려줍니다. 항목마다 청구서(invoice)와\
+      description: "검색어와 여러 조건으로 발행한 청구서를 거르고 정렬해 한 페이지씩 돌려줍니다. 항목마다 청구서(invoice)와\
         \ 결제 상태(payment)를 담습니다. customer_id와 month만으로 거르고 전부 받으려면 GET /v1/invoices가\
         \ 간단합니다. 정렬 방향은 생략하면 desc입니다. from과 to는 한쪽만 줘도 되고, month와 함께 주면 둘 다 만족하는 청\
         구서만 나옵니다. 이벤트 목록 조회와 내보내기는 from과 to를 함께 보내야 합니다. total_unfiltered는 현재 업무 환\
-        경의 전체 발행 청구서 수입니다. summary의 금액과 결제 상태별 건수는 페이지와 관계없이 조건에 맞는 청구서 전체의 값이고, pending인\
-        \ 청구서가 있으면 outstanding_amount는 null입니다. summary는 mode, invoice_count, supply_amount,\
-        \ tax_amount, total_amount, canceled_amount, has_pending, outstanding_amount,\
+        경에서 발행한 청구서 전체 수입니다. summary의 금액과 결제 상태별 건수는 페이지와 관계없이 조건에 맞는 청구서 전체의 값이고\
+        , pending인 청구서가 있으면 outstanding_amount는 null입니다. summary는 mode, invoice_count,\
+        \ supply_amount, tax_amount, total_amount, canceled_amount, has_pending, outstanding_amount,\
         \ status_counts(결제 상태별 건수)입니다."
       operationId: searchInvoices
       parameters:
@@ -5339,14 +5339,14 @@ paths:
       tags:
       - invoice-view-link-controller
     post:
-      description: "로그인 없이 발행 청구서 하나를 보는 링크를 만듭니다. token은 발급 응답에만 실립니다. MeterEngine은\
+      description: "로그인 없이 발행한 청구서 하나를 보는 링크를 만듭니다. token은 발급 응답에만 실립니다. MeterEngine은\
         \ token 원문을 저장하지 않으므로 다시 볼 수 없습니다. 유효 기간은 기본 30일, 최대 90일이고 폐기할 수 있습니다. 링크는\
         \ 발급할 때의 결제 모드(test 또는 live)로 결제 상태를 보여 줍니다. 링크를 가진 사람은 누구나 볼 수 있으므로 그 고객에\
         게만 전달합니다. 재시도를 허용하는 링크를 API 키로 만들 때는 테스트 키인지 라이브 키인지가 지금 결제 모드와 같아야 하고, 다르\
         면 409 payment_mode_mismatch입니다."
       operationId: createInvoiceViewLink
       parameters:
-      - description: 링크를 발급할 발행 청구서의 ID
+      - description: 링크를 발급할 청구서의 ID
         in: path
         name: id
         required: true
@@ -11090,7 +11090,7 @@ components:
       properties:
         invoice:
           $ref: "#/components/schemas/InvoiceResponse"
-          description: 발행 청구서입니다. GET /v1/invoices의 항목과 같습니다.
+          description: 발행한 청구서입니다. GET /v1/invoices의 항목과 같습니다.
         payment:
           $ref: "#/components/schemas/InvoicePaymentResponse"
           description: summary의 mode로 본 이 청구서의 결제 상태입니다.
@@ -11267,7 +11267,7 @@ components:
       properties:
         invoices:
           type: array
-          description: "조건에 맞는 발행 청구서입니다. 달 내림차순, 같은 달은 고객 이름 오름차순입니다."
+          description: "조건에 맞는 발행한 청구서입니다. 달 내림차순, 같은 달은 고객 이름 오름차순입니다."
           items:
             $ref: "#/components/schemas/InvoiceResponse"
     ListLiveEnvironmentApplicationsResponse:

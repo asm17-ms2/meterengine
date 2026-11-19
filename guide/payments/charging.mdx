@@ -1,6 +1,6 @@
 ---
 title: "첫 결제 요청과 결과 확인"
-description: "발행 청구서의 결제를 요청하고, 응답과 결제 시도, 수납 상태로 결과를 확인하는 방법을 설명합니다."
+description: "발행한 청구서의 결제를 요청하고, 응답과 결제 시도, 수납 상태로 결과를 확인하는 방법을 설명합니다."
 ---
 
 {/* 확인 필요: 발행 뒤 자동 첫 결제 없음 */}
@@ -21,7 +21,7 @@ description: "발행 청구서의 결제를 요청하고, 응답과 결제 시�
 
 ## 청구서 id 찾기
 
-결제는 청구서 단위로 요청합니다. read 권한 API 키로 `GET /v1/invoices?month=YYYY-MM`을 부르면 그 청구 월의 발행 청구서가 고객마다 한 줄씩 나오고, 각 항목의 `id`가 청구서 id입니다. `customer_id`를 함께 주면 그 고객의 청구서만 나옵니다.
+결제는 청구서 단위로 요청합니다. read 권한 API 키로 `GET /v1/invoices?month=YYYY-MM`을 부르면 그 청구 월에 발행한 청구서가 고객마다 한 줄씩 나오고, 각 항목의 `id`가 청구서 id입니다. `customer_id`를 함께 주면 그 고객의 청구서만 나옵니다.
 
 ```bash
 curl "https://meterengine.com/v1/invoices?month=2026-10&customer_id=3f2b8c1e-5d4a-4e6f-9a7b-1c2d3e4f5a6b" \

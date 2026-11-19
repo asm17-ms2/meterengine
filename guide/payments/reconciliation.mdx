@@ -198,6 +198,6 @@ MeterEngine에 저장한 토스페이먼츠 키로 MeterEngine 밖에서 받은 
 MeterEngine이 요청한 결제는 토스페이먼츠 결제 기록에 고객 식별값(`customerKey`)으로 MeterEngine 고객 id가, 주문명으로 `<청구 월> 사용료`(예: `2026-10 사용료`)가 남습니다. 이 둘로 `GET /v1/invoice-payments?month=2026-10&customer_id=<고객 id>`를 불러 청구서 id를 찾고, `GET /v1/invoices/{id}/payment-attempts`에서 `id`가 `order_id`와 같은 시도를, `GET /v1/payment-attempts/{id}/cancellations`에서 그 시도의 취소를 봅니다.
 </Step>
 <Step title="고객과 정산을 맞춥니다">
-MeterEngine은 불일치를 고치지 않으므로, 실제로 더 받거나 덜 받은 금액은 토스페이먼츠 쪽 처리와 고객 응대로 맞춥니다. 발행 청구서는 고칠 수 없습니다.
+MeterEngine은 불일치를 고치지 않으므로, 실제로 더 받거나 덜 받은 금액은 토스페이먼츠 쪽 처리와 고객 응대로 맞춥니다. 발행한 청구서는 고칠 수 없습니다.
 </Step>
 </Steps>

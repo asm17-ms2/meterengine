@@ -35,7 +35,7 @@ function toFinalizeFormData(month: string): FormData {
 }
 
 
-// 발행 결과는 처음 몇 건만 보이고 나머지는 이미 전체 목록인 발행 청구서 화면으로 보낸다.
+// 발행 결과는 처음 몇 건만 보이고 나머지는 이미 전체 목록인 청구서 화면으로 보낸다.
 const FINALIZED_PREVIEW_COUNT = 5;
 export function InvoiceFinalizeDialog(target: FinalizeTarget) {
   const [isOpen, setIsOpen] = useState(false);
