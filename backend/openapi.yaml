@@ -2917,7 +2917,7 @@ paths:
   /v1/dashboard:
     get:
       description: "로그인 세션이나 read 권한 API 키로 현재 업무 환경의 월별 현황을 돌려줍니다. 청구 예정액은 공급가액이고\
-        , 발행 청구액과 받은 금액은 부가세 포함 금액입니다. 취소한 금액은 받을 금액에 다시 더하지 않습니다."
+        , 청구액과 받은 금액은 부가세 포함 금액입니다. 취소한 금액은 받을 금액에 다시 더하지 않습니다."
       operationId: getDashboard
       parameters:
       - description: "조회할 달(yyyy-MM, KST)입니다. 생략하면 이번 달입니다."
@@ -2969,9 +2969,9 @@ paths:
       - dashboard-controller
   /v1/dashboard/insights:
     get:
-      description: "로그인 세션이나 read 권한 API 키로 현재 업무 환경의 최근 석 달 발행 청구액과 받은 금액, 조회한 달의\
-        \ 날짜별 이벤트 수를 돌려줍니다. 매일 05:00(KST)에 계산해 둔 값이라 그 뒤에 생긴 변화는 다음 날 반영됩니다. 금액은 부\
-        가세 포함이고 발행한 청구서만 셉니다."
+      description: "로그인 세션이나 read 권한 API 키로 현재 업무 환경의 최근 석 달 청구액과 받은 금액, 조회한 달의 날짜\
+        별 이벤트 수를 돌려줍니다. 매일 05:00(KST)에 계산해 둔 값이라 그 뒤에 생긴 변화는 다음 날 반영됩니다. 금액은 부가세 포\
+        함이고 발행한 청구서만 셉니다."
       operationId: getDashboardInsights
       parameters:
       - description: "조회할 달(yyyy-MM, KST)입니다. 생략하면 이번 달입니다."
@@ -4295,7 +4295,7 @@ paths:
       description: |
         그 달 청구 예정액이 0원이 아닌 고객을 한 번에 발행합니다. 세액은 공급가액의 10%입니다.
         다음 달 2일 04:00 KST가 지나면 남은 고객은 자동으로 발행됩니다. 그 전에 발행하거나 자동 발행이 보류한 고객을 발행할 때 이 경로를 씁니다.
-        그 달에 발생했고 집계 마감 시각(다음 달 2일 00:00 KST) 전에 받은 이벤트로 발행하므로, 마감이 지난 달의 발행 금액과 청구 항목은 그 시점의 청구 예정액과 같습니다.
+        그 달에 발생했고 집계 마감 시각(다음 달 2일 00:00 KST) 전에 받은 이벤트로 발행하므로, 마감이 지난 달의 청구서 금액과 청구 항목은 그 시점의 청구 예정액과 같습니다.
         마감 시각 전에 발행하면 발행 시각까지 받은 이벤트로 발행하고 그 시각을 청구서의 cutoff_at에 남깁니다.
         수량이 0인 청구 항목은 청구서에 싣지 않습니다. 발행한 고객은 그 달 청구 예정액에서 빠집니다.
         그 달이 이미 발행된 고객은 건너뜁니다. 그래서 같은 달로 다시 부르거나 동시에 불러도 청구서가 겹치지 않습니다.
@@ -10249,7 +10249,7 @@ components:
         finalized_total_amount:
           type: integer
           format: int64
-          description: 발행 청구액(원)입니다. 그 달 청구서의 부가세 포함 금액 합계입니다.
+          description: 청구액(원)입니다. 그 달 청구서의 부가세 포함 금액 합계입니다.
         invoice_payments:
           type: array
           description: 그 달 청구서별 결제 현황
@@ -11534,7 +11534,7 @@ components:
         finalized_total_amount:
           type: integer
           format: int64
-          description: 발행 청구액(원)입니다. 그 달 청구서의 부가세 포함 금액 합계입니다.
+          description: 청구액(원)입니다. 그 달 청구서의 부가세 포함 금액 합계입니다.
         month:
           type: string
           description: "달(yyyy-MM, KST)"

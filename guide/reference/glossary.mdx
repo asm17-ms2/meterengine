@@ -147,7 +147,7 @@ description: "가이드 용어의 뜻과 영문 표기, 콘솔 화면 표기를 
 | 과금에서 빠진 이벤트 | 저장된 이벤트가 미터, 집계 수량, 단가와 이어지지 않은 문제를 지금 정의로 다시 진단한 결과 | `event-issues` | 과금에서 빠진 이벤트 | [이벤트가 청구에 안 보일 때](/troubleshooting/events-not-billed) |
 | 문제 종류 | 이벤트의 type을 세는 미터가 없거나, 세는 속성이 없거나 형식이 맞지 않거나, 그 구분 값에 단가가 없는 문제 | `unknown_event_type`, `invalid_target_property`, `unpriced_usage` | 연결할 미터 없음, 수량을 읽을 수 없음, 적용 단가 없음 | [이벤트가 청구에 안 보일 때](/troubleshooting/events-not-billed) |
 | 단가 없는 사용량 | 같은 구분 값의 단가가 없어 청구 항목과 금액에서 빠진 사용량. 청구되지 않습니다 | `unpriced_usages` | 단가 없는 사용량, 적용 단가 없음 | [구분 키와 구분 값](/pricing/dimensions) |
-| 집계값이 음수인 구분 값 | 집계한 값이 음수라 0원으로 보고 청구 항목에서 뺀 구분 값 | `negative_usages` | 집계값이 음수인 구분 값 | [예정액, 발행액, 수납액](/concepts/amounts) |
+| 집계값이 음수인 구분 값 | 집계한 값이 음수라 0원으로 보고 청구 항목에서 뺀 구분 값 | `negative_usages` | 집계값이 음수인 구분 값 | [예정액, 청구액, 수납액](/concepts/amounts) |
 | 조건 전체 CSV 내보내기 | 화면에 건 조건의 전체 결과를 최대 10,000행 CSV로 받는 기능 | `export` | 조건 전체 CSV 내보내기 | [서버 조회와 CSV 내보내기](/reference/search-and-export) |
 | 원본 속성 포함 | 이벤트 CSV에 `properties` JSON 열을 붙이는 선택 | `include_properties` | 원본 속성 포함 (JSON) | [서버 조회와 CSV 내보내기](/reference/search-and-export) |
 | total_unfiltered | | `total_unfiltered` | 검색 조건을 적용하기 전 지금 업무 환경의 전체 건수 | [서버 조회와 CSV 내보내기](/reference/search-and-export) |
@@ -158,15 +158,15 @@ description: "가이드 용어의 뜻과 영문 표기, 콘솔 화면 표기를 
 
 | 용어 | 뜻 | 영문 표기 | 콘솔 표기 | 자세히 |
 | --- | --- | --- | --- | --- |
-| 청구 예정액 | 아직 발행하지 않은 고객의 세전 공급가액. 조회할 때마다 다시 계산합니다 | `draft`, `total_amount` | 청구 예정액 | [예정액, 발행액, 수납액](/concepts/amounts) |
-| 발행 청구액 | 발행한 청구서 합계(세액 포함)의 합 | `finalized_total_amount` | 발행 청구액 | [예정액, 발행액, 수납액](/concepts/amounts) |
-| 공급가액 | 세액을 뺀 발행 금액 | `supply_amount` | 공급가액 | [예정액, 발행액, 수납액](/concepts/amounts) |
-| 세액 | 공급가액의 10% | `tax_amount` | 세액 | [예정액, 발행액, 수납액](/concepts/amounts) |
-| 합계 | 공급가액에 세액을 더한 금액. 결제하는 금액입니다 | `total_amount`, `amount` | '청구서' 고객 줄의 금액, '수납과 취소'의 청구 금액 | [예정액, 발행액, 수납액](/concepts/amounts) |
-| 받을 금액 | 결제 전, 결과 확인 중, 결제 실패인 청구서의 청구액 합 | `outstanding_amount` | 받을 금액 | [예정액, 발행액, 수납액](/concepts/amounts) |
-| 받은 금액 | 결제가 끝난 청구서의 청구액에서 취소액을 뺀 합 | `collected_amount` | 받은 금액 | [예정액, 발행액, 수납액](/concepts/amounts) |
-| 취소액 | 결제를 취소한 금액의 합. 청구서 금액은 바뀌지 않습니다 | `canceled_amount` | 취소액 | [예정액, 발행액, 수납액](/concepts/amounts) |
-| 청구 항목 | 고객, 미터, 구분 값(구간)마다 한 줄인 금액과 기본료, 최소 사용료 조정 항목. 항목마다 10원 미만을 버립니다 | `lines[]`, `line_type` | '청구 검토', '청구서' 표의 '고객 / 청구 항목', 청구서 조회 링크 화면의 '청구 항목' | [예정액, 발행액, 수납액](/concepts/amounts) |
+| 청구 예정액 | 아직 발행하지 않은 고객의 세전 공급가액. 조회할 때마다 다시 계산합니다 | `draft`, `total_amount` | 청구 예정액 | [예정액, 청구액, 수납액](/concepts/amounts) |
+| 청구액 | 발행한 청구서 합계(세액 포함)의 합 | `finalized_total_amount` | 청구액 | [예정액, 청구액, 수납액](/concepts/amounts) |
+| 공급가액 | 세액을 뺀 청구서 금액 | `supply_amount` | 공급가액 | [예정액, 청구액, 수납액](/concepts/amounts) |
+| 세액 | 공급가액의 10% | `tax_amount` | 세액 | [예정액, 청구액, 수납액](/concepts/amounts) |
+| 합계 | 공급가액에 세액을 더한 금액. 결제하는 금액입니다 | `total_amount`, `amount` | '청구서' 고객 줄의 금액, '수납과 취소'의 청구 금액 | [예정액, 청구액, 수납액](/concepts/amounts) |
+| 받을 금액 | 결제 전, 결과 확인 중, 결제 실패인 청구서의 청구액 합 | `outstanding_amount` | 받을 금액 | [예정액, 청구액, 수납액](/concepts/amounts) |
+| 받은 금액 | 결제가 끝난 청구서의 청구액에서 취소액을 뺀 합 | `collected_amount` | 받은 금액 | [예정액, 청구액, 수납액](/concepts/amounts) |
+| 취소액 | 결제를 취소한 금액의 합. 청구서 금액은 바뀌지 않습니다 | `canceled_amount` | 취소액 | [예정액, 청구액, 수납액](/concepts/amounts) |
+| 청구 항목 | 고객, 미터, 구분 값(구간)마다 한 줄인 금액과 기본료, 최소 사용료 조정 항목. 항목마다 10원 미만을 버립니다 | `lines[]`, `line_type` | '청구 검토', '청구서' 표의 '고객 / 청구 항목', 청구서 조회 링크 화면의 '청구 항목' | [예정액, 청구액, 수납액](/concepts/amounts) |
 | 청구 검토 | 청구 검토(화면 제목 '청구 검토 - YYYY년 M월') | | 청구 예정액을 보고 발행하는 콘솔 화면 | [청구서 수동 발행](/billing/finalize-invoices) |
 | 발행 | 한 달의 청구 예정액을 고객마다 청구서로 굳히는 일. 되돌릴 수 없고 결제를 자동으로 시작하지 않습니다 |  | 월 전체 발행 | [청구서 수동 발행](/billing/finalize-invoices) |
 | 발행 상태 | 발행 전, 발행됨 | | '청구 검토' 화면의 달 상태 표시 | [청구서 수동 발행](/billing/finalize-invoices) |
