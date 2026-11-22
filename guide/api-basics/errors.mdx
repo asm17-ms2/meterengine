@@ -162,16 +162,12 @@ API 참조의 code 목록에는 `environment_not_ready`도 있지만, 지금은 
 | 결과 | 찾는 곳 | 보이는 값 |
 | --- | --- | --- |
 | 저장됨 | read 권한 키로 `GET /v1/events/lookup?transaction_id=값`(목록 `GET /v1/events`에도 같은 값이 있습니다), 또는 콘솔 '수집 이벤트' 화면의 이벤트 상세 | 처음 저장한 요청의 `request_id`, `received_at` |
-| 거절됨: `customer_not_found`, `customer_archived`, `event_too_old`, batch 원소의 `validation_error` | read 권한 키로 `GET /v1/event-rejections/search?q=transaction_id값&month=YYYY-MM`, 또는 콘솔 '수집 거절' 화면('요청 ID' 열이 `request_id`입니다) | `request_id`, `error_code`, `error_fields`, batch였다면 `batch_index` |
-| 응답 본문에만 보임 | 연동 쪽 로그 | 단건 요청의 `validation_error`, `malformed_request_body`, batch 자체가 거절된 400(빈 배열이나 100건 초과 등), 401, 403, 429 |
+| 거절 기록에 남음: `customer_not_found`, `customer_archived`, 그리고 200으로 답한 요청의 `event_too_old`와 batch 원소의 `validation_error` | read 권한 키로 `GET /v1/event-rejections/search?q=transaction_id값&month=YYYY-MM`, 또는 콘솔 '수집 거절' 화면('요청 ID' 열이 `request_id`입니다) | `request_id`, `error_code`, `error_fields`, batch였다면 `batch_index` |
+| 응답 본문에만 보임 | 연동 쪽 로그 | 단건 요청의 `validation_error`, `malformed_request_body`, batch 자체가 거절된 400(빈 배열이나 100건 초과 등), 202로 답한 요청의 `event_too_old`와 batch 원소 거절, 401, 403, 429 |
 
 수집 거절 검색의 `month`는 이벤트가 일어난 달이 아니라 거절을 기록한 달(KST)입니다. 생략하면 이번 달입니다. 거절 기록에는 이벤트 원문과 `properties`가 남지 않습니다.
 
 응답 본문에만 보이는 오류는 MeterEngine 쪽에 다시 찾을 기록이 없습니다. 그 응답 본문과 `X-Request-ID`를 연동 쪽 로그에 남겨 두세요.
-
-<Note>
-콘솔의 '수집 거절', '과금에서 빠진 이벤트' 화면과 이벤트 상세는 감사 기록에서 확인하라고 안내하지만, 지금은 수집 요청이 감사 기록에 나오지 않습니다.
-</Note>
 
 ## 문의할 때 적을 값
 
