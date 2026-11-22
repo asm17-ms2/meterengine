@@ -23,6 +23,7 @@ export type DashboardInsightsResponse = {
   month: string; calculated_at: string;
   monthly_amounts: { month: string; finalized_total_amount: number; collected_amount: number }[];
   daily_event_counts: { date: string; event_count: number }[];
+  recent_event_counts: { date: string; event_count: number }[];
 };
 
 export function getDashboardInsights(month: string) {

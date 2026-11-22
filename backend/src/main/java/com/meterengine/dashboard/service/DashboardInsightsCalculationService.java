@@ -71,15 +71,21 @@ public class DashboardInsightsCalculationService {
     LocalDate yesterday = today.minusDays(1);
     LocalDate lastDate =
         yesterday.isBefore(month.atEndOfMonth()) ? yesterday : month.atEndOfMonth();
-    if (lastDate.isBefore(month.atDay(1))) return List.of();
+    return eventCountsBetween(organizationId, month.atDay(1), lastDate);
+  }
+
+  /** 첫 날부터 마지막 날까지(둘 다 포함, KST) 날짜마다 이벤트 수를 센다. 이벤트가 없는 날은 0이다. */
+  @Transactional(readOnly = true)
+  public List<DailyEventCount> eventCountsBetween(
+      UUID organizationId, LocalDate firstDate, LocalDate lastDate) {
+    if (lastDate.isBefore(firstDate)) return List.of();
     Map<LocalDate, Long> eventCountByDate =
         dailyEventCountRepository.countByEventDate(
             organizationId,
             BusinessEnvironmentContext.scopeId(),
-            startOf(month.atDay(1)),
+            startOf(firstDate),
             startOf(lastDate.plusDays(1)));
-    return month
-        .atDay(1)
+    return firstDate
         .datesUntil(lastDate.plusDays(1))
         .map(
             eventDate ->
