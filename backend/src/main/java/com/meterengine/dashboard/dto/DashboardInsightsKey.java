@@ -5,8 +5,11 @@ import java.util.UUID;
 
 /** 인사이트 한 벌을 가리킨다. 조직, 업무 환경, 달마다 한 벌이다. */
 public record DashboardInsightsKey(UUID organizationId, UUID environmentScopeId, YearMonth month) {
+  // 저장하는 값의 모양이 바뀌면 올린다. 옛 모양으로 저장한 값은 읽지 않고 다시 계산하게 된다.
+  private static final String STORED_FORMAT = "v2";
+
   /** 저장소 안에서 이 한 벌이 놓이는 자리. 파일 경로와 S3 키가 같은 꼴을 쓴다. */
   public String path() {
-    return organizationId + "/" + environmentScopeId + "/" + month + ".json";
+    return organizationId + "/" + environmentScopeId + "/" + STORED_FORMAT + "/" + month + ".json";
   }
 }

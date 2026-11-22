@@ -19,6 +19,7 @@ let apiKeys = [];
 let unresolvedInvoicePayments = [];
 let dailyEventCounts = [0];
 let recentEventCounts = [];
+let monthlyAmounts = [];
 let captchaDelayMs = 0;
 const WEBHOOK_ENDPOINT_ID = "99999999-9999-4999-8999-999999999999";
 const HEALTHY_WEBHOOK_ENDPOINT_ID = "99999999-9999-4999-8999-999999999998";
@@ -41,12 +42,13 @@ const server = createServer(async (req, res) => {
   else if (path === "/__control" && req.method === "POST") {
     if (body.reset) { sessions = new Map(); requests = []; outage = false; customers = []; failures = {}; bulk = false; apiKeys = []; }
     if (typeof body.bulk === "boolean") bulk = body.bulk;
-    if (body.reset) { unresolvedInvoicePayments = []; dailyEventCounts = [0]; recentEventCounts = []; captchaDelayMs = 0; lockedOrganization = newLockedOrganization(); liveEnvironmentApplications = []; }
+    if (body.reset) { unresolvedInvoicePayments = []; dailyEventCounts = [0]; recentEventCounts = []; monthlyAmounts = []; captchaDelayMs = 0; lockedOrganization = newLockedOrganization(); liveEnvironmentApplications = []; }
     if (Array.isArray(body.liveEnvironmentApplications)) liveEnvironmentApplications = body.liveEnvironmentApplications;
     if (typeof body.captchaDelayMs === "number") captchaDelayMs = body.captchaDelayMs;
     if (Array.isArray(body.unresolvedInvoicePayments)) unresolvedInvoicePayments = body.unresolvedInvoicePayments;
     if (Array.isArray(body.dailyEventCounts)) dailyEventCounts = body.dailyEventCounts;
     if (Array.isArray(body.recentEventCounts)) recentEventCounts = body.recentEventCounts;
+    if (Array.isArray(body.monthlyAmounts)) monthlyAmounts = body.monthlyAmounts;
     if (body.fail) failures = { ...failures, ...body.fail };
     if (body.revoke) sessions.delete(body.revoke);
     if (body.demote) { const entry = sessions.get(body.demote); if (entry) entry.user_account.role = "member"; }
@@ -141,7 +143,7 @@ const server = createServer(async (req, res) => {
     } else if (path === "/v1/dashboard") result = { status: 200, body: { month: url.searchParams.get("month") ?? "2026-10", calculated_at: new Date().toISOString(), customer_count: customers.length, billable_metric_count: 0, active_api_key_count: 0, event_count: 0, supplier_configured: false, payment_configured: false, payment_mode: "test", draft_supply_amount: 0, finalized_total_amount: 0, collected_amount: 0, canceled_amount: 0, outstanding_amount: 0, failed_payment_count: 0, unpriced_usage_count: 0, negative_usage_count: 0, invoice_payments: [], unresolved_invoice_payments: unresolvedInvoicePayments, draft_invoice: { customers: [] } } };
     else if (path === "/v1/dashboard/insights") {
       const month = url.searchParams.get("month") ?? "2026-10";
-      result = { status: 200, body: { month, calculated_at: new Date().toISOString(), monthly_amounts: [{ month, finalized_total_amount: 0, collected_amount: 0 }], daily_event_counts: dailyEventCounts.map((event_count, index) => ({ date: `${month}-${String(index + 1).padStart(2, "0")}`, event_count })), recent_event_counts: recentEventCounts.map((event_count, index) => ({ date: `${month}-${String(dailyEventCounts.length + index + 1).padStart(2, "0")}`, event_count })) } };
+      result = { status: 200, body: { month, calculated_at: new Date().toISOString(), monthly_amounts: monthlyAmounts.length > 0 ? monthlyAmounts : [{ month, finalized_total_amount: 0, collected_amount: 0, collected_supply_amount: 0, outstanding_supply_amount: 0, draft_supply_amount: 0 }], daily_event_counts: dailyEventCounts.map((event_count, index) => ({ date: `${month}-${String(index + 1).padStart(2, "0")}`, event_count })), recent_event_counts: recentEventCounts.map((event_count, index) => ({ date: `${month}-${String(dailyEventCounts.length + index + 1).padStart(2, "0")}`, event_count })) } };
     }
     else if (path === "/v1/billable-metrics") result = { status: 200, body: { billable_metrics: [] } };
     else if (path === "/v1/organization/invitations" && req.method === "POST") result = { status: 201, body: { id: crypto.randomUUID(), email: body.email, scopes: body.scopes, token: "me_invite_ContractIssued000000000000000001" } };

@@ -4,13 +4,14 @@ import { AggregateLoading } from "@/components/screen/AggregateLoading";
 import { LinkButton } from "@/components/screen/LinkButton";
 import { ColumnChart } from "@/components/insights/ColumnChart";
 import { RankBars } from "@/components/insights/RankBars";
+import { StackedColumnChart } from "@/components/insights/StackedColumnChart";
 import insightStyles from "@/components/insights/insights.module.css";
 import { WorkspaceHeader, MonthFilter } from "@/components/workspace/WorkspaceHeader";
 import { WorkspaceError, WorkspaceTable } from "@/components/workspace/WorkspaceView";
 import type { Result } from "@/lib/api/client";
 import { getDashboard, getDashboardInsights, type DashboardInsightsResponse } from "@/lib/api/workspace";
 import { formatKoreanMonth, formatKrw, formatKstDateTime, formatKstShortStamp } from "@/lib/format";
-import { metricAmounts, topCustomerAmounts } from "@/lib/insights";
+import { metricAmounts, monthlyRevenueSummary, revenueTotal, topCustomerAmounts } from "@/lib/insights";
 import { readMonth } from "@/lib/month";
 import { searchKey } from "@/lib/search-key";
 
@@ -19,7 +20,8 @@ export const metadata: Metadata = { title: "홈" };
 const HOME_DESCRIPTION = "이 달의 금액과 확인할 항목을 먼저 보세요.";
 const RANK_LIMIT = 5;
 const DAY_LABEL_INTERVAL = 5;
-const COMPACT_NUMBER = new Intl.NumberFormat("ko-KR", { notation: "compact", maximumFractionDigits: 1 });
+// 아래부터 쌓는 순서다. 받은 금액 위에 받을 금액, 그 위에 아직 발행하지 않은 금액.
+const REVENUE_SEGMENTS = [{ name: "받은 금액", color: "var(--series-1)" }, { name: "받을 금액", color: "var(--series-outstanding)" }, { name: "발행 전 청구 예정액", color: "var(--series-1)", isHatched: true }];
 const COUNT = new Intl.NumberFormat("ko-KR");
 
 export default async function OverviewPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
@@ -37,16 +39,18 @@ async function TrendCharts({ insights }: { insights: Promise<Result<DashboardIns
   // 계산해 둔 날짜 뒤에, 조회할 때 센 날짜를 잇는다. 그 마지막 날이 오늘이고 아직 늘 수 있다.
   const dailyEventCounts = [...calculatedEventCounts, ...recentEventCounts];
   const todayDate = recentEventCounts.length > 0 ? recentEventCounts[recentEventCounts.length - 1].date : "";
+  // 오늘 칸이 있으면 조회한 달이 아직 끝나지 않은 이번 달이다.
+  const inProgressMonth = todayDate ? result.data.month : "";
+  const revenues = monthlyAmounts.map(amount => ({ month: amount.month, collected: amount.collected_supply_amount, outstanding: amount.outstanding_supply_amount, draft: amount.draft_supply_amount }));
   const eventTotal = dailyEventCounts.reduce((sum, day) => sum + day.event_count, 0);
   const busiest = dailyEventCounts.reduce((top, day) => day.event_count > top.event_count ? day : top, { date: "", event_count: 0 });
   return <>
-    <ColumnChart
-      title="최근 석 달 청구액과 받은 금액"
-      summary={`발행한 청구서 기준이고 부가세를 포함해요. ${formatKstShortStamp(new Date(result.data.calculated_at))}에 계산했어요.`}
-      series={[{ name: "청구액", color: "var(--series-1)" }, { name: "받은 금액", color: "var(--series-2)" }]}
-      columns={monthlyAmounts.map(amount => ({ key: amount.month, axisLabel: `${Number(amount.month.slice(5))}월`, name: formatKoreanMonth(amount.month), values: [amount.finalized_total_amount, amount.collected_amount] }))}
+    <StackedColumnChart
+      title="최근 석 달 매출과 받을 금액"
+      summary={`${monthlyRevenueSummary(revenues, inProgressMonth, formatKrw)} 공급가액 기준이고 ${formatKstShortStamp(new Date(result.data.calculated_at))}에 계산했어요.`}
+      segments={REVENUE_SEGMENTS}
+      columns={revenues.map(revenue => ({ key: revenue.month, axisLabel: `${Number(revenue.month.slice(5))}월`, name: formatKoreanMonth(revenue.month), values: [revenue.collected, revenue.outstanding, revenue.draft], label: `${formatKrw(revenueTotal(revenue))}${revenue.month === inProgressMonth ? " 진행 중" : ""}` }))}
       formatValue={formatKrw}
-      formatCompact={value => COMPACT_NUMBER.format(value)}
     />
     <ColumnChart
       title="날짜별 이벤트 수"

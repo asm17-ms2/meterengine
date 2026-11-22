@@ -46,7 +46,7 @@ class FileDashboardInsightsStoreTest {
               assertThat(found.calculatedAt())
                   .isEqualTo(OffsetDateTime.parse("2026-10-15T05:00:00+09:00"));
               assertThat(found.monthlyAmounts())
-                  .containsExactly(new MonthlyAmount("2026-10", 1100, 1100));
+                  .containsExactly(new MonthlyAmount("2026-10", 1100, 1100, 1000, 0, 0));
               assertThat(found.dailyEventCounts())
                   .containsExactly(new DailyEventCount(LocalDate.of(2026, 10, 1), 12));
             });
@@ -85,7 +85,7 @@ class FileDashboardInsightsStoreTest {
     return new DashboardInsightsResponse(
         "2026-10",
         OffsetDateTime.parse("2026-10-15T05:00:00+09:00"),
-        List.of(new MonthlyAmount("2026-10", 1100, 1100)),
+        List.of(new MonthlyAmount("2026-10", 1100, 1100, 1000, 0, 0)),
         List.of(new DailyEventCount(LocalDate.of(2026, 10, 1), eventCount)));
   }
 }

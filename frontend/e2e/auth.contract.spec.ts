@@ -87,6 +87,16 @@ test("the daily event chart adds today's count as a column that is still being c
   await expect(chart.getByRole("listitem").filter({ hasText: "5일: 이벤트 수 45건, 집계 중" })).toHaveCount(1);
 });
 
+test("the monthly revenue chart stacks collected, owed and not yet invoiced amounts and answers both questions in its summary", async ({ page, request }) => {
+  const amount = (month: string, collected: number, outstanding: number, draft: number) => ({ month, finalized_total_amount: 0, collected_amount: 0, collected_supply_amount: collected, outstanding_supply_amount: outstanding, draft_supply_amount: draft });
+  await request.post(`${FIXTURE_URL}/__control`, { data: { recentEventCounts: [0], monthlyAmounts: [amount("2026-09", 1_580_000, 240_000, 0), amount("2026-10", 2_140_000, 0, 0), amount("2026-11", 0, 0, 1_390_000)] } });
+  await login(page, "member@contract.local", "/overview?month=2026-11");
+  const chart = page.locator("figure").filter({ has: page.getByRole("heading", { name: "최근 석 달 매출과 받을 금액", exact: true }) });
+  await expect(chart).toContainText("11월은 지금까지 1,390,000원이고 10월의 65%예요. 받을 금액은 9월 240,000원이에요.");
+  await expect(chart.getByText("1,390,000원 진행 중", { exact: true })).toBeVisible();
+  await expect(chart.getByRole("listitem").filter({ hasText: "2026년 9월: 받은 금액 1,580,000원, 받을 금액 240,000원, 발행 전 청구 예정액 0원" })).toHaveCount(1);
+});
+
 test("the overview setup step says which supplier and payment settings are missing", async ({ page }) => {
   await login(page, "member@contract.local", "/overview");
   const step = page.locator(".setup-list li").filter({ has: page.getByText("공급자와 결제 설정", { exact: true }) });

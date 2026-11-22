@@ -11548,6 +11548,15 @@ components:
           type: integer
           format: int64
           description: 받은 금액(원)입니다. 결제를 마친 청구서의 청구액에서 취소한 금액을 뺀 합계입니다.
+        collected_supply_amount:
+          type: integer
+          format: int64
+          description: 받은 금액의 공급가액(원)입니다. 결제를 마친 청구서의 공급가액에서 취소한 비율만큼을 뺀 합계입니다.
+        draft_supply_amount:
+          type: integer
+          format: int64
+          description: "발행 전 청구 예정액(원, 공급가액)입니다. 그 달 청구서를 아직 발행하지 않은 고객의 금액이고 계산한\
+            \ 시각의 값입니다."
         finalized_total_amount:
           type: integer
           format: int64
@@ -11555,6 +11564,10 @@ components:
         month:
           type: string
           description: "달(yyyy-MM, KST)"
+        outstanding_supply_amount:
+          type: integer
+          format: int64
+          description: "받을 금액의 공급가액(원)입니다. 결제 전, 실패, 결과 확인 중인 청구서의 공급가액 합계입니다."
     OperationsJob:
       type: object
       properties:

@@ -48,7 +48,16 @@ public record DashboardInsightsResponse(
           long finalizedTotalAmount,
       @Schema(description = "받은 금액(원)입니다. 결제를 마친 청구서의 청구액에서 취소한 금액을 뺀 합계입니다.")
           @JsonProperty("collected_amount")
-          long collectedAmount) {}
+          long collectedAmount,
+      @Schema(description = "받은 금액의 공급가액(원)입니다. 결제를 마친 청구서의 공급가액에서 취소한 비율만큼을 뺀 합계입니다.")
+          @JsonProperty("collected_supply_amount")
+          long collectedSupplyAmount,
+      @Schema(description = "받을 금액의 공급가액(원)입니다. 결제 전, 실패, 결과 확인 중인 청구서의 공급가액 합계입니다.")
+          @JsonProperty("outstanding_supply_amount")
+          long outstandingSupplyAmount,
+      @Schema(description = "발행 전 청구 예정액(원, 공급가액)입니다. 그 달 청구서를 아직 발행하지 않은 고객의 금액이고 계산한 시각의 값입니다.")
+          @JsonProperty("draft_supply_amount")
+          long draftSupplyAmount) {}
 
   public record DailyEventCount(
       @Schema(description = "날짜(yyyy-MM-dd, KST)") @JsonProperty("date") LocalDate eventDate,
