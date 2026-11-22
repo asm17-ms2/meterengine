@@ -32,3 +32,8 @@ export function metricAmounts(customers: readonly { lines: readonly { billable_m
 export function barRatio(value: number, max: number): number {
   return max > 0 && value > 0 ? value / max : 0;
 }
+
+/** 그래프의 왼쪽 절반에 있는 기둥은 "start", 오른쪽 절반은 "end". 글자와 말풍선을 그래프 안쪽으로 붙일 쪽이다. */
+export function edgeSide(index: number, count: number): "start" | "end" {
+  return index < count / 2 ? "start" : "end";
+}

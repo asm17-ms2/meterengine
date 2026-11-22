@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { barRatio, metricAmounts, topCustomerAmounts } from "../src/lib/insights.ts";
+import { barRatio, edgeSide, metricAmounts, topCustomerAmounts } from "../src/lib/insights.ts";
 
 test("top customers are the largest draft amounts first and leave out customers with nothing to bill", () => {
   const customers = [
@@ -38,4 +38,14 @@ test("a bar's length is its share of the largest value and an empty chart has no
   assert.equal(barRatio(0, 200), 0);
   assert.equal(barRatio(10, 0), 0);
   assert.equal(barRatio(-5, 200), 0);
+});
+
+test("a column hangs its label and tooltip toward the middle of the chart so they stay inside it", () => {
+  assert.equal(edgeSide(0, 10), "start");
+  assert.equal(edgeSide(4, 10), "start");
+  assert.equal(edgeSide(5, 10), "end");
+  assert.equal(edgeSide(9, 10), "end");
+  assert.equal(edgeSide(1, 3), "start");
+  assert.equal(edgeSide(2, 3), "end");
+  assert.equal(edgeSide(0, 1), "start");
 });

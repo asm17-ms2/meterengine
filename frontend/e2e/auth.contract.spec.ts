@@ -63,6 +63,21 @@ test("overview keeps the selected month and shows unresolved invoices from every
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("홈 - 2026년 4월");
 });
 
+test("the daily event chart writes the count on the busiest day and shows a day's count when it is pointed at or focused", async ({ page, request }) => {
+  await request.post(`${FIXTURE_URL}/__control`, { data: { dailyEventCounts: [120, 80, 0, 300, 150, 90, 60, 200, 40, 10] } });
+  await login(page, "member@contract.local", "/overview");
+  const chart = page.locator("figure").filter({ has: page.getByRole("heading", { name: "날짜별 이벤트 수", exact: true }) });
+  await expect(chart.getByText("300건", { exact: true })).toBeVisible();
+  const secondDay = chart.getByRole("listitem").filter({ hasText: "2일: 이벤트 수 80건" });
+  const secondDayTip = secondDay.getByText("2일: 이벤트 수 80건", { exact: true });
+  await expect(secondDayTip).not.toHaveCSS("clip-path", "none");
+  await secondDay.hover();
+  await expect(secondDayTip).toHaveCSS("clip-path", "none");
+  const ninthDay = chart.getByRole("listitem").filter({ hasText: "9일: 이벤트 수 40건" });
+  await ninthDay.focus();
+  await expect(ninthDay.getByText("9일: 이벤트 수 40건", { exact: true })).toHaveCSS("clip-path", "none");
+});
+
 test("the overview setup step says which supplier and payment settings are missing", async ({ page }) => {
   await login(page, "member@contract.local", "/overview");
   const step = page.locator(".setup-list li").filter({ has: page.getByText("공급자와 결제 설정", { exact: true }) });
