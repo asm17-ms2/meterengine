@@ -23,6 +23,7 @@ const HEALTHY_WEBHOOK_ENDPOINT_ID = "99999999-9999-4999-8999-999999999998";
 const bulkId = (prefix, index) => `${prefix}${String(index).padStart(12, "0")}`;
 const expiresAt = () => new Date(Date.now() + 3_600_000).toISOString();
 const minutesAgo = minutes => new Date(Date.now() - minutes * 60_000).toISOString();
+const storedEvent = () => ({ transaction_id: "txn-stored-1", customer_id: "eeeeeeee-eeee-4eee-8eee-0000000000c3", customer_name: "저장된 이벤트 고객", type: "api_call", properties: { tokens: 120 }, occurred_at: minutesAgo(10), received_at: minutesAgo(9), request_id: "eeeeeeee-eeee-4eee-8eee-0000000000f3", actor_type: "api_key", actor_id: "eeeeeeee-eeee-4eee-8eee-0000000000a3" });
 const deliveryPage = (url, deliveries) => ({ status: 200, body: { total: deliveries.length, deliveries: deliveries.slice(0, Number(url.searchParams.get("size") ?? 20)) } });
 const failure = (status, code, message) => ({ status, body: { code, message } });
 
@@ -164,6 +165,13 @@ const server = createServer(async (req, res) => {
       { id: "99999999-9999-4999-8999-0000000000a1", status: "pending", type: "payment_failed", attempt_count: 3, response_status: null, failure_reason: "connection_error", next_attempt_at: expiresAt(), created_at: new Date().toISOString(), attempts: [minutesAgo(30), minutesAgo(10), minutesAgo(1)].map(attempted_at => ({ attempted_at, response_status: null, failure_reason: "connection_error", duration_ms: 12 })) },
       { id: "99999999-9999-4999-8999-0000000000a2", status: "failed", type: "webhook_test", attempt_count: 1, response_status: null, failure_reason: "blocked_address", next_attempt_at: null, created_at: new Date().toISOString(), attempts: [{ attempted_at: minutesAgo(40), response_status: null, failure_reason: "blocked_address", duration_ms: 1 }] },
     ]);
+    else if (path === "/v1/event-rejections/search" && req.method === "GET") result = { status: 200, body: { month: url.searchParams.get("month") ?? "2026-10", recording_started_at: null, total: 2, page: 0, size: 20, rejections: [
+      { id: "eeeeeeee-eeee-4eee-8eee-000000000001", transaction_id: "txn-rejected-1", customer_id: "eeeeeeee-eeee-4eee-8eee-0000000000c1", type: "api_call", occurred_at: minutesAgo(30), error_code: "customer_not_found", error_fields: [], request_id: "eeeeeeee-eeee-4eee-8eee-0000000000f1", batch_index: null, recorded_at: minutesAgo(29) },
+      { id: "eeeeeeee-eeee-4eee-8eee-000000000002", transaction_id: "txn-rejected-2", customer_id: "eeeeeeee-eeee-4eee-8eee-0000000000c2", type: "api_call", occurred_at: minutesAgo(20), error_code: "customer_archived", error_fields: [], request_id: "eeeeeeee-eeee-4eee-8eee-0000000000f2", batch_index: null, recorded_at: minutesAgo(19) },
+    ] } };
+    else if (path === "/v1/events/types" && req.method === "GET") result = { status: 200, body: { types: ["api_call"] } };
+    else if (path === "/v1/events/lookup" && req.method === "GET") result = { status: 200, body: storedEvent() };
+    else if (path === "/v1/events" && req.method === "GET") result = { status: 200, body: { month: url.searchParams.get("month"), page: 0, size: 20, total: 1, events: [storedEvent()] } };
     else result = failure(404, "not_found", "계약 테스트에서 다루지 않는 경로입니다.");
   }
   res.writeHead(result.status, { "Content-Type": "application/json" });
