@@ -18,11 +18,13 @@ description: "보낸 사용량이 사용량이나 청구 예정액에 나오지 
 | 단건 요청이 400 `malformed_request_body` | 응답 본문뿐입니다. '수집 거절'에 남지 않습니다 | 본문을 JSON으로 읽지 못했거나 필드 값을 그 형식으로 읽지 못했습니다. 예를 들어 `customer_id`에 UUID가 아닌 값(외부 고객 ID 등)을 넣거나 `timestamp`에 오프셋을 붙이지 않으면 이 응답이 옵니다 | 본문을 고쳐 다시 보냅니다. `customer_id`에는 고객 등록 응답의 `id`(UUID)를 넣고 `timestamp`에는 `+09:00`이나 `Z` 같은 오프셋을 붙입니다 |
 | 단건 요청이 400 `validation_error` | 응답의 `errors[].field`뿐입니다. '수집 거절'에 남지 않습니다 | 필수 필드가 없거나 값이 허용 범위를 벗어났습니다 | `errors`가 짚은 필드를 고쳐 다시 보냅니다 |
 | batch 요청 전체가 400 `validation_error`나 `malformed_request_body` | 응답 본문뿐입니다. '수집 거절'에 남지 않습니다 | `events`가 없거나 비었거나 100건을 넘었거나, 본문을 JSON으로 읽지 못했습니다 | 한 요청에 1건에서 100건까지 담아 다시 보냅니다 |
-| batch 결과 원소의 `result`가 `rejected`, `error.code`가 `validation_error` | 응답의 `results[].error`, '수집 거절'의 '요청 값 오류' | 그 원소의 필드가 없거나 형식이 틀렸습니다 | 그 원소만 고쳐 다시 보냅니다 |
-| 404 `customer_not_found` | '수집 거절'의 '고객을 찾을 수 없음' | 고객을 등록하지 않았거나 다른 업무 환경의 고객 id를 넣었습니다 | 키와 같은 업무 환경에 고객을 등록하고 같은 `transaction_id`로 다시 보냅니다 |
-| 409 `customer_archived` | '수집 거절'의 '보관된 고객' | 고객을 보관했습니다 | 청구할 고객이면 '고객' 화면의 '고객 복원'이나 admin 권한 키의 `POST /v1/customers/{id}/restorations`로 복원한 뒤 같은 `transaction_id`로 다시 보냅니다 |
-| 400 `event_too_old` | '수집 거절'의 '수집 가능 기간 초과' | `timestamp`가 받는 시각보다 35일 넘게 과거입니다 | 같은 이벤트를 다시 보내도 받지 않습니다. 이 사용량을 청구할 방법은 없습니다 |
+| batch 결과 원소의 `result`가 `rejected`, `error.code`가 `validation_error` | 응답의 `results[].error`. 200으로 답한 요청만 '수집 거절'의 '요청 값 오류'에 남고, 202로 답한 요청은 남지 않습니다 | 그 원소의 필드가 없거나 형식이 틀렸습니다 | 그 원소만 고쳐 다시 보냅니다 |
+| 404 `customer_not_found`. 202로 답한 요청은 응답에 오류가 없고 저장할 때 거절됩니다 | '수집 거절'의 '고객을 찾을 수 없음' | 고객을 등록하지 않았거나 다른 업무 환경의 고객 id를 넣었습니다 | 키와 같은 업무 환경에 고객을 등록하고 같은 `transaction_id`로 다시 보냅니다 |
+| 409 `customer_archived`. 202로 답한 요청은 응답에 오류가 없고 저장할 때 거절됩니다 | '수집 거절'의 '보관된 고객' | 고객을 보관했습니다 | 청구할 고객이면 '고객' 화면의 '고객 복원'이나 admin 권한 키의 `POST /v1/customers/{id}/restorations`로 복원한 뒤 같은 `transaction_id`로 다시 보냅니다 |
+| 400 `event_too_old` | 응답의 `code`(batch는 `results[].error`). 200으로 답한 요청만 '수집 거절'의 '수집 가능 기간 초과'에 남고, 202로 답한 요청은 남지 않습니다 | `timestamp`가 받는 시각보다 35일 넘게 과거입니다 | 같은 이벤트를 다시 보내도 받지 않습니다. 이 사용량을 청구할 방법은 없습니다 |
 | 401, 403, 429 | 응답의 `code` | 인증, 권한, 분당 요청 한도 문제입니다. 이벤트 전송에는 ingest 권한이 필요합니다 | [오류 응답과 X-Request-ID](/api-basics/errors)와 [요청 한도와 429](/api-basics/rate-limits)를 참고하세요 |
+
+요청에 바로 오류로 답한 거절은 응답으로 알립니다. '수집 거절'에는 응답 뒤 저장할 때 거절한 이벤트와 200으로 답한 요청의 거절이 남습니다. 남는 범위는 [재전송 설계](/integration/retries)의 '거절된 이벤트 찾기'에 있고, 사유별 조치는 콘솔 '수집 거절' 화면의 '거절 사유별 조치'에도 있습니다.
 
 batch는 HTTP 상태가 202나 200이어도 원소마다 결과가 다릅니다. 원소별 결과를 읽는 방법과 다시 보낼 것과 멈출 것은 [사용량 이벤트 보내기](/integration/events)와 [재전송 설계](/integration/retries)를 참고하세요. 영구 거절 code는 다시 보내지 마세요.
 
@@ -82,7 +84,7 @@ batch는 HTTP 상태가 202나 200이어도 원소마다 결과가 다릅니다.
 '과금에서 빠진 이벤트'와 '수집 진단'(`GET /v1/unbilled-events`)은 발생 시각으로만 대상을 고르고 수신 시각은 보지 않습니다. 그래서 집계 마감 뒤에 받아 청구에서 빠진 지난달 이벤트를 따로 세는 항목이 없습니다. `GET /v1/events?month=YYYY-MM&sort=received_at&order=desc`로 수신 시각이 늦은 이벤트부터 보거나, 이벤트 CSV의 `received_at` 열로 확인하세요.
 </Accordion>
 <Accordion title="수집 요청은 감사 기록에 나오지 않습니다">
-이벤트 수집 요청은 감사 기록에 나오지 않으니 저장된 이벤트와 수집 거절 기록의 `request_id`, `transaction_id`로 찾습니다. '수집 거절'과 '과금에서 빠진 이벤트' 화면은 감사 기록에서 확인하라고 안내하지만 수집 요청은 감사 기록에 없습니다. 자세한 내용은 [오류 응답과 X-Request-ID](/api-basics/errors)를 참고하세요.
+이벤트 수집 요청은 감사 기록에 나오지 않으니 저장된 이벤트와 수집 거절 기록의 `request_id`, `transaction_id`로 찾습니다. 자세한 내용은 [오류 응답과 X-Request-ID](/api-basics/errors)를 참고하세요.
 
 `malformed_request_body`나 단건 `validation_error`처럼 저장도 거절 기록도 되지 않는 오류는 응답 본문과 응답 헤더 `X-Request-ID`를 자사 로그에 남겨 두어야 나중에 찾을 수 있습니다.
 </Accordion>

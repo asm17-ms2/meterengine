@@ -63,6 +63,36 @@ test("overview keeps the selected month and shows unresolved invoices from every
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("홈 - 2026년 4월");
 });
 
+test("the overview shows each top customer's share of the draft total", async ({ page, request }) => {
+  const amounts = [1_240_000, 620_000, 450_000, 330_000, 210_000, 150_000];
+  await request.post(`${FIXTURE_URL}/__control`, { data: { draftInvoiceCustomers: amounts.map((amount, index) => (
+    { customer_id: `cccccccc-cccc-4ccc-8ccc-${String(index).padStart(12, "0")}`, customer_name: `비중 고객 ${index + 1}`, amount, lines: [{ billable_metric_code: "tokens", amount }] }
+  )) } });
+  await login(page, "member@contract.local", "/overview");
+  const chart = page.locator("figure").filter({ has: page.getByRole("heading", { name: "청구 예정액이 큰 고객", exact: true }) });
+  await expect(chart.getByText("청구 예정액이 큰 5곳이 전체의 95%예요. 공급가액 기준이에요.", { exact: true })).toBeVisible();
+  await expect(chart.getByRole("listitem")).toHaveCount(5);
+  await expect(chart.getByRole("listitem").first()).toContainText("전체의 41%");
+  await expect(chart.getByRole("listitem").last()).toContainText("전체의 7%");
+});
+
+test("the rejection screen says what to do for each reason and links to the guide", async ({ page }) => {
+  await login(page, "member@contract.local", "/event-rejections");
+  await expect(page.getByRole("row").filter({ hasText: "txn-rejected-1" })).toContainText("고객을 찾을 수 없음");
+  const tooOld = page.locator(".attention-card").filter({ hasText: "수집 가능 기간 초과" });
+  await expect(tooOld).toContainText("다시 보내도 받지 않아요.");
+  await expect(page.locator(".attention-card")).toHaveCount(4);
+  await expect(page.getByRole("link", { name: "가이드의 이벤트가 청구에 안 보일 때", exact: true })).toHaveAttribute("href", "https://docs.meterengine.com/troubleshooting/events-not-billed");
+});
+
+test("the event detail shows the request id and no link to audit logs", async ({ page }) => {
+  await login(page, "member@contract.local", "/events");
+  await page.getByRole("link", { name: "txn-stored-1", exact: true }).click();
+  const detail = page.getByRole("dialog");
+  await expect(detail.getByText("eeeeeeee-eeee-4eee-8eee-0000000000f3", { exact: true })).toBeVisible();
+  await expect(detail.getByRole("link", { name: /감사 기록/ })).toHaveCount(0);
+});
+
 test("the daily event chart writes the count on the busiest day and shows a day's count when it is pointed at or focused", async ({ page, request }) => {
   await request.post(`${FIXTURE_URL}/__control`, { data: { dailyEventCounts: [120, 80, 0, 300, 150, 90, 60, 200, 40, 10] } });
   await login(page, "member@contract.local", "/overview");

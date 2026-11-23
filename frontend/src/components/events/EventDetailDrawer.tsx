@@ -3,7 +3,6 @@
 import { Button, Descriptions, Drawer, theme, Typography } from "antd";
 import { useRef } from "react";
 
-import { ScopedLink } from "@/components/workspace/ScopedLink";
 
 import type { EventRowView } from "@/components/events/EventsTable";
 import { useInitialFocus } from "@/components/screen/use-initial-focus";
@@ -54,7 +53,8 @@ export function EventDetailDrawer({
           { key: "eventType", label: "이벤트 유형", children: row.eventType },
           { key: "occurredAt", label: "발생 시각 (KST)", children: row.occurredAt },
           { key: "receivedAt", label: "수신 시각 (KST)", children: row.receivedAt },
-          ...(row.requestId ? [{ key: "requestId", label: "수집 요청", children: <ScopedLink href={`/audit?q=${encodeURIComponent(row.requestId)}`}>이 요청의 감사 기록 보기</ScopedLink> }] : []),
+          // 수집 요청은 감사 기록에 남지 않는다. 수집 거절이나 문의에서 찾을 수 있게 요청 ID를 그대로 보인다.
+          ...(row.requestId ? [{ key: "requestId", label: "요청 ID", children: <Typography.Text copyable style={{ fontFamily: token.fontFamilyCode, wordBreak: "break-all" }}>{row.requestId}</Typography.Text> }] : []),
           ...(row.actorType ? [{ key: "actor", label: "전송 주체", children: `${row.actorType === "api_key" ? "API 키" : row.actorType === "user_account" ? "로그인 사용자" : row.actorType}${row.actorId ? ` (${row.actorId})` : ""}` }] : []),
         ]}
       />
