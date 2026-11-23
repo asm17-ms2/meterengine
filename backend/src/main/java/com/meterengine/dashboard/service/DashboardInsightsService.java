@@ -51,7 +51,7 @@ public class DashboardInsightsService {
     List<DailyEventCount> calculated = insights.dailyEventCounts();
     LocalDate firstDate =
         calculated.isEmpty() ? month.atDay(1) : calculated.getLast().eventDate().plusDays(1);
-    return dashboardInsightsCalculationService.eventCountsBetween(organizationId, firstDate, today);
+    return dashboardInsightsCalculationService.count(organizationId, firstDate, today);
   }
 
   // 오늘 값이 이 서버 메모리에 있으면 그것을, 없으면 저장소의 것을, 그것도 없으면 DB에서 계산한다.
