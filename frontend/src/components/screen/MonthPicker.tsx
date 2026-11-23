@@ -3,7 +3,7 @@
 import { CalendarOutlined, CloseCircleFilled } from "@ant-design/icons";
 import { DatePicker, theme, type DatePickerProps } from "antd";
 import dayjs, { type Dayjs } from "dayjs";
-import { cloneElement, isValidElement } from "react";
+import { cloneElement, isValidElement, useMemo } from "react";
 
 import { useListNavigation } from "@/components/screen/use-list-navigation";
 import type { ListCapabilities } from "@/lib/api/capabilities";
@@ -35,6 +35,8 @@ export function MonthPicker({
   const { query: liveQuery, push } = useListNavigation(query, capabilities);
   const month = (onChange ? query.month : liveQuery.month) ?? committedMonth;
   const { token } = theme.useToken();
+  // 값 객체가 바뀌면 DatePicker가 적는 중인 월을 되돌린다. 월이 같으면 같은 객체를 넘긴다
+  const selected = useMemo(() => month === ALL_MONTHS ? null : dayjs(`${month}-01`), [month]);
 
   function handleChange(value: Dayjs | null) {
     if (!value && !allowAll) return;
@@ -68,7 +70,7 @@ export function MonthPicker({
       picker="month"
       format={MONTH_FORMAT}
       aria-label={label}
-      value={month === ALL_MONTHS ? null : dayjs(`${month}-01`)}
+      value={selected}
       allowClear={allowAll ? { clearIcon: <CloseCircleFilled aria-label="지우기" /> } : false}
       placeholder={allowAll ? "전체 기간" : undefined}
       suffixIcon={<CalendarOutlined aria-hidden aria-label={undefined} />}
