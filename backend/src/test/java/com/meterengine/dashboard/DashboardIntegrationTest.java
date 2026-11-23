@@ -356,6 +356,48 @@ class DashboardIntegrationTest {
   }
 
   @Test
+  void 인사이트는_계산해_둔_날짜_뒤부터_오늘까지의_이벤트_수를_조회할_때_세어_준다() {
+    testClock.fix(OffsetDateTime.parse("2026-10-15T03:00:00Z"));
+    UUID organizationId = UUID.randomUUID();
+    String readKey = TestCredentials.issueApiKey(jdbcTemplate, organizationId, "read");
+    UUID customerId = insertCustomer(organizationId);
+    insertEvent(organizationId, customerId, "2026-10-10T01:00:00Z");
+    insertEvent(organizationId, customerId, "2026-10-15T01:00:00Z");
+    String json = insights(readKey, "2026-10");
+    assertThat((List<String>) JsonPath.read(json, "$.recent_event_counts[*].date"))
+        .containsExactly("2026-10-15");
+    assertThat((List<Integer>) JsonPath.read(json, "$.recent_event_counts[*].event_count"))
+        .containsExactly(1);
+
+    // 같은 날 다시 조회하면 계산해 둔 날짜는 그대로이고 오늘 칸만 는다
+    insertEvent(organizationId, customerId, "2026-10-10T02:00:00Z");
+    insertEvent(organizationId, customerId, "2026-10-15T04:00:00Z");
+    testClock.fix(OffsetDateTime.parse("2026-10-15T10:00:00Z"));
+    String later = insights(readKey, "2026-10");
+    assertThat(dailyEventCount(later, 10)).isEqualTo(1);
+    assertThat((List<Integer>) JsonPath.read(later, "$.recent_event_counts[*].event_count"))
+        .containsExactly(2);
+
+    // 자정이 지나고 다음 계산(05:00 KST) 전에는 어제도 아직 계산해 둔 값에 없어 함께 센다
+    testClock.fix(OffsetDateTime.parse("2026-10-15T16:00:00Z"));
+    String afterMidnight = insights(readKey, "2026-10");
+    assertThat((List<String>) JsonPath.read(afterMidnight, "$.recent_event_counts[*].date"))
+        .containsExactly("2026-10-15", "2026-10-16");
+    assertThat((List<Integer>) JsonPath.read(afterMidnight, "$.recent_event_counts[*].event_count"))
+        .containsExactly(2, 0);
+  }
+
+  @Test
+  void 지난_달의_인사이트에는_조회할_때_세는_이벤트_수가_없다() {
+    testClock.fix(OffsetDateTime.parse("2026-10-15T03:00:00Z"));
+    UUID organizationId = UUID.randomUUID();
+    String readKey = TestCredentials.issueApiKey(jdbcTemplate, organizationId, "read");
+    insertEvent(organizationId, insertCustomer(organizationId), "2026-10-15T01:00:00Z");
+    assertThat((List<?>) JsonPath.read(insights(readKey, "2026-09"), "$.recent_event_counts"))
+        .isEmpty();
+  }
+
+  @Test
   void 같은_날_다시_조회하면_계산해_둔_값을_주고_다음_날_다시_계산한다() {
     testClock.fix(OffsetDateTime.parse("2026-10-15T03:00:00Z"));
     UUID organizationId = UUID.randomUUID();

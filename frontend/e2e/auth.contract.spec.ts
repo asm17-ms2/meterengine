@@ -108,6 +108,15 @@ test("the daily event chart writes the count on the busiest day and shows a day'
   await expect(ninthDay.getByText("9일: 이벤트 수 40건", { exact: true })).toHaveCSS("clip-path", "none");
 });
 
+test("the daily event chart adds today's count as a column that is still being counted", async ({ page, request }) => {
+  await request.post(`${FIXTURE_URL}/__control`, { data: { dailyEventCounts: [120, 80, 0, 300], recentEventCounts: [45] } });
+  await login(page, "member@contract.local", "/overview");
+  const chart = page.locator("figure").filter({ has: page.getByRole("heading", { name: "날짜별 이벤트 수", exact: true }) });
+  await expect(chart.getByText("오늘까지 모두 545건이고, 4일에 300건으로 가장 많았어요.", { exact: true })).toBeVisible();
+  await expect(chart.getByText("오늘 45건", { exact: true })).toBeVisible();
+  await expect(chart.getByRole("listitem").filter({ hasText: "5일: 이벤트 수 45건, 집계 중" })).toHaveCount(1);
+});
+
 test("the overview setup step says which supplier and payment settings are missing", async ({ page }) => {
   await login(page, "member@contract.local", "/overview");
   const step = page.locator(".setup-list li").filter({ has: page.getByText("공급자와 결제 설정", { exact: true }) });

@@ -13,6 +13,7 @@
 .group[data-side="start"] .tip, .group[data-side="start"] .columnLabel { left: 0; }
 .group[data-side="end"] .tip, .group[data-side="end"] .columnLabel { right: 0; }
 .column { flex: 0 1 24px; min-width: 2px; border-radius: 4px 4px 0 0; background: var(--series); }
+.pending { background: repeating-linear-gradient(135deg, var(--series) 0 4px, color-mix(in srgb, var(--series) 35%, transparent) 4px 8px); }
 .group:hover .column, .group:focus .column { filter: brightness(.88); }
 .axis, .values { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); margin: 0; padding: 0; list-style: none; text-align: center; font-size: 11px; font-variant-numeric: tabular-nums; }
 .axis { padding-top: 6px; }
