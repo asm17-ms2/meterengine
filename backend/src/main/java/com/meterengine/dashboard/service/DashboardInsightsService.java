@@ -4,10 +4,14 @@ import com.meterengine.dashboard.client.DashboardInsightsStore;
 import com.meterengine.dashboard.client.DashboardInsightsStoreException;
 import com.meterengine.dashboard.dto.DashboardInsightsKey;
 import com.meterengine.dashboard.dto.DashboardInsightsResponse;
+import com.meterengine.dashboard.dto.DashboardInsightsResponse.DailyEventCount;
 import com.meterengine.global.security.BusinessEnvironmentContext;
+import com.meterengine.global.time.BillingMonth;
 import java.time.Clock;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
@@ -33,8 +37,25 @@ public class DashboardInsightsService {
     this.clock = clock;
   }
 
-  /** 오늘 값이 이 서버 메모리에 있으면 그것을, 없으면 저장소의 것을, 그것도 없으면 DB에서 계산해 준다. */
+  /** 계산해 둔 인사이트에, 그 뒤부터 오늘까지의 날짜별 이벤트 수를 지금 세어 붙여 준다. */
   public DashboardInsightsResponse get(UUID organizationId, YearMonth month) {
+    DashboardInsightsResponse insights = calculatedInsights(organizationId, month);
+    return insights.withRecentEventCounts(recentEventCounts(organizationId, month, insights));
+  }
+
+  // 계산해 둔 값은 어제까지라 오늘 보낸 이벤트가 내일 새벽까지 보이지 않는다. 오늘 칸은 조회할 때 센다.
+  private List<DailyEventCount> recentEventCounts(
+      UUID organizationId, YearMonth month, DashboardInsightsResponse insights) {
+    LocalDate today = BillingMonth.now(clock).toLocalDate();
+    if (!YearMonth.from(today).equals(month)) return List.of();
+    List<DailyEventCount> calculated = insights.dailyEventCounts();
+    LocalDate firstDate =
+        calculated.isEmpty() ? month.atDay(1) : calculated.getLast().eventDate().plusDays(1);
+    return dashboardInsightsCalculationService.count(organizationId, firstDate, today);
+  }
+
+  // 오늘 값이 이 서버 메모리에 있으면 그것을, 없으면 저장소의 것을, 그것도 없으면 DB에서 계산한다.
+  private DashboardInsightsResponse calculatedInsights(UUID organizationId, YearMonth month) {
     DashboardInsightsKey key =
         new DashboardInsightsKey(organizationId, BusinessEnvironmentContext.scopeId(), month);
     OffsetDateTime refreshedAt =

@@ -8,11 +8,19 @@ import { workspaceFetch } from "@/lib/api/workspace";
 import { readMonth } from "@/lib/month";
 import { MonthField } from "@/components/screen/MonthField";
 import { formatKstDateTime } from "@/lib/format";
+import { DOCS_URL } from "@/lib/docs";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "수집 거절" };
 
 const ERRORS: Record<string, string> = { customer_not_found: "고객을 찾을 수 없음", customer_archived: "보관된 고객", event_too_old: "수집 가능 기간 초과", validation_error: "요청 값 오류" };
+const ERROR_ACTIONS: Record<string, string> = {
+  customer_not_found: "요청의 고객 ID가 이 업무 환경에 없어요. 고객을 등록한 뒤 같은 transaction_id로 다시 보내세요.",
+  customer_archived: "보관한 고객이에요. 청구할 고객이면 복원한 뒤 같은 transaction_id로 다시 보내세요.",
+  event_too_old: "발생 시각이 받은 시각보다 35일 넘게 지났어요. 다시 보내도 받지 않아요.",
+  validation_error: "값이 없거나 형식이 달라요. '확인할 항목'의 필드를 고쳐 다시 보내세요.",
+};
+const REJECTION_GUIDE_URL = `${DOCS_URL}/troubleshooting/events-not-billed`;
 type Rejection = { id: string; transaction_id: string | null; customer_id: string | null; type: string | null; occurred_at: string | null; error_code: string; error_fields: string[]; request_id: string | null; batch_index: number | null; recorded_at: string };
 type Rejections = { month: string; recording_started_at: string | null; total: number; page: number; size: number; rejections: Rejection[] };
 
@@ -44,6 +52,9 @@ export default async function EventRejectionsPage({ searchParams }: { searchPara
         <PageLinks label="수집 거절 페이지" pathname="/event-rejections" params={Object.fromEntries(source)} page={page} size={size} total={result.data.total} />
       </> : <WorkspaceError message={result.error.message} />}
       <p className="field-hint">거절된 이벤트의 원문과 속성은 저장하지 않아요. 조회 월은 거절을 기록한 달이에요.</p>
+      <h2>거절 사유별 조치</h2>
+      <ul className="attention-grid">{Object.entries(ERRORS).map(([code, label]) => <li key={code} className="attention-card"><strong>{label}</strong><p>{ERROR_ACTIONS[code]}</p></li>)}</ul>
+      <p>요청에 바로 오류로 답한 거절은 그 요청의 응답에서 확인하세요. 여러 건을 한 번에 보낸 요청은 성공으로 답해도 건마다 결과가 따로 있어요. 자세한 원인과 조치는 <a href={REJECTION_GUIDE_URL} target="_blank" rel="noopener noreferrer">가이드의 이벤트가 청구에 안 보일 때</a>에 있어요.</p>
     </section>
   </>;
 }

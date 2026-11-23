@@ -4,13 +4,14 @@ import { AggregateLoading } from "@/components/screen/AggregateLoading";
 import { LinkButton } from "@/components/screen/LinkButton";
 import { ColumnChart } from "@/components/insights/ColumnChart";
 import { RankBars } from "@/components/insights/RankBars";
+import { StackedColumnChart } from "@/components/insights/StackedColumnChart";
 import insightStyles from "@/components/insights/insights.module.css";
 import { WorkspaceHeader, MonthFilter } from "@/components/workspace/WorkspaceHeader";
 import { WorkspaceError, WorkspaceTable } from "@/components/workspace/WorkspaceView";
 import type { Result } from "@/lib/api/client";
 import { getDashboard, getDashboardInsights, type DashboardInsightsResponse } from "@/lib/api/workspace";
 import { formatKoreanMonth, formatKrw, formatKstDateTime, formatKstShortStamp } from "@/lib/format";
-import { metricAmounts, topCustomerAmounts } from "@/lib/insights";
+import { formatShare, metricAmounts, monthlyRevenueSummary, revenueTotal, shareOfTotal, topCustomerAmounts, topCustomerSummary } from "@/lib/insights";
 import { readMonth } from "@/lib/month";
 import { searchKey } from "@/lib/search-key";
 
@@ -19,7 +20,8 @@ export const metadata: Metadata = { title: "홈" };
 const HOME_DESCRIPTION = "이 달의 금액과 확인할 항목을 먼저 보세요.";
 const RANK_LIMIT = 5;
 const DAY_LABEL_INTERVAL = 5;
-const COMPACT_NUMBER = new Intl.NumberFormat("ko-KR", { notation: "compact", maximumFractionDigits: 1 });
+// 아래부터 쌓는 순서다. 받은 금액 위에 받을 금액, 그 위에 아직 발행하지 않은 금액.
+const REVENUE_SEGMENTS = [{ name: "받은 금액", color: "var(--series-1)" }, { name: "받을 금액", color: "var(--series-outstanding)" }, { name: "발행 전 청구 예정액", color: "var(--series-1)", isHatched: true }];
 const COUNT = new Intl.NumberFormat("ko-KR");
 
 export default async function OverviewPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
@@ -33,25 +35,33 @@ export default async function OverviewPage({ searchParams }: { searchParams: Pro
 async function TrendCharts({ insights }: { insights: Promise<Result<DashboardInsightsResponse>> }) {
   const result = await insights;
   if (!result.ok) return <WorkspaceError message={result.error.message} />;
-  const { monthly_amounts: monthlyAmounts, daily_event_counts: dailyEventCounts } = result.data;
+  const { monthly_amounts: monthlyAmounts, daily_event_counts: calculatedEventCounts, recent_event_counts: recentEventCounts } = result.data;
+  // 계산해 둔 날짜 뒤에, 조회할 때 센 날짜를 잇는다. 그 마지막 날이 오늘이고 아직 늘 수 있다.
+  const dailyEventCounts = [...calculatedEventCounts, ...recentEventCounts];
+  const todayDate = recentEventCounts.length > 0 ? recentEventCounts[recentEventCounts.length - 1].date : "";
+  // 오늘 칸이 있으면 조회한 달이 아직 끝나지 않은 이번 달이다.
+  const inProgressMonth = todayDate ? result.data.month : "";
+  const revenues = monthlyAmounts.map(amount => ({ month: amount.month, collected: amount.collected_supply_amount, outstanding: amount.outstanding_supply_amount, draft: amount.draft_supply_amount }));
   const eventTotal = dailyEventCounts.reduce((sum, day) => sum + day.event_count, 0);
   const busiest = dailyEventCounts.reduce((top, day) => day.event_count > top.event_count ? day : top, { date: "", event_count: 0 });
   return <>
-    <ColumnChart
-      title="최근 석 달 청구액과 받은 금액"
-      summary={`발행한 청구서 기준이고 부가세를 포함해요. ${formatKstShortStamp(new Date(result.data.calculated_at))}에 계산했어요.`}
-      series={[{ name: "청구액", color: "var(--series-1)" }, { name: "받은 금액", color: "var(--series-2)" }]}
-      columns={monthlyAmounts.map(amount => ({ key: amount.month, axisLabel: `${Number(amount.month.slice(5))}월`, name: formatKoreanMonth(amount.month), values: [amount.finalized_total_amount, amount.collected_amount] }))}
+    <StackedColumnChart
+      title="최근 석 달 매출과 받을 금액"
+      summary={`${monthlyRevenueSummary(revenues, inProgressMonth, formatKrw)} 공급가액 기준이고 ${formatKstShortStamp(new Date(result.data.calculated_at))}에 계산했어요.`}
+      segments={REVENUE_SEGMENTS}
+      columns={revenues.map(revenue => ({ key: revenue.month, axisLabel: `${Number(revenue.month.slice(5))}월`, name: formatKoreanMonth(revenue.month), values: [revenue.collected, revenue.outstanding, revenue.draft], label: `${formatKrw(revenueTotal(revenue))}${revenue.month === inProgressMonth ? " 진행 중" : ""}` }))}
       formatValue={formatKrw}
-      formatCompact={value => COMPACT_NUMBER.format(value)}
     />
     <ColumnChart
       title="날짜별 이벤트 수"
-      summary={eventTotal > 0 ? `어제까지 모두 ${COUNT.format(eventTotal)}건이고, ${Number(busiest.date.slice(8))}일에 ${COUNT.format(busiest.event_count)}건으로 가장 많았어요.` : "어제까지 발생한 이벤트가 없어요. 오늘 이벤트는 내일 새벽 계산에 들어가요."}
+      summary={eventTotal > 0 ? `${todayDate ? "오늘까지 " : ""}모두 ${COUNT.format(eventTotal)}건이고, ${Number(busiest.date.slice(8))}일에 ${COUNT.format(busiest.event_count)}건으로 가장 많았어요.` : "이 달에 발생한 이벤트가 없어요."}
       series={[{ name: "이벤트 수", color: "var(--series-1)" }]}
       columns={dailyEventCounts.map(day => {
         const dayOfMonth = Number(day.date.slice(8));
-        return { key: day.date, axisLabel: dayOfMonth === 1 || dayOfMonth % DAY_LABEL_INTERVAL === 0 ? String(dayOfMonth) : "", name: `${dayOfMonth}일`, values: [day.event_count] };
+        const isToday = day.date === todayDate;
+        const isBusiest = busiest.event_count > 0 && day.date === busiest.date;
+        const count = `${COUNT.format(day.event_count)}건`;
+        return { key: day.date, axisLabel: dayOfMonth === 1 || dayOfMonth % DAY_LABEL_INTERVAL === 0 ? String(dayOfMonth) : "", name: `${dayOfMonth}일`, values: [day.event_count], isPending: isToday, ...(isToday ? { label: `오늘 ${count}` } : isBusiest && { label: count }) };
       })}
       formatValue={value => `${COUNT.format(value)}건`}
     />
@@ -81,10 +91,10 @@ async function Overview({ month, insights }: { month: string; insights: Promise<
     <section className="workspace-panel"><h2>확인할 항목</h2><ul className="setup-list">{data.unpriced_usage_count > 0 && <li><div><strong>단가 없는 사용량 구분 값 {data.unpriced_usage_count}개</strong><p>단가를 등록해야 청구액에 들어가요.</p></div><span className="workspace-actions"><LinkButton href={`/billing?month=${month}`}>검토</LinkButton><LinkButton href={`/event-issues?month=${month}&reason=unpriced_usage`}>이벤트 보기</LinkButton></span></li>}{data.negative_usage_count > 0 && <li><div><strong>집계값이 음수인 구분 값 {data.negative_usage_count}개</strong><p>집계값이 음수인 구분 값은 청구에서 빠져요.</p></div><LinkButton href={`/billing?month=${month}`}>확인</LinkButton></li>}{data.failed_payment_count > 0 && <li><div><strong>결제 실패 {data.failed_payment_count}건</strong><p>카드와 실패 사유를 확인한 뒤 다시 요청하세요.</p></div><LinkButton href={`/payments?month=${month}&payment_status=failed`}>수납 확인</LinkButton></li>}</ul>{data.unpriced_usage_count === 0 && data.negative_usage_count === 0 && data.failed_payment_count === 0 && <p role="status">선택한 달에 확인할 항목이 없어요.</p>}<div><LinkButton href={`/events?month=${month}`}>수집 이벤트 {data.event_count.toLocaleString("ko-KR")}건 보기</LinkButton></div></section>
     <section className="workspace-panel" aria-labelledby="home-insights-title">
       <h2 id="home-insights-title">인사이트</h2>
-      <p>매일 05시에 다시 계산해요. 오늘 생긴 변화는 내일 반영돼요.</p>
+      <p>금액 추이는 매일 05시에 다시 계산하고, 오늘 이벤트 수는 화면을 열 때 세요.</p>
       <div className={insightStyles.grid}>
         <Suspense fallback={<AggregateLoading title="금액 추이와 이벤트 수를 세는 중이에요" />}><TrendCharts insights={insights} /></Suspense>
-        <RankBars title="청구 예정액이 큰 고객" summary={`이 달 청구 예정액 상위 ${RANK_LIMIT}곳이에요. 공급가액 기준이에요.`} rows={topCustomerAmounts(draftCustomers, RANK_LIMIT)} formatValue={formatKrw} empty="이 달에 청구할 금액이 있는 고객이 없어요." />
+        <RankBars title="청구 예정액이 큰 고객" summary={topCustomerSummary(draftCustomers, RANK_LIMIT, data.draft_supply_amount)} rows={topCustomerAmounts(draftCustomers, RANK_LIMIT)} formatValue={formatKrw} formatShare={amount => formatShare(shareOfTotal(amount, data.draft_supply_amount))} empty="이 달에 청구할 금액이 있는 고객이 없어요." />
         <RankBars title="과금 미터별 청구 예정액" summary="어느 과금 미터가 매출을 만드는지 보여요. 공급가액 기준이에요." rows={metricAmounts(draftCustomers, RANK_LIMIT)} formatValue={formatKrw} empty="이 달에 금액이 생긴 과금 미터가 없어요." />
       </div>
     </section>

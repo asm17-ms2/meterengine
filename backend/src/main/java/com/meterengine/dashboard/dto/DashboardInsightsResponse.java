@@ -17,7 +17,30 @@ public record DashboardInsightsResponse(
         List<MonthlyAmount> monthlyAmounts,
     @Schema(description = "조회한 달의 1일부터 계산한 날의 전날(KST)까지 날짜별 이벤트 수입니다. 계산한 날과 그 뒤의 날짜는 주지 않습니다.")
         @JsonProperty("daily_event_counts")
-        List<DailyEventCount> dailyEventCounts) {
+        List<DailyEventCount> dailyEventCounts,
+    @Schema(
+            description =
+                "계산해 둔 날짜 뒤부터 오늘(KST)까지의 날짜별 이벤트 수입니다. 조회할 때마다 셉니다. 비어 있지 않으면 마지막 원소가 오늘이고, 오늘 값은 하루가 끝날 때까지 늘 수 있습니다. 조회한 달이 이번 달이 아니면 비어 있습니다.")
+        @JsonProperty("recent_event_counts")
+        List<DailyEventCount> recentEventCounts) {
+  // 저장소에는 조회할 때 세는 값을 두지 않는다. 이 필드가 생기기 전에 저장한 값도 읽을 수 있어야 한다.
+  public DashboardInsightsResponse {
+    recentEventCounts = recentEventCounts == null ? List.of() : recentEventCounts;
+  }
+
+  public DashboardInsightsResponse(
+      String month,
+      OffsetDateTime calculatedAt,
+      List<MonthlyAmount> monthlyAmounts,
+      List<DailyEventCount> dailyEventCounts) {
+    this(month, calculatedAt, monthlyAmounts, dailyEventCounts, List.of());
+  }
+
+  public DashboardInsightsResponse withRecentEventCounts(List<DailyEventCount> recentEventCounts) {
+    return new DashboardInsightsResponse(
+        month, calculatedAt, monthlyAmounts, dailyEventCounts, recentEventCounts);
+  }
+
   public record MonthlyAmount(
       @Schema(description = "달(yyyy-MM, KST)") String month,
       @Schema(description = "청구액(원)입니다. 그 달 청구서의 부가세 포함 금액 합계입니다.")
@@ -25,7 +48,16 @@ public record DashboardInsightsResponse(
           long finalizedTotalAmount,
       @Schema(description = "받은 금액(원)입니다. 결제를 마친 청구서의 청구액에서 취소한 금액을 뺀 합계입니다.")
           @JsonProperty("collected_amount")
-          long collectedAmount) {}
+          long collectedAmount,
+      @Schema(description = "받은 금액의 공급가액(원)입니다. 결제를 마친 청구서의 공급가액에서 취소한 비율만큼을 뺀 합계입니다.")
+          @JsonProperty("collected_supply_amount")
+          long collectedSupplyAmount,
+      @Schema(description = "받을 금액의 공급가액(원)입니다. 결제 전, 실패, 결과 확인 중인 청구서의 공급가액 합계입니다.")
+          @JsonProperty("outstanding_supply_amount")
+          long outstandingSupplyAmount,
+      @Schema(description = "발행 전 청구 예정액(원, 공급가액)입니다. 그 달 청구서를 아직 발행하지 않은 고객의 금액이고 계산한 시각의 값입니다.")
+          @JsonProperty("draft_supply_amount")
+          long draftSupplyAmount) {}
 
   public record DailyEventCount(
       @Schema(description = "날짜(yyyy-MM-dd, KST)") @JsonProperty("date") LocalDate eventDate,

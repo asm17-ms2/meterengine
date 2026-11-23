@@ -63,6 +63,70 @@ test("overview keeps the selected month and shows unresolved invoices from every
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("홈 - 2026년 4월");
 });
 
+test("the overview shows each top customer's share of the draft total", async ({ page, request }) => {
+  const amounts = [1_240_000, 620_000, 450_000, 330_000, 210_000, 150_000];
+  await request.post(`${FIXTURE_URL}/__control`, { data: { draftInvoiceCustomers: amounts.map((amount, index) => (
+    { customer_id: `cccccccc-cccc-4ccc-8ccc-${String(index).padStart(12, "0")}`, customer_name: `비중 고객 ${index + 1}`, amount, lines: [{ billable_metric_code: "tokens", amount }] }
+  )) } });
+  await login(page, "member@contract.local", "/overview");
+  const chart = page.locator("figure").filter({ has: page.getByRole("heading", { name: "청구 예정액이 큰 고객", exact: true }) });
+  await expect(chart.getByText("청구 예정액이 큰 5곳이 전체의 95%예요. 공급가액 기준이에요.", { exact: true })).toBeVisible();
+  await expect(chart.getByRole("listitem")).toHaveCount(5);
+  await expect(chart.getByRole("listitem").first()).toContainText("전체의 41%");
+  await expect(chart.getByRole("listitem").last()).toContainText("전체의 7%");
+});
+
+test("the rejection screen says what to do for each reason and links to the guide", async ({ page }) => {
+  await login(page, "member@contract.local", "/event-rejections");
+  await expect(page.getByRole("row").filter({ hasText: "txn-rejected-1" })).toContainText("고객을 찾을 수 없음");
+  const tooOld = page.locator(".attention-card").filter({ hasText: "수집 가능 기간 초과" });
+  await expect(tooOld).toContainText("다시 보내도 받지 않아요.");
+  await expect(page.locator(".attention-card")).toHaveCount(4);
+  await expect(page.getByRole("link", { name: "가이드의 이벤트가 청구에 안 보일 때", exact: true })).toHaveAttribute("href", "https://docs.meterengine.com/troubleshooting/events-not-billed");
+});
+
+test("the event detail shows the request id and no link to audit logs", async ({ page }) => {
+  await login(page, "member@contract.local", "/events");
+  await page.getByRole("link", { name: "txn-stored-1", exact: true }).click();
+  const detail = page.getByRole("dialog");
+  await expect(detail.getByText("eeeeeeee-eeee-4eee-8eee-0000000000f3", { exact: true })).toBeVisible();
+  await expect(detail.getByRole("link", { name: /감사 기록/ })).toHaveCount(0);
+});
+
+test("the daily event chart writes the count on the busiest day and shows a day's count when it is pointed at or focused", async ({ page, request }) => {
+  await request.post(`${FIXTURE_URL}/__control`, { data: { dailyEventCounts: [120, 80, 0, 300, 150, 90, 60, 200, 40, 10] } });
+  await login(page, "member@contract.local", "/overview");
+  const chart = page.locator("figure").filter({ has: page.getByRole("heading", { name: "날짜별 이벤트 수", exact: true }) });
+  await expect(chart.getByText("300건", { exact: true })).toBeVisible();
+  const secondDay = chart.getByRole("listitem").filter({ hasText: "2일: 이벤트 수 80건" });
+  const secondDayTip = secondDay.getByText("2일: 이벤트 수 80건", { exact: true });
+  await expect(secondDayTip).not.toHaveCSS("clip-path", "none");
+  await secondDay.hover();
+  await expect(secondDayTip).toHaveCSS("clip-path", "none");
+  const ninthDay = chart.getByRole("listitem").filter({ hasText: "9일: 이벤트 수 40건" });
+  await ninthDay.focus();
+  await expect(ninthDay.getByText("9일: 이벤트 수 40건", { exact: true })).toHaveCSS("clip-path", "none");
+});
+
+test("the daily event chart adds today's count as a column that is still being counted", async ({ page, request }) => {
+  await request.post(`${FIXTURE_URL}/__control`, { data: { dailyEventCounts: [120, 80, 0, 300], recentEventCounts: [45] } });
+  await login(page, "member@contract.local", "/overview");
+  const chart = page.locator("figure").filter({ has: page.getByRole("heading", { name: "날짜별 이벤트 수", exact: true }) });
+  await expect(chart.getByText("오늘까지 모두 545건이고, 4일에 300건으로 가장 많았어요.", { exact: true })).toBeVisible();
+  await expect(chart.getByText("오늘 45건", { exact: true })).toBeVisible();
+  await expect(chart.getByRole("listitem").filter({ hasText: "5일: 이벤트 수 45건, 집계 중" })).toHaveCount(1);
+});
+
+test("the monthly revenue chart stacks collected, owed and not yet invoiced amounts and answers both questions in its summary", async ({ page, request }) => {
+  const amount = (month: string, collected: number, outstanding: number, draft: number) => ({ month, finalized_total_amount: 0, collected_amount: 0, collected_supply_amount: collected, outstanding_supply_amount: outstanding, draft_supply_amount: draft });
+  await request.post(`${FIXTURE_URL}/__control`, { data: { recentEventCounts: [0], monthlyAmounts: [amount("2026-09", 1_580_000, 240_000, 0), amount("2026-10", 2_140_000, 0, 0), amount("2026-11", 0, 0, 1_390_000)] } });
+  await login(page, "member@contract.local", "/overview?month=2026-11");
+  const chart = page.locator("figure").filter({ has: page.getByRole("heading", { name: "최근 석 달 매출과 받을 금액", exact: true }) });
+  await expect(chart).toContainText("11월은 지금까지 1,390,000원이고 10월의 65%예요. 받을 금액은 9월 240,000원이에요.");
+  await expect(chart.getByText("1,390,000원 진행 중", { exact: true })).toBeVisible();
+  await expect(chart.getByRole("listitem").filter({ hasText: "2026년 9월: 받은 금액 1,580,000원, 받을 금액 240,000원, 발행 전 청구 예정액 0원" })).toHaveCount(1);
+});
+
 test("the overview setup step says which supplier and payment settings are missing", async ({ page }) => {
   await login(page, "member@contract.local", "/overview");
   const step = page.locator(".setup-list li").filter({ has: page.getByText("공급자와 결제 설정", { exact: true }) });

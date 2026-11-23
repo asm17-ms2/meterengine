@@ -57,7 +57,7 @@ public class DashboardController {
   @Operation(
       summary = "월별 금액 추이와 날짜별 이벤트 수 조회",
       description =
-          "로그인 세션이나 read 권한 API 키로 현재 업무 환경의 최근 석 달 청구액과 받은 금액, 조회한 달의 날짜별 이벤트 수를 돌려줍니다. 매일 05:00(KST)에 계산해 둔 값이라 그 뒤에 생긴 변화는 다음 날 반영됩니다."
+          "로그인 세션이나 read 권한 API 키로 현재 업무 환경의 최근 석 달 청구액과 받은 금액, 조회한 달의 날짜별 이벤트 수를 돌려줍니다. 금액과 어제까지의 이벤트 수는 매일 05:00(KST)에 계산해 둔 값이라 그 뒤에 생긴 변화는 다음 날 반영됩니다. 계산해 둔 날짜 뒤부터 오늘까지의 이벤트 수는 recent_event_counts에 조회할 때 세어 줍니다."
               + " 금액은 부가세 포함이고 발행한 청구서만 셉니다.")
   public DashboardInsightsResponse getDashboardInsights(
       @CurrentOrganizationId UUID organizationId,

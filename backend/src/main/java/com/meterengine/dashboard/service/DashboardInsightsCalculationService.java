@@ -6,6 +6,10 @@ import com.meterengine.dashboard.dto.DashboardInsightsResponse.MonthlyAmount;
 import com.meterengine.dashboard.repository.DailyEventCountRepository;
 import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.global.time.BillingMonth;
+import com.meterengine.invoice.entity.Invoice;
+import com.meterengine.invoice.repository.InvoiceRepository;
+import com.meterengine.invoice.service.DraftInvoiceService;
+import com.meterengine.payment.dto.InvoicePaymentResponse;
 import com.meterengine.payment.service.InvoicePaymentService;
 import com.meterengine.payment.service.PaymentSettingService;
 import java.time.Clock;
@@ -15,6 +19,7 @@ import java.time.YearMonth;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,16 +30,22 @@ public class DashboardInsightsCalculationService {
   private final InvoicePaymentService invoicePaymentService;
   private final PaymentSettingService paymentSettingService;
   private final DailyEventCountRepository dailyEventCountRepository;
+  private final DraftInvoiceService draftInvoiceService;
+  private final InvoiceRepository invoiceRepository;
   private final Clock clock;
 
   DashboardInsightsCalculationService(
       InvoicePaymentService invoicePaymentService,
       PaymentSettingService paymentSettingService,
       DailyEventCountRepository dailyEventCountRepository,
+      DraftInvoiceService draftInvoiceService,
+      InvoiceRepository invoiceRepository,
       Clock clock) {
     this.invoicePaymentService = invoicePaymentService;
     this.paymentSettingService = paymentSettingService;
     this.dailyEventCountRepository = dailyEventCountRepository;
+    this.draftInvoiceService = draftInvoiceService;
+    this.invoiceRepository = invoiceRepository;
     this.clock = clock;
   }
 
@@ -58,11 +69,27 @@ public class DashboardInsightsCalculationService {
   }
 
   private MonthlyAmount monthlyAmount(UUID organizationId, YearMonth month, String mode) {
-    PaymentTotals totals =
-        PaymentTotals.from(
-            invoicePaymentService.list(organizationId, month, null, mode).invoicePayments());
+    List<InvoicePaymentResponse> payments =
+        invoicePaymentService.list(organizationId, month, null, mode).invoicePayments();
+    PaymentTotals totals = PaymentTotals.from(payments);
+    SupplyAmounts supplyAmounts =
+        SupplyAmounts.from(payments, supplyAmountByInvoiceId(organizationId, month));
     return new MonthlyAmount(
-        month.toString(), totals.finalizedTotalAmount(), totals.collectedAmount());
+        month.toString(),
+        totals.finalizedTotalAmount(),
+        totals.collectedAmount(),
+        supplyAmounts.collected(),
+        supplyAmounts.outstanding(),
+        draftInvoiceService.preview(organizationId, month).totalAmount());
+  }
+
+  private Map<UUID, Long> supplyAmountByInvoiceId(UUID organizationId, YearMonth month) {
+    List<Invoice> invoices =
+        BusinessEnvironmentContext.environmentId() == null
+            ? invoiceRepository.findNewestFirst(organizationId, null, month.toString())
+            : invoiceRepository.findNewestFirstScoped(
+                organizationId, BusinessEnvironmentContext.environmentId(), null, month.toString());
+    return invoices.stream().collect(Collectors.toMap(Invoice::getId, Invoice::getSupplyAmount));
   }
 
   // 오늘은 아직 끝나지 않아 하루 한 번 계산하는 값에 넣으면 반쪽이 된다. 어제까지만 센다.
@@ -71,15 +98,20 @@ public class DashboardInsightsCalculationService {
     LocalDate yesterday = today.minusDays(1);
     LocalDate lastDate =
         yesterday.isBefore(month.atEndOfMonth()) ? yesterday : month.atEndOfMonth();
-    if (lastDate.isBefore(month.atDay(1))) return List.of();
+    return count(organizationId, month.atDay(1), lastDate);
+  }
+
+  /** 첫 날부터 마지막 날까지(둘 다 포함, KST) 날짜마다 이벤트 수를 센다. 이벤트가 없는 날은 0이다. */
+  @Transactional(readOnly = true)
+  public List<DailyEventCount> count(UUID organizationId, LocalDate firstDate, LocalDate lastDate) {
+    if (lastDate.isBefore(firstDate)) return List.of();
     Map<LocalDate, Long> eventCountByDate =
         dailyEventCountRepository.countByEventDate(
             organizationId,
             BusinessEnvironmentContext.scopeId(),
-            startOf(month.atDay(1)),
+            startOf(firstDate),
             startOf(lastDate.plusDays(1)));
-    return month
-        .atDay(1)
+    return firstDate
         .datesUntil(lastDate.plusDays(1))
         .map(
             eventDate ->
