@@ -76,6 +76,23 @@ test("the overview shows each top customer's share of the draft total", async ({
   await expect(chart.getByRole("listitem").last()).toContainText("전체의 7%");
 });
 
+test("the rejection screen says what to do for each reason and links to the guide", async ({ page }) => {
+  await login(page, "member@contract.local", "/event-rejections");
+  await expect(page.getByRole("row").filter({ hasText: "txn-rejected-1" })).toContainText("고객을 찾을 수 없음");
+  const tooOld = page.locator(".attention-card").filter({ hasText: "수집 가능 기간 초과" });
+  await expect(tooOld).toContainText("다시 보내도 받지 않아요.");
+  await expect(page.locator(".attention-card")).toHaveCount(4);
+  await expect(page.getByRole("link", { name: "가이드의 이벤트가 청구에 안 보일 때", exact: true })).toHaveAttribute("href", "https://docs.meterengine.com/troubleshooting/events-not-billed");
+});
+
+test("the event detail shows the request id and no link to audit logs", async ({ page }) => {
+  await login(page, "member@contract.local", "/events");
+  await page.getByRole("link", { name: "txn-stored-1", exact: true }).click();
+  const detail = page.getByRole("dialog");
+  await expect(detail.getByText("eeeeeeee-eeee-4eee-8eee-0000000000f3", { exact: true })).toBeVisible();
+  await expect(detail.getByRole("link", { name: /감사 기록/ })).toHaveCount(0);
+});
+
 test("the overview setup step says which supplier and payment settings are missing", async ({ page }) => {
   await login(page, "member@contract.local", "/overview");
   const step = page.locator(".setup-list li").filter({ has: page.getByText("공급자와 결제 설정", { exact: true }) });
