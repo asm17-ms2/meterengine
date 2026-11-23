@@ -51,7 +51,8 @@ async function TrendCharts({ insights }: { insights: Promise<Result<DashboardIns
       series={[{ name: "이벤트 수", color: "var(--series-1)" }]}
       columns={dailyEventCounts.map(day => {
         const dayOfMonth = Number(day.date.slice(8));
-        return { key: day.date, axisLabel: dayOfMonth === 1 || dayOfMonth % DAY_LABEL_INTERVAL === 0 ? String(dayOfMonth) : "", name: `${dayOfMonth}일`, values: [day.event_count] };
+        const isBusiest = busiest.event_count > 0 && day.date === busiest.date;
+        return { key: day.date, axisLabel: dayOfMonth === 1 || dayOfMonth % DAY_LABEL_INTERVAL === 0 ? String(dayOfMonth) : "", name: `${dayOfMonth}일`, values: [day.event_count], ...(isBusiest && { label: `${COUNT.format(day.event_count)}건` }) };
       })}
       formatValue={value => `${COUNT.format(value)}건`}
     />

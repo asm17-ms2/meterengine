@@ -55,3 +55,8 @@ export function topCustomerSummary(customers: readonly { customer_name: string; 
   if (billableCount <= limit || !share) return `청구 예정액이 있는 고객은 ${billableCount}곳이에요. ${SUPPLY_BASIS}`;
   return `청구 예정액이 큰 ${limit}곳이 전체의 ${share}${share.endsWith("%") ? "예요" : "이에요"}. ${SUPPLY_BASIS}`;
 }
+
+/** 그래프의 왼쪽 절반에 있는 기둥은 "start", 오른쪽 절반은 "end". 글자와 말풍선을 그래프 안쪽으로 붙일 쪽이다. */
+export function edgeSide(index: number, count: number): "start" | "end" {
+  return index < count / 2 ? "start" : "end";
+}

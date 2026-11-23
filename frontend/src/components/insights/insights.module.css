@@ -5,9 +5,15 @@
 .legend { display: flex; flex-wrap: wrap; gap: 4px 16px; list-style: none; margin: 0 0 12px; padding: 0; font-size: 12px; }
 .swatch { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 2px; background: var(--series); }
 .plot { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); column-gap: 2px; align-items: end; height: 160px; margin: 0; padding: 0; list-style: none; border-bottom: 1px solid var(--line); }
-.group { display: flex; align-items: flex-end; justify-content: center; gap: 2px; height: 100%; }
+.group { position: relative; display: flex; align-items: flex-end; justify-content: center; gap: 2px; height: 100%; }
+.group:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.tip { position: absolute; top: 0; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; pointer-events: none; }
+.group:hover .tip, .group:focus .tip { z-index: 2; width: auto; height: auto; overflow: visible; clip-path: none; padding: 4px 8px; border-radius: 6px; background: var(--ink); color: var(--paper); font-size: 12px; font-variant-numeric: tabular-nums; }
+.columnLabel { position: absolute; padding-bottom: 2px; font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.group[data-side="start"] .tip, .group[data-side="start"] .columnLabel { left: 0; }
+.group[data-side="end"] .tip, .group[data-side="end"] .columnLabel { right: 0; }
 .column { flex: 0 1 24px; min-width: 2px; border-radius: 4px 4px 0 0; background: var(--series); }
-.group:hover .column { filter: brightness(.88); }
+.group:hover .column, .group:focus .column { filter: brightness(.88); }
 .axis, .values { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); margin: 0; padding: 0; list-style: none; text-align: center; font-size: 11px; font-variant-numeric: tabular-nums; }
 .axis { padding-top: 6px; }
 .values { padding-top: 2px; }

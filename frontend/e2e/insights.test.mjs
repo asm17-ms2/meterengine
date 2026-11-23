@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { barRatio, formatShare, metricAmounts, shareOfTotal, topCustomerAmounts, topCustomerSummary } from "../src/lib/insights.ts";
+import { barRatio, edgeSide, formatShare, metricAmounts, shareOfTotal, topCustomerAmounts, topCustomerSummary } from "../src/lib/insights.ts";
 
 test("top customers are the largest draft amounts first and leave out customers with nothing to bill", () => {
   const customers = [
@@ -74,4 +74,14 @@ test("the customer summary only counts customers when all of them are listed", (
 test("the customer summary reads naturally when the listed customers hold under one percent", () => {
   const customers = Array.from({ length: 6 }, (_, index) => ({ customer_name: `고객${index}`, amount: 1 }));
   assert.equal(topCustomerSummary(customers, 5, 10_000), "청구 예정액이 큰 5곳이 전체의 1% 미만이에요. 공급가액 기준이에요.");
+});
+
+test("a column hangs its label and tooltip toward the middle of the chart so they stay inside it", () => {
+  assert.equal(edgeSide(0, 10), "start");
+  assert.equal(edgeSide(4, 10), "start");
+  assert.equal(edgeSide(5, 10), "end");
+  assert.equal(edgeSide(9, 10), "end");
+  assert.equal(edgeSide(1, 3), "start");
+  assert.equal(edgeSide(2, 3), "end");
+  assert.equal(edgeSide(0, 1), "start");
 });
