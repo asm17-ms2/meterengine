@@ -10,7 +10,7 @@ import { WorkspaceError, WorkspaceTable } from "@/components/workspace/Workspace
 import type { Result } from "@/lib/api/client";
 import { getDashboard, getDashboardInsights, type DashboardInsightsResponse } from "@/lib/api/workspace";
 import { formatKoreanMonth, formatKrw, formatKstDateTime, formatKstShortStamp } from "@/lib/format";
-import { metricAmounts, topCustomerAmounts } from "@/lib/insights";
+import { formatShare, metricAmounts, shareOfTotal, topCustomerAmounts, topCustomerSummary } from "@/lib/insights";
 import { readMonth } from "@/lib/month";
 import { searchKey } from "@/lib/search-key";
 
@@ -90,7 +90,7 @@ async function Overview({ month, insights }: { month: string; insights: Promise<
       <p>금액 추이는 매일 05시에 다시 계산하고, 오늘 이벤트 수는 화면을 열 때 세요.</p>
       <div className={insightStyles.grid}>
         <Suspense fallback={<AggregateLoading title="금액 추이와 이벤트 수를 세는 중이에요" />}><TrendCharts insights={insights} /></Suspense>
-        <RankBars title="청구 예정액이 큰 고객" summary={`이 달 청구 예정액 상위 ${RANK_LIMIT}곳이에요. 공급가액 기준이에요.`} rows={topCustomerAmounts(draftCustomers, RANK_LIMIT)} formatValue={formatKrw} empty="이 달에 청구할 금액이 있는 고객이 없어요." />
+        <RankBars title="청구 예정액이 큰 고객" summary={topCustomerSummary(draftCustomers, RANK_LIMIT, data.draft_supply_amount)} rows={topCustomerAmounts(draftCustomers, RANK_LIMIT)} formatValue={formatKrw} formatShare={amount => formatShare(shareOfTotal(amount, data.draft_supply_amount))} empty="이 달에 청구할 금액이 있는 고객이 없어요." />
         <RankBars title="과금 미터별 청구 예정액" summary="어느 과금 미터가 매출을 만드는지 보여요. 공급가액 기준이에요." rows={metricAmounts(draftCustomers, RANK_LIMIT)} formatValue={formatKrw} empty="이 달에 금액이 생긴 과금 미터가 없어요." />
       </div>
     </section>
