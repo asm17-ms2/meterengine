@@ -334,6 +334,29 @@ class DashboardIntegrationTest {
   }
 
   @Test
+  void 인사이트의_달별_금액은_받은_금액과_받을_금액을_공급가액으로_나눠_준다() {
+    testClock.fix(OffsetDateTime.parse("2026-10-15T03:00:00Z"));
+    UUID organizationId = UUID.randomUUID();
+    String readKey = TestCredentials.issueApiKey(jdbcTemplate, organizationId, "read");
+    UUID paid = insertInvoice(organizationId, "2026-09", 1000);
+    insertAttempt(organizationId, paid, "test", "done");
+    UUID failed = insertInvoice(organizationId, "2026-09", 2000);
+    insertAttempt(organizationId, failed, "test", "failed");
+    insertInvoice(organizationId, "2026-09", 500);
+    UUID partiallyCanceled = insertInvoice(organizationId, "2026-08", 4000);
+    insertAttempt(organizationId, partiallyCanceled, "test", "done");
+    insertCancellation(organizationId, partiallyCanceled, 1100);
+    String json = insights(readKey, "2026-10");
+    assertThat((List<Integer>) JsonPath.read(json, "$.monthly_amounts[*].collected_supply_amount"))
+        .containsExactly(3000, 1000, 0);
+    assertThat(
+            (List<Integer>) JsonPath.read(json, "$.monthly_amounts[*].outstanding_supply_amount"))
+        .containsExactly(0, 2500, 0);
+    assertThat((List<Integer>) JsonPath.read(json, "$.monthly_amounts[*].draft_supply_amount"))
+        .containsExactly(0, 0, 0);
+  }
+
+  @Test
   void 인사이트의_일별_이벤트_수는_KST_날짜로_세고_어제까지만_준다() {
     testClock.fix(OffsetDateTime.parse("2026-10-15T03:00:00Z"));
     UUID organizationId = UUID.randomUUID();

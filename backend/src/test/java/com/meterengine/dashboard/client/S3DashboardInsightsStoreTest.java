@@ -41,7 +41,7 @@ class S3DashboardInsightsStoreTest {
     store.save(key, FileDashboardInsightsStoreTest.insights(7));
 
     String objectKey =
-        "insights/" + key.organizationId() + "/" + key.environmentScopeId() + "/2026-10.json";
+        "insights/" + key.organizationId() + "/" + key.environmentScopeId() + "/v2/2026-10.json";
     assertThat(s3Client.bodyByObject).containsOnlyKeys(BUCKET + "/" + objectKey);
     assertThat(s3Client.contentTypeByObject).containsValue("application/json");
     assertThat(store.find(key).orElseThrow().dailyEventCounts())

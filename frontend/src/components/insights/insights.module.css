@@ -1,8 +1,8 @@
 .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px 40px; }
-.chart { --series-1: var(--blue); --series-2: #1baf7a; min-width: 0; margin: 0; }
+.chart { --series-1: var(--blue); --series-2: #1baf7a; --series-outstanding: #b72c3c; min-width: 0; margin: 0; }
 .chart h3 { margin: 0 0 4px; font-size: 14px; }
 .chart > p { margin: 0 0 16px; font-size: 13px; }
-.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; list-style: none; margin: 0 0 12px; padding: 0; font-size: 12px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 16px; list-style: none; margin: 0 0 28px; padding: 0; font-size: 12px; }
 .swatch { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 2px; background: var(--series); }
 .plot { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); column-gap: 2px; align-items: end; height: 160px; margin: 0; padding: 0; list-style: none; border-bottom: 1px solid var(--line); }
 .group { position: relative; display: flex; align-items: flex-end; justify-content: center; gap: 2px; height: 100%; }
@@ -13,12 +13,13 @@
 .group[data-side="start"] .tip, .group[data-side="start"] .columnLabel { left: 0; }
 .group[data-side="end"] .tip, .group[data-side="end"] .columnLabel { right: 0; }
 .column { flex: 0 1 24px; min-width: 2px; border-radius: 4px 4px 0 0; background: var(--series); }
+.stack { flex: 0 1 56px; min-width: 2px; display: flex; flex-direction: column-reverse; overflow: hidden; border-radius: 4px 4px 0 0; }
+.segment { min-height: 0; background: var(--series); }
+.group:hover .stack, .group:focus .stack { filter: brightness(.88); }
 .pending { background: repeating-linear-gradient(135deg, var(--series) 0 4px, color-mix(in srgb, var(--series) 35%, transparent) 4px 8px); }
 .group:hover .column, .group:focus .column { filter: brightness(.88); }
-.axis, .values { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); margin: 0; padding: 0; list-style: none; text-align: center; font-size: 11px; font-variant-numeric: tabular-nums; }
+.axis { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); margin: 0; padding: 0; list-style: none; text-align: center; font-size: 11px; font-variant-numeric: tabular-nums; }
 .axis { padding-top: 6px; }
-.values { padding-top: 2px; }
-.values li { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rank { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
 .rank li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; font-size: 13px; }
 .rankLabel { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
