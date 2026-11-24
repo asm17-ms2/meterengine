@@ -4,10 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
+import com.jayway.jsonpath.JsonPath;
 import com.meterengine.TestClock;
 import com.meterengine.TestCredentials;
 import com.meterengine.TestEvents;
 import com.meterengine.TestcontainersConfiguration;
+import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.time.YearMonth;
 import java.time.ZoneId;
@@ -400,6 +402,129 @@ class DraftInvoiceIntegrationTest {
   }
 
   @Test
+  void customer_id를_주면_그_고객만_나오고_total_amount도_그_고객의_금액이다() {
+    UUID organizationId = organizationWithTokenBillableMetric();
+    UUID acme = insertCustomer(organizationId, "아크메");
+    UUID beta = insertCustomer(organizationId, "베타");
+    insertEvent(organizationId, "tx-1", acme, 3280, "2026-08-10T12:00:00+09:00");
+    insertEvent(organizationId, "tx-2", beta, 1000, "2026-08-10T12:00:00+09:00");
+
+    MvcTestResult result = get(organizationId, AUGUST, beta);
+
+    assertThat(result)
+        .hasStatusOk()
+        .bodyJson()
+        .extractingPath("$.customers[*].customer_id")
+        .asArray()
+        .containsExactly(beta.toString());
+    assertThat(result).bodyJson().extractingPath("$.customers[0].amount").isEqualTo(500);
+    assertThat(result).bodyJson().extractingPath("$.total_amount").isEqualTo(500);
+  }
+
+  @Test
+  void customer_id를_준_결과는_전체_조회의_그_고객_값과_같다() throws Exception {
+    UUID organizationId = organizationWithTokenBillableMetric();
+    UUID acme = insertCustomer(organizationId, "아크메");
+    UUID beta = insertCustomer(organizationId, "베타");
+    insertEvent(organizationId, "tx-1", acme, 3280, "2026-08-10T12:00:00+09:00");
+    insertEvent(organizationId, "tx-2", beta, 1000, "2026-08-10T12:00:00+09:00");
+    insertEvent(organizationId, "tx-3", beta, 2799, "2026-08-11T12:00:00+09:00");
+
+    String whole =
+        get(organizationId, AUGUST).getResponse().getContentAsString(StandardCharsets.UTF_8);
+    String single =
+        get(organizationId, AUGUST, beta).getResponse().getContentAsString(StandardCharsets.UTF_8);
+
+    List<Object> expected =
+        JsonPath.read(whole, "$.customers[?(@.customer_id=='%s')]".formatted(beta));
+    List<Object> actual = JsonPath.read(single, "$.customers");
+    assertThat(actual).hasSize(1).isEqualTo(expected);
+  }
+
+  @Test
+  void 사용량이_없는_고객을_customer_id로_주면_라인_없이_금액_0으로_나온다() {
+    UUID organizationId = organizationWithTokenBillableMetric();
+    UUID acme = insertCustomer(organizationId, "아크메");
+    UUID zeta = insertCustomer(organizationId, "제타상사");
+    insertEvent(organizationId, "tx-1", acme, 500, "2026-08-10T12:00:00+09:00");
+
+    MvcTestResult result = get(organizationId, AUGUST, zeta);
+
+    assertThat(result)
+        .hasStatusOk()
+        .bodyJson()
+        .extractingPath("$.customers[*].customer_id")
+        .asArray()
+        .containsExactly(zeta.toString());
+    assertThat(result).bodyJson().extractingPath("$.customers[0].amount").isEqualTo(0);
+    assertThat(result).bodyJson().extractingPath("$.customers[0].lines").asArray().isEmpty();
+    assertThat(result).bodyJson().extractingPath("$.total_amount").isEqualTo(0);
+  }
+
+  @Test
+  void 없는_customer_id와_다른_도입사의_고객은_404다() {
+    UUID organizationId = organizationWithTokenBillableMetric();
+    insertCustomer(organizationId, "아크메");
+    UUID otherOrganizationCustomer =
+        insertCustomer(organizationWithTokenBillableMetric(), "다른 도입사 고객");
+
+    for (UUID customerId : List.of(UUID.randomUUID(), otherOrganizationCustomer)) {
+      MvcTestResult result = get(organizationId, AUGUST, customerId);
+
+      assertThat(result).hasStatus(404);
+      assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("customer_not_found");
+    }
+  }
+
+  @Test
+  void customer_id가_UUID가_아니면_400이다() {
+    UUID organizationId = organizationWithTokenBillableMetric();
+
+    MvcTestResult result = get(organizationId, AUGUST, "abc");
+
+    assertThat(result).hasStatus(400);
+    assertThat(result).bodyJson().extractingPath("$.code").isEqualTo("validation_error");
+  }
+
+  @Test
+  void 그_달이_확정된_고객을_customer_id로_주면_customers가_빈_배열이고_total_amount가_0이다() {
+    UUID organizationId = organizationWithTokenBillableMetric();
+    UUID acme = insertCustomer(organizationId, "아크메");
+    UUID beta = insertCustomer(organizationId, "베타");
+    insertEvent(organizationId, "tx-1", acme, 3280, "2026-08-10T12:00:00+09:00");
+    insertEvent(organizationId, "tx-2", beta, 1000, "2026-08-10T12:00:00+09:00");
+    insertInvoice(organizationId, acme, AUGUST);
+
+    MvcTestResult result = get(organizationId, AUGUST, acme);
+
+    assertThat(result).hasStatusOk().bodyJson().extractingPath("$.customers").asArray().isEmpty();
+    assertThat(result).bodyJson().extractingPath("$.total_amount").isEqualTo(0);
+  }
+
+  @Test
+  void month_없이_customer_id만_주면_이번_달로_계산한다() {
+    UUID organizationId = organizationWithTokenBillableMetric();
+    UUID acme = insertCustomer(organizationId, "아크메");
+    UUID beta = insertCustomer(organizationId, "베타");
+    OffsetDateTime thisMonth = YearMonth.now(KST).atDay(1).atStartOfDay(KST).toOffsetDateTime();
+    insertEvent(organizationId, "tx-1", acme, 500, thisMonth);
+    insertEvent(organizationId, "tx-2", beta, 1000, thisMonth);
+
+    MvcTestResult result =
+        mvc.get()
+            .uri("/v1/invoices/draft?customer_id={customerId}", acme)
+            .header(AUTHORIZATION, authorization(organizationId))
+            .exchange();
+
+    assertThat(result)
+        .hasStatusOk()
+        .bodyJson()
+        .extractingPath("$.month")
+        .isEqualTo(YearMonth.now(KST).toString());
+    assertThat(result).bodyJson().extractingPath("$.total_amount").isEqualTo(250);
+  }
+
+  @Test
   void 인증이_없으면_401이다() {
     assertThat(mvc.get().uri("/v1/invoices/draft").exchange()).hasStatus(401);
   }
@@ -414,6 +539,13 @@ class DraftInvoiceIntegrationTest {
   private MvcTestResult get(UUID organizationId, String month) {
     return mvc.get()
         .uri("/v1/invoices/draft?month={month}", month)
+        .header(AUTHORIZATION, authorization(organizationId))
+        .exchange();
+  }
+
+  private MvcTestResult get(UUID organizationId, String month, Object customerId) {
+    return mvc.get()
+        .uri("/v1/invoices/draft?month={month}&customer_id={customerId}", month, customerId)
         .header(AUTHORIZATION, authorization(organizationId))
         .exchange();
   }
