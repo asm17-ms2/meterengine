@@ -254,6 +254,21 @@ class EnvironmentBillingIntegrationTest {
   }
 
   @Test
+  void 청구_예정액의_customer_id는_요청_환경의_고객만_받는다() {
+    UUID testCustomer = prepare("test", 20);
+    UUID liveCustomer = prepare("live", 30);
+
+    JsonNode draft =
+        ok(get("test", "/v1/invoices/draft?month=" + MONTH + "&customer_id=" + testCustomer));
+
+    assertThat(draft.get("customers").size()).isEqualTo(1);
+    assertThat(draft.at("/customers/0/customer_id").asString()).isEqualTo(testCustomer.toString());
+    assertThat(draft.get("total_amount").asLong()).isEqualTo(20 * 20L + 20 * 10L);
+    assertThat(get("test", "/v1/invoices/draft?month=" + MONTH + "&customer_id=" + liveCustomer))
+        .hasStatus(404);
+  }
+
+  @Test
   void 같은_환경의_동시_확정은_하나만_생성하고_다른_환경은_별도로_확정한다() throws Exception {
     prepare("test", 20);
     prepare("live", 30);
