@@ -17,7 +17,6 @@ let failures = {};
 let bulk = false;
 let apiKeys = [];
 let unresolvedInvoicePayments = [];
-let draftInvoiceCustomers = [];
 let dailyEventCounts = [0];
 let recentEventCounts = [];
 let monthlyAmounts = [];
@@ -44,11 +43,10 @@ const server = createServer(async (req, res) => {
   else if (path === "/__control" && req.method === "POST") {
     if (body.reset) { sessions = new Map(); requests = []; outage = false; customers = []; failures = {}; bulk = false; apiKeys = []; }
     if (typeof body.bulk === "boolean") bulk = body.bulk;
-    if (body.reset) { unresolvedInvoicePayments = []; draftInvoiceCustomers = []; dailyEventCounts = [0]; recentEventCounts = []; monthlyAmounts = []; captchaDelayMs = 0; lockedOrganization = newLockedOrganization(); liveEnvironmentApplications = []; }
+    if (body.reset) { unresolvedInvoicePayments = []; dailyEventCounts = [0]; recentEventCounts = []; monthlyAmounts = []; captchaDelayMs = 0; lockedOrganization = newLockedOrganization(); liveEnvironmentApplications = []; }
     if (Array.isArray(body.liveEnvironmentApplications)) liveEnvironmentApplications = body.liveEnvironmentApplications;
     if (typeof body.captchaDelayMs === "number") captchaDelayMs = body.captchaDelayMs;
     if (Array.isArray(body.unresolvedInvoicePayments)) unresolvedInvoicePayments = body.unresolvedInvoicePayments;
-    if (Array.isArray(body.draftInvoiceCustomers)) draftInvoiceCustomers = body.draftInvoiceCustomers;
     if (Array.isArray(body.dailyEventCounts)) dailyEventCounts = body.dailyEventCounts;
     if (Array.isArray(body.recentEventCounts)) recentEventCounts = body.recentEventCounts;
     if (Array.isArray(body.monthlyAmounts)) monthlyAmounts = body.monthlyAmounts;
@@ -143,7 +141,12 @@ const server = createServer(async (req, res) => {
       else if (req.method !== "PATCH") result = { status: 200, body: customer };
       else if (req.headers["if-match"] !== `"${customer.version}"`) result = failure(409, "resource_version_conflict", "다른 요청이 변경한 항목입니다. 다시 조회한 뒤 수정하세요");
       else { Object.assign(customer, { name: body.name, billing_email: body.billing_email, version: customer.version + 1 }); result = { status: 200, body: customer }; }
-    } else if (path === "/v1/dashboard") result = { status: 200, body: { month: url.searchParams.get("month") ?? "2026-10", calculated_at: new Date().toISOString(), customer_count: customers.length, billable_metric_count: 0, active_api_key_count: 0, event_count: 0, supplier_configured: false, payment_configured: false, payment_mode: "test", draft_supply_amount: draftInvoiceCustomers.reduce((sum, customer) => sum + customer.amount, 0), finalized_total_amount: 0, collected_amount: 0, canceled_amount: 0, outstanding_amount: 0, failed_payment_count: 0, unpriced_usage_count: 0, negative_usage_count: 0, invoice_payments: [], unresolved_invoice_payments: unresolvedInvoicePayments, draft_invoice: { customers: draftInvoiceCustomers } } };
+    } else if (path === "/v1/organization/supplier") result = { status: 200, body: { business_registration_number: null, representative_name: null, business_address: null } };
+    else if (path === "/v1/payment-setting") result = { status: 200, body: { mode: "test", updated_at: null } };
+    else if (path === "/v1/toss-payments-credentials" && req.method === "GET") result = { status: 200, body: { toss_payments_credentials: [] } };
+    // 처리할 결제는 청구서와 결제 상태로 나눠 돌려준다. month가 있으면 그 달 것만 준다.
+    else if (path === "/v1/invoices" && req.method === "GET") result = { status: 200, body: { invoices: unresolvedInvoicePayments.filter(payment => !url.searchParams.has("month") || payment.month === url.searchParams.get("month")).map(payment => ({ id: payment.invoice_id, customer_id: payment.customer_id, customer_name: payment.customer_name, month: payment.month, finalized_at: new Date().toISOString(), supply_amount: payment.amount, tax_amount: 0, total_amount: payment.amount, lines: [] })) } };
+    else if (path === "/v1/invoice-payments") result = { status: 200, body: { invoice_payments: unresolvedInvoicePayments.filter(payment => !url.searchParams.has("month") || payment.month === url.searchParams.get("month")).map(payment => ({ invoice_id: payment.invoice_id, status: payment.status, mode: payment.mode, amount: payment.amount, canceled_amount: payment.canceled_amount, attempt_count: payment.attempt_count, last_failure_code: payment.last_failure_code, next_retry_at: payment.next_retry_at, completed_at: payment.completed_at })) } };
     else if (path === "/v1/dashboard/insights") {
       const month = url.searchParams.get("month") ?? "2026-10";
       result = { status: 200, body: { month, calculated_at: new Date().toISOString(), monthly_amounts: monthlyAmounts.length > 0 ? monthlyAmounts : [{ month, finalized_total_amount: 0, collected_amount: 0, collected_supply_amount: 0, outstanding_supply_amount: 0, draft_supply_amount: 0 }], daily_event_counts: dailyEventCounts.map((event_count, index) => ({ date: `${month}-${String(index + 1).padStart(2, "0")}`, event_count })), recent_event_counts: recentEventCounts.map((event_count, index) => ({ date: `${month}-${String(dailyEventCounts.length + index + 1).padStart(2, "0")}`, event_count })) } };

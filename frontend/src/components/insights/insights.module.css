@@ -20,12 +20,5 @@
 .group:hover .column, .group:focus .column { filter: brightness(.88); }
 .axis { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); margin: 0; padding: 0; list-style: none; text-align: center; font-size: 11px; font-variant-numeric: tabular-nums; }
 .axis { padding-top: 6px; }
-.rank { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
-.rank li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; font-size: 13px; }
-.rankLabel { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.rankValue { font-variant-numeric: tabular-nums; }
-.rankShare { display: inline-block; min-width: 4.5em; margin-left: 8px; color: var(--muted); text-align: right; }
-.rankTrack { grid-column: 1 / -1; height: 10px; border-radius: 0 4px 4px 0; background: var(--canvas); }
-.rankBar { height: 100%; min-width: 2px; border-radius: 0 4px 4px 0; background: var(--series-1); }
 .hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }

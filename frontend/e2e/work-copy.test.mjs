@@ -52,7 +52,7 @@ test("customer detail and overview write months and times in the shared Korean f
   const detail = source("app/(console)/customers/[id]/page.tsx");
   const overview = source("app/(console)/overview/page.tsx");
   assert.ok(detail.includes("<h2>{formatKoreanMonth(month)} 청구와 수납</h2>"));
-  assert.ok(overview.includes("{formatKstDateTime(data.calculated_at)} KST 기준."));
+  assert.ok(overview.includes("{formatKstDateTime(data.calculatedAt)} KST 기준."));
   assert.ok(!overview.includes("new Date(data.calculated_at).toLocaleString("));
 });
 

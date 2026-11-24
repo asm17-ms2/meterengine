@@ -100,9 +100,9 @@ test("the event issue summary uses the same reason names as the filter and the p
   assert.ok(issues.includes("<strong>{REASONS[issueReason]} {COUNT.format(summary[issueReason])}건</strong>"));
 });
 
-test("the home unpriced usage item also links to events filtered to a missing price", () => {
+test("the home links to the month's events left out of billing", () => {
   const overview = appSource("(console)/overview/page.tsx");
-  assert.ok(overview.includes("<LinkButton href={`/event-issues?month=${month}&reason=unpriced_usage`}>이벤트 보기</LinkButton>"));
+  assert.ok(overview.includes("<LinkButton href={`/event-issues?month=${month}`}>과금에서 빠진 이벤트 보기</LinkButton>"));
 });
 
 // 홈의 할 일은 글자 링크가 아니라 버튼 모양으로 보인다.

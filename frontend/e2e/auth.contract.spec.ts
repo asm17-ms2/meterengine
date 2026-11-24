@@ -63,17 +63,13 @@ test("overview keeps the selected month and shows unresolved invoices from every
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("홈 - 2026년 4월");
 });
 
-test("the overview shows each top customer's share of the draft total", async ({ page, request }) => {
-  const amounts = [1_240_000, 620_000, 450_000, 330_000, 210_000, 150_000];
-  await request.post(`${FIXTURE_URL}/__control`, { data: { draftInvoiceCustomers: amounts.map((amount, index) => (
-    { customer_id: `cccccccc-cccc-4ccc-8ccc-${String(index).padStart(12, "0")}`, customer_name: `비중 고객 ${index + 1}`, amount, lines: [{ billable_metric_code: "tokens", amount }] }
-  )) } });
+test("the overview asks only the APIs it shows and never works out the whole month's draft", async ({ page, request }) => {
   await login(page, "member@contract.local", "/overview");
-  const chart = page.locator("figure").filter({ has: page.getByRole("heading", { name: "청구 예정액이 큰 고객", exact: true }) });
-  await expect(chart.getByText("청구 예정액이 큰 5곳이 전체의 95%예요. 공급가액 기준이에요.", { exact: true })).toBeVisible();
-  await expect(chart.getByRole("listitem")).toHaveCount(5);
-  await expect(chart.getByRole("listitem").first()).toContainText("전체의 41%");
-  await expect(chart.getByRole("listitem").last()).toContainText("전체의 7%");
+  await expect(page.getByRole("region", { name: "월별 금액 흐름", exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "월별 금액 흐름", exact: true })).not.toContainText("청구 예정액");
+  const paths = (await (await request.get(`${FIXTURE_URL}/__requests`)).json()).map((call: { path: string }) => call.path.split("?")[0]);
+  expect(paths).not.toContain("/v1/dashboard");
+  expect(paths.filter((path: string) => path.startsWith("/v1/invoices/draft"))).toEqual([]);
 });
 
 test("the rejection screen says what to do for each reason and links to the guide", async ({ page }) => {

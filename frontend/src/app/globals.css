@@ -325,6 +325,8 @@ details[open] > .disclosure-summary + * { margin-top: 12px; }
 .wordmark { font-family: var(--font-wordmark), var(--font-pretendard), sans-serif; }
 .organization-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.organization-link .anticon { flex: none; }
 .workspace-json, pre, code { font-family: var(--font-mono), var(--font-pretendard), monospace; }
+.finance-flow.finance-flow-three { grid-template-columns: repeat(3, minmax(0,1fr)); }
+@media (max-width: 767px) { .finance-flow.finance-flow-three { grid-template-columns: 1fr; } }
 .finance-flow strong { font-family: var(--font-pretendard), "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; letter-spacing: -.025em; }
 .organization-link { max-width: min(30vw, 480px); white-space: nowrap; }
 @media (max-width: 767px) { .organization-link { max-width: calc(100vw - 225px); font-size: 12px; } }
