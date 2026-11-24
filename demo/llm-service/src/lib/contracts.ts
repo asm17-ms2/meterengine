@@ -108,6 +108,8 @@ export type UsageSnapshot = SnapshotBase & {
   usage: { state: "ready" | "unavailable"; updatedAt: string; metrics: MeterUsageView[]; error?: string };
   pricing: { state: "ready" | "unavailable"; error?: string };
 };
+// 요청을 보낸 뒤에 다시 읽는 것. 앱의 원장에서만 세고 MeterEngine을 부르지 않는다.
+export type UsageStatsSnapshot = SnapshotBase & { stats: UsageStats };
 export type BillingSnapshot = SnapshotBase & {
   billing: {
     state: "ready" | "unavailable";

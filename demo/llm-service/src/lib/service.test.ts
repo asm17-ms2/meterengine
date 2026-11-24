@@ -519,6 +519,28 @@ test("한 계정의 실패 재전송이 다른 계정의 큐를 처리하지 않
   assert.deepEqual(fake.events.map(event => event.customer_id), [ACCOUNT_A.customerId]);
 });
 
+test("요청 통계는 MeterEngine을 부르지 않고 이 계정의 기록하지 못한 건수를 돌려준다", async t => {
+  const store = new OpenAbStore(":memory:", [ACCOUNT_A, ACCOUNT_B]);
+  t.after(() => store.close());
+  const reads: string[] = [];
+  const fake = clientFixture({
+    async ingestEvent() { throw new Error("upstream unavailable"); },
+    async searchUsage(params = {}) { reads.push("usage"); return usagePage(params.customer_id!, []); },
+    async listBillableMetricPrices() { reads.push("prices"); return { billable_metric_prices: [] }; },
+  });
+  const service = new OpenAbService({ config: config(), store, client: fake.client, now: () => NOW });
+  await service.generate(ACCOUNT_A, apiBody("기록하지 못할 요청"));
+  const result = service.usageStats(ACCOUNT_A, "2026-10");
+  assert.deepEqual(reads, []);
+  assert.deepEqual({ user: result.user.id, month: result.month }, { user: ACCOUNT_A.id, month: "2026-10" });
+  assert.equal(result.stats.totalRequests, 1);
+  assert.equal(result.stats.pendingMetering + result.stats.failedMetering, 1);
+  assert.deepEqual(result.stats, (await service.usage(ACCOUNT_A, "2026-10")).stats);
+  assert.equal(service.usageStats(ACCOUNT_B, "2026-10").stats.totalRequests, 0);
+  assert.equal(service.usageStats(ACCOUNT_A, "2026-11").stats.totalRequests, 0);
+  assert.throws(() => service.usageStats(ACCOUNT_A, "2026-13"), (error: unknown) => error instanceof ServiceError && error.status === 400);
+});
+
 test("사용량과 청구 예정액은 로그인한 고객으로만 조회하고 응답에 다른 고객의 것을 섞지 않는다", async t => {
   const store = new OpenAbStore(":memory:", [ACCOUNT_A, ACCOUNT_B]);
   t.after(() => store.close());
