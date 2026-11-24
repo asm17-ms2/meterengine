@@ -6,7 +6,7 @@ import { useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { defaultModelId, METRICS, MODELS } from "@/lib/catalog";
 import { BATCH_ITEM_MAX_LENGTH, BATCH_MAX_ITEMS } from "@/lib/contracts";
-import type { BatchView, GenerationView, TokenUsage, WorkspaceSnapshot } from "@/lib/contracts";
+import type { BatchView, GenerationView, TokenUsage, UsageSnapshot } from "@/lib/contracts";
 import { createRequestId } from "@/lib/request-id";
 import { ApiFailure, errorMessage, jsonRequest, readApi } from "./client-api";
 import { MeteringLabel, Notice } from "./Feedback";
@@ -34,7 +34,7 @@ function resultPreview(item: GenerationView): string {
   return item.output;
 }
 
-export function BatchScreen({ snapshot, onUsageChanged, onSessionLost }: { snapshot: WorkspaceSnapshot; onUsageChanged: () => void; onSessionLost: () => void }) {
+export function BatchScreen({ snapshot, onUsageChanged, onSessionLost }: { snapshot: UsageSnapshot; onUsageChanged: () => void; onSessionLost: () => void }) {
   const [modelId, setModelId] = useState(defaultModelId("batch"));
   const [text, setText] = useState("");
   const [result, setResult] = useState<BatchView | null>(null);

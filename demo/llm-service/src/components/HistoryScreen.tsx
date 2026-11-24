@@ -4,7 +4,7 @@ import { ArrowRightOutlined, RightOutlined } from "@ant-design/icons";
 import Link from "next/link";
 import { useState } from "react";
 import { MODELS, SURFACES } from "@/lib/catalog";
-import type { GenerationView, WorkspaceSnapshot } from "@/lib/contracts";
+import type { GenerationView, HistorySnapshot } from "@/lib/contracts";
 import { MeteringLabel } from "./Feedback";
 import { formatDate, formatTokens, surfaceName } from "./format";
 import { TokenMeter } from "./TokenMeter";
@@ -16,7 +16,7 @@ function responseText(request: GenerationView): string {
   return request.output;
 }
 
-export function HistoryScreen({ snapshot }: { snapshot: WorkspaceSnapshot }) {
+export function HistoryScreen({ snapshot }: { snapshot: HistorySnapshot }) {
   const [surfaceFilter, setSurfaceFilter] = useState("");
   const [modelFilter, setModelFilter] = useState("");
   const [query, setQuery] = useState("");

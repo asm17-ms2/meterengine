@@ -12,6 +12,6 @@ export async function GET(request: Request): Promise<NextResponse> {
     const service = getRuntime();
     assertRequest(request, service.config);
     const account = service.requireAccount((await cookies()).get(SESSION_COOKIE)?.value);
-    return jsonResponse(await service.workspace(account, new URL(request.url).searchParams.get("month") ?? currentMonth()));
+    return jsonResponse(await service.usage(account, new URL(request.url).searchParams.get("month") ?? currentMonth()));
   });
 }
