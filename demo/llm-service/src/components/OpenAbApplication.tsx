@@ -5,7 +5,7 @@ import { Button, ConfigProvider } from "antd";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { COMPANY } from "@/lib/catalog";
-import type { SessionResponse, WorkspaceSnapshot } from "@/lib/contracts";
+import type { SessionResponse, UsageSnapshot, WorkspaceSnapshot } from "@/lib/contracts";
 import { ApiPlayground } from "./ApiPlayground";
 import { BatchScreen } from "./BatchScreen";
 import { currentBillingMonth, hasMonthFilter, workspaceBillingMonth } from "./billing-month";
@@ -14,7 +14,6 @@ import { BillingScreen } from "./BillingScreen";
 import { ChatScreen } from "./ChatScreen";
 import { ApiFailure, errorMessage, jsonRequest, readApi } from "./client-api";
 import { Notice, SyncStatus } from "./Feedback";
-import { MONEY } from "./format";
 import { HistoryScreen } from "./HistoryScreen";
 import { LoginScreen } from "./LoginScreen";
 import { UsageScreen } from "./UsageScreen";
@@ -40,6 +39,16 @@ const HEADINGS: Record<WorkspaceSection, { title: string; description: string }>
   history: { title: "요청 기록", description: "대화, API, 일괄 처리로 보낸 요청과 응답을 다시 볼 수 있어요." },
 };
 const MONTH_PATTERN = /^(?!0000)\d{4}-(0[1-9]|1[0-2])$/;
+// 화면마다 필요한 조회만 부른다. 모델을 쓰는 화면은 단가를 보여 주려고 사용량 응답을 함께 쓴다.
+const SNAPSHOT_PATHS: Record<WorkspaceSection, string> = { chat: "/api/usage", api: "/api/usage", batch: "/api/usage", usage: "/api/usage", billing: "/api/billing", history: "/api/history" };
+
+function isUsageSnapshot(snapshot: WorkspaceSnapshot): snapshot is UsageSnapshot {
+  return "usage" in snapshot;
+}
+
+function matchesSection(section: WorkspaceSection, snapshot: WorkspaceSnapshot): boolean {
+  return SNAPSHOT_PATHS[section] === "/api/usage" ? isUsageSnapshot(snapshot) : section === "billing" ? "billing" in snapshot : "requests" in snapshot;
+}
 const THEME = {
   token: { colorPrimary: "#3b33c4", colorText: "#15192b", colorTextSecondary: "#545b73", colorTextPlaceholder: "#5f667e", colorBgContainer: "#ffffff", colorBorder: "#8a90a6", borderRadius: 10, controlHeight: 44, fontSize: 15, fontFamily: 'var(--font-pretendard), "Apple SD Gothic Neo", "Malgun Gothic", sans-serif' },
 };
@@ -82,7 +91,7 @@ export function OpenAbApplication({ section, initialMonth }: { section: Workspac
     const version = ++workspaceVersion.current;
     setIsRefreshing(true);
     try {
-      const result = await readApi<WorkspaceSnapshot>(`/api/workspace?${new URLSearchParams({ month: requestedMonth })}`);
+      const result = await readApi<WorkspaceSnapshot>(`${SNAPSHOT_PATHS[section]}?${new URLSearchParams({ month: requestedMonth })}`);
       if (workspaceVersion.current === version) { setSnapshot(result); setWorkspaceError(""); }
     } catch (error) {
       if (workspaceVersion.current !== version) return;
@@ -104,7 +113,7 @@ export function OpenAbApplication({ section, initialMonth }: { section: Workspac
     const requestedMonth = workspaceBillingMonth(section, month);
     const version = ++workspaceVersion.current;
     const controller = new AbortController();
-    void readApi<WorkspaceSnapshot>(`/api/workspace?${new URLSearchParams({ month: requestedMonth })}`, { signal: controller.signal }).then(result => {
+    void readApi<WorkspaceSnapshot>(`${SNAPSHOT_PATHS[section]}?${new URLSearchParams({ month: requestedMonth })}`, { signal: controller.signal }).then(result => {
       if (workspaceVersion.current === version) { selectedMonth.current = requestedMonth; setMonth(requestedMonth); setSnapshot(result); setWorkspaceError(""); }
     }).catch(async error => {
       if (controller.signal.aborted || workspaceVersion.current !== version) return;
@@ -177,10 +186,9 @@ export function OpenAbApplication({ section, initialMonth }: { section: Workspac
 
   const onSessionLost = useCallback(() => { void loadSession(); }, [loadSession]);
   const onUsageChanged = useCallback(() => { void refreshWorkspace(); }, [refreshWorkspace]);
-  const isCurrentSnapshot = snapshot !== null && snapshot.user.id === session?.user?.id && snapshot.month === month;
+  const isCurrentSnapshot = snapshot !== null && snapshot.user.id === session?.user?.id && snapshot.month === month && matchesSection(section, snapshot);
   const heading = HEADINGS[section];
   const isModelScreen = !hasMonthFilter(section);
-  const draftTotal = snapshot && snapshot.month === currentBillingMonth() ? snapshot.billing.draft?.totalAmount : undefined;
   const navLink = (item: NavItem) => <Link key={item.id} href={hasMonthFilter(item.id) ? `${item.href}?month=${encodeURIComponent(hasMonthFilter(section) ? month : currentBillingMonth())}` : item.href} aria-current={item.id === section ? "page" : undefined}>{item.label}</Link>;
 
   return <ConfigProvider theme={THEME}>{!session?.user ? <LoginScreen session={session} error={sessionError} isBusy={isSigningIn} onLogin={id => void login(id)} onReload={() => void loadSession()} /> : <div className={`application application-${section}`}>
@@ -188,7 +196,6 @@ export function OpenAbApplication({ section, initialMonth }: { section: Workspac
         <Link href="/" className="wordmark">{COMPANY.name}</Link>
         <nav aria-label="주요 메뉴"><div className="nav-group">{PRODUCT_NAV.map(navLink)}</div><div className="nav-group nav-group-account">{ACCOUNT_NAV.map(navLink)}</div></nav>
         <div className="account-controls">
-          {draftTotal !== undefined && <Link href={`/billing?month=${currentBillingMonth()}`} className="header-bill">이번 달 예정액 <strong>{MONEY.format(draftTotal)}</strong></Link>}
           <div className="account-name"><strong>{session.user.name}</strong><span>{session.user.email}</span></div>
           <Button onClick={() => void logout()} loading={isLoggingOut} icon={<LogoutOutlined aria-hidden="true" />}>나가기</Button>
         </div>
@@ -198,17 +205,17 @@ export function OpenAbApplication({ section, initialMonth }: { section: Workspac
         {section !== "chat" && <div className="page-heading"><div><h1>{heading.title}</h1><p>{heading.description}</p></div>{hasMonthFilter(section) && <MonthFilter key={month} value={month} onApply={changeMonth} isBusy={isRefreshing} />}</div>}
         {workspaceError && <Notice title="사용 내역을 불러오지 못했어요" onRetry={() => void refreshWorkspace()} isBusy={isRefreshing}>{workspaceError}</Notice>}
         {!isCurrentSnapshot ? <div className="workspace-loading" role="status">{isRefreshing ? <><LoadingOutlined spin aria-hidden="true" /><span>사용 내역을 불러오고 있어요.</span></> : <><span>사용 내역을 다시 불러와 주세요.</span><Button onClick={() => void refreshWorkspace()}>다시 불러오기</Button></>}</div> : <>
-          {isModelScreen && (snapshot.usage.state === "unavailable" || snapshot.billing.state === "unavailable") && <Notice title="사용량과 청구 정보 일부를 불러오지 못했어요" onRetry={() => void refreshWorkspace()} isBusy={isRefreshing}>
+          {isModelScreen && isUsageSnapshot(snapshot) && (snapshot.usage.state === "unavailable" || snapshot.pricing.state === "unavailable") && <Notice title="사용량과 요금 정보 일부를 불러오지 못했어요" onRetry={() => void refreshWorkspace()} isBusy={isRefreshing}>
             {snapshot.usage.state === "unavailable" && <span className="notice-detail">사용량: {snapshot.usage.error || "잠시 뒤 다시 불러와 주세요."}</span>}
-            {snapshot.billing.state === "unavailable" && <span className="notice-detail">청구: {snapshot.billing.error || "잠시 뒤 다시 불러와 주세요."}</span>}
-            <span className="notice-detail">대화와 요청 기록은 그대로 있어요. 단가와 청구 예정액은 다시 불러온 뒤 보여 드려요.</span>
+            {snapshot.pricing.state === "unavailable" && <span className="notice-detail">요금: {snapshot.pricing.error || "잠시 뒤 다시 불러와 주세요."}</span>}
+            <span className="notice-detail">대화와 요청 기록은 그대로 있어요. 단가는 다시 불러온 뒤 보여 드려요.</span>
           </Notice>}
-          {isModelScreen && snapshot.stats.pendingMetering + snapshot.stats.failedMetering > 0 && <SyncStatus snapshot={snapshot} isBusy={isRetrying} onRetry={() => void retryMetering()} />}
-          {section === "chat" ? <ChatScreen snapshot={snapshot} onUsageChanged={onUsageChanged} onSessionLost={onSessionLost} />
+          {isModelScreen && isUsageSnapshot(snapshot) && snapshot.stats.pendingMetering + snapshot.stats.failedMetering > 0 && <SyncStatus snapshot={snapshot} isBusy={isRetrying} onRetry={() => void retryMetering()} />}
+          {isUsageSnapshot(snapshot) ? (section === "chat" ? <ChatScreen snapshot={snapshot} onUsageChanged={onUsageChanged} onSessionLost={onSessionLost} />
             : section === "api" ? <ApiPlayground snapshot={snapshot} onUsageChanged={onUsageChanged} onSessionLost={onSessionLost} />
             : section === "batch" ? <BatchScreen snapshot={snapshot} onUsageChanged={onUsageChanged} onSessionLost={onSessionLost} />
-            : section === "usage" ? <UsageScreen snapshot={snapshot} isRetrying={isRetrying} onRetryMetering={() => void retryMetering()} />
-            : section === "billing" ? <BillingScreen snapshot={snapshot} /> : <HistoryScreen snapshot={snapshot} />}
+            : <UsageScreen snapshot={snapshot} isRetrying={isRetrying} onRetryMetering={() => void retryMetering()} />)
+            : "billing" in snapshot ? <BillingScreen snapshot={snapshot} /> : <HistoryScreen snapshot={snapshot} />}
           {!isModelScreen && <div className="refresh-control"><span>{session.user.name}의 {month} 자료예요.</span><Button onClick={() => void refreshWorkspace()} loading={isRefreshing} icon={<ReloadOutlined aria-hidden="true" />}>새로 불러오기</Button></div>}
         </>}
         <p className={section === "chat" ? "screen-reader-only" : "action-status"} role="status" aria-live="polite">{actionStatus}</p>

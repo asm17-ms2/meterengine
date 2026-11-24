@@ -3,7 +3,7 @@
 import { ArrowRightOutlined } from "@ant-design/icons";
 import { Button } from "antd";
 import { useState } from "react";
-import type { BillingLine, InvoiceView, WorkspaceSnapshot } from "@/lib/contracts";
+import type { BillingLine, InvoiceView, BillingSnapshot } from "@/lib/contracts";
 import { errorMessage, jsonRequest, readApi } from "./client-api";
 import { Notice } from "./Feedback";
 import { formatDate, formatQuantity, modelName, MONEY, PAYMENT_LABELS, surfaceName } from "./format";
@@ -27,7 +27,7 @@ function InvoiceDetails({ invoice }: { invoice: InvoiceView }) {
   </article>;
 }
 
-export function BillingScreen({ snapshot }: { snapshot: WorkspaceSnapshot }) {
+export function BillingScreen({ snapshot }: { snapshot: BillingSnapshot }) {
   const [isRegistering, setIsRegistering] = useState(false);
   const [registration, setRegistration] = useState<RegistrationView | null>(null);
   const [error, setError] = useState("");

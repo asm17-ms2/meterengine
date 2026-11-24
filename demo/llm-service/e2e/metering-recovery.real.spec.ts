@@ -7,8 +7,8 @@ import { createServer as createPortProbe, type AddressInfo } from "node:net";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { transactionId } from "../src/lib/catalog";
-import type { GenerationView, SessionResponse, WorkspaceSnapshot } from "../src/lib/contracts";
-import { ARTIFACT_DIR, assertNoSecrets, jsonResponse, meterEvent, noHorizontalOverflow, runtimeAccounts, runtimeEnvironment, safeFailure, screenshot, secretValues } from "./helpers";
+import type { GenerationView, SessionResponse } from "../src/lib/contracts";
+import { ARTIFACT_DIR, assertNoSecrets, jsonResponse, workspace, meterEvent, noHorizontalOverflow, runtimeAccounts, runtimeEnvironment, safeFailure, screenshot, secretValues } from "./helpers";
 
 type IngestBody = { transaction_id: string; customer_id: string; timestamp: string; properties: Record<string, unknown> };
 
@@ -139,11 +139,10 @@ test("수집 장애와 응답 유실을 자체 DB에 보존하고 재기동 뒤 
     await screenshot(page, "15-metering-pending-desktop.png", secrets);
     failWorkspaceReads = true;
     await page.reload();
-    const warning = page.getByRole("alert").filter({ hasText: "사용량과 청구 정보 일부를 불러오지 못했어요" });
+    const warning = page.getByRole("alert").filter({ hasText: "사용량과 요금 정보 일부를 불러오지 못했어요" });
     await expect(warning).toBeVisible();
     await expect(warning).toContainText("대화와 요청 기록은 그대로 있어요");
-    await expect(page.locator(".header-bill")).toHaveCount(0);
-    const partial = await jsonResponse<WorkspaceSnapshot>(await client.get("/api/workspace"));
+    const partial = await workspace(client);
     expect(partial.usage.state).toBe("unavailable");
     expect(partial.billing.state).toBe("unavailable");
     expect(partial.billing.draft).toBeNull();

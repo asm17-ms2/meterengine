@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent, KeyboardEvent } from "react";
 import { defaultModelId, MODELS } from "@/lib/catalog";
 import { PROMPT_MAX_LENGTH } from "@/lib/contracts";
-import type { ConversationSummary, ConversationView, GenerationView, WorkspaceSnapshot } from "@/lib/contracts";
+import type { ConversationSummary, ConversationView, GenerationView, UsageSnapshot } from "@/lib/contracts";
 import { createRequestId } from "@/lib/request-id";
 import { ApiFailure, errorMessage, jsonRequest, readApi, settleGeneration } from "./client-api";
 import { MeteringLabel, Notice } from "./Feedback";
@@ -37,7 +37,7 @@ function AssistantMessage({ message, isAnimated }: { message: GenerationView; is
   </article>;
 }
 
-export function ChatScreen({ snapshot, onUsageChanged, onSessionLost }: { snapshot: WorkspaceSnapshot; onUsageChanged: () => void; onSessionLost: () => void }) {
+export function ChatScreen({ snapshot, onUsageChanged, onSessionLost }: { snapshot: UsageSnapshot; onUsageChanged: () => void; onSessionLost: () => void }) {
   const [conversations, setConversations] = useState<ConversationSummary[] | null>(null);
   const [listError, setListError] = useState("");
   const [activeId, setActiveId] = useState<string | null>(null);
