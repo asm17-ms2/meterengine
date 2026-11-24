@@ -5,7 +5,7 @@ import { Button, ConfigProvider } from "antd";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { COMPANY } from "@/lib/catalog";
-import type { SessionResponse, UsageSnapshot, WorkspaceSnapshot } from "@/lib/contracts";
+import type { SessionResponse, UsageSnapshot, UsageStatsSnapshot, WorkspaceSnapshot } from "@/lib/contracts";
 import { ApiPlayground } from "./ApiPlayground";
 import { BatchScreen } from "./BatchScreen";
 import { currentBillingMonth, hasMonthFilter, workspaceBillingMonth } from "./billing-month";
@@ -16,6 +16,7 @@ import { ApiFailure, errorMessage, jsonRequest, readApi } from "./client-api";
 import { Notice, SyncStatus } from "./Feedback";
 import { HistoryScreen } from "./HistoryScreen";
 import { LoginScreen } from "./LoginScreen";
+import { withUsageStats } from "./usage-stats";
 import { UsageScreen } from "./UsageScreen";
 
 type NavItem = { id: WorkspaceSection; label: string; href: string };
@@ -185,7 +186,14 @@ export function OpenAbApplication({ section, initialMonth }: { section: Workspac
   };
 
   const onSessionLost = useCallback(() => { void loadSession(); }, [loadSession]);
-  const onUsageChanged = useCallback(() => { void refreshWorkspace(); }, [refreshWorkspace]);
+  // 요청을 보낸 뒤에 달라지는 것은 기록하지 못한 건수뿐이라 통계만 다시 읽는다. 달이 넘어갔으면 전부 다시 읽는다.
+  const onUsageChanged = useCallback(() => {
+    const requestedMonth = selectedMonth.current;
+    if (workspaceBillingMonth(section, requestedMonth) !== requestedMonth) { void refreshWorkspace(); return; }
+    void readApi<UsageStatsSnapshot>(`/api/usage/stats?${new URLSearchParams({ month: requestedMonth })}`)
+      .then(result => setSnapshot(current => withUsageStats(current, result)))
+      .catch(error => { if (error instanceof ApiFailure && error.status === 401) void loadSession(); });
+  }, [section, refreshWorkspace, loadSession]);
   const isCurrentSnapshot = snapshot !== null && snapshot.user.id === session?.user?.id && snapshot.month === month && matchesSection(section, snapshot);
   const heading = HEADINGS[section];
   const isModelScreen = !hasMonthFilter(section);

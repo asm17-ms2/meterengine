@@ -6,7 +6,7 @@ import type { MetricKey, SurfaceId } from "./catalog.ts";
 import { viewer } from "./config.ts";
 import type { OpenAbConfig, ServiceAccount } from "./config.ts";
 import { BATCH_ITEM_MAX_LENGTH, BATCH_MAX_ITEMS, PROMPT_MAX_LENGTH, PROVIDER_INFO, SYSTEM_MAX_LENGTH } from "./contracts.ts";
-import type { BatchView, BillingLine, BillingSnapshot, ConversationSummary, ConversationView, GenerationView, HistorySnapshot, LlmModel, MetricPrices, SessionResponse, UsageSnapshot } from "./contracts.ts";
+import type { BatchView, BillingLine, BillingSnapshot, ConversationSummary, ConversationView, GenerationView, HistorySnapshot, LlmModel, MetricPrices, SessionResponse, UsageSnapshot, UsageStatsSnapshot } from "./contracts.ts";
 import { usageEvent } from "./metering-event.ts";
 import { estimateTokens, LocalDemoProvider, PROMPT_CACHE_MIN_TOKENS, PROMPT_CACHE_TTL_MS } from "./provider.ts";
 import type { GenerationOutput, GenerationProvider } from "./provider.ts";
@@ -299,6 +299,12 @@ export class OpenAbService {
     this.store.makeOutboxDue(account.id, requestId);
     await this.flushMetering({ accountId: account.id, generationId: requestId });
     return this.store.outboxCounts(account.id);
+  }
+
+  // 요청 수와 기록하지 못한 건수. 앱의 원장만 읽어 요청을 보낸 뒤에 다시 읽어도 MeterEngine을 부르지 않는다.
+  usageStats(account: ServiceAccount, month: string): UsageStatsSnapshot {
+    const range = monthRange(month);
+    return { user: viewer(account), month, stats: this.store.stats(account.id, range.start, range.end) };
   }
 
   // 사용량과 단가. 대화, API, 일괄 처리, 사용량 화면이 쓴다. 사용량은 이 고객 것만 집계한다.
