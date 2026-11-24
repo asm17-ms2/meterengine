@@ -210,7 +210,10 @@ test("격리 계약: 업무 환경 전환은 목적지를 밝힌 확인 창을 �
   const environment = page.getByRole("combobox", { name: "업무 환경", exact: true });
   await environment.focus();
   await page.keyboard.press("ArrowDown");
+  // 목록은 키 입력 뒤 한 박자 늦게 열린다. 열리기 전에 Escape를 누르면 열린 채 남아 다음 클릭이 목록을 닫는다
+  await expect(environment).toHaveAttribute("aria-expanded", "true");
   await page.keyboard.press("Escape");
+  await expect(environment).toHaveAttribute("aria-expanded", "false");
   expect(new URL(page.url()).searchParams.get("environment")).toBeNull();
   await environment.click();
   await page.locator(".ant-select-item-option", { hasText: "라이브 환경" }).click();
@@ -440,6 +443,17 @@ test("changing the month on the payments list keeps the customer carried in from
   await control(request, "failed-payments");
   await page.goto("/payments?month=2026-10&customer_id=77777777-7777-4777-8777-777777777777");
   await page.getByLabel("조회 월", { exact: true }).fill("2026-09");
+  await page.getByRole("button", { name: "조건 적용", exact: true }).click();
+  await expect(page).toHaveURL(url => url.searchParams.get("month") === "2026-09" && url.searchParams.get("customer_id") === "77777777-7777-4777-8777-777777777777");
+});
+
+test("수납 조회 월을 적는 도중에 주소가 바뀌어 조회 조건이 다시 그려져도 적은 월을 제출한다", async ({ page, request }) => {
+  await control(request, "failed-payments");
+  await page.goto("/payments?month=2026-10");
+  await expect(page).toHaveURL(url => url.searchParams.has("organization_id"));
+  await page.getByLabel("조회 월", { exact: true }).fill("2026-09");
+  await page.evaluate(() => window.history.replaceState(null, "", `${location.pathname}${location.search}&customer_id=77777777-7777-4777-8777-777777777777`));
+  await expect(page.locator('form input[type="hidden"][name="customer_id"]')).toHaveValue("77777777-7777-4777-8777-777777777777");
   await page.getByRole("button", { name: "조건 적용", exact: true }).click();
   await expect(page).toHaveURL(url => url.searchParams.get("month") === "2026-09" && url.searchParams.get("customer_id") === "77777777-7777-4777-8777-777777777777");
 });
