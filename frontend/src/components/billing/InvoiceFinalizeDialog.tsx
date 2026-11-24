@@ -17,13 +17,14 @@ import { ENVIRONMENT_LABELS, readEnvironment } from "@/lib/environment";
 import { formatKrw } from "@/lib/format";
 import { MODAL_WIDTH } from "@/components/table/table-defaults";
 
+// 고객을 고르기 전에는 달 전체 청구 예정액을 계산하지 않으므로 대상 수와 금액을 모른다.
 type FinalizeTarget = {
   month: string;
   monthLabel: string;
-  targetCount: number;
-  supplyAmount: string;
+  targetCount?: number;
+  supplyAmount?: string;
   isUnfinishedMonth: boolean;
-  hasUnpricedUsages: boolean;
+  hasUnpricedUsages?: boolean;
 };
 
 const PARAGRAPH_STYLE = { margin: 0, textWrap: "pretty" } as const;
@@ -98,7 +99,7 @@ function InvoiceFinalizeForm({ onClose, ...target }: FinalizeTarget & { onClose:
         <p>발행한 공급가액 {formatKrw(state.supplyAmount)}, 세액 {formatKrw(state.taxAmount)}, 합계 {formatKrw(state.totalAmount)}</p>
         <ul>{state.invoices.slice(0, FINALIZED_PREVIEW_COUNT).map(invoice => <li key={invoice.id}><LinkButton href={`/payments/${invoice.id}`}>{invoice.invoice_number ?? invoice.id}</LinkButton> {invoice.customer_name} / {formatKrw(invoice.total_amount)}</li>)}</ul>
         {state.invoices.length > FINALIZED_PREVIEW_COUNT && <p className="field-hint">{`나머지 ${state.invoices.length - FINALIZED_PREVIEW_COUNT}건은 '청구서 보기'에서 확인하세요.`}</p>}
-        {state.failedCount > 0 || state.finalizedCount !== targetCount ? (
+        {state.failedCount > 0 || state.finalizedCount === 0 || (targetCount !== undefined && state.finalizedCount !== targetCount) ? (
           <Typography.Paragraph style={PARAGRAPH_STYLE}>
             {state.failedCount > 0
               ? `청구서를 발행하지 못한 고객이 ${state.failedCount}명 있어요. 발행한 청구서는 그대로 남고, 다시 발행하면 남은 고객만 다시 시도해요.`
@@ -137,8 +138,8 @@ function InvoiceFinalizeForm({ onClose, ...target }: FinalizeTarget & { onClose:
     >
       <Flex vertical gap="medium">
         <Typography.Paragraph style={PARAGRAPH_STYLE}>
-          청구할 금액이 있는 고객 {targetCount}명의 청구서를 발행해요. 공급가액 합계는{" "}
-          {supplyAmount}이고, 청구서에는 세액 10%를 더한 합계가 적혀요. 금액은 집계 마감
+          {targetCount === undefined ? "이 달 청구할 금액이 있는 고객 모두의 청구서를 발행해요. 청구서에는 공급가액에" : <>청구할 금액이 있는 고객 {targetCount}명의 청구서를 발행해요. 공급가액 합계는{" "}
+          {supplyAmount}이고, 청구서에는</>} 세액 10%를 더한 합계가 적혀요. 금액은 집계 마감
           시각(다음 달 2일 00:00 KST)까지 받은 사용량으로 다시 계산하고, 마감 전이면 발행하는
           순간까지 받은 사용량으로 계산해요.
         </Typography.Paragraph>

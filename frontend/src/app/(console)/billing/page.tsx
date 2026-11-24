@@ -11,7 +11,9 @@ import { BillingMeta } from "@/components/billing/BillingMeta";
 import { BillingSection } from "@/components/billing/BillingSection";
 import { BillingStatusTag } from "@/components/billing/BillingStatusTag";
 import { InvoiceFinalizeButton } from "@/components/billing/InvoiceFinalizeButton";
+import { InvoiceFinalizeDialog } from "@/components/billing/InvoiceFinalizeDialog";
 import { InvoiceFinalizeSection } from "@/components/billing/InvoiceFinalizeSection";
+import { CustomerRequiredState } from "@/components/screen/CustomerRequiredState";
 import { CutoffStamp } from "@/components/screen/CutoffStamp";
 import { FilterBar } from "@/components/screen/FilterBar";
 import { ListControlsLoader } from "@/components/screen/ListControlsLoader";
@@ -25,6 +27,7 @@ import { previewDraftInvoice, resolveIsFinalizedMonth } from "@/lib/api/billing"
 import { CAPABILITIES } from "@/lib/api/capabilities";
 import { listAllInvoices } from "@/lib/api/invoices";
 import { formatKoreanMonth } from "@/lib/format";
+import { formatKstMonth } from "@/lib/month";
 import { readListQuery, type MonthlyListQuery } from "@/lib/list-query";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -47,8 +50,9 @@ export default async function BillingPage({
   const monthInvoicesQuery = readListQuery({ month }, CAPABILITIES.listInvoices, { hasMonth: true });
   const invoicesQuery: MonthlyListQuery = { ...monthInvoicesQuery, customerId: query.customerId };
 
+  const hasCustomer = Boolean(query.customerId);
   const draftInvoice =
-    devState === "loading" ? null : previewDraftInvoice(query, devState);
+    devState === "loading" || !hasCustomer ? null : previewDraftInvoice(query, devState);
   const invoices = listAllInvoices(invoicesQuery, devState);
   const monthInvoices = isCustomerFiltered ? listAllInvoices(monthInvoicesQuery, devState) : invoices;
   // 조건을 건 응답도 summary에 월 전체 값(month_*)을 실어 오므로 월 전체 발행 영역도 같은 응답을 쓴다.
@@ -66,7 +70,9 @@ export default async function BillingPage({
           ) : null
         }
         extra={
-          draftInvoice ? (
+          !hasCustomer ? (
+            <InvoiceFinalizeDialog month={month} monthLabel={formatKoreanMonth(month)} isUnfinishedMonth={month >= formatKstMonth()} />
+          ) : draftInvoice ? (
             <Suspense key={month} fallback={<InvoiceFinalizeButton disabled />}>
               <InvoiceFinalizeSection draftInvoice={draftInvoice} month={month} />
             </Suspense>
@@ -101,8 +107,12 @@ export default async function BillingPage({
                   <BillingExpandControls draftInvoice={draftInvoice} isMonthFinalized={isMonthFinalized} />
                 </Suspense>
               </>
-            ) : (
+            ) : hasCustomer ? (
               <ExpandControls />
+            ) : (
+              <Suspense key={`${loadingKey}:finalized-link`} fallback={null}>
+                <BillingFinalizedLink invoices={monthInvoices} month={month} />
+              </Suspense>
             )
           }
         >
@@ -120,7 +130,9 @@ export default async function BillingPage({
         <CsvDownload resource="billing" />
         <Suspense fallback={null}><DataMonths filterForm="resource-search-billing" resource="usage" pathname="/billing" query={query} /></Suspense>
 
-        {draftInvoice ? (
+        {!hasCustomer ? (
+          <CustomerRequiredState subject="청구 예정액은" />
+        ) : draftInvoice ? (
           <Suspense key={loadingKey} fallback={<AggregateLoading title="청구 예정액을 계산하는 중이에요" />}>
             <BillingSection draftInvoice={draftInvoice} invoices={invoices} isMonthFinalized={isMonthFinalized} query={query} />
           </Suspense>

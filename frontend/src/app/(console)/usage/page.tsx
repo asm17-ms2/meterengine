@@ -11,6 +11,7 @@ import { QueryStamp } from "@/components/screen/QueryStamp";
 import { ScreenCard } from "@/components/screen/ScreenCard";
 import { ScreenHeader } from "@/components/screen/ScreenHeader";
 import { AggregateLoading } from "@/components/screen/AggregateLoading";
+import { CustomerRequiredState } from "@/components/screen/CustomerRequiredState";
 import { CollapseProvider } from "@/components/table/CollapseProvider";
 import { ExpandControls } from "@/components/table/ExpandControls";
 import { UsageMeta } from "@/components/usage/UsageMeta";
@@ -38,8 +39,9 @@ export default async function UsagePage({
   const loadingKey = searchKey(params);
   const now = new Date();
 
+  const hasCustomer = Boolean(query.customerId);
   const usage =
-    devState === "loading" ? null : aggregateBillableMetricUsages(query, devState);
+    devState === "loading" || !hasCustomer ? null : aggregateBillableMetricUsages(query, devState);
 
   return (
     <CollapseProvider>
@@ -57,7 +59,7 @@ export default async function UsagePage({
             <>
               <CutoffStamp month={month} now={now} />
               <QueryStamp text={formatKstShortStamp(now)} />
-              <ExpandControls />
+              {hasCustomer ? <ExpandControls /> : null}
             </>
           }
         >
@@ -75,7 +77,9 @@ export default async function UsagePage({
         <CsvDownload resource="usage" />
         <Suspense fallback={null}><DataMonths filterForm="resource-search-usage" resource="usage" pathname="/usage" query={query} /></Suspense>
 
-        {usage ? (
+        {!hasCustomer ? (
+          <CustomerRequiredState subject="사용량은" />
+        ) : usage ? (
           <Suspense key={loadingKey} fallback={<AggregateLoading title="사용량을 집계하는 중이에요" />}>
             <UsageSection usage={usage} query={query} />
           </Suspense>

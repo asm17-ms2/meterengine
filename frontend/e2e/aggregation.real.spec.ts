@@ -320,7 +320,7 @@ test("집계 10종과 단위 변환을 수집부터 사용량, 청구 예정액,
     });
 
     await test.step("청구 검토에서 발행하고 서버 간 조회로 스냅샷 검증", async () => {
-      await page.goto(`/billing?month=${month}`);
+      await page.goto(`/billing?month=${month}&customer_id=${customerId}`);
       for (const aggregation of ["sum", "avg"]) {
         const row = page.locator(".data-desktop-table").getByRole("row").filter({ hasText: fractionCode(aggregation) });
         await expect(row.getByText("계산 기준: 1 / 3", { exact: true })).toBeVisible();
