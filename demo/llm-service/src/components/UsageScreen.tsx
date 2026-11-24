@@ -1,13 +1,13 @@
 import { METRICS, MODELS, SURFACES } from "@/lib/catalog";
 import type { SurfaceId } from "@/lib/catalog";
-import type { TokenUsage, WorkspaceSnapshot } from "@/lib/contracts";
+import type { TokenUsage, UsageSnapshot } from "@/lib/contracts";
 import { Notice, SyncStatus } from "./Feedback";
 import { formatDate, formatPrice, formatTokens, METRIC_KEYS, modelName, surfaceName } from "./format";
 import { TokenMeter } from "./TokenMeter";
 
 type Row = { modelId: string; surface: SurfaceId; usage: TokenUsage };
 
-function usageRows(snapshot: WorkspaceSnapshot): Row[] {
+function usageRows(snapshot: UsageSnapshot): Row[] {
   const rows = new Map<string, Row>();
   for (const metric of snapshot.usage.metrics) for (const part of metric.breakdown) {
     const key = `${part.modelId}\n${part.surface}`;
@@ -20,7 +20,7 @@ function usageRows(snapshot: WorkspaceSnapshot): Row[] {
   return [...rows.values()].sort((left, right) => modelOrder(left.modelId) - modelOrder(right.modelId) || surfaceOrder(left.surface) - surfaceOrder(right.surface));
 }
 
-export function UsageScreen({ snapshot, isRetrying, onRetryMetering }: { snapshot: WorkspaceSnapshot; isRetrying: boolean; onRetryMetering: () => void }) {
+export function UsageScreen({ snapshot, isRetrying, onRetryMetering }: { snapshot: UsageSnapshot; isRetrying: boolean; onRetryMetering: () => void }) {
   const totals = Object.fromEntries(METRIC_KEYS.map(key => [key, snapshot.usage.metrics.find(metric => metric.key === key)?.rawQuantity ?? 0])) as TokenUsage;
   const rows = usageRows(snapshot);
   return <>

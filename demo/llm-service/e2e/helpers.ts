@@ -3,7 +3,7 @@ import { readFileSync, mkdirSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { transactionId } from "../src/lib/catalog";
-import type { GenerationView, SessionResponse, WorkspaceSnapshot } from "../src/lib/contracts";
+import type { BillingSnapshot, GenerationView, HistorySnapshot, SessionResponse, UsageSnapshot } from "../src/lib/contracts";
 
 export const BASE_URL = process.env.OPENAB_E2E_URL ?? process.env.OPENAB_E2E_BASE_URL ?? "http://localhost:3200";
 export const APP_ORIGIN = new URL(BASE_URL).origin;
@@ -65,8 +65,14 @@ export async function login(request: APIRequestContext, accountId: string): Prom
   await jsonResponse(await request.post("/api/session", { headers: { Origin: APP_ORIGIN }, data: { accountId } }));
 }
 
-export async function workspace(request: APIRequestContext, month?: string): Promise<WorkspaceSnapshot> {
-  return jsonResponse<WorkspaceSnapshot>(await request.get(`/api/workspace${month ? `?month=${encodeURIComponent(month)}` : ""}`));
+export type WorkspaceView = UsageSnapshot & BillingSnapshot & HistorySnapshot;
+export const SNAPSHOT_PATHS = ["/api/usage", "/api/billing", "/api/history"] as const;
+
+// 화면은 경로를 하나씩 부르지만 시험은 세 경로를 한 번에 본다.
+export async function workspace(request: APIRequestContext, month?: string): Promise<WorkspaceView> {
+  const query = month ? `?month=${encodeURIComponent(month)}` : "";
+  const [usage, billing, history] = await Promise.all(SNAPSHOT_PATHS.map(async path => jsonResponse<object>(await request.get(`${path}${query}`))));
+  return { ...usage, ...billing, ...history } as WorkspaceView;
 }
 
 export async function awaitGeneration(request: APIRequestContext, id: string): Promise<GenerationView> {
