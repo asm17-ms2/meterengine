@@ -65,11 +65,11 @@ test("the event detail drawer uses the table's labels and says the raw JSON is i
 
 test("mobile event links open the drawer in place and closing it returns focus to the row link", () => {
   const table = source("events/EventsTable.tsx");
-  const routed = source("events/RoutedEventDetail.tsx");
+  const detail = source("events/use-event-detail.ts");
   assert.ok(table.includes("data-transaction-id={row.transactionId}"));
   assert.equal(table.match(/onClick=\{event => openOnPlainClick\(event, row\)\}/g)?.length, 1);
   assert.ok(table.includes("<a href={detailHref(row)} data-transaction-id={row.transactionId} onClick={event => openOnPlainClick(event, row)}>"));
-  assert.ok(routed.includes("data-transaction-id"));
+  assert.ok(detail.includes("data-transaction-id"));
 });
 
 test("the rejection search keeps its customer id guidance visible below the search row and tied to the field", () => {

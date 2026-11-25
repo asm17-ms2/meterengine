@@ -178,7 +178,7 @@ const server = createServer(async (req, res) => {
       { id: "eeeeeeee-eeee-4eee-8eee-000000000002", transaction_id: "txn-rejected-2", customer_id: "eeeeeeee-eeee-4eee-8eee-0000000000c2", type: "api_call", occurred_at: minutesAgo(20), error_code: "customer_archived", error_fields: [], request_id: "eeeeeeee-eeee-4eee-8eee-0000000000f2", batch_index: null, recorded_at: minutesAgo(19) },
     ] } };
     else if (path === "/v1/events/types" && req.method === "GET") result = { status: 200, body: { types: ["api_call"] } };
-    else if (path === "/v1/events/lookup" && req.method === "GET") result = { status: 200, body: storedEvent() };
+    else if (path === "/v1/events/lookup" && req.method === "GET") result = { status: 200, body: { ...storedEvent(), transaction_id: url.searchParams.get("transaction_id") } };
     else if (path === "/v1/events" && req.method === "GET") result = { status: 200, body: { month: url.searchParams.get("month"), page: 0, size: 20, total: 1, events: [storedEvent()] } };
     else result = failure(404, "not_found", "계약 테스트에서 다루지 않는 경로입니다.");
   }

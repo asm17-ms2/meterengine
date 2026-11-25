@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type APIRequestContext, type Page } from "@playwright/test";
 import { test } from "./console-browser";
 
 import { fixtureUrl, frontendOrigin } from "./contract-stack";
@@ -91,6 +91,51 @@ test("the event detail shows the request id and no link to audit logs", async ({
   const detail = page.getByRole("dialog");
   await expect(detail.getByText("eeeeeeee-eeee-4eee-8eee-0000000000f3", { exact: true })).toBeVisible();
   await expect(detail.getByRole("link", { name: /감사 기록/ })).toHaveCount(0);
+});
+
+const fixturePaths = async (request: APIRequestContext) => (await (await request.get(`${FIXTURE_URL}/__requests`)).json()).map((call: { path: string }) => call.path);
+
+test("opening and closing an event's detail from the list asks the server for nothing", async ({ page, request }) => {
+  await login(page, "member@contract.local", "/events");
+  const row = page.getByRole("link", { name: "txn-stored-1", exact: true });
+  const detail = page.getByRole("dialog", { name: "이벤트 상세", exact: true });
+  await expect(row).toBeVisible();
+  await page.waitForLoadState("networkidle");
+  const before = await fixturePaths(request);
+  await row.click();
+  await expect(detail).toBeVisible();
+  await expect(page).toHaveURL(url => url.searchParams.get("transaction_id") === "txn-stored-1");
+  await page.goBack();
+  await expect(detail).toHaveCount(0);
+  await expect(page).toHaveURL(url => !url.searchParams.has("transaction_id"));
+  await row.click();
+  await detail.getByRole("button", { name: "닫기", exact: true }).click();
+  await expect(detail).toHaveCount(0);
+  await expect(page).toHaveURL(url => !url.searchParams.has("transaction_id"));
+  await expect(row).toBeFocused();
+  await page.waitForLoadState("networkidle");
+  expect((await fixturePaths(request)).slice(before.length)).toEqual([]);
+});
+
+test("an address naming an event on the page opens its detail from the list without a lookup", async ({ page, request }) => {
+  await login(page, "member@contract.local", "/events?transaction_id=txn-stored-1");
+  await expect(page.getByRole("dialog", { name: "이벤트 상세", exact: true })).toHaveCount(1);
+  await page.waitForLoadState("networkidle");
+  expect((await fixturePaths(request)).filter((path: string) => path.startsWith("/v1/events/lookup"))).toEqual([]);
+});
+
+test("an address naming an event off the page looks it up once and closes without asking the server again", async ({ page, request }) => {
+  await login(page, "member@contract.local", "/events?transaction_id=txn-off-page");
+  const detail = page.getByRole("dialog", { name: "이벤트 상세", exact: true });
+  await expect(detail.locator("pre")).toContainText('"transaction_id": "txn-off-page"');
+  await page.waitForLoadState("networkidle");
+  const before = await fixturePaths(request);
+  expect(before.filter((path: string) => path.startsWith("/v1/events/lookup"))).toHaveLength(1);
+  await detail.getByRole("button", { name: "닫기", exact: true }).click();
+  await expect(detail).toHaveCount(0);
+  await expect(page).toHaveURL(url => !url.searchParams.has("transaction_id"));
+  await page.waitForLoadState("networkidle");
+  expect((await fixturePaths(request)).slice(before.length)).toEqual([]);
 });
 
 test("the daily event chart writes the count on the busiest day and shows a day's count when it is pointed at or focused", async ({ page, request }) => {
