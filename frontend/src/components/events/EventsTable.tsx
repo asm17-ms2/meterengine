@@ -1,11 +1,9 @@
 "use client";
 
-import { useWorkspaceSearch } from "@/components/workspace/use-workspace-search";
-
 import { Flex, Table, theme, Typography } from "antd";
-import { useTransition } from "react";
-import { useRouter } from "next/navigation";
 
+import { EventDetailDrawer } from "@/components/events/EventDetailDrawer";
+import { useEventDetail } from "@/components/events/use-event-detail";
 import { ListPagination } from "@/components/screen/ListPagination";
 import { ScreenNote } from "@/components/screen/ScreenNote";
 import { NumberText } from "@/components/table/NumberText";
@@ -42,13 +40,12 @@ export function EventsTable({
 }) {
   const { token } = theme.useToken();
   const capabilities = CAPABILITIES.listEvents;
-  const router = useRouter();
-  const searchParams = useWorkspaceSearch();
-  const [isOpening, startOpening] = useTransition();
+  const detail = useEventDetail();
+  const selected = rows.find(row => row.transactionId === detail.openId);
 
-  function detailHref(row: EventRowView) { const next = new URLSearchParams(searchParams.toString()); next.set("transaction_id", row.transactionId); return `/events?${next}`; }
+  function detailHref(row: EventRowView) { return detail.hrefFor(row.transactionId); }
 
-  function openDetail(row: EventRowView) { startOpening(() => router.push(detailHref(row), { scroll: false })); }
+  function openDetail(row: EventRowView) { detail.open(row.transactionId); }
   // 수정 키가 없으면 페이지를 다시 읽지 않고 서랍을 연다. 데스크톱 행과 모바일 카드가 같이 쓴다.
   function openOnPlainClick(event: React.MouseEvent, row: EventRowView) {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -115,7 +112,7 @@ export function EventsTable({
 
   return (
     <>
-      {isOpening && <p role="status" className="field-hint">이벤트 상세를 불러오는 중이에요.</p>}
+      {selected && <EventDetailDrawer row={selected} isOpen onClose={() => detail.close(selected.transactionId)} />}
       <div className="data-mobile-records">{rows.map(row => <article key={row.transactionId} className="data-mobile-record"><h3><a href={detailHref(row)} data-transaction-id={row.transactionId} onClick={event => openOnPlainClick(event, row)}>{row.transactionId}</a></h3><div className="data-mobile-line"><span>{row.customerName}</span><strong>{row.eventType}</strong></div><p className="field-hint">발생 {row.occurredAt} KST</p><p className="field-hint">수신 {row.receivedAt} KST</p><code className="workspace-cell-text">{row.propertiesPreview}</code></article>)}</div>
       <div className="data-desktop-table"><Table<EventRowView>
         rowKey="transactionId"

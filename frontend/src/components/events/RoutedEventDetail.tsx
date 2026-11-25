@@ -1,20 +1,17 @@
 "use client";
 
-import { useWorkspaceSearch } from "@/components/workspace/use-workspace-search";
+import type { ReactNode } from "react";
 
-import { useRouter } from "next/navigation";
 import { EventDetailDrawer } from "@/components/events/EventDetailDrawer";
-import { focusInFrames } from "@/components/screen/use-initial-focus";
 import type { EventRowView } from "@/components/events/EventsTable";
+import { useEventDetail } from "@/components/events/use-event-detail";
+
+// 서랍을 닫아도 서버가 화면을 다시 그리지 않아, 서버가 그린 상세와 오류는 주소가 그 이벤트를 가리킬 때만 보인다.
+export function WhenEventSelected({ transactionId, children }: { transactionId: string; children: ReactNode }) {
+  return useEventDetail().openId === transactionId ? children : null;
+}
 
 export function RoutedEventDetail({ row }: { row: EventRowView }) {
-  const router = useRouter();
-  const search = useWorkspaceSearch();
-  // 닫은 뒤 이 서랍을 연 표의 행 링크로 포커스를 돌린다. 다른 페이지에서 딥링크로 열었으면 그 행이 없어 아무것도 하지 않는다.
-  return <EventDetailDrawer row={row} isOpen onClose={() => {
-    const next = new URLSearchParams(search.toString());
-    next.delete("transaction_id");
-    router.replace(`/events?${next}`, { scroll: false });
-    focusInFrames(() => Array.from(document.querySelectorAll<HTMLElement>("[data-transaction-id]")).find(link => link.dataset.transactionId === row.transactionId && link.offsetParent !== null));
-  }} />;
+  const detail = useEventDetail();
+  return <EventDetailDrawer row={row} isOpen onClose={() => detail.close(row.transactionId)} />;
 }
