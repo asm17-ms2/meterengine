@@ -3,9 +3,9 @@ import { randomUUID } from "node:crypto";
 import { writeFileSync } from "node:fs";
 import path from "node:path";
 import { METRICS, MODELS } from "../src/lib/catalog";
-import type { BatchView, ConversationView, GenerationView, TokenUsage, WorkspaceSnapshot } from "../src/lib/contracts";
+import type { BatchView, ConversationView, GenerationView, HistorySnapshot, TokenUsage } from "../src/lib/contracts";
 import {
-  APP_ORIGIN, ARTIFACT_DIR, BASE_URL, assertClientAssetsSafe, assertNoSecrets, awaitGeneration, bannerStaysVisible, expectEventMatches, jsonResponse,
+  APP_ORIGIN, ARTIFACT_DIR, BASE_URL, SNAPSHOT_PATHS, assertClientAssetsSafe, assertNoSecrets, awaitGeneration, bannerStaysVisible, expectEventMatches, jsonResponse,
   login, meterEvent, noHorizontalOverflow, rememberSession, runtimeAccounts, runtimeEnvironment,
   safeFailure, screenshot, secretValues, session, workspace,
 } from "./helpers";
@@ -244,10 +244,10 @@ test("고객 회사의 대화, API, 일괄 처리가 실제 수집과 청구로 
     const otherPrompt = `분리된 고객의 비공개 입력 ${randomUUID()}`;
     const otherGeneration = await generate(otherContext.request, { requestId: randomUUID(), surface: "api", modelId: "ab-5-mini", prompt: otherPrompt });
     expect((await context.request.get(`/api/requests/${otherGeneration.id}`)).status()).toBe(404);
-    const selected = await context.request.get(`/api/workspace?month=${baseline.month}&customer_id=${encodeURIComponent(other.customerId)}`);
+    const selected = await context.request.get(`/api/history?month=${baseline.month}&customer_id=${encodeURIComponent(other.customerId)}`);
     expect([200, 400].includes(selected.status())).toBe(true);
     if (selected.status() === 200) {
-      const own = await selected.json() as WorkspaceSnapshot;
+      const own = await selected.json() as HistorySnapshot;
       expect(own.user.id).toBe(account.id);
       expect(own.requests.some(item => item.id === otherGeneration.id)).toBe(false);
       expect(JSON.stringify(own).includes(otherPrompt)).toBe(false);
@@ -322,7 +322,7 @@ test("서비스의 세션과 요청 경계가 위조와 교차 출처를 거절�
   try {
     const context = await browser.newContext({ baseURL: BASE_URL });
     contexts.push(context);
-    expect((await context.request.get("/api/workspace")).status()).toBe(401);
+    for (const path of SNAPSHOT_PATHS) expect((await context.request.get(path)).status()).toBe(401);
     expect((await context.request.get("/api/requests")).status()).toBe(401);
     expect((await context.request.get("/api/conversations")).status()).toBe(401);
     expect((await context.request.get("/api/session", { headers: { Host: "untrusted.invalid" } })).status()).toBe(403);
@@ -345,14 +345,14 @@ test("서비스의 세션과 요청 경계가 위조와 교차 출처를 거절�
       expect((await context.request.post("/api/generations", { headers: { Origin: APP_ORIGIN }, data: invalid })).status()).toBe(400);
     }
     expect((await context.request.post("/api/batches", { headers: { Origin: APP_ORIGIN }, data: { batchId: randomUUID(), modelId: "ab-5", items: Array.from({ length: 21 }, () => ({ requestId: randomUUID(), prompt: "x" })) } })).status()).toBe(400);
-    expect((await context.request.get("/api/workspace?month=2026-13")).status()).toBe(400);
+    for (const path of SNAPSHOT_PATHS) expect((await context.request.get(`${path}?month=2026-13`)).status()).toBe(400);
     const forged = await browser.newContext({ baseURL: BASE_URL });
     contexts.push(forged);
     await forged.addCookies([{ ...cookie!, value: "0".repeat(64) }]);
-    expect((await forged.request.get("/api/workspace")).status()).toBe(401);
+    for (const path of SNAPSHOT_PATHS) expect((await forged.request.get(path)).status()).toBe(401);
     const logout = await context.request.delete("/api/session", { headers: { Origin: APP_ORIGIN } });
     expect([200, 204].includes(logout.status())).toBe(true);
-    expect((await context.request.get("/api/workspace")).status()).toBe(401);
+    for (const path of SNAPSHOT_PATHS) expect((await context.request.get(path)).status()).toBe(401);
     expect((await session(context.request)).user).toBeNull();
   } catch (error) {
     failure = safeFailure(error, secrets);

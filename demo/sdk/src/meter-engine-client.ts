@@ -193,7 +193,7 @@ export class MeterEngineClient {
     return this.request("POST", `/v1/invoices/${encodeURIComponent(id)}/view-links/${encodeURIComponent(linkId)}/revoke`);
   }
 
-  previewDraftInvoice(params: { month?: string } = {}): Promise<DraftInvoiceResponse> {
+  previewDraftInvoice(params: { month?: string; customer_id?: string } = {}): Promise<DraftInvoiceResponse> {
     return this.request("GET", queryPath("/v1/invoices/draft", params));
   }
 

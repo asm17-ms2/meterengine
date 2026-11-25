@@ -6,7 +6,7 @@ import type { MetricKey, SurfaceId } from "./catalog.ts";
 import { viewer } from "./config.ts";
 import type { OpenAbConfig, ServiceAccount } from "./config.ts";
 import { BATCH_ITEM_MAX_LENGTH, BATCH_MAX_ITEMS, PROMPT_MAX_LENGTH, PROVIDER_INFO, SYSTEM_MAX_LENGTH } from "./contracts.ts";
-import type { BatchView, BillingLine, ConversationSummary, ConversationView, GenerationView, LlmModel, MetricPrices, SessionResponse, WorkspaceSnapshot } from "./contracts.ts";
+import type { BatchView, BillingLine, BillingSnapshot, ConversationSummary, ConversationView, GenerationView, HistorySnapshot, LlmModel, MetricPrices, SessionResponse, UsageSnapshot, UsageStatsSnapshot } from "./contracts.ts";
 import { usageEvent } from "./metering-event.ts";
 import { estimateTokens, LocalDemoProvider, PROMPT_CACHE_MIN_TOKENS, PROMPT_CACHE_TTL_MS } from "./provider.ts";
 import type { GenerationOutput, GenerationProvider } from "./provider.ts";
@@ -14,7 +14,7 @@ import { ServiceError } from "./service-error.ts";
 import { OpenAbStore } from "./store.ts";
 import type { GenerationSpec } from "./store.ts";
 
-export type MeteringClient = Pick<MeterEngineClient, "ingestEvent" | "aggregateBillableMetricUsages" | "previewDraftInvoice" | "listInvoices" | "listInvoicePayments" | "getPaymentMethod" | "listBillableMetricPrices">;
+export type MeteringClient = Pick<MeterEngineClient, "ingestEvent" | "searchUsage" | "previewDraftInvoice" | "listInvoices" | "listInvoicePayments" | "getPaymentMethod" | "listBillableMetricPrices">;
 type RegistrationClient = Pick<MeterEngineClient, "createPaymentMethodRegistration">;
 export type ServiceDependencies = {
   config: OpenAbConfig;
@@ -301,42 +301,37 @@ export class OpenAbService {
     return this.store.outboxCounts(account.id);
   }
 
-  async workspace(account: ServiceAccount, month: string): Promise<WorkspaceSnapshot> {
+  // 요청 수와 기록하지 못한 건수. 앱의 원장만 읽어 요청을 보낸 뒤에 다시 읽어도 MeterEngine을 부르지 않는다.
+  usageStats(account: ServiceAccount, month: string): UsageStatsSnapshot {
     const range = monthRange(month);
-    const [usage, draft, invoices, payments, method, commonPrices, customerPrices] = await Promise.allSettled([
-      this.client.aggregateBillableMetricUsages({ month }), this.client.previewDraftInvoice({ month }),
-      this.client.listInvoices({ month, customer_id: account.customerId }), this.client.listInvoicePayments({ month, customer_id: account.customerId }),
-      this.client.getPaymentMethod(account.customerId), this.client.listBillableMetricPrices({ month }), this.client.listBillableMetricPrices({ month, customer_id: account.customerId }),
+    return { user: viewer(account), month, stats: this.store.stats(account.id, range.start, range.end) };
+  }
+
+  // 사용량과 단가. 대화, API, 일괄 처리, 사용량 화면이 쓴다. 사용량은 이 고객 것만 집계한다.
+  async usage(account: ServiceAccount, month: string): Promise<UsageSnapshot> {
+    const range = monthRange(month);
+    const [usage, commonPrices, customerPrices] = await Promise.allSettled([
+      this.client.searchUsage({ month, customer_id: account.customerId }),
+      this.client.listBillableMetricPrices({ month }), this.client.listBillableMetricPrices({ month, customer_id: account.customerId }),
     ]);
-    const visibleInvoices = invoices.status === "fulfilled" ? invoices.value.invoices.filter(invoice => invoice.customer_id === account.customerId) : [];
-    const invoiceIds = new Set(visibleInvoices.map(invoice => invoice.id));
-    const visiblePayments = payments.status === "fulfilled" ? payments.value.invoice_payments.filter(payment => invoiceIds.has(payment.invoice_id)) : [];
-    const draftCustomer = draft.status === "fulfilled" ? draft.value.customers.find(customer => customer.customer_id === account.customerId) : null;
-    const methodCode = method.status === "rejected" && typeof method.reason === "object" && method.reason !== null && "code" in method.reason ? method.reason.code : null;
-    const billingErrors = [draft.status === "rejected" ? "청구 예정액" : "", invoices.status === "rejected" ? "확정 청구서" : "", payments.status === "rejected" ? "납부 상태" : "", method.status === "rejected" && methodCode !== "payment_method_not_found" ? "결제 카드" : ""].filter(Boolean);
+    const usageData: ListBillableMetricUsagesResponse | null = usage.status === "fulfilled"
+      ? { month, billable_metric_usages: usage.value.items.find(item => item.customer_id === account.customerId)?.metrics ?? [] } : null;
     const priceData = commonPrices.status === "fulfilled" && customerPrices.status === "fulfilled" ? mergePriceSchedules(commonPrices.value, customerPrices.value, account.customerId) : null;
     const hasPriceQueryFailure = commonPrices.status === "rejected" || customerPrices.status === "rejected";
-    const usageData = usage.status === "fulfilled" ? usage.value : null;
     const hasCompatibleMetrics = METRICS.every(metric => matchesMetricContract(metric.code, usageData, priceData));
     const models = modelsWithPrices(priceData, usageData, account.customerId, month);
     const hasMissingPrice = !hasCompatibleMetrics || models.some(model => model.surfaces.some(surface => METRICS.some(metric => isRequiredPrice(model.kind, metric.key) && model.prices[surface]?.[metric.key] == null)));
     const isPriceReadFailure = usage.status === "rejected" || hasPriceQueryFailure;
-    if (payments.status === "fulfilled" && visibleInvoices.some(invoice => !visiblePayments.some(payment => payment.invoice_id === invoice.id))) billingErrors.push("일부 납부 상태");
-    if (method.status === "fulfilled" && method.value.customer_id !== account.customerId) billingErrors.push("결제 카드");
-    if (hasMissingPrice && isPriceReadFailure) billingErrors.push("적용 요금");
-    const billingError = [
-      billingErrors.length ? `청구 정보 일부를 불러오지 못했어요: ${billingErrors.join(", ")}. 잠시 뒤 새로 불러와 주세요.` : "",
-      hasMissingPrice && !isPriceReadFailure ? "이번 달 요금 설정이 서비스 기준과 맞지 않아 요금을 표시하지 않아요. 서비스 운영자에게 문의해 주세요." : "",
-    ].filter(Boolean).join(" ");
+    const pricingError = !hasMissingPrice ? "" : isPriceReadFailure ? "적용 요금을 불러오지 못했어요. 잠시 뒤 새로 불러와 주세요."
+      : "이번 달 요금 설정이 서비스 기준과 맞지 않아 요금을 표시하지 않아요. 서비스 운영자에게 문의해 주세요.";
     const metricCodes = new Set(METRICS.map(metric => metric.code));
     return {
       user: viewer(account), month, provider: PROVIDER_INFO,
       models,
       stats: this.store.stats(account.id, range.start, range.end),
-      requests: this.store.listGenerations(account.id, range.start, range.end),
       usage: {
-        state: usage.status === "fulfilled" && hasCompatibleMetrics ? "ready" : "unavailable", updatedAt: new Date(this.now()).toISOString(),
-        metrics: usage.status === "fulfilled" ? usage.value.billable_metric_usages.filter(metric => metricCodes.has(metric.code)).flatMap(metric => metric.customers.filter(customer => customer.customer_id === account.customerId).map(customer => ({
+        state: usageData && hasCompatibleMetrics ? "ready" : "unavailable", updatedAt: new Date(this.now()).toISOString(),
+        metrics: usageData ? usageData.billable_metric_usages.filter(metric => metricCodes.has(metric.code)).flatMap(metric => metric.customers.filter(customer => customer.customer_id === account.customerId).map(customer => ({
           code: metric.code, key: METRICS.find(item => item.code === metric.code)!.key, name: metricName(metric.code),
           quantity: customer.quantity, rawQuantity: customer.raw_quantity ?? customer.quantity, unitSize: metric.unit_size ?? 1,
           breakdown: customer.dimension_usages.flatMap(dimension => {
@@ -348,6 +343,29 @@ export class OpenAbService {
           : hasPriceQueryFailure ? { error: "요금표를 불러오지 못해 적용 단가를 표시하지 않아요. 잠시 뒤 새로 불러와 주세요." }
           : !hasCompatibleMetrics ? { error: "사용량 집계 기준이 서비스 기준과 달라 사용량을 표시하지 않아요. 서비스 운영자에게 문의해 주세요." } : {}),
       },
+      pricing: { state: pricingError ? "unavailable" : "ready", ...(pricingError ? { error: pricingError } : {}) },
+    };
+  }
+
+  // 청구 예정액, 확정 청구서, 납부 상태, 결제 카드. 청구 예정액은 이 고객 것만 계산한다.
+  async billing(account: ServiceAccount, month: string): Promise<BillingSnapshot> {
+    monthRange(month);
+    const [draft, invoices, payments, method] = await Promise.allSettled([
+      this.client.previewDraftInvoice({ month, customer_id: account.customerId }),
+      this.client.listInvoices({ month, customer_id: account.customerId }), this.client.listInvoicePayments({ month, customer_id: account.customerId }),
+      this.client.getPaymentMethod(account.customerId),
+    ]);
+    const visibleInvoices = invoices.status === "fulfilled" ? invoices.value.invoices.filter(invoice => invoice.customer_id === account.customerId) : [];
+    const invoiceIds = new Set(visibleInvoices.map(invoice => invoice.id));
+    const visiblePayments = payments.status === "fulfilled" ? payments.value.invoice_payments.filter(payment => invoiceIds.has(payment.invoice_id)) : [];
+    const draftCustomer = draft.status === "fulfilled" ? draft.value.customers.find(customer => customer.customer_id === account.customerId) : null;
+    const methodCode = method.status === "rejected" && typeof method.reason === "object" && method.reason !== null && "code" in method.reason ? method.reason.code : null;
+    const billingErrors = [draft.status === "rejected" ? "청구 예정액" : "", invoices.status === "rejected" ? "확정 청구서" : "", payments.status === "rejected" ? "납부 상태" : "", method.status === "rejected" && methodCode !== "payment_method_not_found" ? "결제 카드" : ""].filter(Boolean);
+    if (payments.status === "fulfilled" && visibleInvoices.some(invoice => !visiblePayments.some(payment => payment.invoice_id === invoice.id))) billingErrors.push("일부 납부 상태");
+    if (method.status === "fulfilled" && method.value.customer_id !== account.customerId) billingErrors.push("결제 카드");
+    const billingError = billingErrors.length ? `청구 정보 일부를 불러오지 못했어요: ${billingErrors.join(", ")}. 잠시 뒤 새로 불러와 주세요.` : "";
+    return {
+      user: viewer(account), month,
       billing: {
         state: billingError ? "unavailable" : "ready",
         draft: draftCustomer ? { supplyAmount: draftCustomer.amount, taxAmount: Math.floor(draftCustomer.amount * 0.1), totalAmount: draftCustomer.amount + Math.floor(draftCustomer.amount * 0.1), lines: draftCustomer.lines.map(billingLine) } : null,
@@ -361,6 +379,11 @@ export class OpenAbService {
         ...(billingError ? { error: billingError } : {}),
       },
     };
+  }
+
+  history(account: ServiceAccount, month: string): HistorySnapshot {
+    const range = monthRange(month);
+    return { user: viewer(account), month, requests: this.store.listGenerations(account.id, range.start, range.end) };
   }
 
   async registerPaymentMethod(account: ServiceAccount): Promise<{ url: string; expiresAt: string; mode: "test" | "live" }> {

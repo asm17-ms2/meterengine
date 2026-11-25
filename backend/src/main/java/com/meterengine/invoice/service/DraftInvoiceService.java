@@ -2,6 +2,8 @@ package com.meterengine.invoice.service;
 
 import com.meterengine.customer.entity.Customer;
 import com.meterengine.customer.repository.CustomerRepository;
+import com.meterengine.global.error.ErrorCode;
+import com.meterengine.global.error.NotFoundException;
 import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.global.time.BillingMonth;
 import com.meterengine.invoice.config.InvoiceAutoFinalizeProperties;
@@ -64,10 +66,24 @@ public class DraftInvoiceService {
 
   @Transactional(readOnly = true)
   public DraftInvoiceResponse preview(UUID organizationId, YearMonth month) {
+    return preview(organizationId, month, null);
+  }
+
+  // customerId가 있으면 그 고객의 이벤트만 집계해 그 고객만 돌려준다. total_amount도 그 고객의 금액이다.
+  @Transactional(readOnly = true)
+  public DraftInvoiceResponse preview(UUID organizationId, YearMonth month, UUID customerId) {
+    if (customerId != null && !existsCustomer(organizationId, customerId)) {
+      throw new NotFoundException(ErrorCode.CUSTOMER_NOT_FOUND);
+    }
+
     OffsetDateTime calculatedAt =
         OffsetDateTime.now(clock.withZone(BillableMetricUsageService.BILLING_ZONE));
     List<DraftInvoiceCustomer> draftInvoiceCustomers =
-        calculate(organizationId, month, BillableMetricUsageService.cutoffAt(month));
+        calculate(
+            organizationId,
+            month,
+            BillableMetricUsageService.cutoffAt(month),
+            customerId == null ? null : List.of(customerId));
 
     long totalAmount =
         draftInvoiceCustomers.stream()
@@ -83,6 +99,13 @@ public class DraftInvoiceService {
         autoFinalize.running(),
         totalAmount,
         draftInvoiceCustomers);
+  }
+
+  private boolean existsCustomer(UUID organizationId, UUID customerId) {
+    UUID environmentId = BusinessEnvironmentContext.environmentId();
+    return environmentId == null
+        ? customerRepository.existsByOrganizationIdAndId(organizationId, customerId)
+        : customerRepository.findScoped(organizationId, environmentId, customerId).isPresent();
   }
 
   // 확정 시각 전이면 그 시각이다. 지났으면 요청한 환경에서 그 달을 아직 다 훑지 않았거나 실패가 남았을 때만 다음 실행 시각이다.

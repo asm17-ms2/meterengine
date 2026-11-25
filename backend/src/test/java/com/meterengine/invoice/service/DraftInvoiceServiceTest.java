@@ -1,12 +1,16 @@
 package com.meterengine.invoice.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.meterengine.customer.entity.Customer;
 import com.meterengine.customer.repository.CustomerRepository;
+import com.meterengine.global.error.ErrorCode;
+import com.meterengine.global.error.NotFoundException;
 import com.meterengine.global.security.BusinessEnvironment;
 import com.meterengine.global.security.BusinessEnvironmentContext;
 import com.meterengine.invoice.config.InvoiceAutoFinalizeProperties;
@@ -375,6 +379,68 @@ class DraftInvoiceServiceTest {
                   .isEqualTo(Map.of("model", "b"));
               assertThat(draftInvoiceNegativeUsage.quantity()).isEqualByComparingTo("-30");
             });
+  }
+
+  @Test
+  void 고객을_지정하면_집계에_그_고객만_넘기고_그_고객만_돌려준다() {
+    Customer acme = customer("아크메");
+    Customer beta = customer("베타");
+    stubCustomers(acme, beta);
+    when(customerRepository.existsByOrganizationIdAndId(ORGANIZATION_ID, acme.getId()))
+        .thenReturn(true);
+    List<BillableMetricUsage> billableMetricUsages = List.of();
+    when(billableMetricUsageService.aggregate(
+            ORGANIZATION_ID,
+            AUGUST,
+            OffsetDateTime.parse("2026-10-26T10:00:00+09:00"),
+            BillableMetricUsageService.cutoffAt(AUGUST),
+            List.of(acme.getId())))
+        .thenReturn(billableMetricUsages);
+    when(chargeService.calculate(ORGANIZATION_ID, AUGUST, billableMetricUsages))
+        .thenReturn(Map.of(acme.getId(), customerCharge(acme, 300)));
+
+    DraftInvoiceResponse response =
+        draftInvoiceService.preview(ORGANIZATION_ID, AUGUST, acme.getId());
+
+    assertThat(response.customers())
+        .extracting(DraftInvoiceCustomer::customerId)
+        .containsExactly(acme.getId());
+    assertThat(response.totalAmount()).isEqualTo(300);
+  }
+
+  @Test
+  void 없는_고객을_지정하면_customer_not_found다() {
+    UUID missing = UUID.randomUUID();
+    when(customerRepository.existsByOrganizationIdAndId(ORGANIZATION_ID, missing))
+        .thenReturn(false);
+
+    assertThatThrownBy(() -> draftInvoiceService.preview(ORGANIZATION_ID, AUGUST, missing))
+        .isInstanceOfSatisfying(
+            NotFoundException.class,
+            exception ->
+                assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.CUSTOMER_NOT_FOUND));
+    verifyNoInteractions(billableMetricUsageService);
+  }
+
+  @Test
+  void 업무_환경이_있으면_그_환경의_고객인지_확인한다() {
+    UUID environmentId = UUID.randomUUID();
+    UUID otherEnvironmentCustomer = UUID.randomUUID();
+    when(customerRepository.findScoped(ORGANIZATION_ID, environmentId, otherEnvironmentCustomer))
+        .thenReturn(Optional.empty());
+
+    assertThatThrownBy(
+            () ->
+                BusinessEnvironmentContext.run(
+                    new BusinessEnvironment(ORGANIZATION_ID, environmentId, "live"),
+                    () ->
+                        draftInvoiceService.preview(
+                            ORGANIZATION_ID, AUGUST, otherEnvironmentCustomer)))
+        .isInstanceOfSatisfying(
+            NotFoundException.class,
+            exception ->
+                assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.CUSTOMER_NOT_FOUND));
+    verifyNoInteractions(billableMetricUsageService);
   }
 
   // 계산할 사용량이 없는 도입사에서 시계만 다른 청구 예정액 서비스를 만든다. 자동 확정은 켜져 있다.

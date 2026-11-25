@@ -6,7 +6,7 @@ import { useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { COMPANY, defaultModelId, MODELS, transactionId } from "@/lib/catalog";
 import { PROMPT_MAX_LENGTH, SYSTEM_MAX_LENGTH } from "@/lib/contracts";
-import type { GenerationView, WorkspaceSnapshot } from "@/lib/contracts";
+import type { GenerationView, UsageSnapshot } from "@/lib/contracts";
 import { createRequestId } from "@/lib/request-id";
 import { estimateTokens, PROMPT_CACHE_MIN_TOKENS } from "@/lib/tokens";
 import { ApiFailure, errorMessage, jsonRequest, readApi, settleGeneration } from "./client-api";
@@ -37,7 +37,7 @@ function responsePreview(result: GenerationView, isEmbedding: boolean): string {
   return JSON.stringify({ id: transactionId(result.id), object: "response", model: result.modelId, output_text: result.output, usage, latency_ms: result.latencyMs }, null, 2);
 }
 
-export function ApiPlayground({ snapshot, onUsageChanged, onSessionLost }: { snapshot: WorkspaceSnapshot; onUsageChanged: () => void; onSessionLost: () => void }) {
+export function ApiPlayground({ snapshot, onUsageChanged, onSessionLost }: { snapshot: UsageSnapshot; onUsageChanged: () => void; onSessionLost: () => void }) {
   const [modelId, setModelId] = useState(defaultModelId("api"));
   const [system, setSystem] = useState("");
   const [prompt, setPrompt] = useState("");

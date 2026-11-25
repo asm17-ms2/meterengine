@@ -4376,6 +4376,7 @@ paths:
         청구서를 아직 발행하지 않은 고객의 청구 예정액을 과금 미터의 구분 값별 사용량에 그 구분 값의 단가를 곱해 계산해 돌려줍니다.
         달 하나의 모든 고객을 한 번에 보려면 이 경로를 씁니다. 검색어, 여러 조건, 정렬, 페이지가 필요하면 GET /v1/invoices/draft/search를 씁니다.
         그 달 청구서가 발행된 고객은 나오지 않고 total_amount는 이 달 청구서를 아직 발행하지 않은 고객의 합입니다. 발행된 금액은 청구서 목록 조회로 봅니다.
+        customer_id를 주면 그 고객의 이벤트만 집계해 그 고객만 돌려주고 total_amount도 그 고객의 금액입니다. 그 달 청구서가 발행된 고객이면 customers가 빈 배열입니다.
         조회할 때마다 계산하며 저장하지 않습니다. 기간은 KST 기준의 달입니다.
         그 달 이벤트 가운데 수신 시각(received_at)이 집계 마감 시각(다음 달 2일 00:00 KST)보다 이른 것만 집계합니다. 마감 뒤에 받은 그 달 이벤트는 저장되지만 집계와 청구에 들지 않습니다.
         금액은 원 단위 정수입니다. 고객, 과금 미터, 구분 값마다 생기는 청구 항목마다 10원 미만을 버린 뒤 더합니다. 10원이 안 되는 청구 항목은 0원입니다.
@@ -4384,6 +4385,13 @@ paths:
         고객은 이름 오름차순, 청구 항목은 과금 미터 코드 오름차순, 같은 과금 미터 안에서는 dimension_values 오름차순입니다. 페이지를 나누지 않습니다.
       operationId: previewDraftInvoice
       parameters:
+      - description: 이 고객의 청구 예정액만 계산합니다. 생략하면 모든 고객입니다.
+        in: query
+        name: customer_id
+        required: false
+        schema:
+          type: string
+          format: uuid
       - description: "집계할 달(yyyy-MM, KST)입니다. 생략하면 이번 달입니다."
         example: 2026-08
         in: query
@@ -4405,8 +4413,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: "code=validation_error: month가 yyyy-MM이 아니거나 0001-01부터 9999-12까\
-            지의 범위 밖입니다."
+          description: "code=validation_error: customer_id가 UUID가 아니거나, month가 yyyy-MM이\
+            \ 아니거나 0001-01부터 9999-12까지의 범위 밖입니다."
         "401":
           content:
             application/json:
@@ -4424,6 +4432,12 @@ paths:
             code=permission_denied: 키의 권한이나 계정의 역할로는 할 수 없는 요청이거나, 조직이 정해지지 않은 로그인 세션입니다.
             code=organization_not_active: 조직의 이용이 정지됐습니다.
             code=consent_required: 로그인 세션의 사용자가 약관과 개인정보 처리방침에 아직 동의하지 않았습니다. POST /v1/sessions/current/consents로 동의합니다.
+        "404":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "code=customer_not_found: customer_id가 가리키는 고객이 없습니다."
         "429":
           content:
             application/json:

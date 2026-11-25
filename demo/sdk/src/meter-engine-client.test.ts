@@ -503,6 +503,17 @@ test("listCustomers는 GET /v1/customers", async () => {
   assert.equal(calls[0].method, "GET");
 });
 
+test("previewDraftInvoice는 customer_id를 쿼리로 붙인다", async () => {
+  const { client, calls } = createClient([json(200, {})]);
+
+  await client.previewDraftInvoice({ month: "2026-10", customer_id: CUSTOMER_ID });
+
+  const url = new URL(calls[0].url);
+  assert.equal(`${url.origin}${url.pathname}`, `${BASE_URL}/v1/invoices/draft`);
+  assert.deepEqual(Object.fromEntries(url.searchParams), { month: "2026-10", customer_id: CUSTOMER_ID });
+  assert.equal(calls[0].method, "GET");
+});
+
 test("조회도 5xx면 재시도한다", async () => {
   const { client, calls } = createClient([apiError(503, "internal_server_error"), json(200, { customers: [] })]);
 

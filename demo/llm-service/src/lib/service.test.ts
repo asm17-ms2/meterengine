@@ -6,7 +6,7 @@ import path from "node:path";
 import { createServer } from "node:http";
 import { test } from "node:test";
 import { MeterEngineApiError } from "@meterengine/sdk";
-import type { IngestEventRequest } from "@meterengine/sdk";
+import type { CustomerUsageSearchItem, IngestEventRequest } from "@meterengine/sdk";
 import { EVENT_TYPE, METRICS, MODELS, transactionId } from "./catalog.ts";
 import { readConfig } from "./config.ts";
 import type { OpenAbConfig } from "./config.ts";
@@ -35,11 +35,16 @@ function apiBody(prompt: string, requestId: string = randomUUID(), modelId = "ab
   return { requestId, surface: "api", modelId, prompt };
 }
 
+// 서버처럼 고른 고객 한 명만 담은 사용량 검색 결과를 만든다.
+function usagePage(customerId: string, metrics: CustomerUsageSearchItem["metrics"]) {
+  return { items: [{ customer_id: customerId, customer_name: "가람데이터", metrics }], total: 1, total_unfiltered: 1, page: 1, size: 25, summary: { month: "2026-10", customer_count: 1, metric_count: metrics.length, line_count: 0, nonzero_customer_count: 0 } };
+}
+
 function clientFixture(overrides: Partial<MeteringClient> = {}) {
   const events: IngestEventRequest[] = [];
   const client: MeteringClient = {
     async ingestEvent(event) { events.push({ ...event, transaction_id: event.transaction_id! }); return { transaction_id: event.transaction_id!, duplicate: false }; },
-    async aggregateBillableMetricUsages() { return { month: "2026-10", billable_metric_usages: [] }; },
+    async searchUsage(params = {}) { return usagePage(params.customer_id!, []); },
     async previewDraftInvoice() { return { month: "2026-10", calculated_at: "2026-10-26T12:00:00Z", total_amount: 0, customers: [] }; },
     async listInvoices() { return { invoices: [] }; },
     async listInvoicePayments() { return { invoice_payments: [] }; },
@@ -73,7 +78,7 @@ function commonRates(code: string, index: number) {
 function pricedClientFixture(options: { customerOverride?: boolean; unavailable?: "common" | "customer"; change?: UsageChange } = {}) {
   const queries: Array<{ month?: string; customer_id?: string }> = [];
   const fake = clientFixture({
-    async aggregateBillableMetricUsages() { return { month: "2026-10", billable_metric_usages: usageMetrics(options.change) }; },
+    async searchUsage(params = {}) { return usagePage(params.customer_id!, usageMetrics(options.change)); },
     async listBillableMetricPrices(params = {}) {
       queries.push(params);
       const scope = params.customer_id ? "customer" : "common";
@@ -514,15 +519,38 @@ test("한 계정의 실패 재전송이 다른 계정의 큐를 처리하지 않
   assert.deepEqual(fake.events.map(event => event.customer_id), [ACCOUNT_A.customerId]);
 });
 
-test("조회 응답에 다른 고객의 사용량, 인보이스, 납부 상태를 섞지 않는다", async t => {
+test("요청 통계는 MeterEngine을 부르지 않고 이 계정의 기록하지 못한 건수를 돌려준다", async t => {
   const store = new OpenAbStore(":memory:", [ACCOUNT_A, ACCOUNT_B]);
   t.after(() => store.close());
+  const reads: string[] = [];
   const fake = clientFixture({
-    async aggregateBillableMetricUsages() { return { month: "2026-10", billable_metric_usages: [{ ...usageMetrics()[0], customers: [
+    async ingestEvent() { throw new Error("upstream unavailable"); },
+    async searchUsage(params = {}) { reads.push("usage"); return usagePage(params.customer_id!, []); },
+    async listBillableMetricPrices() { reads.push("prices"); return { billable_metric_prices: [] }; },
+  });
+  const service = new OpenAbService({ config: config(), store, client: fake.client, now: () => NOW });
+  await service.generate(ACCOUNT_A, apiBody("기록하지 못할 요청"));
+  const result = service.usageStats(ACCOUNT_A, "2026-10");
+  assert.deepEqual(reads, []);
+  assert.deepEqual({ user: result.user.id, month: result.month }, { user: ACCOUNT_A.id, month: "2026-10" });
+  assert.equal(result.stats.totalRequests, 1);
+  assert.equal(result.stats.pendingMetering + result.stats.failedMetering, 1);
+  assert.deepEqual(result.stats, (await service.usage(ACCOUNT_A, "2026-10")).stats);
+  assert.equal(service.usageStats(ACCOUNT_B, "2026-10").stats.totalRequests, 0);
+  assert.equal(service.usageStats(ACCOUNT_A, "2026-11").stats.totalRequests, 0);
+  assert.throws(() => service.usageStats(ACCOUNT_A, "2026-13"), (error: unknown) => error instanceof ServiceError && error.status === 400);
+});
+
+test("사용량과 청구 예정액은 로그인한 고객으로만 조회하고 응답에 다른 고객의 것을 섞지 않는다", async t => {
+  const store = new OpenAbStore(":memory:", [ACCOUNT_A, ACCOUNT_B]);
+  t.after(() => store.close());
+  const queries: Array<[string, string | undefined]> = [];
+  const fake = clientFixture({
+    async searchUsage(params = {}) { queries.push(["usage", params.customer_id]); return usagePage(ACCOUNT_A.customerId, [{ ...usageMetrics()[0], customers: [
       { customer_id: ACCOUNT_A.customerId, customer_name: "가람데이터", quantity: 0.00001, raw_quantity: 10, dimension_usages: [{ dimension_values: { model: "ab-5", surface: "chat" }, quantity: 0.00001, raw_quantity: 10 }, { dimension_values: { model: "ab-5" }, quantity: 1, raw_quantity: 1 }] },
       { customer_id: ACCOUNT_B.customerId, customer_name: "다른 고객 비밀", quantity: 999, dimension_usages: [] },
-    ] }] }; },
-    async previewDraftInvoice() { return { month: "2026-10", calculated_at: "2026-10-26T12:00:00Z", total_amount: 999999, customers: [
+    ] }]); },
+    async previewDraftInvoice(params = {}) { queries.push(["draft", params.customer_id]); return { month: "2026-10", calculated_at: "2026-10-26T12:00:00Z", total_amount: 999999, customers: [
       { customer_id: ACCOUNT_A.customerId, customer_name: "가람데이터", amount: 100, lines: [{ billable_metric_code: "llm-cache-read-tokens", target_property: "cache_read_tokens", dimension_values: { model: "ab-5", surface: "batch" }, quantity: 0.25, unit_price: 200, amount: 50, line_type: "per_unit" as const, tier_index: 0 }], unpriced_usages: [], negative_usages: [] },
       { customer_id: ACCOUNT_B.customerId, customer_name: "다른 고객 비밀", amount: 999999, lines: [], unpriced_usages: [], negative_usages: [] },
     ] }; },
@@ -533,7 +561,8 @@ test("조회 응답에 다른 고객의 사용량, 인보이스, 납부 상태�
     async listInvoicePayments() { return { invoice_payments: [{ invoice_id: "b-invoice", status: "paid", mode: "test", amount: 999999, canceled_amount: 0, attempt_count: 1, last_failure_code: null, next_retry_at: null, completed_at: null }] }; },
   });
   const service = new OpenAbService({ config: config(), store, client: fake.client, now: () => NOW });
-  const result = await service.workspace(ACCOUNT_A, "2026-10");
+  const [usage, result] = await Promise.all([service.usage(ACCOUNT_A, "2026-10"), service.billing(ACCOUNT_A, "2026-10")]);
+  assert.deepEqual(queries.sort(), [["draft", ACCOUNT_A.customerId], ["usage", ACCOUNT_A.customerId]]);
   assert.equal(result.billing.draft?.totalAmount, 110);
   assert.deepEqual(result.billing.draft?.lines.map(line => [line.label, line.modelId, line.surface]), [["캐시 읽기 토큰", "ab-5", "batch"]]);
   assert.equal(result.billing.invoices.length, 1);
@@ -542,26 +571,28 @@ test("조회 응답에 다른 고객의 사용량, 인보이스, 납부 상태�
   assert.equal(result.billing.invoices[0].paidAmount, null);
   assert.equal(result.billing.invoices[0].canceledAmount, null);
   assert.equal(result.billing.invoices[0].amountDue, null);
-  assert.deepEqual(result.usage.metrics.map(metric => [metric.code, metric.key, metric.quantity, metric.rawQuantity, metric.breakdown]), [["llm-input-tokens", "input", 0.00001, 10, [{ modelId: "ab-5", surface: "chat", quantity: 0.00001, rawQuantity: 10 }]]]);
-  assert.ok(!JSON.stringify(result).includes("다른 고객 비밀"));
-  assert.ok(!JSON.stringify(result).includes("999999"));
+  assert.deepEqual(usage.usage.metrics.map(metric => [metric.code, metric.key, metric.quantity, metric.rawQuantity, metric.breakdown]), [["llm-input-tokens", "input", 0.00001, 10, [{ modelId: "ab-5", surface: "chat", quantity: 0.00001, rawQuantity: 10 }]]]);
+  assert.ok(!JSON.stringify([usage, result]).includes("다른 고객 비밀"));
+  assert.ok(!JSON.stringify([usage, result]).includes("999999"));
 });
 
 test("부분 조회 실패를 가짜 0원 성공으로 바꾸지 않는다", async t => {
   const store = new OpenAbStore(":memory:", [ACCOUNT_A]);
   t.after(() => store.close());
   const fake = clientFixture({
-    async aggregateBillableMetricUsages() { throw new Error("secret upstream payload"); },
+    async searchUsage() { throw new Error("secret upstream payload"); },
     async previewDraftInvoice() { throw new Error("secret upstream payload"); },
     async listBillableMetricPrices() { throw new Error("secret upstream payload"); },
   });
-  const result = await new OpenAbService({ config: config(), store, client: fake.client, now: () => NOW }).workspace(ACCOUNT_A, "2026-10");
-  assert.equal(result.usage.state, "unavailable");
+  const service = new OpenAbService({ config: config(), store, client: fake.client, now: () => NOW });
+  const [usage, result] = await Promise.all([service.usage(ACCOUNT_A, "2026-10"), service.billing(ACCOUNT_A, "2026-10")]);
+  assert.equal(usage.usage.state, "unavailable");
+  assert.equal(usage.models[0].prices.chat?.input, null);
+  assert.equal(usage.pricing.error, "적용 요금을 불러오지 못했어요. 잠시 뒤 새로 불러와 주세요.");
   assert.equal(result.billing.state, "unavailable");
   assert.equal(result.billing.draft, null);
-  assert.equal(result.models[0].prices.chat?.input, null);
-  assert.equal(result.billing.error, "청구 정보 일부를 불러오지 못했어요: 청구 예정액, 적용 요금. 잠시 뒤 새로 불러와 주세요.");
-  assert.ok(!JSON.stringify(result).includes("secret upstream payload"));
+  assert.equal(result.billing.error, "청구 정보 일부를 불러오지 못했어요: 청구 예정액. 잠시 뒤 새로 불러와 주세요.");
+  assert.ok(!JSON.stringify([usage, result]).includes("secret upstream payload"));
 });
 
 test("일부 납부 상태가 빠지거나 다른 고객 카드가 오면 청구를 ready로 보이지 않는다", async t => {
@@ -572,7 +603,7 @@ test("일부 납부 상태가 빠지거나 다른 고객 카드가 오면 청구
     fake.client.listInvoices = async () => ({ invoices: [{ id: "invoice", invoice_number: "ME-202610-00000001", customer_id: ACCOUNT_A.customerId, customer_name: "가람데이터", month: "2026-10", finalized_at: "2026-10-26T12:00:00Z", supply_amount: 100, tax_amount: 10, total_amount: 110, lines: [] }] });
     fake.client.listInvoicePayments = async () => ({ invoice_payments: broken === "payment" ? [] : [{ invoice_id: "invoice", status: "paid", mode: "test", amount: 110, canceled_amount: 0, attempt_count: 1, last_failure_code: null, next_retry_at: null, completed_at: null }] });
     if (broken === "method") fake.client.getPaymentMethod = async () => ({ customer_id: ACCOUNT_B.customerId, card_issuer_code: "61", card_number: "1234****5678", mode: "test", authenticated_at: "2026-10-01T00:00:00Z" });
-    const result = await new OpenAbService({ config: config(), store, client: fake.client, now: () => NOW }).workspace(ACCOUNT_A, "2026-10");
+    const result = await new OpenAbService({ config: config(), store, client: fake.client, now: () => NOW }).billing(ACCOUNT_A, "2026-10");
     assert.equal(result.billing.state, "unavailable", broken);
     assert.equal(result.billing.error, `청구 정보 일부를 불러오지 못했어요: ${broken === "payment" ? "일부 납부 상태" : "결제 카드"}. 잠시 뒤 새로 불러와 주세요.`, broken);
   }
@@ -582,7 +613,7 @@ test("모델과 용도마다 100만 토큰 단가를 읽고 일괄 처리 단가
   const store = new OpenAbStore(":memory:", [ACCOUNT_A]);
   t.after(() => store.close());
   const fake = pricedClientFixture();
-  const result = await new OpenAbService({ config: config(), store, client: fake.client, now: () => NOW }).workspace(ACCOUNT_A, "2026-10");
+  const result = await new OpenAbService({ config: config(), store, client: fake.client, now: () => NOW }).usage(ACCOUNT_A, "2026-10");
   assert.deepEqual(fake.queries, [{ month: "2026-10" }, { month: "2026-10", customer_id: ACCOUNT_A.customerId }]);
   const ab5 = result.models.find(model => model.id === "ab-5")!;
   assert.deepEqual(ab5.prices.chat, { input: 4000, output: 20000, cacheRead: 400, cacheWrite: 5000 });
@@ -591,18 +622,18 @@ test("모델과 용도마다 100만 토큰 단가를 읽고 일괄 처리 단가
   assert.deepEqual(embed.prices.api, { input: 30, output: null, cacheRead: null, cacheWrite: null });
   assert.equal(embed.prices.chat, undefined);
   assert.equal(result.usage.state, "ready");
-  assert.equal(result.billing.state, "ready");
+  assert.equal(result.pricing.state, "ready");
 });
 
 test("고객별 단가는 더 최근 공통 단가보다 우선하고 다른 조합은 공통 단가를 쓴다", async t => {
   const store = new OpenAbStore(":memory:", [ACCOUNT_A]);
   t.after(() => store.close());
   const fake = pricedClientFixture({ customerOverride: true });
-  const result = await new OpenAbService({ config: config(), store, client: fake.client, now: () => NOW }).workspace(ACCOUNT_A, "2026-10");
+  const result = await new OpenAbService({ config: config(), store, client: fake.client, now: () => NOW }).usage(ACCOUNT_A, "2026-10");
   const ab5 = result.models.find(model => model.id === "ab-5")!;
   assert.equal(ab5.prices.api?.input, 3500);
   assert.equal(ab5.prices.chat?.input, 4000);
-  assert.equal(result.billing.state, "ready");
+  assert.equal(result.pricing.state, "ready");
 });
 
 test("공통 단가와 고객별 단가 중 하나라도 조회 실패하면 부분 단가를 확정 가격으로 표시하지 않는다", async t => {
@@ -610,9 +641,9 @@ test("공통 단가와 고객별 단가 중 하나라도 조회 실패하면 부
   t.after(() => store.close());
   for (const unavailable of ["common", "customer"] as const) {
     const fake = pricedClientFixture({ customerOverride: true, unavailable });
-    const result = await new OpenAbService({ config: config(), store, client: fake.client, now: () => NOW }).workspace(ACCOUNT_A, "2026-10");
+    const result = await new OpenAbService({ config: config(), store, client: fake.client, now: () => NOW }).usage(ACCOUNT_A, "2026-10");
     assert.ok(result.models.every(model => Object.values(model.prices).every(prices => Object.values(prices!).every(value => value === null))), unavailable);
-    assert.equal(result.billing.state, "unavailable", unavailable);
+    assert.equal(result.pricing.state, "unavailable", unavailable);
     assert.equal(result.usage.state, "unavailable", unavailable);
     assert.match(result.usage.error!, /요금표를 불러오지 못해/);
     assert.ok(!JSON.stringify(result).includes("unavailable scoped price query"));
@@ -624,15 +655,15 @@ test("과금 미터 단위, 집계 방식, 이벤트 유형, 차원이 달라지
   t.after(() => store.close());
   for (const change of ["none", "unit", "aggregation", "rounding", "dimensions", "eventType"] as const) {
     const fake = pricedClientFixture({ change });
-    const result = await new OpenAbService({ config: config(), store, client: fake.client, now: () => NOW }).workspace(ACCOUNT_A, "2026-10");
+    const result = await new OpenAbService({ config: config(), store, client: fake.client, now: () => NOW }).usage(ACCOUNT_A, "2026-10");
     const input = result.models.find(model => model.id === "ab-5")!.prices.chat?.input;
     if (change === "none") {
       assert.equal(input, 4000);
       assert.equal(result.usage.state, "ready");
     } else {
       assert.equal(input, null, change);
-      assert.equal(result.billing.state, "unavailable", change);
-      assert.equal(result.billing.error, "이번 달 요금 설정이 서비스 기준과 맞지 않아 요금을 표시하지 않아요. 서비스 운영자에게 문의해 주세요.", change);
+      assert.equal(result.pricing.state, "unavailable", change);
+      assert.equal(result.pricing.error, "이번 달 요금 설정이 서비스 기준과 맞지 않아 요금을 표시하지 않아요. 서비스 운영자에게 문의해 주세요.", change);
       assert.match(result.usage.error!, /사용량 집계 기준/);
     }
   }
@@ -655,9 +686,9 @@ test("텍스트 모델의 단가가 하나라도 빠지면 요금 설정 확인�
     const response = await original(params);
     return { billable_metric_prices: response.billable_metric_prices.map(metric => ({ ...metric, price_rates: metric.price_rates.filter(rate => !(rate.dimension_values.model === "ab-5-nano" && rate.dimension_values.surface === "batch" && metric.billable_metric_code === "llm-cache-write-tokens")) })) };
   };
-  const result = await new OpenAbService({ config: config(), store, client: fake.client, now: () => NOW }).workspace(ACCOUNT_A, "2026-10");
-  assert.equal(result.billing.state, "unavailable");
-  assert.match(result.billing.error!, /요금 설정이 서비스 기준과 맞지 않아/);
+  const result = await new OpenAbService({ config: config(), store, client: fake.client, now: () => NOW }).usage(ACCOUNT_A, "2026-10");
+  assert.equal(result.pricing.state, "unavailable");
+  assert.match(result.pricing.error!, /요금 설정이 서비스 기준과 맞지 않아/);
 });
 
 test("결제 취소는 별도 금액으로 표시하고 다시 결제할 미납액으로 만들지 않는다", async t => {
@@ -668,7 +699,7 @@ test("결제 취소는 별도 금액으로 표시하고 다시 결제할 미납�
       async listInvoices() { return { invoices: [{ id: "invoice", invoice_number: "ME-202610-00000001", customer_id: ACCOUNT_A.customerId, customer_name: "가람데이터", month: "2026-10", finalized_at: "2026-10-26T12:00:00Z", supply_amount: 100, tax_amount: 10, total_amount: 110, lines: [] }] }; },
       async listInvoicePayments() { return { invoice_payments: [{ invoice_id: "invoice", status: canceled === 110 ? "canceled" : "partially_canceled", mode: "test", amount: 110, canceled_amount: canceled, attempt_count: 1, last_failure_code: null, next_retry_at: null, completed_at: null }] }; },
     });
-    const result = await new OpenAbService({ config: config(), store, client: fake.client, now: () => NOW }).workspace(ACCOUNT_A, "2026-10");
+    const result = await new OpenAbService({ config: config(), store, client: fake.client, now: () => NOW }).billing(ACCOUNT_A, "2026-10");
     assert.equal(result.billing.invoices[0].amountDue, 0);
     assert.equal(result.billing.invoices[0].canceledAmount, canceled);
     assert.equal(result.billing.invoices[0].paidAmount, 110 - canceled);

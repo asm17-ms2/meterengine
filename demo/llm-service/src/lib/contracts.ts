@@ -99,14 +99,18 @@ export type UsageStats = {
   failedMetering: number;
 };
 
-export type WorkspaceSnapshot = {
-  user: Viewer;
-  month: string;
+// 화면마다 필요한 조회만 하도록 응답을 나눈다. 대화, API, 일괄 처리, 사용량은 UsageSnapshot을 쓴다.
+type SnapshotBase = { user: Viewer; month: string };
+export type UsageSnapshot = SnapshotBase & {
   provider: ProviderInfo;
   models: LlmModel[];
   stats: UsageStats;
-  requests: GenerationView[];
   usage: { state: "ready" | "unavailable"; updatedAt: string; metrics: MeterUsageView[]; error?: string };
+  pricing: { state: "ready" | "unavailable"; error?: string };
+};
+// 요청을 보낸 뒤에 다시 읽는 것. 앱의 원장에서만 세고 MeterEngine을 부르지 않는다.
+export type UsageStatsSnapshot = SnapshotBase & { stats: UsageStats };
+export type BillingSnapshot = SnapshotBase & {
   billing: {
     state: "ready" | "unavailable";
     draft: DraftView | null;
@@ -116,6 +120,8 @@ export type WorkspaceSnapshot = {
     error?: string;
   };
 };
+export type HistorySnapshot = SnapshotBase & { requests: GenerationView[] };
+export type WorkspaceSnapshot = UsageSnapshot | BillingSnapshot | HistorySnapshot;
 
 export type ApiErrorBody = { error: { code: string; message: string; retryable?: boolean } };
 
